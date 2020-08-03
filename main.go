@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"net/http"
 	"ws/message"
+	"ws/uclient"
 )
 
 func main() {
@@ -14,7 +15,6 @@ func main() {
 			return true
 		},
 	}
-	var connMap = make(map[*Client]bool)
 	var channel = make(chan []byte, 1000)
 	server := gin.Default()
 	server.GET("/", func(context *gin.Context) {
@@ -24,12 +24,8 @@ func main() {
 		fmt.Print(err)
 		if err == nil {
 			go func(conn *websocket.Conn) {
-				client := NewClient(conn)
-				connMap[client] = true
-				defer func() {
-					conn.Close()
-					connMap[client] = false
-				}()
+				client := uclient.NewClient(conn)
+				uclient.WaitAccepts[client] = true
 				fmt.Print("链接开始\n")
 				for {
 					mType, msg, err := conn.ReadMessage()
@@ -46,15 +42,5 @@ func main() {
 	server.GET("/index", func(context *gin.Context) {
 		context.File("index.html")
 	})
-	go func() {
-		for {
-			msg := <-channel
-			for con, exist := range connMap {
-				if exist {
-					con.Conn.WriteJSON(message.Message{MType: "1", Name: string(msg)})
-				}
-			}
-		}
-	}()
 	server.Run(":5000")
 }
