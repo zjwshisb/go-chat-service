@@ -5,7 +5,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
-	"ws/message"
 	"ws/uclient"
 )
 
@@ -24,7 +23,7 @@ func main() {
 		fmt.Print(err)
 		if err == nil {
 			go func(conn *websocket.Conn) {
-				client := uclient.NewClient(conn)
+				client := uclient.NewClient(conn, 1)
 				uclient.WaitAccepts[client] = true
 				fmt.Print("链接开始\n")
 				for {
