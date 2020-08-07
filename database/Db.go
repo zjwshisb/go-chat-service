@@ -1,4 +1,4 @@
-package model
+package database
 
 import (
 	"github.com/jinzhu/gorm"
@@ -12,11 +12,11 @@ var (
 
 func init()  {
 	conf := config.DBConf
-	host := conf.Host + ":" + conf.Port
-	extra := "?charset=utf8&parseTime=True&loc=Local"
 	user := conf.Username + ":" + conf.Password
+	host := "(" + conf.Host + ":" + conf.Port + ")"
+	extra := "?charset=utf8&parseTime=True&loc=Local"
 	var err error
-	Db, err = gorm.Open(conf.Connection, user + "@/" + host + extra)
+	Db, err = gorm.Open(conf.Connection, user + "@" + host + "/" + conf.Database +  extra)
 	if err != nil {
 		log.Fatal(err)
 	}

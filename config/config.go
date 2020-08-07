@@ -22,8 +22,9 @@ func init()  {
 		Database: Config["DB_DATABASE"],
 		Username: Config["DB_USERNAME"],
 		Password: Config["DB_PASSWORD"],
-		Connection: Config["Connection"],
+		Connection: Config["DB_CONNECTION"],
 	}
+	log.Println(DBConf)
 }
 
 type db struct {
