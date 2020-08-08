@@ -2,13 +2,14 @@ package uclient
 
 import (
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
+	"strconv"
 	"sync"
-	"fmt"
 )
 
 type Client struct {
 	Conn       *websocket.Conn
-	Id         int32
+	Id         int64
 	intMessage chan []byte
 	outMessage chan []byte
 	isClose    bool
@@ -20,7 +21,7 @@ var (
 	WaitAccepts = make(map[*Client]bool)
 )
 
-func NewClient(conn *websocket.Conn, id int32) *Client {
+func NewClient(conn *websocket.Conn, id int64) *Client {
 	client := &Client{
 		Conn:       conn,
 		Id:         id,
@@ -31,6 +32,7 @@ func NewClient(conn *websocket.Conn, id int32) *Client {
 	}
 	go client.safeSend()
 	go client.SafeRead()
+	logrus.Info("client:" + strconv.FormatInt(client.Id, 10) + ":connect")
 	return client
 }
 func (client *Client) isCLose() bool {
@@ -39,17 +41,17 @@ func (client *Client) isCLose() bool {
 	return client.isClose
 }
 func (client *Client) safeClose() {
+	defer client.lock.Unlock()
 	client.lock.Lock()
 	if !client.isClose {
 		client.isClose = true
 		err := client.Conn.Close()
 		if err != nil {
-			fmt.Println(err)
+			logrus.Error(err)
 		}
+		logrus.Info("client:" + strconv.FormatInt(client.Id, 10) + ":close")
 		close(client.flag)
-		fmt.Println("client:" + string(client.Id) + " cloase")
 	}
-	client.lock.Unlock()
 }
 
 func (client *Client) Push(msg []byte) {
@@ -58,32 +60,36 @@ func (client *Client) Push(msg []byte) {
 
 func (client *Client) safeSend() {
 	defer client.safeClose()
-	for  {
+	LOOP: for  {
 		select {
 			case <-client.flag:
 				break
 			default:
 				msg := <-client.outMessage
 				err := client.Conn.WriteMessage(websocket.TextMessage, msg)
-				if err == nil {
-					break
+				if err != nil {
+					logrus.Error("client:" + strconv.FormatInt(client.Id, 10) + ":break send loop:" + err.Error())
+					break LOOP
 				}
+				logrus.Info("client:" + strconv.FormatInt(client.Id, 10) + ":send:" + string(msg))
+
 		}
 	}
 }
 func (client *Client) SafeRead() {
 	defer client.safeClose()
-	for {
+	LOOP: for {
 		select {
 			case <-client.flag:
 				break
 			default:
 				_, msg, err := client.Conn.ReadMessage()
-				if err == nil {
-					return
+				if err != nil {
+					logrus.Error("client:" + strconv.FormatInt(client.Id, 10) + ":break read loop:" + err.Error())
+					break LOOP
 				}
-				fmt.Println(msg)
 				client.intMessage <- msg
+				logrus.Error("client:" + strconv.FormatInt(client.Id, 10) + ":receive:" + string(msg))
 				client.Push(msg)
 		}
 	}
