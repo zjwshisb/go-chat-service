@@ -1,9 +1,18 @@
 package main
 
-var (
-	action string
+import (
+	"ws/config"
+	"ws/db"
+	"ws/modules"
+	"ws/routers"
 )
 
+func init()  {
+	config.Setup()
+	db.Setup()
+	routers.Setup()
+	modules.Setup()
+}
 func main() {
-	App.run()
+	routers.Router.Run(config.Http.Host +":" + config.Http.Port)
 }

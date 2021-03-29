@@ -1,37 +1,43 @@
 package config
 
 import (
-	"github.com/joho/godotenv"
+	"gopkg.in/ini.v1"
 	"log"
 )
 
-var (
-	Config map[string]string
-	DBConf db
-)
-
-func init()  {
-	var err error
-	Config, err = godotenv.Read()
-	if err != nil {
-		log.Fatal(nil)
-	}
-	DBConf = db{
-		Host: Config["DB_HOST"],
-		Port: Config["DB_PORT"],
-		Database: Config["DB_DATABASE"],
-		Username: Config["DB_USERNAME"],
-		Password: Config["DB_PASSWORD"],
-		Connection: Config["DB_CONNECTION"],
-	}
-	log.Println(DBConf)
-}
-
-type db struct {
-	Host string
-	Port string
-	Database string
+type mysql struct {
 	Username string
 	Password string
-	Connection string
+	Host string
+	Name string
+	Port string
+}
+type http struct {
+	Port string
+	Host string
+}
+type redis struct {
+	Addr string
+	Auth string
+}
+
+var (
+	Mysql *mysql
+	Http *http
+	Redis *redis
+)
+func Setup() {
+	cfg, err := ini.Load("config.ini")
+	if err != nil {
+		log.Fatal(err)
+	}
+	Mysql = &mysql{}
+	err = cfg.Section("Mysql").MapTo(Mysql)
+	Http = &http{}
+	err = cfg.Section("Http").MapTo(Http)
+	Redis = &redis{}
+	err = cfg.Section("Redis").MapTo(Redis)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
