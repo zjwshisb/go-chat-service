@@ -6,10 +6,10 @@ import (
 	"github.com/gorilla/websocket"
 	"net/http"
 	"ws/models"
-	"ws/modules"
 	sHttp "ws/modules/service/http"
 	"ws/modules/service/middleware"
 	"ws/routers"
+	"ws/util"
 )
 
 var (
@@ -48,7 +48,7 @@ func Setup() {
 				Conn: conn,
 				UserId: serverUser.ID,
 				isClose: false,
-				Send: make(chan *modules.Action, 1000),
+				Send: make(chan *util.Action, 1000),
 				closeSignal: make(chan struct{}),
 			}
 			client.start()

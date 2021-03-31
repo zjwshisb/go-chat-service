@@ -1,4 +1,4 @@
-package modules
+package util
 
 import "encoding/json"
 
@@ -9,11 +9,8 @@ type Action struct {
 	Action string `json:"action"`
 }
 
-func (action *Action) Marshal() (b []byte) {
-	b, err := json.Marshal(action)
-	if err != nil {
-		b = nil
-	}
+func (action *Action) Marshal() (b []byte, err error) {
+	b, err = json.Marshal(action)
 	return
 }
 

@@ -32,5 +32,4 @@ func Setup() {
 		Password: config.Redis.Auth, // no password set
 		DB:       0,  // use default DB
 	})
-
 }

@@ -1,14 +1,14 @@
 package models
 
-import "google.golang.org/genproto/googleapis/type/datetime"
 
-type message struct {
-	Id int64
-	UserId int64
-	ServiceId int64
-	Type string
-	content string
-	CreatedAT datetime.DateTime
+type Message struct {
+	Id uint64 `gorm:"primaryKey"`
+	UserId int64 `gorm:"index"`
+	ServiceId int64 `gorm:"index"`
+	Type string `gorm:"size:16"`
+	Content string `gorm:"size:1024"`
+	CreatedAT int
 	ReqId int64
 	IsServer bool
 }
+

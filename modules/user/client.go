@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 	"ws/db"
-	"ws/modules"
+	"ws/util"
 )
 
 type UClient struct {
 	Conn *websocket.Conn
-	Send chan *modules.Action
+	Send chan *util.Action
 	UserId int64
 	isClose bool
 	once sync.Once
@@ -56,12 +56,15 @@ func (c *UClient) SendMsg() {
 	for {
 		select {
 		case action := <-c.Send:
-			err := c.Conn.WriteMessage(websocket.TextMessage, action.Marshal())
-			if err != nil {
-				fmt.Println(err)
-				c.close()
-				goto END
+			msg, err := action.Marshal()
+			if err == nil {
+				err := c.Conn.WriteMessage(websocket.TextMessage, msg)
+				if err != nil {
+					c.close()
+					goto END
+				}
 			}
+
 		}
 	}
 END:

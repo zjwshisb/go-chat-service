@@ -3,6 +3,7 @@ package main
 import (
 	"ws/config"
 	"ws/db"
+	"ws/migrate"
 	"ws/modules"
 	"ws/routers"
 )
@@ -14,5 +15,8 @@ func init()  {
 	modules.Setup()
 }
 func main() {
-	routers.Router.Run(config.Http.Host +":" + config.Http.Port)
+	//routers.Router.Run(config.Http.Host +":" + config.Http.Port)
+	//m := flag.String("m", "m", "模式")
+	//fmt.Println(*m)
+	migrate.Run()
 }

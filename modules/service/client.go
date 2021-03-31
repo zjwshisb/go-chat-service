@@ -8,15 +8,15 @@ import (
 	"sync"
 	"time"
 	"ws/db"
-	"ws/modules"
+	"ws/util"
 )
-
+const MessageKey = "server:%d:message"
 type Client struct {
 	Conn        *websocket.Conn
 	UserId      int64
 	isClose     bool
 	once        sync.Once
-	Send        chan *modules.Action
+	Send        chan *util.Action
 	closeSignal chan struct{}
 }
 
@@ -35,7 +35,6 @@ func (c *Client) start() {
 	go c.SendMsg()
 	go c.getMsg()
 }
-
 func (c *Client) ReadMsg() {
 	var msg = make(chan []byte, 50)
 	for {
@@ -52,7 +51,7 @@ func (c *Client) ReadMsg() {
 			goto END
 		case message := <-msg:
 			var ctx = context.Background()
-			var action *modules.Action
+			var action *util.Action
 			err := action.UnMarshal(message)
 			if err == nil {
 				// todo
@@ -66,10 +65,13 @@ func (c *Client) SendMsg() {
 	for {
 		select {
 		case action := <-c.Send:
-			err := c.Conn.WriteMessage(websocket.TextMessage, action.Marshal())
-			if err != nil {
-				c.close()
-				goto END
+			msg, err := action.Marshal()
+			if err == nil {
+				err := c.Conn.WriteMessage(websocket.TextMessage, msg)
+				if err != nil {
+					c.close()
+					goto END
+				}
 			}
 		case <-c.closeSignal:
 			goto END
@@ -83,7 +85,7 @@ func (c *Client) getMsg() {
 	for {
 		ctx := context.Background()
 		go func() {
-			val, err := db.Redis.BLPop(ctx, time.Second*1, fmt.Sprintf("server:%d:message", c.UserId)).Result()
+			val, err := db.Redis.BLPop(ctx, time.Second * 1, fmt.Sprintf(MessageKey, c.UserId)).Result()
 			if err != redis.Nil {
 				msg <- val[1]
 			} else {
@@ -95,7 +97,7 @@ func (c *Client) getMsg() {
 			goto END
 		case <-errChan:
 		case m := <-msg:
-			action := &modules.Action{}
+			action := &util.Action{}
 			if err := action.UnMarshal([]byte(m)); err != nil {
 				c.Send <- action
 			}
