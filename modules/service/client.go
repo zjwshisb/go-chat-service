@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 	"ws/db"
+	"ws/models"
 	"ws/util"
 )
 const MessageKey = "server:%d:message"
@@ -28,13 +29,31 @@ func (c *Client) close() {
 		H.Logout <- c
 	})
 }
-
+func (c *Client) sendKey() string  {
+	return fmt.Sprintf("server:%d:message", c.UserId)
+}
 func (c *Client) start() {
 	H.Login <- c
 	go c.ReadMsg()
 	go c.SendMsg()
 	go c.getMsg()
 }
+
+func (c *Client) handleReadAction(action util.Action) (err error) {
+	switch action.Action {
+	case "message":
+		msg, err := models.NewFromAction(action)
+		if err == nil {
+			msg.ServiceId = c.UserId
+			msg.IsServer = true
+			db.Db.Save(msg)
+		}
+		receipt := util.NewReceiptAction(action)
+		c.Send<- receipt
+	}
+	return
+}
+
 func (c *Client) ReadMsg() {
 	var msg = make(chan []byte, 50)
 	for {
@@ -50,12 +69,14 @@ func (c *Client) ReadMsg() {
 		case <-c.closeSignal:
 			goto END
 		case message := <-msg:
-			var ctx = context.Background()
-			var action *util.Action
+			var action util.Action
 			err := action.UnMarshal(message)
+			ctx := context.Background()
 			if err == nil {
-				// todo
-				db.Redis.RPush(ctx, fmt.Sprintf("user:%d:message", 1), message)
+				err = c.handleReadAction(action)
+				if err == nil {
+					db.Redis.RPush(ctx, fmt.Sprintf("user:%d:message", 1), message)
+				}
 			}
 		}
 	}
