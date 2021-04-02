@@ -5,11 +5,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"ws/hub"
 	"ws/models"
 	sHttp "ws/modules/service/http"
 	"ws/modules/service/middleware"
 	"ws/routers"
-	"ws/util"
 )
 
 var (
@@ -18,17 +18,9 @@ var (
 			return true
 		},
 	}
-	H *hub
 )
 
 func Setup() {
-	H = &hub{
-		Clients: make(map[int64]*Client),
-		Logout: make(chan *Client, 1000),
-		Login: make(chan *Client, 1000),
-	}
-	go H.run()
-
 	g := routers.Router.Group("/service")
 	{
 		g.POST("/login", sHttp.Login)
@@ -44,15 +36,14 @@ func Setup() {
 			if err != nil {
 				fmt.Println(err)
 			}
-			client := &Client{
-				Conn: conn,
-				UserId: serverUser.ID,
-				isClose: false,
-				Send: make(chan *util.Action, 1000),
-				closeSignal: make(chan struct{}),
+			client := &hub.Client{
+				Conn:        conn,
+				UserId:      serverUser.ID,
+				IsClose:     false,
+				Send:        make(chan *models.Action, 1000),
+				CloseSignal: make(chan struct{}),
 			}
-			client.start()
+			hub.Hub.Server.Login(client)
 		})
 	}
-
 }

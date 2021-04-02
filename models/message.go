@@ -2,8 +2,6 @@ package models
 
 import (
 	"github.com/mitchellh/mapstructure"
-	"time"
-	"ws/util"
 )
 
 type Message struct {
@@ -12,15 +10,13 @@ type Message struct {
 	ServiceId int64 `gorm:"index"`
 	Type string `gorm:"size:16" mapstructure:"type"`
 	Content string `gorm:"size:1024" mapstructure:"content"`
-	CreatedAT int64
+	ReceivedAT int64
+	SendAt int64
 	IsServer bool `gorm:"is_server"`
 }
 
-func NewFromAction(action util.Action) (message *Message,err error) {
+func NewFromAction(action Action) (message *Message,err error) {
 	message = &Message{}
 	err = mapstructure.Decode(action.Data, message)
-	if err == nil {
-		message.CreatedAT = time.Now().Unix()
-	}
 	return
 }

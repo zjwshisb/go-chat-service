@@ -3,6 +3,7 @@ package main
 import (
 	"ws/config"
 	"ws/db"
+	"ws/hub"
 	"ws/modules"
 	"ws/routers"
 )
@@ -12,6 +13,7 @@ func init()  {
 	db.Setup()
 	routers.Setup()
 	modules.Setup()
+	hub.Setup()
 }
 func main() {
 	routers.Router.Run(config.Http.Host +":" + config.Http.Port)

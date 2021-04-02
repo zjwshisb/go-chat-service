@@ -4,8 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"ws/hub"
+	"ws/models"
 	"ws/routers"
-	"ws/util"
 )
 
 var (
@@ -26,14 +27,13 @@ func Setup() {
 			if err != nil {
 				return
 			}
-			clint := &UClient{
+			client := &hub.UClient{
 				Conn: conn,
-				Send: make(chan *util.Action, 1000),
+				Send: make(chan *models.Action, 1000),
 				UserId: 1,
+				CloseSignal: make(chan struct{}),
 			}
-			go clint.GetMsg()
-			go clint.SendMsg()
-			go clint.ReadMsg()
+			hub.Hub.User.Login(client)
 		})
 	}
 
