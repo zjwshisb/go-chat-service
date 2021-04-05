@@ -15,7 +15,7 @@ type Message struct {
 	IsServer bool `gorm:"is_server"`
 }
 
-func NewFromAction(action Action) (message *Message,err error) {
+func NewFromAction(action *Action) (message *Message,err error) {
 	message = &Message{}
 	err = mapstructure.Decode(action.Data, message)
 	return

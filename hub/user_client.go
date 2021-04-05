@@ -14,23 +14,26 @@ type UClient struct {
 	Conn *websocket.Conn
 	Send chan *models.Action
 	UserId int64
-	isClose bool
 	once sync.Once
 	ServerId int64
 	CloseSignal chan struct{}
 	lock sync.RWMutex
 }
-
-func (c *UClient) Run() {
+func (c *UClient) Setup() {
 	ctx := context.Background()
 	cmd := db.Redis.Get(ctx, c.CacheServerIdKey())
 	if ServerId, err := cmd.Int64(); err == nil {
+		c.lock.Lock()
+		defer c.lock.Unlock()
 		c.ServerId = ServerId
 		db.Redis.SetEX(ctx, c.CacheServerIdKey(), ServerId, time.Hour * 24 * 2)
 	}
+}
+func (c *UClient) Run() {
 	go c.getMsg()
 	go c.sendMsg()
 	go c.readMsg()
+	go c.Ping()
 }
 
 func (c *UClient) waitingSendMessageKey() string {
@@ -39,6 +42,20 @@ func (c *UClient) waitingSendMessageKey() string {
 
 func (c *UClient) CacheServerIdKey() string {
 	return fmt.Sprintf("user:%d:server", c.UserId)
+}
+
+func (c *UClient) Ping() {
+	timer := time.NewTicker(time.Second)
+	for {
+		select {
+		case <- timer.C:
+			c.Send<- models.NewPingAction()
+		case <- c.CloseSignal:
+			timer.Stop()
+			goto END
+		}
+	}
+END:
 }
 
 func (c *UClient) setServed(sid int64) error {
@@ -58,7 +75,6 @@ func (c *UClient) setServed(sid int64) error {
 
 func (c *UClient) close() {
 	c.once.Do(func() {
-		c.isClose = false
 		_ = c.Conn.Close()
 		close(c.CloseSignal)
 		Hub.User.Logout(c)
@@ -76,31 +92,32 @@ func (c *UClient) readMsg() {
 			c.close()
 			break
 		}
-		var act models.Action
+		var act = &models.Action{}
 		err = act.UnMarshal(msgStr)
 		if err == nil {
 			switch act.Action {
 			case "message":
 				msg, err := models.NewFromAction(act)
 				if err == nil {
-					act.Message = msg
+					act.Data["id"] = msg.Id
 					msg.ServiceId = c.UserId
 					msg.IsServer = false
 					msg.ReceivedAT = time.Now().Unix()
 					if c.ServerId == 0 { // 用户没有被客服接入时
 						msg.ServiceId = 0
+						db.Db.Save(msg)
 					} else { // 用户被客服接入
 						msg.ServiceId = c.ServerId
+						db.Db.Save(msg)
+						act.Message = msg
 						sClient, err := Hub.Server.GetClient(c.ServerId)
 						if err == nil {
-							sClient.Send<- &act
+							sClient.Send<- act
 						}
 					}
-					db.Db.Save(msg)
 					receipt := models.NewReceiptAction(act)
 					c.Send<- receipt
 				}
-
 			}
 		}
 
@@ -115,9 +132,6 @@ func (c *UClient) getMsg() {
 		} else {
 			fmt.Println(val)
 		}
-		if c.isClose {
-			break
-		}
 	}
 }
 func (c *UClient) sendMsg() {
@@ -130,6 +144,10 @@ func (c *UClient) sendMsg() {
 				if err != nil {
 					c.close()
 					goto END
+				}
+				if act.Message != nil {
+					act.Message.SendAt = time.Now().Unix()
+					db.Db.Save(act.Message)
 				}
 			}
 		case <-c.CloseSignal:

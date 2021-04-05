@@ -16,19 +16,39 @@ const MessageKey = "server:%d:message"
 type Client struct {
 	Conn        *websocket.Conn
 	UserId      int64
-	IsClose     bool
 	Once        sync.Once
 	Send        chan *models.Action
 	CloseSignal chan struct{}
+}
+
+
+func (c *Client) Run() {
+	go c.ReadMsg()
+	go c.SendMsg()
+	go c.getMsg()
+	go c.ping()
 }
 
 func (c *Client) close() {
 	c.Once.Do(func() {
 		_ = c.Conn.Close()
 		c.CloseSignal <- struct{}{}
-		c.IsClose = true
 		Hub.Server.Logout(c)
 	})
+}
+
+func (c *Client) ping(){
+	ticker := time.NewTicker(time.Second * 30)
+	for {
+		select {
+		case <-ticker.C:
+			c.Send<- models.NewPingAction()
+		case <-c.CloseSignal:
+			ticker.Stop()
+			goto END
+		}
+	}
+	END:
 }
 
 func (c *Client) sendKey() string  {
@@ -39,11 +59,6 @@ func (c *Client) serverUserIdsKey() string {
 	return fmt.Sprintf("server:%d:user-ids", c.UserId)
 }
 
-func (c *Client) Start() {
-	go c.ReadMsg()
-	go c.SendMsg()
-	go c.getMsg()
-}
 
 func (c *Client) accept(uid int64) {
 	uClient, err := Hub.User.getClient(uid)
@@ -67,7 +82,7 @@ func (c *Client) accept(uid int64) {
 	}
 }
 
-func (c *Client) handleReadAction(a models.Action) (err error) {
+func (c *Client) handleReadAction(a *models.Action) (err error) {
 	switch a.Action {
 	case "message":
 		msg, err := models.NewFromAction(a)
@@ -82,7 +97,7 @@ func (c *Client) handleReadAction(a models.Action) (err error) {
 				c.Send<- receipt
 				UClient, err := Hub.User.getClient(msg.UserId)
 				if err == nil { // 在线
-					UClient.Send<- &a
+					UClient.Send<- a
 				}
 			}
 
@@ -93,7 +108,7 @@ func (c *Client) handleReadAction(a models.Action) (err error) {
 func (c *Client) handleSendAction(act models.Action) {
 	if act.Message != nil {
 		act.Message.SendAt = time.Now().Unix()
-		db.Db.Save(act)
+		db.Db.Save(act.Message)
 	}
 }
 func (c *Client) ReadMsg() {
@@ -112,7 +127,7 @@ func (c *Client) ReadMsg() {
 		case <-c.CloseSignal:
 			goto END
 		case msgStr := <-msg:
-			var act models.Action
+			var act = &models.Action{}
 			err := act.UnMarshal(msgStr)
 			if err == nil {
 				err = c.handleReadAction(act)

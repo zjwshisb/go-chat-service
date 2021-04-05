@@ -7,13 +7,21 @@ type hub struct {
 	User *userHub
 }
 
+const (
+	serverLogin = "LOGIN"
+	serverLogout = "LOGOUT"
+	userLogin = "USER_LOGIN"
+	userLogout = "USER_LOGOUT"
+)
+
 func Setup()  {
 	server := &serverHub{
 		Clients: make(map[int64]*Client),
 	}
+	server.setup()
 	user := &userHub{
 		Clients: make(map[int64]*UClient),
-		Waiting: make([]*UClient, 0),
+		Waiting: make(map[int64]*UClient),
 	}
 	Hub = &hub{
 		Server: server,

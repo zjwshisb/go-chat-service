@@ -3,6 +3,7 @@ package user
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"math/rand"
 	"net/http"
 	"ws/hub"
 	"ws/models"
@@ -30,9 +31,11 @@ func Setup() {
 			client := &hub.UClient{
 				Conn: conn,
 				Send: make(chan *models.Action, 1000),
-				UserId: 1,
+				UserId: rand.Int63n(100),
 				CloseSignal: make(chan struct{}),
+				ServerId:  0,
 			}
+			client.Setup()
 			hub.Hub.User.Login(client)
 		})
 	}
