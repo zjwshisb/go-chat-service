@@ -19,6 +19,11 @@ type ServerUser struct {
 	DeletedAt *time.Time `json:"deleted_at"`
 	Username  string     `gorm:"string;size:255" json:"username"`
 	Password  string     `gorm:"string;size:255" json:"-"`
+	ApiToken string 	`gogm:"string;size:255"  json:"-"`
+}
+
+func (user *ServerUser) GetPrimaryKey() int64 {
+	return user.ID
 }
 
 func (user *ServerUser) Login() (token string) {

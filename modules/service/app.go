@@ -24,6 +24,7 @@ func Setup() {
 	g := routers.Router.Group("/service")
 	{
 		g.POST("/login", sHttp.Login)
+
 		auth := g.Group("/")
 
 		auth.Use(middleware.Authenticate)

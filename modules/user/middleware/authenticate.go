@@ -1,13 +1,15 @@
 package middleware
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"ws/models"
 )
 
 func Authenticate(c *gin.Context) {
-	user := &models.ServerUser{}
+	user := &models.User{}
 	user.Auth(c)
+	fmt.Println(user)
 	if user.ID != 0 {
 		c.Set("user", user)
 	} else {

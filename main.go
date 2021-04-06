@@ -19,5 +19,5 @@ func main() {
 	routers.Router.Run(config.Http.Host +":" + config.Http.Port)
 	//m := flag.String("m", "m", "模式")
 	//fmt.Println(*m)
-	//migrate.Run()
+	//migrate.Seed()
 }
