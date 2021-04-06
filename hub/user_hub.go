@@ -1,7 +1,6 @@
 package hub
 
 import (
-	"errors"
 	"sync"
 	"ws/util"
 )
@@ -13,13 +12,10 @@ type userHub struct {
 	util.Hook
 }
 
-func (hub *userHub) getClient(id int64) (client *UClient,err error) {
+func (hub *userHub) getClient(id int64) (client *UClient,ok bool) {
 	hub.Lock.RLock()
 	defer hub.Lock.RUnlock()
-	client, ok := hub.Clients[id]
-	if !ok {
-		err = errors.New("client not exists")
-	}
+	client, ok = hub.Clients[id]
 	return
 }
 func (hub *userHub) Logout(client *UClient) {

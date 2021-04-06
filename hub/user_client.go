@@ -30,7 +30,6 @@ func (c *UClient) Setup() {
 	}
 }
 func (c *UClient) Run() {
-	go c.getMsg()
 	go c.sendMsg()
 	go c.readMsg()
 	go c.Ping()
@@ -110,8 +109,8 @@ func (c *UClient) readMsg() {
 						msg.ServiceId = c.ServerId
 						db.Db.Save(msg)
 						act.Message = msg
-						sClient, err := Hub.Server.GetClient(c.ServerId)
-						if err == nil {
+						sClient, ok := Hub.Server.GetClient(c.ServerId)
+						if ok {
 							sClient.Send<- act
 						}
 					}
@@ -123,17 +122,7 @@ func (c *UClient) readMsg() {
 
 	}
 }
-func (c *UClient) getMsg() {
-	var ctx = context.Background()
-	for {
-		val ,err := db.Redis.BLPop(ctx, time.Second * 10, fmt.Sprintf("user:%d:message", c.UserId)).Result()
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			fmt.Println(val)
-		}
-	}
-}
+
 func (c *UClient) sendMsg() {
 	for {
 		select {
