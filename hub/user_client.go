@@ -1,7 +1,5 @@
 package hub
-
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
@@ -10,23 +8,23 @@ import (
 	"ws/db"
 	"ws/models"
 )
+
 type UClient struct {
 	Conn *websocket.Conn
 	Send chan *models.Action
-	UserId int64
+	User *models.User
 	once sync.Once
 	ServerId int64
 	CloseSignal chan struct{}
 	lock sync.RWMutex
+	CreatedAt int64
 }
 func (c *UClient) Setup() {
-	ctx := context.Background()
-	cmd := db.Redis.Get(ctx, c.CacheServerIdKey())
-	if ServerId, err := cmd.Int64(); err == nil {
+	sid := c.User.GetLastServerId()
+	if sid > 0 {
 		c.lock.Lock()
 		defer c.lock.Unlock()
-		c.ServerId = ServerId
-		db.Redis.SetEX(ctx, c.CacheServerIdKey(), ServerId, time.Hour * 24 * 2)
+		c.ServerId = sid
 	}
 }
 func (c *UClient) Run() {
@@ -36,12 +34,9 @@ func (c *UClient) Run() {
 }
 
 func (c *UClient) waitingSendMessageKey() string {
-	return fmt.Sprintf("user:%d:waiting-send-messages", c.UserId)
+	return fmt.Sprintf("user:%d:waiting-send-messages", c.User.ID)
 }
 
-func (c *UClient) CacheServerIdKey() string {
-	return fmt.Sprintf("user:%d:server", c.UserId)
-}
 
 func (c *UClient) Ping() {
 	timer := time.NewTicker(time.Second)
@@ -58,18 +53,7 @@ END:
 }
 
 func (c *UClient) setServed(sid int64) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	if c.ServerId > 0 {
-		return errors.New("user is accept")
-	}
-	ctx := context.Background()
-	cmd := db.Redis.SetEX(ctx, c.CacheServerIdKey(), sid, time.Hour * 24 * 2)
-	if cmd.Err() != nil {
-		return errors.New("persist error")
-	}
-	c.ServerId = sid
-	return nil
+	return errors.New("t")
 }
 
 func (c *UClient) close() {
@@ -80,7 +64,7 @@ func (c *UClient) close() {
 	})
 }
 func (c *UClient) getWaitingMsg() (messages []models.Message) {
-	db.Db.Where("user_id = ?" , c.UserId).Where("service_id", 0).Find(&messages)
+	db.Db.Where("user_id = ?" , c.User.ID).Where("service_id", 0).Find(&messages)
 	return
 }
 
@@ -99,7 +83,7 @@ func (c *UClient) readMsg() {
 				msg, err := models.NewFromAction(act)
 				if err == nil {
 					act.Data["id"] = msg.Id
-					msg.ServiceId = c.UserId
+					msg.ServiceId = c.User.ID
 					msg.IsServer = false
 					msg.ReceivedAT = time.Now().Unix()
 					if c.ServerId == 0 { // 用户没有被客服接入时

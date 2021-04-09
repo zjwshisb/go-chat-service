@@ -1,7 +1,7 @@
 package hub
 
 import (
-	"fmt"
+	"sort"
 	"sync"
 	"ws/db"
 	"ws/models"
@@ -27,7 +27,7 @@ func (hub *serverHub) setup() {
 			if uClient.ServerId > 0 {
 				hub.noticeUserOnline(uClient)
 			} else {
-				hub.broadcastUserWaitingCount()
+				hub.broadcastWaitingUsers()
 			}
 		}
 	})
@@ -37,7 +37,7 @@ func (hub *serverHub) setup() {
 			if uClient.ServerId > 0 {
 				hub.noticeUserOffOnline(uClient)
 			} else {
-				hub.broadcastUserWaitingCount()
+				hub.broadcastWaitingUsers()
 			}
 		}
 	})
@@ -48,7 +48,7 @@ func (hub *serverHub) Logout(c *Client) {
 		hub.Lock.Unlock()
 		hub.TriggerHook(serverLogin, c)
 	}()
-	delete(hub.Clients, c.UserId)
+	delete(hub.Clients, c.User.ID)
 }
 
 func (hub *serverHub) Login(c *Client) {
@@ -57,7 +57,10 @@ func (hub *serverHub) Login(c *Client) {
 		hub.Lock.Unlock()
 		hub.TriggerHook(serverLogout)
 	}()
-	hub.Clients[c.UserId] = c
+	if old, ok := hub.Clients[c.User.ID]; ok{
+		old.close()
+	}
+	hub.Clients[c.User.ID] = c
 	c.Run()
 }
 
@@ -70,24 +73,36 @@ func (hub *serverHub) GetClient(id int64) (client *Client, ok bool) {
 func (hub *serverHub) noticeUserOnline(uClient *UClient) {
 	serverClient, ok := hub.GetClient(uClient.ServerId)
 	if ok {
-		serverClient.Send <- models.NewUserOnlineAction(uClient.UserId)
+		serverClient.Send <- models.NewUserOnlineAction(uClient.User.ID)
 	}
 }
 func (hub *serverHub) noticeUserOffOnline(uClient *UClient) {
 	serverClient, ok := hub.GetClient(uClient.ServerId)
 	if ok {
-		serverClient.Send <- models.NewUserOfflineAction(uClient.UserId)
+		serverClient.Send <- models.NewUserOfflineAction(uClient.User.ID)
 	}
 }
 
 // 广播待接入的客户数量
-func (hub *serverHub) broadcastUserWaitingCount() {
-	Hub.User.WaitingLock.RLock()
-	defer Hub.User.WaitingLock.RUnlock()
-	count := len(Hub.User.Waiting)
-	act := models.NewUserWaitingCountAction(count)
+func (hub *serverHub) broadcastWaitingUsers() {
+	Hub.User.Lock.RLock()
+	defer Hub.User.Lock.RUnlock()
+	d := make([]map[string]interface{}, 0)
+	s := make([]*UClient, 0)
+	for _, c := range Hub.User.Waiting {
+		s = append(s, c)
+	}
+	sort.Slice(s, func(i, j int) bool {
+		return s[i].CreatedAt < s[j].CreatedAt
+	})
+	for _, client := range s {
+		i := make(map[string]interface{})
+		i["id"] = client.User.ID
+		i["username"] = client.User.Username
+		d = append(d, i)
+	}
+	act := models.NewWaitingUsersAction(d)
 	for _, client := range hub.Clients {
-		fmt.Println(client)
 		client.Send <- act
 	}
 }
@@ -100,7 +115,7 @@ func (hub *serverHub) broadcastOnlineList() {
 		var ids []int64
 		var broadcastData []interface{}
 		for _, c := range hub.Clients {
-			ids = append(ids, c.UserId)
+			ids = append(ids, c.User.ID)
 		}
 		var users = make([]models.ServerUser, 100)
 		db.Db.Find(&users, ids)

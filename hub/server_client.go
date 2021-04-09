@@ -13,7 +13,7 @@ import (
 
 type Client struct {
 	Conn        *websocket.Conn
-	UserId      int64
+	User      *models.ServerUser
 	Once        sync.Once
 	Send        chan *models.Action
 	CloseSignal chan struct{}
@@ -21,6 +21,29 @@ type Client struct {
 
 
 func (c *Client) Run() {
+	users := c.User.GetChatUsers()
+	resp := make([]map[string]interface{}, 0)
+	for _, user := range users {
+		newItem := make(map[string]interface{})
+		newItem["disabled"] = false
+		newItem["online"] = false
+		newItem["messages"] = make([]int, 0)
+		for k, v := range user {
+			newItem[k] = v
+		}
+		if newItem["last_chat_time"].(int64) < time.Now().Unix() - 24 * 60 * 60 * 2 {
+			newItem["disabled"] = true
+		}
+		if _, ok := Hub.User.getClient(newItem["id"].(int64)); ok {
+			newItem["online"] = true
+		}
+		if _, ok := Hub.User.getWaitClient(newItem["id"].(int64)); ok {
+			newItem["online"] = true
+		}
+		resp = append(resp, newItem)
+	}
+	userAction := models.NewServerUserListAction(resp)
+	c.Send<- userAction
 	go c.ReadMsg()
 	go c.SendMsg()
 	go c.ping()
@@ -49,24 +72,19 @@ func (c *Client) ping(){
 }
 
 func (c *Client) serverUserIdsKey() string {
-	return fmt.Sprintf("server:%d:user-ids", c.UserId)
-}
-func (c *Client) getUserList() {
-	//ctx := context.Background()
-	//cmd := db.Redis.SMembers(ctx, c.serverUserIdsKey())
-	//ids := cmd.Val()
+	return fmt.Sprintf("server:%d:user-ids", c.User.ID)
 }
 
 func (c *Client) accept(uid int64) {
 	uClient, ok := Hub.User.getClient(uid)
 	if ok {
-		if err := uClient.setServed(c.UserId); err == nil {
-			uClient.ServerId = c.UserId
+		if err := uClient.setServed(c.User.ID); err == nil {
+			uClient.ServerId = c.User.ID
 			messages := uClient.getWaitingMsg()
 			ctx := context.Background()
 			db.Redis.SAdd(ctx, c.serverUserIdsKey())
 			for _, msg := range messages {
-				msg.ServiceId = c.UserId
+				msg.ServiceId = c.User.ID
 				db.Db.Save(msg)
 				data := make(map[string]interface{})
 				mapstructure.Decode(messages, data)
@@ -85,7 +103,7 @@ func (c *Client) handleReadAction(a *models.Action) (err error) {
 		msg, err := models.NewFromAction(a)
 		if err == nil {
 			if msg.UserId > 0 {
-				msg.ServiceId = c.UserId
+				msg.ServiceId = c.User.ID
 				msg.IsServer = true
 				msg.ReceivedAT = time.Now().Unix()
 				db.Db.Save(msg)
@@ -102,10 +120,11 @@ func (c *Client) handleReadAction(a *models.Action) (err error) {
 	}
 	return
 }
-func (c *Client) handleSendAction(act models.Action) {
+func (c *Client) onSendSuccess(act models.Action) {
 	if act.Message != nil {
 		act.Message.SendAt = time.Now().Unix()
 		db.Db.Save(act.Message)
+		c.User.UpdateChatUser(act.Message.UserId)
 	}
 }
 func (c *Client) ReadMsg() {
@@ -141,7 +160,7 @@ func (c *Client) SendMsg() {
 			if err == nil {
 				err := c.Conn.WriteMessage(websocket.TextMessage, msgStr)
 				if err == nil { // 发送成功
-					c.handleSendAction(*act)
+					c.onSendSuccess(*act)
 				} else {
 					c.close()
 					goto END

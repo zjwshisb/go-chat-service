@@ -39,7 +39,7 @@ func Setup() {
 			}
 			client := &hub.Client{
 				Conn:        conn,
-				UserId:      serverUser.ID,
+				User:      serverUser,
 				Send:        make(chan *models.Action, 1000),
 				CloseSignal: make(chan struct{}),
 			}

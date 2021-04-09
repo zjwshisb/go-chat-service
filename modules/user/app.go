@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"time"
 	"ws/hub"
 	"ws/models"
 	sHttp "ws/modules/user/http"
@@ -36,8 +37,9 @@ func Setup() {
 			client := &hub.UClient{
 				Conn: conn,
 				Send: make(chan *models.Action, 1000),
-				UserId: user.ID,
+				User: user,
 				CloseSignal: make(chan struct{}),
+				CreatedAt: time.Now().Unix(),
 			}
 			client.Setup()
 			hub.Hub.User.Login(client)

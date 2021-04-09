@@ -1,12 +1,16 @@
 package models
 
 import (
+	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"time"
 	"ws/db"
 	"ws/util"
 )
-
+const (
+	User2ServerHashKey = "user-to-server"
+)
 type UserAuthenticate interface {
 	Delivery()
 	Auth()
@@ -37,4 +41,21 @@ func (user *User) Logout() {
 
 func (user *User) Auth(c *gin.Context) {
 	db.Db.Where("api_token= ?", util.GetToken(c)).Limit(1).First(user)
+}
+func (user *User) GetLastServerId() int64 {
+	if user.ID == 0 {
+		return 0
+	}
+	ctx := context.Background()
+	cmd := db.Redis.HGet(ctx, User2ServerHashKey, string(user.ID))
+	if sid, err := cmd.Int64(); err == nil {
+		// 判断是否超时
+		cmd := db.Redis.ZScore(ctx, fmt.Sprintf(serverChatUserKey, sid), string(user.ID))
+		t := int64(cmd.Val())
+		if t <= (time.Now().Unix() - 3600 * 24 * 2) {
+			return 0
+		}
+		return sid
+	}
+	return 0
 }

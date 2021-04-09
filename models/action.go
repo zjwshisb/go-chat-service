@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	messageAction = "message"
 	receiptAction = "receipt"
 	pingAction = "ping"
 	userOnLineAction = "user-online"
 	userOffLineAction = "user-offline"
-	userWaitingCountAction = "user-waiting-count"
+	userWaitingCountAction = "waiting-users"
+	serverUserListAction = "server-user-list"
 )
 
 type Action struct {
@@ -35,7 +35,16 @@ func (action *Action) UnMarshal(b []byte) (err error) {
 	err =  json.Unmarshal(b, action)
 	return
 }
-
+func NewServerUserListAction(d []map[string]interface{}) *Action {
+	data := make(map[string]interface{})
+	data["list"] = d
+	return &Action{
+		ReqId: util.CreateReqId(),
+		Action: serverUserListAction,
+		Time: time.Now().Unix(),
+		Data: data,
+	}
+}
 func NewReceiptAction(action *Action) *Action {
 	data := make(map[string]interface{})
 	userId, ok := action.Data["user_id"]
@@ -76,9 +85,9 @@ func NewPingAction()  *Action {
 		Time: time.Now().Unix(),
 	}
 }
-func NewUserWaitingCountAction(count int) *Action {
+func NewWaitingUsersAction(i interface{}) *Action {
 	data := make(map[string]interface{})
-	data["count"] = count
+	data["list"] = i
 	return &Action{
 		ReqId: util.CreateReqId(),
 		Action: userWaitingCountAction,
