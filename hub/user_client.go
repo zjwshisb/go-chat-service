@@ -1,7 +1,6 @@
 package hub
+
 import (
-	"errors"
-	"fmt"
 	"github.com/gorilla/websocket"
 	"sync"
 	"time"
@@ -33,11 +32,6 @@ func (c *UClient) Run() {
 	go c.Ping()
 }
 
-func (c *UClient) waitingSendMessageKey() string {
-	return fmt.Sprintf("user:%d:waiting-send-messages", c.User.ID)
-}
-
-
 func (c *UClient) Ping() {
 	timer := time.NewTicker(time.Second)
 	for {
@@ -52,8 +46,13 @@ func (c *UClient) Ping() {
 END:
 }
 
-func (c *UClient) setServed(sid int64) error {
-	return errors.New("t")
+func (c *UClient) setServerId(sid int64) {
+	c.lock.Lock()
+	err := c.User.SetServerId(sid)
+	if err == nil {
+		c.ServerId = sid
+	}
+	c.lock.Unlock()
 }
 
 func (c *UClient) close() {
@@ -63,10 +62,7 @@ func (c *UClient) close() {
 		Hub.User.Logout(c)
 	})
 }
-func (c *UClient) getWaitingMsg() (messages []models.Message) {
-	db.Db.Where("user_id = ?" , c.User.ID).Where("service_id", 0).Find(&messages)
-	return
-}
+
 
 func (c *UClient) readMsg() {
 	for {

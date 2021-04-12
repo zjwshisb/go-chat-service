@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"time"
@@ -26,6 +27,12 @@ type User struct {
 	ApiToken  string     `gogm:"string;size:255"  json:"-"`
 }
 
+// 未发送给客服的消息
+func (user *Uer) GetUnSendMsg() (messages []Message) {
+	db.Db.Where("user_id = ?" , user.ID).Where("service_id", 0).Find(&messages)
+	return
+}
+
 func (user *User) Login() (token string) {
 	token = util.RandomStr(32)
 	db.Db.Model(user).Update("api_token", token)
@@ -42,6 +49,16 @@ func (user *User) Logout() {
 func (user *User) Auth(c *gin.Context) {
 	db.Db.Where("api_token= ?", util.GetToken(c)).Limit(1).First(user)
 }
+// 设置客服对象id
+func (user *User) SetServerId(sid int64) error {
+	if user.ID == 0 {
+		return errors.New("user not exist")
+	}
+	ctx := context.Background()
+	cmd := db.Redis.HSet(ctx, User2ServerHashKey, string(user.ID), sid)
+	return cmd.Err()
+}
+// 获取最后一个客服id
 func (user *User) GetLastServerId() int64 {
 	if user.ID == 0 {
 		return 0
