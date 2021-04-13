@@ -16,12 +16,18 @@ const (
 
 func Setup()  {
 	server := &serverHub{
-		Clients: make(map[int64]*Client),
+		serverClientMap: serverClientMap{
+			Clients: make(map[int64]*Client),
+		},
 	}
 	server.setup()
 	user := &userHub{
-		Clients: make(map[int64]*UClient),
-		Waiting: make(map[int64]*UClient),
+		WaitingClient: &UserClientMap{
+			Clients: make(map[int64]*UClient),
+		},
+		AcceptedClient: &UserClientMap{
+			Clients: make(map[int64]*UClient),
+		},
 	}
 	Hub = &hub{
 		Server: server,

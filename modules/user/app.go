@@ -5,8 +5,10 @@ import (
 	"github.com/gorilla/websocket"
 	"net/http"
 	"time"
+	"ws/action"
 	"ws/hub"
 	"ws/models"
+	http2 "ws/modules/service/http"
 	sHttp "ws/modules/user/http"
 	"ws/modules/user/middleware"
 	"ws/routers"
@@ -26,7 +28,7 @@ func Setup() {
 		g.POST("/login", sHttp.Login)
 		auth := g.Group("/")
 		auth.Use(middleware.Authenticate)
-
+		auth.POST("/ws/accept", http2.Accept)
 		auth.GET("/ws", func(c *gin.Context) {
 			conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 			if err != nil {
@@ -36,7 +38,7 @@ func Setup() {
 			user := u.(*models.User)
 			client := &hub.UClient{
 				Conn: conn,
-				Send: make(chan *models.Action, 1000),
+				Send: make(chan *action.Action, 1000),
 				User: user,
 				CloseSignal: make(chan struct{}),
 				CreatedAt: time.Now().Unix(),

@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"ws/action"
 	"ws/hub"
 	"ws/models"
 	sHttp "ws/modules/service/http"
@@ -40,10 +41,12 @@ func Setup() {
 			client := &hub.Client{
 				Conn:        conn,
 				User:      serverUser,
-				Send:        make(chan *models.Action, 1000),
+				Send:        make(chan *action.Action, 1000),
 				CloseSignal: make(chan struct{}),
 			}
 			hub.Hub.Server.Login(client)
 		})
+		auth.POST("/ws/chat-user", sHttp.Accept)
+		auth.DELETE("/ws/chat-user/:id", sHttp.Remove)
 	}
 }

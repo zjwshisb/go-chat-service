@@ -4,13 +4,14 @@ import (
 	"github.com/gorilla/websocket"
 	"sync"
 	"time"
+	"ws/action"
 	"ws/db"
 	"ws/models"
 )
 
 type UClient struct {
 	Conn *websocket.Conn
-	Send chan *models.Action
+	Send chan *action.Action
 	User *models.User
 	once sync.Once
 	ServerId int64
@@ -37,7 +38,7 @@ func (c *UClient) Ping() {
 	for {
 		select {
 		case <- timer.C:
-			c.Send<- models.NewPingAction()
+			c.Send<- action.NewPing()
 		case <- c.CloseSignal:
 			timer.Stop()
 			goto END
@@ -46,13 +47,14 @@ func (c *UClient) Ping() {
 END:
 }
 
-func (c *UClient) setServerId(sid int64) {
+func (c *UClient) SetServerId(sid int64) (err error) {
 	c.lock.Lock()
-	err := c.User.SetServerId(sid)
+	err = c.User.SetServerId(sid)
 	if err == nil {
 		c.ServerId = sid
 	}
 	c.lock.Unlock()
+	return
 }
 
 func (c *UClient) close() {
@@ -71,17 +73,17 @@ func (c *UClient) readMsg() {
 			c.close()
 			break
 		}
-		var act = &models.Action{}
+		var act = &action.Action{}
 		err = act.UnMarshal(msgStr)
 		if err == nil {
 			switch act.Action {
 			case "message":
-				msg, err := models.NewFromAction(act)
+				msg, err := act.GetMessage()
+				act.Data["user_id"] = c.User.ID
 				if err == nil {
-					act.Data["id"] = msg.Id
-					msg.ServiceId = c.User.ID
 					msg.IsServer = false
 					msg.ReceivedAT = time.Now().Unix()
+					msg.UserId = c.User.ID
 					if c.ServerId == 0 { // 用户没有被客服接入时
 						msg.ServiceId = 0
 						db.Db.Save(msg)
@@ -94,7 +96,7 @@ func (c *UClient) readMsg() {
 							sClient.Send<- act
 						}
 					}
-					receipt := models.NewReceiptAction(act)
+					receipt := action.NewReceipt(act)
 					c.Send<- receipt
 				}
 			}

@@ -31,6 +31,16 @@ type ServerUser struct {
 	ApiToken string 	`gogm:"string;size:255"  json:"-"`
 }
 
+type ChatUser struct {
+	ID        int64      `json:"id"`
+	Username  string     `json:"username"`
+	LastChatTime int64  `json:"last_chat_time"`
+	Disabled bool `json:"disabled"`
+	Online bool `json:"online"`
+	Messages []interface{} `json:"messages"`
+	Unread int `json:"unread"`
+}
+
 func (user *ServerUser) GetPrimaryKey() int64 {
 	return user.ID
 }
@@ -54,10 +64,10 @@ func (user *ServerUser) FindByName(username string) () {
 func (user *ServerUser) chatUsersKey() string {
 	return fmt.Sprintf(serverChatUserKey, user.ID)
 }
-// 获取交谈过的用户
-func (user *ServerUser) GetChatUsers() (users []map[string]interface{}) {
+// 获取聊天过的用户
+func (user *ServerUser) GetChatUsers() (users []*ChatUser) {
 	ctx := context.Background()
-	cmd := db.Redis.ZRangeWithScores(ctx, user.chatUsersKey(), 0, -1)
+	cmd := db.Redis.ZRevRangeWithScores(ctx, user.chatUsersKey(), 0, -1)
 	if cmd.Err() != nil {
 		return
 	}
@@ -72,7 +82,7 @@ func (user *ServerUser) GetChatUsers() (users []map[string]interface{}) {
 	if len(uids) == 0 {
 		return
 	}
-	usesModel := make([]User, 100)
+	usesModel := make([]User, 0)
 	db.Db.Find(&usesModel, uids)
 	for _, v := range cmd.Val() {
 		member := v.Member.(string)
@@ -80,10 +90,12 @@ func (user *ServerUser) GetChatUsers() (users []map[string]interface{}) {
 		if err == nil {
 			for _, u := range usesModel {
 				if u.ID == id {
-					item := make(map[string]interface{})
-					item["id"] = id
-					item["username"] = u.Username
-					item["last_chat_time"] = int64(v.Score)
+					item := &ChatUser{
+						ID: id,
+						Username: u.Username,
+						LastChatTime: int64(v.Score),
+						Messages: make([]interface{}, 0),
+					}
 					users = append(users, item)
 					break
 				}
@@ -92,7 +104,13 @@ func (user *ServerUser) GetChatUsers() (users []map[string]interface{}) {
 	}
 	return
 }
-// 更新用户最后交谈时间
+// 移除聊天用户
+func (user *ServerUser) RemoveChatUser(uid int64) error {
+	ctx := context.Background()
+	cmd := db.Redis.ZRem(ctx,  user.chatUsersKey(), uid)
+	return cmd.Err()
+}
+// 更新聊天用户
 func (user *ServerUser) UpdateChatUser(uid int64) error {
 	ctx := context.Background()
 	m := &redis.Z{Member: uid, Score: float64(time.Now().Unix())}

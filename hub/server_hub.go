@@ -3,24 +3,49 @@ package hub
 import (
 	"sort"
 	"sync"
-	"ws/db"
-	"ws/models"
+	"ws/action"
 	"ws/util"
 )
 
-type serverHub struct {
-	Clients map[int64]*Client
+type serverClientMap struct {
+	Clients map[int64] *Client
 	Lock    sync.RWMutex
-	util.Hook
 }
-
+// 获取客户端
+func (m *serverClientMap) GetClient(id int64) (client *Client, ok bool) {
+	m.Lock.RLock()
+	defer m.Lock.RUnlock()
+	client, ok = m.Clients[id]
+	return
+}
+// 移除客户端
+func (m *serverClientMap) RemoveClient(id int64) {
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+	delete(m.Clients, id)
+}
+// 注册客户端
+func (m *serverClientMap) AddClient(client *Client) ()  {
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+	m.Clients[client.User.ID] = client
+}
+// 所有客户端
+func (m *serverClientMap) getAllClient() []*Client {
+	m.Lock.RLock()
+	defer m.Lock.RUnlock()
+	r := make([]*Client, 0)
+	for _, c := range m.Clients {
+		r = append(r, c)
+	}
+	return r
+}
+type serverHub struct {
+	util.Hook
+	serverClientMap
+}
+// 初始化
 func (hub *serverHub) setup() {
-	hub.RegisterHook(serverLogin, func(i ...interface{}) {
-		hub.broadcastOnlineList()
-	})
-	hub.RegisterHook(serverLogout, func(i ...interface{}) {
-		hub.broadcastOnlineList()
-	})
 	hub.RegisterHook(userLogin, func(i ...interface{}) {
 		uClient, ok := i[0].(*UClient)
 		if ok {
@@ -42,54 +67,47 @@ func (hub *serverHub) setup() {
 		}
 	})
 }
-func (hub *serverHub) Logout(c *Client) {
-	hub.Lock.Lock()
-	defer func() {
-		hub.Lock.Unlock()
-		hub.TriggerHook(serverLogin, c)
-	}()
-	delete(hub.Clients, c.User.ID)
+// 发送小心
+func (hub *serverHub) SendAction(a  *action.Action, clients ...*Client) {
+	for _,c := range clients {
+		c.Send<- a
+	}
 }
-
+// 登出客户端
+func (hub *serverHub) Logout(c *Client) {
+	hub.RemoveClient(c.User.ID)
+	hub.TriggerHook(serverLogout, c)
+}
+// 登入客户端
 func (hub *serverHub) Login(c *Client) {
-	hub.Lock.Lock()
-	defer func() {
-		hub.Lock.Unlock()
-		hub.TriggerHook(serverLogout)
-	}()
-	if old, ok := hub.Clients[c.User.ID]; ok{
+	if old, ok := hub.GetClient(c.User.ID); ok{
 		old.close()
 	}
-	hub.Clients[c.User.ID] = c
-	c.Run()
+	hub.AddClient(c)
+	c.Send<- hub.getWaitingUsersAction()
+	go c.Run()
+	hub.TriggerHook(serverLogin, c)
 }
 
-func (hub *serverHub) GetClient(id int64) (client *Client, ok bool) {
-	hub.Lock.RLock()
-	defer hub.Lock.RUnlock()
-	client, ok = hub.Clients[id]
-	return
-}
 func (hub *serverHub) noticeUserOnline(uClient *UClient) {
 	serverClient, ok := hub.GetClient(uClient.ServerId)
 	if ok {
-		serverClient.Send <- models.NewUserOnlineAction(uClient.User.ID)
+		act := action.NewUserOnline(uClient.User.ID)
+		hub.SendAction(act, serverClient)
 	}
 }
 func (hub *serverHub) noticeUserOffOnline(uClient *UClient) {
 	serverClient, ok := hub.GetClient(uClient.ServerId)
 	if ok {
-		serverClient.Send <- models.NewUserOfflineAction(uClient.User.ID)
+		act := action.NewUserOffline(uClient.User.ID)
+		hub.SendAction(act, serverClient)
 	}
 }
-
-// 广播待接入的客户数量
-func (hub *serverHub) broadcastWaitingUsers() {
-	Hub.User.Lock.RLock()
-	defer Hub.User.Lock.RUnlock()
+// 待接入用户
+func (hub *serverHub) getWaitingUsersAction() *action.Action {
 	d := make([]map[string]interface{}, 0)
 	s := make([]*UClient, 0)
-	for _, c := range Hub.User.Waiting {
+	for _, c := range Hub.User.WaitingClient.Clients {
 		s = append(s, c)
 	}
 	sort.Slice(s, func(i, j int) bool {
@@ -101,34 +119,13 @@ func (hub *serverHub) broadcastWaitingUsers() {
 		i["username"] = client.User.Username
 		d = append(d, i)
 	}
-	act := models.NewWaitingUsersAction(d)
-	for _, client := range hub.Clients {
-		client.Send <- act
-	}
+	act := action.NewWaitingUsers(d)
+	return act
 }
 
-// 广播在线客服列表
-func (hub *serverHub) broadcastOnlineList() {
-	defer hub.Lock.RUnlock()
-	hub.Lock.RLock()
-	if len(hub.Clients) > 0 {
-		var ids []int64
-		var broadcastData []interface{}
-		for _, c := range hub.Clients {
-			ids = append(ids, c.User.ID)
-		}
-		var users = make([]models.ServerUser, 100)
-		db.Db.Find(&users, ids)
-		for _, v := range users {
-			broadcastData = append(broadcastData, map[string]interface{}{
-				"user_id":  v.ID,
-				"username": v.Username,
-			})
-		}
-		for _, c := range hub.Clients {
-			c.Send <- models.NewServiceOnlineListAction(map[string]interface{}{
-				"list": broadcastData,
-			})
-		}
-	}
+// 广播待接入的客户数量
+func (hub *serverHub) broadcastWaitingUsers() {
+	act := hub.getWaitingUsersAction()
+	client := hub.getAllClient()
+	hub.SendAction(act, client...)
 }

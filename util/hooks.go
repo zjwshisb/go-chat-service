@@ -4,12 +4,12 @@ import "sync"
 
 type Hook struct {
 	Hooks map[string] []func(i ...interface{})
-	Lock sync.RWMutex
+	lock sync.RWMutex
 }
 
 func (hook *Hook) RegisterHook(name string, callback func(i ...interface{}))  {
-	hook.Lock.Lock()
-	defer hook.Lock.Unlock()
+	hook.lock.Lock()
+	defer hook.lock.Unlock()
 	if hook.Hooks == nil {
 		hook.Hooks = make(map[string][]func(i ...interface{}))
 	}
@@ -25,8 +25,8 @@ func (hook *Hook) RegisterHook(name string, callback func(i ...interface{}))  {
 }
 
 func (hook *Hook) TriggerHook(name string, payload ...interface{})  {
-	hook.Lock.RLock()
-	defer hook.Lock.RUnlock()
+	hook.lock.RLock()
+	defer hook.lock.RUnlock()
 	callbacks, ok := hook.Hooks[name]
 	if ok {
 		for _, callback := range callbacks {

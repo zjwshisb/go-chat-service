@@ -1,12 +1,11 @@
 package hub
 
 import (
-	"context"
-	"fmt"
+	"errors"
 	"github.com/gorilla/websocket"
-	"github.com/mitchellh/mapstructure"
 	"sync"
 	"time"
+	"ws/action"
 	"ws/db"
 	"ws/models"
 )
@@ -15,39 +14,35 @@ type Client struct {
 	Conn        *websocket.Conn
 	User      *models.ServerUser
 	Once        sync.Once
-	Send        chan *models.Action
+	Send        chan *action.Action
 	CloseSignal chan struct{}
 }
 
 
 func (c *Client) Run() {
-	users := c.User.GetChatUsers()
-	resp := make([]map[string]interface{}, 0)
-	for _, user := range users {
-		newItem := make(map[string]interface{})
-		newItem["disabled"] = false
-		newItem["online"] = false
-		newItem["messages"] = make([]int, 0)
-		for k, v := range user {
-			newItem[k] = v
-		}
-		if newItem["last_chat_time"].(int64) < time.Now().Unix() - 24 * 60 * 60 * 2 {
-			newItem["disabled"] = true
-		}
-		if _, ok := Hub.User.getClient(newItem["id"].(int64)); ok {
-			newItem["online"] = true
-		}
-		if _, ok := Hub.User.getWaitClient(newItem["id"].(int64)); ok {
-			newItem["online"] = true
-		}
-		resp = append(resp, newItem)
-	}
-	userAction := models.NewServerUserListAction(resp)
-	c.Send<- userAction
+	c.SendUserListAction()
 	go c.ReadMsg()
 	go c.SendMsg()
 	go c.ping()
 }
+
+func (c *Client) SendUserListAction()  {
+	users := c.User.GetChatUsers()
+	for _, user := range users {
+		if user.LastChatTime < time.Now().Unix() - 24 * 60 * 60 * 2 {
+			user.Disabled = true
+		}
+		if _, ok := Hub.User.AcceptedClient.GetClient(user.ID); ok {
+			user.Online = true
+		}
+		if _, ok := Hub.User.WaitingClient.GetClient(user.ID); ok {
+			user.Online = true
+		}
+	}
+	userAction := action.NewServerUserList(users)
+	c.Send<- userAction
+}
+
 
 func (c *Client) close() {
 	c.Once.Do(func() {
@@ -62,7 +57,7 @@ func (c *Client) ping(){
 	for {
 		select {
 		case <-ticker.C:
-			c.Send<- models.NewPingAction()
+			c.Send<- action.NewPing()
 		case <-c.CloseSignal:
 			ticker.Stop()
 			goto END
@@ -71,36 +66,26 @@ func (c *Client) ping(){
 	END:
 }
 
-func (c *Client) serverUserIdsKey() string {
-	return fmt.Sprintf("server:%d:user-ids", c.User.ID)
-}
-
-func (c *Client) accept(uid int64) {
-	uClient, ok := Hub.User.getClient(uid)
-	if ok {
-		if err := uClient.setServed(c.User.ID); err == nil {
-			uClient.ServerId = c.User.ID
-			messages := uClient.getWaitingMsg()
-			ctx := context.Background()
-			db.Redis.SAdd(ctx, c.serverUserIdsKey())
-			for _, msg := range messages {
-				msg.ServiceId = c.User.ID
-				db.Db.Save(msg)
-				data := make(map[string]interface{})
-				mapstructure.Decode(messages, data)
-				c.Send<- &models.Action{
-					Data: data,
-					Action: "message",
-				}
-			}
-		}
+// 接入用户
+func (c *Client) Accept(uid int64) (user *models.User, err error){
+	uClient, exist := Hub.User.WaitingClient.GetClient(uid)
+	if !exist {
+		err = errors.New("用户端已离线")
+		return
 	}
+	if err := uClient.SetServerId(c.User.ID); err == nil {
+		Hub.User.Change2accept(uClient)
+		c.User.UpdateChatUser(uid)
+		Hub.Server.broadcastWaitingUsers()
+		user = uClient.User
+	}
+	return
 }
 
-func (c *Client) handleReadAction(a *models.Action) (err error) {
+func (c *Client) handleReadAction(a *action.Action) (err error) {
 	switch a.Action {
 	case "message":
-		msg, err := models.NewFromAction(a)
+		msg, err := a.GetMessage()
 		if err == nil {
 			if msg.UserId > 0 {
 				msg.ServiceId = c.User.ID
@@ -108,9 +93,9 @@ func (c *Client) handleReadAction(a *models.Action) (err error) {
 				msg.ReceivedAT = time.Now().Unix()
 				db.Db.Save(msg)
 				a.Message = msg
-				receipt := models.NewReceiptAction(a)
+				receipt := action.NewReceipt(a)
 				c.Send<- receipt
-				UClient, ok := Hub.User.getClient(msg.UserId)
+				UClient, ok := Hub.User.AcceptedClient.GetClient(msg.UserId)
 				if ok { // 在线
 					UClient.Send<- a
 				}
@@ -120,7 +105,7 @@ func (c *Client) handleReadAction(a *models.Action) (err error) {
 	}
 	return
 }
-func (c *Client) onSendSuccess(act models.Action) {
+func (c *Client) onSendSuccess(act action.Action) {
 	if act.Message != nil {
 		act.Message.SendAt = time.Now().Unix()
 		db.Db.Save(act.Message)
@@ -132,7 +117,6 @@ func (c *Client) ReadMsg() {
 	for {
 		go func() {
 			_, message, err := c.Conn.ReadMessage()
-			fmt.Println(message)
 			if err != nil {
 				c.close()
 			} else {
@@ -143,7 +127,7 @@ func (c *Client) ReadMsg() {
 		case <-c.CloseSignal:
 			goto END
 		case msgStr := <-msg:
-			var act = &models.Action{}
+			var act = &action.Action{}
 			err := act.UnMarshal(msgStr)
 			if err == nil {
 				err = c.handleReadAction(act)

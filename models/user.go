@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
+	"strconv"
 	"time"
 	"ws/db"
 	"ws/util"
@@ -28,7 +30,7 @@ type User struct {
 }
 
 // 未发送给客服的消息
-func (user *Uer) GetUnSendMsg() (messages []Message) {
+func (user *User) GetUnSendMsg() (messages []Message) {
 	db.Db.Where("user_id = ?" , user.ID).Where("service_id", 0).Find(&messages)
 	return
 }
@@ -55,7 +57,8 @@ func (user *User) SetServerId(sid int64) error {
 		return errors.New("user not exist")
 	}
 	ctx := context.Background()
-	cmd := db.Redis.HSet(ctx, User2ServerHashKey, string(user.ID), sid)
+	db.Redis.HSet(ctx, User2ServerHashKey, "test", sid)
+	cmd := db.Redis.HSet(ctx, User2ServerHashKey, user.ID, sid)
 	return cmd.Err()
 }
 // 获取最后一个客服id
@@ -64,10 +67,14 @@ func (user *User) GetLastServerId() int64 {
 		return 0
 	}
 	ctx := context.Background()
-	cmd := db.Redis.HGet(ctx, User2ServerHashKey, string(user.ID))
+	key := strconv.FormatInt(user.ID, 10)
+	cmd := db.Redis.HGet(ctx, User2ServerHashKey, key)
 	if sid, err := cmd.Int64(); err == nil {
-		// 判断是否超时
-		cmd := db.Redis.ZScore(ctx, fmt.Sprintf(serverChatUserKey, sid), string(user.ID))
+		// 判断是否超时||已被客服端移除
+		cmd := db.Redis.ZScore(ctx, fmt.Sprintf(serverChatUserKey, sid), key)
+		if cmd.Err() == redis.Nil {
+			return 0
+		}
 		t := int64(cmd.Val())
 		if t <= (time.Now().Unix() - 3600 * 24 * 2) {
 			return 0
