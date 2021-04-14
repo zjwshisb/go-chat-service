@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"strconv"
 	"time"
-	"ws/action"
 	"ws/db"
 	"ws/hub"
 	"ws/models"
@@ -31,10 +30,10 @@ func Accept(c *gin.Context) {
 			return
 		}
 		unreadMsg := user.GetUnSendMsg()
-		messages := make([]interface{}, 0)
+		messages := make([]models.Message, 0)
 		for _, m := range unreadMsg {
 			db.Db.Model(&m).Update("service_id", serverUser.ID)
-			messages = append(messages, *action.NewMessage(m))
+			messages = append(messages, m)
 		}
 		chatUser := models.ChatUser{
 			ID: user.ID,

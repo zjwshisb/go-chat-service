@@ -9,5 +9,7 @@ type Message struct {
 	ReceivedAT int64 `json:"received_at"`
 	SendAt int64 `json:"-"`
 	IsServer bool `gorm:"is_server" json:"is_server"`
+	ReqId int64 `gorm:"index" mapstructure:"req_id" json:"req_id"`
+	IsSuccess bool `gorm:"-" json:"is_success"`
 }
 

@@ -78,11 +78,11 @@ func (c *UClient) readMsg() {
 		if err == nil {
 			switch act.Action {
 			case "message":
-				msg, err := act.GetMessage()
 				act.Data["user_id"] = c.User.ID
+				msg, err := act.GetMessage()
 				if err == nil {
 					msg.IsServer = false
-					msg.ReceivedAT = time.Now().Unix()
+					msg.ReceivedAT = time.Now().UnixNano() / 1e6
 					msg.UserId = c.User.ID
 					if c.ServerId == 0 { // 用户没有被客服接入时
 						msg.ServiceId = 0
@@ -93,15 +93,14 @@ func (c *UClient) readMsg() {
 						act.Message = msg
 						sClient, ok := Hub.Server.GetClient(c.ServerId)
 						if ok {
-							sClient.Send<- act
+							Hub.Server.SendAction(act, sClient)
 						}
 					}
-					receipt := action.NewReceipt(act)
+					receipt, _ := action.NewReceipt(act)
 					c.Send<- receipt
 				}
 			}
 		}
-
 	}
 }
 

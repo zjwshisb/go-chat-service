@@ -67,7 +67,7 @@ func (hub *serverHub) setup() {
 		}
 	})
 }
-// 发送小心
+// 发送消息
 func (hub *serverHub) SendAction(a  *action.Action, clients ...*Client) {
 	for _,c := range clients {
 		c.Send<- a

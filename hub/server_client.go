@@ -12,12 +12,11 @@ import (
 
 type Client struct {
 	Conn        *websocket.Conn
-	User      *models.ServerUser
+	User        *models.ServerUser
 	Once        sync.Once
 	Send        chan *action.Action
 	CloseSignal chan struct{}
 }
-
 
 func (c *Client) Run() {
 	c.SendUserListAction()
@@ -26,10 +25,20 @@ func (c *Client) Run() {
 	go c.ping()
 }
 
-func (c *Client) SendUserListAction()  {
+func (c *Client) SendUserListAction() {
 	users := c.User.GetChatUsers()
+	// 获取一周内的聊天记录
+	last := time.Now().Unix() - 7*24*60
+	var messages []models.Message
+	db.Db.Where("received_at > ?", last).Where("service_id = ?", c.User.ID).Find(&messages)
 	for _, user := range users {
-		if user.LastChatTime < time.Now().Unix() - 24 * 60 * 60 * 2 {
+		for _, m := range messages {
+			m.IsSuccess = true
+			if m.UserId == user.ID {
+				user.Messages = append(user.Messages, m)
+			}
+		}
+		if (time.Now().Unix() - user.LastChatTime) < - models.ChatUserValidDuration {
 			user.Disabled = true
 		}
 		if _, ok := Hub.User.AcceptedClient.GetClient(user.ID); ok {
@@ -40,9 +49,8 @@ func (c *Client) SendUserListAction()  {
 		}
 	}
 	userAction := action.NewServerUserList(users)
-	c.Send<- userAction
+	c.Send <- userAction
 }
-
 
 func (c *Client) close() {
 	c.Once.Do(func() {
@@ -52,22 +60,22 @@ func (c *Client) close() {
 	})
 }
 
-func (c *Client) ping(){
+func (c *Client) ping() {
 	ticker := time.NewTicker(time.Second * 10)
 	for {
 		select {
 		case <-ticker.C:
-			c.Send<- action.NewPing()
+			c.Send <- action.NewPing()
 		case <-c.CloseSignal:
 			ticker.Stop()
 			goto END
 		}
 	}
-	END:
+END:
 }
 
 // 接入用户
-func (c *Client) Accept(uid int64) (user *models.User, err error){
+func (c *Client) Accept(uid int64) (user *models.User, err error) {
 	uClient, exist := Hub.User.WaitingClient.GetClient(uid)
 	if !exist {
 		err = errors.New("用户端已离线")
@@ -82,26 +90,27 @@ func (c *Client) Accept(uid int64) (user *models.User, err error){
 	return
 }
 
-func (c *Client) handleReadAction(a *action.Action) (err error) {
-	switch a.Action {
+func (c *Client) onMessage(act *action.Action) {
+	switch act.Action {
 	case "message":
-		msg, err := a.GetMessage()
+		msg, err := act.GetMessage()
 		if err == nil {
-			if msg.UserId > 0 {
+			if msg.UserId > 0 && len(msg.Content) != 0 && c.User.CheckChatUserLegal(msg.UserId) {
 				msg.ServiceId = c.User.ID
 				msg.IsServer = true
-				msg.ReceivedAT = time.Now().Unix()
+				msg.ReceivedAT = time.Now().UnixNano() / 1e6
 				db.Db.Save(msg)
-				a.Message = msg
-				receipt := action.NewReceipt(a)
-				c.Send<- receipt
+				act.Message = msg
+				receipt, _ := action.NewReceipt(act)
+				c.Send <- receipt
 				UClient, ok := Hub.User.AcceptedClient.GetClient(msg.UserId)
 				if ok { // 在线
-					UClient.Send<- a
+					UClient.Send <- act
 				}
 			}
 
 		}
+		break
 	}
 	return
 }
@@ -130,7 +139,7 @@ func (c *Client) ReadMsg() {
 			var act = &action.Action{}
 			err := act.UnMarshal(msgStr)
 			if err == nil {
-				err = c.handleReadAction(act)
+				c.onMessage(act)
 			}
 		}
 	}

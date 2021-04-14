@@ -13,6 +13,7 @@ import (
 
 const (
 	serverChatUserKey = "server-user:%d:chat-user"
+	ChatUserValidDuration = 2 * 24 * 60 * 60
 )
 
 type ServerUserAuthenticate interface {
@@ -37,7 +38,7 @@ type ChatUser struct {
 	LastChatTime int64  `json:"last_chat_time"`
 	Disabled bool `json:"disabled"`
 	Online bool `json:"online"`
-	Messages []interface{} `json:"messages"`
+	Messages []Message `json:"messages"`
 	Unread int `json:"unread"`
 }
 
@@ -63,6 +64,20 @@ func (user *ServerUser) FindByName(username string) () {
 }
 func (user *ServerUser) chatUsersKey() string {
 	return fmt.Sprintf(serverChatUserKey, user.ID)
+}
+// 检查聊天对象是否合法
+func (user *ServerUser) CheckChatUserLegal(uid int64) bool {
+	ctx := context.Background()
+	cmd := db.Redis.ZScore(ctx, user.chatUsersKey(), strconv.FormatInt(uid , 10))
+	if cmd.Err() == redis.Nil {
+		return false
+	}
+	score := cmd.Val()
+	t := int64(score)
+	if (time.Now().Unix() - t) <= ChatUserValidDuration {
+		return true
+	}
+	return false
 }
 // 获取聊天过的用户
 func (user *ServerUser) GetChatUsers() (users []*ChatUser) {
@@ -94,7 +109,7 @@ func (user *ServerUser) GetChatUsers() (users []*ChatUser) {
 						ID: id,
 						Username: u.Username,
 						LastChatTime: int64(v.Score),
-						Messages: make([]interface{}, 0),
+						Messages: make([]Message, 0),
 					}
 					users = append(users, item)
 					break
