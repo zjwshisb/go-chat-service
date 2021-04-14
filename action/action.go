@@ -103,11 +103,5 @@ func NewWaitingUsers(i interface{}) *Action {
 		Data: data,
 	}
 }
-func NewServiceOnlineList(data map[string]interface{}) *Action {
-	return &Action{
-		Action: "service_online_list",
-		Time: time.Now().Unix(),
-		Data: data,
-	}
-}
+
 

@@ -11,5 +11,6 @@ type Message struct {
 	IsServer bool `gorm:"is_server" json:"is_server"`
 	ReqId int64 `gorm:"index" mapstructure:"req_id" json:"req_id"`
 	IsSuccess bool `gorm:"-" json:"is_success"`
+	IsRead bool `gorm:"bool" json:"is_read"`
 }
 

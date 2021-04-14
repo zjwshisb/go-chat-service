@@ -55,7 +55,7 @@ func (c *Client) SendUserListAction() {
 func (c *Client) close() {
 	c.Once.Do(func() {
 		_ = c.Conn.Close()
-		c.CloseSignal <- struct{}{}
+		close(c.CloseSignal)
 		Hub.Server.Logout(c)
 	})
 }

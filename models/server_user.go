@@ -29,7 +29,7 @@ type ServerUser struct {
 	DeletedAt *time.Time `json:"deleted_at"`
 	Username  string     `gorm:"string;size:255" json:"username"`
 	Password  string     `gorm:"string;size:255" json:"-"`
-	ApiToken string 	`gogm:"string;size:255"  json:"-"`
+	ApiToken string 	`gorm:"string;size:255"  json:"-"`
 }
 
 type ChatUser struct {
@@ -59,6 +59,7 @@ func (user *ServerUser) Logout()  {
 func (user *ServerUser) Auth(c *gin.Context) {
 	db.Db.Where("api_token= ?", util.GetToken(c)).Limit(1).First(user)
 }
+
 func (user *ServerUser) FindByName(username string) () {
 	db.Db.Where("username= ?", username).Limit(1).First(user)
 }
@@ -81,6 +82,8 @@ func (user *ServerUser) CheckChatUserLegal(uid int64) bool {
 }
 // 获取聊天过的用户
 func (user *ServerUser) GetChatUsers() (users []*ChatUser) {
+	// 防止json后为null
+	users = make([]*ChatUser, 0)
 	ctx := context.Background()
 	cmd := db.Redis.ZRevRangeWithScores(ctx, user.chatUsersKey(), 0, -1)
 	if cmd.Err() != nil {
