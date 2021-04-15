@@ -21,12 +21,12 @@ func Accept(c *gin.Context) {
 		serverUser := ui.(*models.ServerUser)
 		sClient, exist := hub.Hub.Server.GetClient(serverUser.ID)
 		if !exist {
-			c.JSON(200, util.RespFail("请先登录", 500))
+			util.RespFail(c,"请先登录", 500)
 			return
 		}
 		user, err := sClient.Accept(form.Uid)
 		if err != nil {
-			c.JSON(200, util.RespFail(err.Error(), 500))
+			util.RespFail(c, err.Error(), 500)
 			return
 		}
 		unreadMsg := user.GetUnSendMsg()
@@ -44,9 +44,9 @@ func Accept(c *gin.Context) {
 			Unread: len(unreadMsg),
 			LastChatTime: time.Now().Unix(),
 		}
-		c.JSON(200, util.RespSuccess(chatUser))
+		util.RespSuccess(c, chatUser)
 	} else {
-		c.JSON(200, util.RespFail("测试", 500))
+		util.RespValidateFail(c , "验证不通过")
 	}
 }
 
@@ -63,5 +63,5 @@ func Remove(c *gin.Context) {
 			}
 		}
 	}
-	c.JSON(200, util.RespSuccess(nil))
+	util.RespSuccess(c, nil)
 }

@@ -3,12 +3,13 @@ package http
 import (
 	"github.com/gin-gonic/gin"
 	"ws/models"
+	"ws/util"
 )
 
 func Me(c *gin.Context) {
 	ui, _ := c.Get("user")
 	user := ui.(*models.ServerUser)
-	c.JSON(200, gin.H{
+	util.RespSuccess(c , gin.H{
 		"username": user.Username,
 		"id": user.ID,
 	})

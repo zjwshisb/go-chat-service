@@ -1,36 +1,27 @@
 package util
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+)
 
-func RespSuccess(data interface{}, other ...map[string]interface{}) gin.H {
-	resp := gin.H{
+func RespSuccess(c *gin.Context, data interface{}) {
+	c.JSON(200, gin.H{
 		"data": data,
 		"success": true,
 		"code": 0,
-	}
-	if len(other) > 0 {
-		for _, m:= range other {
-			for k, v := range m{
-				resp[k] = v
-			}
-		}
-	}
-
-	return resp
+	})
 }
-
-func RespFail(message string, code int,other ...map[string]interface{}) gin.H {
-	resp := gin.H{
-		"message": message,
+func RespValidateFail(c *gin.Context, msg interface{}) {
+	c.JSON(422, gin.H{
+		"message": msg,
 		"success": false,
-		"code": code,
-	}
-	if len(other) > 0 {
-		for _, m:= range other {
-			for k, v := range m{
-				resp[k] = v
-			}
-		}
-	}
-	return resp
+	})
 }
+func RespFail(c *gin.Context, msg interface{} , code int) {
+	c.JSON(200, gin.H{
+		"success": false,
+		"code":code,
+		"message": msg,
+	})
+}
+

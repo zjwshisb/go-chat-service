@@ -23,11 +23,11 @@ func Login(c *gin.Context) {
 	user.FindByName(form.Username)
 	if user.ID !=  0 {
 		if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.Password)) == nil {
-			c.JSON(200, util.RespSuccess(gin.H{
+			util.RespSuccess(c, gin.H{
 				"token": user.Login(),
-			}))
+			})
 			return
 		}
 	}
-	c.JSON(200, util.RespFail("账号密码错误", 1))
+	util.RespFail(c, "账号密码错误", 500)
 }

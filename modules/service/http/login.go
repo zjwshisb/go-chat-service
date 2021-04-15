@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"ws/models"
@@ -9,25 +8,26 @@ import (
 )
 
 type loginForm struct {
-	Username string
-	Password string
+	Username string `form:"username" binding:"required"`
+	Password string `form:"password" binding:"required"`
 }
 
 func Login(c *gin.Context) {
 	form := &loginForm{}
-	err := c.Bind(&form)
+	err := c.ShouldBind(form)
 	if err != nil {
-		fmt.Println(err)
+		util.RespValidateFail(c, "表单验证失败")
+		return
 	}
 	user := &models.ServerUser{}
 	user.FindByName(form.Username)
 	if user.ID !=  0 {
 		if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.Password)) == nil {
-			c.JSON(200, util.RespSuccess(gin.H{
+			util.RespSuccess(c, gin.H{
 				"token": user.Login(),
-			}))
+			})
 			return
 		}
 	}
-	c.JSON(200, util.RespFail("账号密码错误", 1))
+	util.RespValidateFail(c, "账号密码错误")
 }
