@@ -88,7 +88,7 @@ func (hub *serverHub) Login(c *Client) {
 	go c.Run()
 	hub.TriggerHook(serverLogin, c)
 }
-
+// 通知用户上线
 func (hub *serverHub) noticeUserOnline(uClient *UClient) {
 	serverClient, ok := hub.GetClient(uClient.ServerId)
 	if ok {
@@ -96,6 +96,7 @@ func (hub *serverHub) noticeUserOnline(uClient *UClient) {
 		hub.SendAction(act, serverClient)
 	}
 }
+// 通知用户下线
 func (hub *serverHub) noticeUserOffOnline(uClient *UClient) {
 	serverClient, ok := hub.GetClient(uClient.ServerId)
 	if ok {
@@ -122,7 +123,6 @@ func (hub *serverHub) getWaitingUsersAction() *action.Action {
 	act := action.NewWaitingUsers(d)
 	return act
 }
-
 // 广播待接入的客户数量
 func (hub *serverHub) broadcastWaitingUsers() {
 	act := hub.getWaitingUsersAction()

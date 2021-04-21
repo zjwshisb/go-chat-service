@@ -30,11 +30,11 @@ func (c *UClient) Setup() {
 func (c *UClient) Run() {
 	go c.sendMsg()
 	go c.readMsg()
-	go c.Ping()
+	go c.ping()
 }
 
-func (c *UClient) Ping() {
-	timer := time.NewTicker(time.Second)
+func (c *UClient) ping() {
+	timer := time.NewTicker(time.Second * 10)
 	for {
 		select {
 		case <- timer.C:
@@ -46,7 +46,7 @@ func (c *UClient) Ping() {
 	}
 END:
 }
-
+// 设置客服id
 func (c *UClient) SetServerId(sid int64) (err error) {
 	c.lock.Lock()
 	err = c.User.SetServerId(sid)
@@ -56,7 +56,15 @@ func (c *UClient) SetServerId(sid int64) (err error) {
 	c.lock.Unlock()
 	return
 }
-
+// 移除客服id
+func (c *UClient) RemoveServerId (){
+	c.lock.Lock()
+	_ = c.User.RemoveServerId()
+	c.ServerId = 0
+	c.lock.Unlock()
+	return
+}
+// 关闭
 func (c *UClient) close() {
 	c.once.Do(func() {
 		_ = c.Conn.Close()
@@ -64,7 +72,6 @@ func (c *UClient) close() {
 		Hub.User.Logout(c)
 	})
 }
-
 
 func (c *UClient) readMsg() {
 	for {
@@ -82,7 +89,7 @@ func (c *UClient) readMsg() {
 				msg, err := act.GetMessage()
 				if err == nil {
 					msg.IsServer = false
-					msg.ReceivedAT = time.Now().UnixNano() / 1e6
+					msg.ReceivedAT = time.Now().Unix()
 					msg.UserId = c.User.ID
 					if c.ServerId == 0 { // 用户没有被客服接入时
 						msg.ServiceId = 0
@@ -115,7 +122,7 @@ func (c *UClient) sendMsg() {
 					c.close()
 					goto END
 				}
-				if act.Message != nil {
+				if act.Action == action.MessageAction && act.Message != nil {
 					act.Message.SendAt = time.Now().Unix()
 					db.Db.Save(act.Message)
 				}

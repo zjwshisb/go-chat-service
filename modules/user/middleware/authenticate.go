@@ -9,7 +9,7 @@ import (
 func Authenticate(c *gin.Context) {
 	user := &models.User{}
 	user.Auth(c)
-	fmt.Println(user)
+	fmt.Println(user.ID)
 	if user.ID != 0 {
 		c.Set("user", user)
 	} else {

@@ -26,6 +26,9 @@ type Action struct {
 }
 
 func (action *Action) Marshal() (b []byte, err error) {
+	if action.Action == PingAction {
+		return []byte(""), nil
+	}
 	b, err = json.Marshal(action)
 	return
 }
@@ -45,6 +48,7 @@ func (action *Action) GetMessage() (message *models.Message,err error)  {
 	return
 
 }
+
 func NewServerUserList(d []*models.ChatUser) *Action {
 	data := make(map[string]interface{})
 	data["list"] = d

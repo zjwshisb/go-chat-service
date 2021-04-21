@@ -41,17 +41,11 @@ type ChatUser struct {
 	Messages []Message `json:"messages"`
 	Unread int `json:"unread"`
 }
-
-func (user *ServerUser) GetPrimaryKey() int64 {
-	return user.ID
-}
-
 func (user *ServerUser) Login() (token string) {
 	token = util.RandomStr(32)
 	db.Db.Model(user).Update("api_token", token)
 	return
 }
-
 func (user *ServerUser) Logout()  {
 	db.Db.Model(user).Update("api_token", "")
 }

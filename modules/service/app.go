@@ -46,7 +46,8 @@ func Setup() {
 			}
 			hub.Hub.Server.Login(client)
 		})
-		auth.POST("/ws/chat-user", sHttp.Accept)
-		auth.DELETE("/ws/chat-user/:id", sHttp.Remove)
+		auth.POST("/ws/chat-user", sHttp.AcceptUser)
+		auth.POST("/ws/read-all", sHttp.ReadAll)
+		auth.DELETE("/ws/chat-user/:id", sHttp.RemoveUser)
 	}
 }

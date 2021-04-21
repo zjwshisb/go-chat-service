@@ -57,8 +57,13 @@ func (user *User) SetServerId(sid int64) error {
 		return errors.New("user not exist")
 	}
 	ctx := context.Background()
-	db.Redis.HSet(ctx, User2ServerHashKey, "test", sid)
 	cmd := db.Redis.HSet(ctx, User2ServerHashKey, user.ID, sid)
+	return cmd.Err()
+}
+// 清除客服对象id
+func (user *User) RemoveServerId() error {
+	ctx := context.Background()
+	cmd := db.Redis.HDel(ctx, User2ServerHashKey, strconv.FormatInt(user.ID, 10))
 	return cmd.Err()
 }
 // 获取最后一个客服id

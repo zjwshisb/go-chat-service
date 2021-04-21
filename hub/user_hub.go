@@ -5,7 +5,7 @@ import (
 	"ws/util"
 )
 type UserClientMap struct {
-	Clients map[int64]*UClient // 已接入的客户端
+	Clients map[int64]*UClient // 客户端map
 	lock sync.RWMutex
 }
 
@@ -35,7 +35,6 @@ func (m *UserClientMap) GetAllClient() (s []*UClient){
 	}
 	return r
 }
-
 
 type userHub struct {
 	AcceptedClient *UserClientMap
