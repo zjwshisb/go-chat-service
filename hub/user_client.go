@@ -86,6 +86,7 @@ func (c *UClient) readMsg() {
 			switch act.Action {
 			case "message":
 				act.Data["user_id"] = c.User.ID
+				act.Data["avatar"] = ""
 				msg, err := act.GetMessage()
 				if err == nil {
 					msg.IsServer = false

@@ -24,4 +24,8 @@ func RespFail(c *gin.Context, msg interface{} , code int) {
 		"message": msg,
 	})
 }
-
+func RespError(c *gin.Context, msg interface{}){
+	c.JSON(500, gin.H{
+		"message": msg,
+	})
+}

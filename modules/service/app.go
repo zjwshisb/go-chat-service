@@ -29,7 +29,11 @@ func Setup() {
 		auth := g.Group("/")
 
 		auth.Use(middleware.Authenticate)
-		auth.GET("me", sHttp.Me)
+		auth.GET("/me", sHttp.Me)
+		auth.POST("/me/avatar", sHttp.Avatar)
+		auth.POST("/ws/chat-user", sHttp.AcceptUser)
+		auth.POST("/ws/read-all", sHttp.ReadAll)
+		auth.DELETE("/ws/chat-user/:id", sHttp.RemoveUser)
 
 		auth.GET("/ws", func(c *gin.Context) {
 			u, _ := c.Get("user")
@@ -46,8 +50,6 @@ func Setup() {
 			}
 			hub.Hub.Server.Login(client)
 		})
-		auth.POST("/ws/chat-user", sHttp.AcceptUser)
-		auth.POST("/ws/read-all", sHttp.ReadAll)
-		auth.DELETE("/ws/chat-user/:id", sHttp.RemoveUser)
+
 	}
 }

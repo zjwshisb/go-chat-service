@@ -30,6 +30,7 @@ type ServerUser struct {
 	Username  string     `gorm:"string;size:255" json:"username"`
 	Password  string     `gorm:"string;size:255" json:"-"`
 	ApiToken string 	`gorm:"string;size:255"  json:"-"`
+	Avatar string 		`gorm:"string;size:512" json:"avatar"`
 }
 
 type ChatUser struct {
@@ -40,6 +41,7 @@ type ChatUser struct {
 	Online bool `json:"online"`
 	Messages []Message `json:"messages"`
 	Unread int `json:"unread"`
+
 }
 func (user *ServerUser) Login() (token string) {
 	token = util.RandomStr(32)
@@ -76,7 +78,6 @@ func (user *ServerUser) CheckChatUserLegal(uid int64) bool {
 }
 // 获取聊天过的用户
 func (user *ServerUser) GetChatUsers() (users []*ChatUser) {
-	// 防止json后为null
 	users = make([]*ChatUser, 0)
 	ctx := context.Background()
 	cmd := db.Redis.ZRevRangeWithScores(ctx, user.chatUsersKey(), 0, -1)

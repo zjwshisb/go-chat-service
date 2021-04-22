@@ -101,6 +101,7 @@ func (c *Client) onMessage(act *action.Action) {
 				msg.ReceivedAT = time.Now().Unix()
 				db.Db.Save(msg)
 				act.Message = msg
+				act.Data["avatar"] = c.User.Avatar
 				receipt, _ := action.NewReceipt(act)
 				c.Send <- receipt
 				UClient, ok := Hub.User.AcceptedClient.GetClient(msg.UserId)
