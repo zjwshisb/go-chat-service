@@ -14,5 +14,6 @@ func Setup() {
 		AllowHeaders:     []string{"*"},
 		AllowCredentials: true,
 	}))
-	Router.Static("/storage","./storage")
+	Router.Static("/assets","./storage/assets")
+	Router.Static("/public", "./storage/public")
 }

@@ -4,6 +4,9 @@ import (
 	"gopkg.in/ini.v1"
 	"log"
 )
+type app struct {
+	Url string
+}
 
 type mysql struct {
 	Username string
@@ -15,6 +18,7 @@ type mysql struct {
 type http struct {
 	Port string
 	Host string
+	Url string
 }
 type redis struct {
 	Addr string
@@ -31,13 +35,16 @@ func Setup() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	Mysql = &mysql{}
 	err = cfg.Section("Mysql").MapTo(Mysql)
 	Http = &http{}
+
 	err = cfg.Section("Http").MapTo(Http)
 	Redis = &redis{}
 	err = cfg.Section("Redis").MapTo(Redis)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 }

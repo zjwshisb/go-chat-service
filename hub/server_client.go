@@ -30,15 +30,22 @@ func (c *Client) SendUserListAction() {
 	// 获取一周内的聊天记录
 	last := time.Now().Unix() - 2 * 24 * 60 * 60 * 1000
 	var messages []models.Message
-	db.Db.Where("received_at > ?", last).Where("service_id = ?", c.User.ID).Find(&messages)
+	db.Db.Preload("ServerUser").
+		Preload("User").
+		Where("received_at > ?", last).
+		Where("service_id = ?", c.User.ID).
+		Find(&messages)
 	for _, user := range users {
 		for _, m := range messages {
 			if m.UserId == user.ID {
 				m.IsSuccess = true
-				user.Messages = append(user.Messages, m)
+				if m.IsServer {
+					m.Avatar = m.ServerUser.GetAvatarUrl()
+				}
 				if !m.IsRead && !m.IsServer{
 					user.Unread += 1
 				}
+				user.Messages = append(user.Messages, m)
 			}
 		}
 		user.Disabled = !c.User.CheckChatUserLegal(user.ID)
@@ -90,9 +97,9 @@ func (c *Client) Accept(uid int64) (user *models.User, err error) {
 	}
 	return
 }
-func (c *Client) onMessage(act *action.Action) {
+func (c *Client) handleMessage(act *action.Action) {
 	switch act.Action {
-	case "message":
+	case action.SendMessageAction:
 		msg, err := act.GetMessage()
 		if err == nil {
 			if msg.UserId > 0 && len(msg.Content) != 0 && c.User.CheckChatUserLegal(msg.UserId) {
@@ -100,13 +107,11 @@ func (c *Client) onMessage(act *action.Action) {
 				msg.IsServer = true
 				msg.ReceivedAT = time.Now().Unix()
 				db.Db.Save(msg)
-				act.Message = msg
-				act.Data["avatar"] = c.User.Avatar
-				receipt, _ := action.NewReceipt(act)
-				c.Send <- receipt
+				msg.Avatar = c.User.GetAvatarUrl()
+				c.Send <- action.NewReceipt(msg)
 				UClient, ok := Hub.User.AcceptedClient.GetClient(msg.UserId)
 				if ok { // 在线
-					UClient.Send <- act
+					UClient.Send <- action.NewReceiveAction(msg)
 				}
 			}
 		}
@@ -115,10 +120,13 @@ func (c *Client) onMessage(act *action.Action) {
 	return
 }
 func (c *Client) onSendSuccess(act action.Action) {
-	if act.Action == action.MessageAction && act.Message != nil {
-		act.Message.SendAt = time.Now().Unix()
-		db.Db.Save(act.Message)
-		_ = c.User.UpdateChatUser(act.Message.UserId)
+	if act.Action == action.ReceiveMessageAction {
+		msg, ok := act.Data.(*models.Message)
+		if ok {
+			msg.SendAt = time.Now().Unix()
+			db.Db.Save(msg)
+			_ = c.User.UpdateChatUser(msg.UserId)
+		}
 	}
 }
 func (c *Client) ReadMsg() {
@@ -139,7 +147,7 @@ func (c *Client) ReadMsg() {
 			var act = &action.Action{}
 			err := act.UnMarshal(msgStr)
 			if err == nil {
-				c.onMessage(act)
+				c.handleMessage(act)
 			}
 		}
 	}

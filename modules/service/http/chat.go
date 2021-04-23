@@ -2,6 +2,9 @@ package http
 
 import (
 	"github.com/gin-gonic/gin"
+	"log"
+	"os"
+	"path"
 	"strconv"
 	"time"
 	"ws/db"
@@ -21,7 +24,7 @@ func AcceptUser(c *gin.Context) {
 		serverUser := ui.(*models.ServerUser)
 		sClient, exist := hub.Hub.Server.GetClient(serverUser.ID)
 		if !exist {
-			util.RespFail(c,"请先登录", 500)
+			util.RespFail(c, "请先登录", 500)
 			return
 		}
 		user, err := sClient.Accept(form.Uid)
@@ -35,30 +38,31 @@ func AcceptUser(c *gin.Context) {
 		db.Db.Table("messages").
 			Where("user_id = ?", form.Uid).
 			Where("service_id = ?", 0).Updates(map[string]interface{}{
-				"service_id": serverUser.ID,
-				"send_at":now,
+			"service_id": serverUser.ID,
+			"send_at":    now,
 		})
 		messages := make([]models.Message, 0)
 		db.Db.Where("user_id = ?", form.Uid).
 			Where("service_id = ?", serverUser.ID).
-			Where("received_at >= ?", now - 2 * 24 * 60 * 60).Find(&messages)
-		for _, m:= range messages {
+			Where("received_at >= ?", now-2*24*60*60).Find(&messages)
+		for _, m := range messages {
 			m.IsSuccess = true
 		}
 		chatUser := models.ChatUser{
-			ID: user.ID,
-			Username: user.Username,
-			Online: true,
-			Disabled: false,
-			Messages: messages,
-			Unread: len(unSendMsg),
+			ID:           user.ID,
+			Username:     user.Username,
+			Online:       true,
+			Disabled:     false,
+			Messages:     messages,
+			Unread:       len(unSendMsg),
 			LastChatTime: time.Now().Unix(),
 		}
 		util.RespSuccess(c, chatUser)
 	} else {
-		util.RespValidateFail(c , "验证不通过")
+		util.RespValidateFail(c, "验证不通过")
 	}
 }
+
 // 移除用户
 func RemoveUser(c *gin.Context) {
 	uidStr := c.Param("id")
@@ -76,6 +80,7 @@ func RemoveUser(c *gin.Context) {
 	}
 	util.RespSuccess(c, nil)
 }
+
 // 已读
 func ReadAll(c *gin.Context) {
 	form := &struct {
@@ -86,11 +91,38 @@ func ReadAll(c *gin.Context) {
 		ui, _ := c.Get("user")
 		server := ui.(*models.ServerUser)
 		db.Db.Model(&models.Message{}).
-			Where("service_id = ?" , server.ID).
+			Where("service_id = ?", server.ID).
 			Where("user_id = ?", form.Id).
 			Update("is_read", 1)
 		util.RespSuccess(c, gin.H{})
 	} else {
 		util.RespValidateFail(c, "invalid params")
 	}
+}
+// 聊天图片
+func Image(c *gin.Context) {
+	file, _ := c.FormFile("file")
+	ext := path.Ext(file.Filename)
+	imageDir := "/chat"
+	assetPath := util.StoragePath()
+	_, err := os.Stat(assetPath  + imageDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err := os.Mkdir(assetPath + imageDir, 0666)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+	filename := util.RandomStr(32) + ext
+	fullPath := assetPath + imageDir + "/" + filename
+	err = c.SaveUploadedFile(file, fullPath)
+	if err != nil {
+		util.RespError(c, err.Error())
+	} else {
+		util.RespSuccess(c, gin.H{
+			"url": util.Asset( imageDir + "/" + filename),
+		})
+	}
+
 }

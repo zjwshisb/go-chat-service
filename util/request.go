@@ -17,7 +17,4 @@ func GetToken(c *gin.Context) (token string) {
 	}
 	return token
 }
-func Asset(c *gin.Context, path string) string {
-	host := c.Request.Host
-	return "http://" + host + path
-}
+

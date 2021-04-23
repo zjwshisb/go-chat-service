@@ -15,14 +15,14 @@ const (
 	UserOffLineAction = "user-offline"
 	UserWaitingCountAction = "waiting-users"
 	ServerUserListAction = "server-user-list"
-	MessageAction = "message"
+	SendMessageAction = "send-message"
+	ReceiveMessageAction = "receive-message"
 )
 
 type Action struct {
-	Data map[string]interface{} `json:"data"`
+	Data interface{} `json:"data"`
 	Time int64	`json:"time"`
 	Action string `json:"action"`
-	Message *models.Message `json:"-"`
 }
 
 func (action *Action) Marshal() (b []byte, err error) {
@@ -39,7 +39,7 @@ func (action *Action) UnMarshal(b []byte) (err error) {
 }
 
 func (action *Action) GetMessage() (message *models.Message,err error)  {
-	if action.Action == MessageAction {
+	if action.Action == SendMessageAction {
 		message = &models.Message{}
 		err = mapstructure.Decode(action.Data, message)
 	} else {
@@ -47,6 +47,13 @@ func (action *Action) GetMessage() (message *models.Message,err error)  {
 	}
 	return
 
+}
+func NewReceiveAction (msg *models.Message) *Action {
+	return &Action{
+		Action: ReceiveMessageAction,
+		Time: time.Now().Unix(),
+		Data: msg,
+	}
 }
 
 func NewServerUserList(d []*models.ChatUser) *Action {
@@ -58,15 +65,10 @@ func NewServerUserList(d []*models.ChatUser) *Action {
 		Data: data,
 	}
 }
-func NewReceipt(action *Action) (act *Action, err error) {
-	if action.Action != MessageAction {
-		err = errors.New("无效的action")
-		return
-	}
+func NewReceipt(msg *models.Message) (act *Action) {
 	data := make(map[string]interface{})
-	userId := action.Data["user_id"]
-	data["user_id"] = userId
-	data["req_id"] = action.Data["req_id"]
+	data["user_id"] = msg.UserId
+	data["req_id"] = msg.ReqId
 	act = &Action{
 		Action: ReceiptAction,
 		Time: time.Now().Unix(),

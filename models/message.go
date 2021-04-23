@@ -12,6 +12,8 @@ type Message struct {
 	ReqId int64 `gorm:"index" mapstructure:"req_id" json:"req_id"`
 	IsSuccess bool `gorm:"-" json:"is_success"`
 	IsRead bool `gorm:"bool" json:"is_read"`
-	Avatar string `gorm:"-" json:"Avatar"`
+	Avatar string `gorm:"-" json:"avatar"`
+	ServerUser ServerUser `gorm:"foreignKey:service_id" json:"-"`
+	User User `gorm:"foreignKey:user_id" json:"-"`
 }
 

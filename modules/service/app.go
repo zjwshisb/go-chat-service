@@ -33,6 +33,7 @@ func Setup() {
 		auth.POST("/me/avatar", sHttp.Avatar)
 		auth.POST("/ws/chat-user", sHttp.AcceptUser)
 		auth.POST("/ws/read-all", sHttp.ReadAll)
+		auth.POST("/ws/image", sHttp.Image)
 		auth.DELETE("/ws/chat-user/:id", sHttp.RemoveUser)
 
 		auth.GET("/ws", func(c *gin.Context) {

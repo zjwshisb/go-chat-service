@@ -84,9 +84,7 @@ func (c *UClient) readMsg() {
 		err = act.UnMarshal(msgStr)
 		if err == nil {
 			switch act.Action {
-			case "message":
-				act.Data["user_id"] = c.User.ID
-				act.Data["avatar"] = ""
+			case action.SendMessageAction:
 				msg, err := act.GetMessage()
 				if err == nil {
 					msg.IsServer = false
@@ -98,13 +96,12 @@ func (c *UClient) readMsg() {
 					} else { // 用户被客服接入
 						msg.ServiceId = c.ServerId
 						db.Db.Save(msg)
-						act.Message = msg
 						sClient, ok := Hub.Server.GetClient(c.ServerId)
 						if ok {
-							Hub.Server.SendAction(act, sClient)
+							Hub.Server.SendAction(action.NewReceiveAction(msg), sClient)
 						}
 					}
-					receipt, _ := action.NewReceipt(act)
+					receipt := action.NewReceipt(msg)
 					c.Send<- receipt
 				}
 			}
@@ -123,9 +120,10 @@ func (c *UClient) sendMsg() {
 					c.close()
 					goto END
 				}
-				if act.Action == action.MessageAction && act.Message != nil {
-					act.Message.SendAt = time.Now().Unix()
-					db.Db.Save(act.Message)
+				if act.Action == action.ReceiveMessageAction  {
+					msg := act.Data.(*models.Message)
+					msg.SendAt = time.Now().Unix()
+					db.Db.Save(msg)
 				}
 			}
 		case <-c.CloseSignal:
