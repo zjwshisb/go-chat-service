@@ -19,45 +19,9 @@ type Client struct {
 }
 
 func (c *Client) Run() {
-	c.SendUserListAction()
 	go c.ReadMsg()
 	go c.SendMsg()
 	go c.ping()
-}
-
-func (c *Client) SendUserListAction() {
-	users := c.User.GetChatUsers()
-	// 获取一周内的聊天记录
-	last := time.Now().Unix() - 2 * 24 * 60 * 60 * 1000
-	var messages []models.Message
-	db.Db.Preload("ServerUser").
-		Preload("User").
-		Where("received_at > ?", last).
-		Where("service_id = ?", c.User.ID).
-		Find(&messages)
-	for _, user := range users {
-		for _, m := range messages {
-			if m.UserId == user.ID {
-				m.IsSuccess = true
-				if m.IsServer {
-					m.Avatar = m.ServerUser.GetAvatarUrl()
-				}
-				if !m.IsRead && !m.IsServer{
-					user.Unread += 1
-				}
-				user.Messages = append(user.Messages, m)
-			}
-		}
-		user.Disabled = !c.User.CheckChatUserLegal(user.ID)
-		if _, ok := Hub.User.AcceptedClient.GetClient(user.ID); ok {
-			user.Online = true
-		}
-		if _, ok := Hub.User.WaitingClient.GetClient(user.ID); ok {
-			user.Online = true
-		}
-	}
-	userAction := action.NewServerUserList(users)
-	c.Send <- userAction
 }
 
 func (c *Client) close() {
@@ -81,7 +45,6 @@ func (c *Client) ping() {
 	}
 END:
 }
-
 // 接入用户
 func (c *Client) Accept(uid int64) (user *models.User, err error) {
 	uClient, exist := Hub.User.WaitingClient.GetClient(uid)
@@ -129,6 +92,7 @@ func (c *Client) onSendSuccess(act action.Action) {
 		}
 	}
 }
+// 读消息
 func (c *Client) ReadMsg() {
 	var msg = make(chan []byte, 50)
 	for {
@@ -153,6 +117,7 @@ func (c *Client) ReadMsg() {
 	}
 END:
 }
+// 发消息
 func (c *Client) SendMsg() {
 	for {
 		select {

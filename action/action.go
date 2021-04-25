@@ -14,7 +14,6 @@ const (
 	UserOnLineAction = "user-online"
 	UserOffLineAction = "user-offline"
 	UserWaitingCountAction = "waiting-users"
-	ServerUserListAction = "server-user-list"
 	SendMessageAction = "send-message"
 	ReceiveMessageAction = "receive-message"
 )
@@ -55,16 +54,6 @@ func NewReceiveAction (msg *models.Message) *Action {
 		Data: msg,
 	}
 }
-
-func NewServerUserList(d []*models.ChatUser) *Action {
-	data := make(map[string]interface{})
-	data["list"] = d
-	return &Action{
-		Action: ServerUserListAction,
-		Time: time.Now().Unix(),
-		Data: data,
-	}
-}
 func NewReceipt(msg *models.Message) (act *Action) {
 	data := make(map[string]interface{})
 	data["user_id"] = msg.UserId
@@ -101,12 +90,10 @@ func NewPing() *Action {
 	}
 }
 func NewWaitingUsers(i interface{}) *Action {
-	data := make(map[string]interface{})
-	data["list"] = i
 	return &Action{
 		Action: UserWaitingCountAction,
 		Time: time.Now().Unix(),
-		Data: data,
+		Data: i,
 	}
 }
 

@@ -31,10 +31,11 @@ func Setup() {
 		auth.Use(middleware.Authenticate)
 		auth.GET("/me", sHttp.Me)
 		auth.POST("/me/avatar", sHttp.Avatar)
+		auth.DELETE("/ws/chat-user/:id", sHttp.RemoveUser)
 		auth.POST("/ws/chat-user", sHttp.AcceptUser)
+		auth.GET("/ws/chat-users", sHttp.ChatUserList)
 		auth.POST("/ws/read-all", sHttp.ReadAll)
 		auth.POST("/ws/image", sHttp.Image)
-		auth.DELETE("/ws/chat-user/:id", sHttp.RemoveUser)
 
 		auth.GET("/ws", func(c *gin.Context) {
 			u, _ := c.Get("user")

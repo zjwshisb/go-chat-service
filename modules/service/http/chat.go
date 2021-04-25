@@ -12,7 +12,42 @@ import (
 	"ws/models"
 	"ws/util"
 )
-
+// 聊天用户列表
+func ChatUserList(c *gin.Context) {
+	ui, _ := c.Get("user")
+	user := ui.(*models.ServerUser)
+	users := user.GetChatUsers()
+	// 获取一周内的聊天记录
+	last := time.Now().Unix() - 2 * 24 * 60 * 60 * 1000
+	var messages []models.Message
+	db.Db.Preload("ServerUser").
+		Preload("User").
+		Where("received_at > ?", last).
+		Where("service_id = ?", user.ID).
+		Find(&messages)
+	for _, u := range users {
+		for _, m := range messages {
+			if m.UserId == u.ID {
+				m.IsSuccess = true
+				if m.IsServer {
+					m.Avatar = m.ServerUser.GetAvatarUrl()
+				}
+				if !m.IsRead && !m.IsServer{
+					u.Unread += 1
+				}
+				u.Messages = append(u.Messages, m)
+			}
+		}
+		u.Disabled = !user.CheckChatUserLegal(u.ID)
+		if _, ok := hub.Hub.User.AcceptedClient.GetClient(u.ID); ok {
+			u.Online = true
+		}
+		if _, ok := hub.Hub.User.WaitingClient.GetClient(u.ID); ok {
+			u.Online = true
+		}
+	}
+	util.RespSuccess(c , users)
+}
 // 接入用户
 func AcceptUser(c *gin.Context) {
 	form := &struct {
@@ -124,5 +159,4 @@ func Image(c *gin.Context) {
 			"url": util.Asset( imageDir + "/" + filename),
 		})
 	}
-
 }

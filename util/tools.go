@@ -9,8 +9,11 @@ import (
 func Asset(path string)  string {
 	return config.Http.Url + "/assets" + path
 }
-func StoragePath() string {
+func AssetPath(path string) string {
 	return BasePath() + "/storage/assets"
+}
+func StoragePath() string {
+	return BasePath() + "/storage"
 }
 func BasePath() string {
 	path, err := os.Getwd()

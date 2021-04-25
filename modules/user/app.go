@@ -28,6 +28,7 @@ func Setup() {
 		auth := g.Group("/")
 		auth.Use(middleware.Authenticate)
 		auth.GET("/ws/messages",sHttp.GetHistoryMessage)
+		auth.POST("/ws/image", sHttp.Image)
 		auth.GET("/ws", func(c *gin.Context) {
 			conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 			if err != nil {
