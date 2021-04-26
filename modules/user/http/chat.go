@@ -1,11 +1,12 @@
 package http
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
 	"os"
 	"path"
-	"time"
+	"strconv"
 	"ws/db"
 	"ws/models"
 	"ws/util"
@@ -15,9 +16,17 @@ func GetHistoryMessage(c *gin.Context)  {
 	ui, _ := c.Get("user")
 	user := ui.(*models.User)
 	messages := make([]*models.Message, 0)
-	db.Db.Preload("ServerUser").Where("user_id = ?", user.ID).
-		Where("received_at > ? ", time.Now().Unix() - 2 * 24 * 3600).
-		Find(&messages)
+	query := db.Db.Preload("ServerUser").Where("user_id = ?", user.ID)
+
+	id, exist := c.GetQuery("id")
+	if exist {
+		idInt, err  := strconv.ParseInt(id, 10, 64)
+		if err == nil {
+			fmt.Println(idInt)
+			query.Where("id < ?", idInt)
+		}
+	}
+	query.Order("id desc").Limit(20).Find(&messages)
 	for _, msg := range messages {
 		if msg.IsServer {
 			msg.Avatar = msg.ServerUser.GetAvatarUrl()

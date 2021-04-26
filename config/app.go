@@ -25,32 +25,29 @@ type app struct {
 	LogPath string
 }
 var (
-	Mysql *mysql
-	Http *http
-	Redis *redis
-	App *app
+	Mysql = &mysql{}
+	Http  = &http{}
+	Redis = &redis{}
+	App = &app{}
 )
 func Setup() {
 	cfg, err := ini.Load("config.ini")
 	if err != nil {
 		log.Fatal(err)
 	}
-	Mysql = &mysql{}
 	err = cfg.Section("Mysql").MapTo(Mysql)
 	if err != nil {
 		log.Fatal(err)
 	}
-	Http = &http{}
 	err = cfg.Section("Http").MapTo(Http)
 	if err != nil {
 		log.Fatal(err)
 	}
-	Redis = &redis{}
 	err = cfg.Section("Redis").MapTo(Redis)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = cfg.Section("APP").MapTo(App)
+	err = cfg.Section("App").MapTo(App)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -2,8 +2,6 @@ package log
 
 import (
 	"github.com/sirupsen/logrus"
-	"time"
-	"ws/util"
 )
 var Log =  logrus.New()
 
