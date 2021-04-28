@@ -1,11 +1,11 @@
 package hub
 
 import (
-	"fmt"
 	"github.com/gorilla/websocket"
 	"sync"
 	"time"
 	"ws/action"
+	"ws/core/log"
 	"ws/db"
 	"ws/models"
 )
@@ -50,10 +50,7 @@ END:
 // 设置客服id
 func (c *UClient) SetServerId(sid int64) (err error) {
 	c.lock.Lock()
-	err = c.User.SetServerId(sid)
-	if err == nil {
-		c.ServerId = sid
-	}
+	c.ServerId = sid
 	c.lock.Unlock()
 	return
 }
@@ -83,12 +80,10 @@ func (c *UClient) readMsg() {
 		}
 		var act = &action.Action{}
 		err = act.UnMarshal(msgStr)
-		fmt.Println(err)
 		if err == nil {
 			switch act.Action {
 			case action.SendMessageAction:
 				msg, err := act.GetMessage()
-				fmt.Println(err)
 				if err == nil {
 					msg.IsServer = false
 					msg.ReceivedAT = time.Now().Unix()
@@ -108,6 +103,8 @@ func (c *UClient) readMsg() {
 					c.Send<- receipt
 				}
 			}
+		} else {
+			log.Log.Warning(err)
 		}
 	}
 }

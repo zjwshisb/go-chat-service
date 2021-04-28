@@ -36,6 +36,7 @@ func Setup() {
 		auth.GET("/ws/chat-users", sHttp.ChatUserList)
 		auth.POST("/ws/read-all", sHttp.ReadAll)
 		auth.POST("/ws/image", sHttp.Image)
+		auth.GET("/ws/messages", sHttp.GetHistoryMessage)
 
 		auth.GET("/ws", func(c *gin.Context) {
 			u, _ := c.Get("user")

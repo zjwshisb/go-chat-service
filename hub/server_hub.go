@@ -11,6 +11,8 @@ type serverClientMap struct {
 	Clients map[int64] *Client
 	Lock    sync.RWMutex
 }
+
+
 // 获取客户端
 func (m *serverClientMap) GetClient(id int64) (client *Client, ok bool) {
 	m.Lock.RLock()
@@ -52,7 +54,7 @@ func (hub *serverHub) setup() {
 			if uClient.ServerId > 0 {
 				hub.noticeUserOnline(uClient)
 			} else {
-				hub.broadcastWaitingUsers()
+				hub.BroadcastWaitingUsers()
 			}
 		}
 	})
@@ -62,7 +64,7 @@ func (hub *serverHub) setup() {
 			if uClient.ServerId > 0 {
 				hub.noticeUserOffOnline(uClient)
 			} else {
-				hub.broadcastWaitingUsers()
+				hub.BroadcastWaitingUsers()
 			}
 		}
 	})
@@ -76,7 +78,6 @@ func (hub *serverHub) SendAction(a  *action.Action, clients ...*Client) {
 // 登出客户端
 func (hub *serverHub) Logout(c *Client) {
 	hub.RemoveClient(c.User.ID)
-	hub.TriggerHook(serverLogout, c)
 }
 // 登入客户端
 func (hub *serverHub) Login(c *Client) {
@@ -86,7 +87,6 @@ func (hub *serverHub) Login(c *Client) {
 	hub.AddClient(c)
 	c.Send<- hub.getWaitingUsersAction()
 	go c.Run()
-	hub.TriggerHook(serverLogin, c)
 }
 // 通知用户上线
 func (hub *serverHub) noticeUserOnline(uClient *UClient) {
@@ -124,7 +124,7 @@ func (hub *serverHub) getWaitingUsersAction() *action.Action {
 	return act
 }
 // 广播待接入的客户数量
-func (hub *serverHub) broadcastWaitingUsers() {
+func (hub *serverHub) BroadcastWaitingUsers() {
 	act := hub.getWaitingUsersAction()
 	client := hub.getAllClient()
 	hub.SendAction(act, client...)

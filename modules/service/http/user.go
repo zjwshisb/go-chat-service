@@ -3,9 +3,9 @@ package http
 import (
 	"github.com/disintegration/imaging"
 	"github.com/gin-gonic/gin"
-	"log"
 	"os"
 	"path"
+	"ws/core/image"
 	"ws/db"
 	"ws/hub"
 	"ws/models"
@@ -18,37 +18,27 @@ func Me(c *gin.Context) {
 	util.RespSuccess(c , gin.H{
 		"username": user.Username,
 		"id": user.ID,
-		"avatar": util.Asset(user.Avatar),
+		"avatar": image.Url(user.Avatar),
 	})
 }
 // 更新头像
 func Avatar(c *gin.Context) {
 	file, _ := c.FormFile("file")
 	ext := path.Ext(file.Filename)
-	avatarDir := "/avatar"
-	assetPath := util.StoragePath()
-	_, err := os.Stat(assetPath + avatarDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			err := os.Mkdir(assetPath + avatarDir, 0666)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}
+	var err error
 	temp := os.TempDir() +  "/" + util.RandomStr(32) +  ext
 	err = c.SaveUploadedFile(file, temp)
 	if err != nil {
 		util.RespError(c, err.Error())
 	} else {
-		imagePath := avatarDir + "/" + util.RandomStr(32) + ext
+		imagePath := image.AvatarDIR + "/" + util.RandomStr(32) + ext
 		file, err := imaging.Open(temp)
 		if err != nil {
 			util.RespError(c, err.Error())
 			return
 		}
 		err = imaging.Save(imaging.Thumbnail(file, 300,300, imaging.CatmullRom),
-			assetPath + imagePath)
+			image.BasePath + imagePath)
 		if err != nil {
 			util.RespError(c, err.Error())
 		} else {

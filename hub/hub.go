@@ -8,8 +8,7 @@ type hub struct {
 }
 
 const (
-	serverLogin = "LOGIN"
-	serverLogout = "LOGOUT"
+
 	userLogin = "USER_LOGIN"
 	userLogout = "USER_LOGOUT"
 )

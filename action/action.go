@@ -6,6 +6,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"time"
 	"ws/models"
+	"ws/resources"
 )
 
 const (
@@ -27,6 +28,19 @@ type Action struct {
 func (action *Action) Marshal() (b []byte, err error) {
 	if action.Action == PingAction {
 		return []byte(""), nil
+	}
+	if action.Action == ReceiveMessageAction {
+		msg, ok := action.Data.(*models.Message)
+		if !ok {
+			err = errors.New("param error")
+			return
+		}
+		b, err = json.Marshal(Action{
+			Time: action.Time,
+			Action: action.Action,
+			Data: resources.NewMessage(*msg),
+		})
+		return
 	}
 	b, err = json.Marshal(action)
 	return

@@ -1,64 +1,47 @@
 package http
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
-	"log"
-	"os"
 	"path"
 	"strconv"
+	"ws/core/image"
 	"ws/db"
 	"ws/models"
+	"ws/resources"
 	"ws/util"
 )
-
+// 消息记录
 func GetHistoryMessage(c *gin.Context)  {
 	ui, _ := c.Get("user")
 	user := ui.(*models.User)
 	messages := make([]*models.Message, 0)
 	query := db.Db.Preload("ServerUser").Where("user_id = ?", user.ID)
-
 	id, exist := c.GetQuery("id")
 	if exist {
 		idInt, err  := strconv.ParseInt(id, 10, 64)
 		if err == nil {
-			fmt.Println(idInt)
 			query.Where("id < ?", idInt)
 		}
 	}
 	query.Order("id desc").Limit(20).Find(&messages)
+	messagesResources := make([]*resources.Message,0)
 	for _, msg := range messages {
-		if msg.IsServer {
-			msg.Avatar = msg.ServerUser.GetAvatarUrl()
-		} else {
-			msg.Avatar = ""
-		}
+		messagesResources = append(messagesResources, resources.NewMessage(*msg))
 	}
-	util.RespSuccess(c, messages)
+	util.RespSuccess(c, messagesResources)
 }
 // 聊天图片
 func Image(c *gin.Context) {
 	file, _ := c.FormFile("file")
 	ext := path.Ext(file.Filename)
-	imageDir := "/chat"
-	assetPath := util.StoragePath()
-	_, err := os.Stat(assetPath  + imageDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			err := os.Mkdir(assetPath + imageDir, 0666)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}
 	filename := util.RandomStr(32) + ext
-	fullPath := assetPath + imageDir + "/" + filename
-	err = c.SaveUploadedFile(file, fullPath)
+	fullPath := image.BasePath + image.ChatDir + "/" + filename
+	err := c.SaveUploadedFile(file, fullPath)
 	if err != nil {
 		util.RespError(c, err.Error())
 	} else {
 		util.RespSuccess(c, gin.H{
-			"url": util.Asset( imageDir + "/" + filename),
+			"url": image.Url(image.ChatDir + "/" + filename),
 		})
 	}
 }

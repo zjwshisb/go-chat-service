@@ -45,11 +45,13 @@ type userHub struct {
 func (hub *userHub) Change2waiting(client *UClient)  {
 	hub.AcceptedClient.RemoveClient(client.User.ID)
 	hub.WaitingClient.AddClient(client)
+	go Hub.Server.BroadcastWaitingUsers()
 }
 
 func (hub *userHub) Change2accept(client *UClient) {
 	hub.WaitingClient.RemoveClient(client.User.ID)
 	hub.AcceptedClient.AddClient(client)
+	go Hub.Server.BroadcastWaitingUsers()
 }
 
 func (hub *userHub) Logout(client *UClient) {

@@ -1,11 +1,11 @@
 package hub
 
 import (
-	"errors"
 	"github.com/gorilla/websocket"
 	"sync"
 	"time"
 	"ws/action"
+	"ws/core/log"
 	"ws/db"
 	"ws/models"
 )
@@ -46,20 +46,16 @@ func (c *Client) ping() {
 END:
 }
 // 接入用户
-func (c *Client) Accept(uid int64) (user *models.User, err error) {
-	uClient, exist := Hub.User.WaitingClient.GetClient(uid)
-	if !exist {
-		err = errors.New("用户端已离线")
-		return
-	}
-	if err := uClient.SetServerId(c.User.ID); err == nil {
+func (c *Client) Accept(user *models.User) {
+	uClient, exist := Hub.User.WaitingClient.GetClient(user.ID)
+	if exist { // 如果用户在线
+		_ = uClient.SetServerId(c.User.ID)
 		Hub.User.Change2accept(uClient)
-		_ = c.User.UpdateChatUser(uid)
-		Hub.Server.broadcastWaitingUsers()
-		user = uClient.User
 	}
-	return
+	_ = user.SetServerId(c.User.ID)
+	_ = c.User.UpdateChatUser(user.ID)
 }
+// 消息处理
 func (c *Client) handleMessage(act *action.Action) {
 	switch act.Action {
 	case action.SendMessageAction:
@@ -70,7 +66,6 @@ func (c *Client) handleMessage(act *action.Action) {
 				msg.IsServer = true
 				msg.ReceivedAT = time.Now().Unix()
 				db.Db.Save(msg)
-				msg.Avatar = c.User.GetAvatarUrl()
 				c.Send <- action.NewReceipt(msg)
 				UClient, ok := Hub.User.AcceptedClient.GetClient(msg.UserId)
 				if ok { // 在线
@@ -82,7 +77,8 @@ func (c *Client) handleMessage(act *action.Action) {
 	}
 	return
 }
-func (c *Client) onSendSuccess(act action.Action) {
+// 发送成功处理
+func (c *Client) handleSendSuccess(act *action.Action) {
 	if act.Action == action.ReceiveMessageAction {
 		msg, ok := act.Data.(*models.Message)
 		if ok {
@@ -112,6 +108,8 @@ func (c *Client) ReadMsg() {
 			err := act.UnMarshal(msgStr)
 			if err == nil {
 				c.handleMessage(act)
+			} else {
+				log.Log.Warning(err)
 			}
 		}
 	}
@@ -126,12 +124,11 @@ func (c *Client) SendMsg() {
 			if err == nil {
 				err := c.Conn.WriteMessage(websocket.TextMessage, msgStr)
 				if err == nil { // 发送成功
-					c.onSendSuccess(*act)
+					c.handleSendSuccess(act)
 				} else {
 					c.close()
 					goto END
 				}
-
 			}
 		case <-c.CloseSignal:
 			goto END

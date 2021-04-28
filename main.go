@@ -2,6 +2,7 @@ package main
 
 import (
 	"ws/config"
+	"ws/core"
 	"ws/db"
 	"ws/hub"
 	"ws/modules"
@@ -11,6 +12,7 @@ import (
 func init()  {
 	config.Setup()
 	db.Setup()
+	core.Setup()
 	routers.Setup()
 	modules.Setup()
 	hub.Setup()

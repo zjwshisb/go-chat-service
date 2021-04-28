@@ -14,15 +14,15 @@ type mysql struct {
 type http struct {
 	Port string
 	Host string
-	Url string
 }
 type redis struct {
 	Addr string
 	Auth string
 }
 type app struct {
-	StoragePath string
 	LogPath string
+	Url string
+	ChatSessionDuration int64
 }
 var (
 	Mysql = &mysql{}

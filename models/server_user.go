@@ -7,13 +7,14 @@ import (
 	"github.com/go-redis/redis/v8"
 	"strconv"
 	"time"
+	"ws/config"
+	"ws/core/image"
 	"ws/db"
 	"ws/util"
 )
 
 const (
 	serverChatUserKey = "server-user:%d:chat-user"
-	ChatUserValidDuration = 2 * 24 * 60 * 60
 )
 
 type ServerUserAuthenticate interface {
@@ -33,20 +34,11 @@ type ServerUser struct {
 	Avatar string 		`gorm:"string;size:512" json:"-"`
 }
 
-type ChatUser struct {
-	ID        int64      `json:"id"`
-	Username  string     `json:"username"`
-	LastChatTime int64  `json:"last_chat_time"`
-	Disabled bool `json:"disabled"`
-	Online bool `json:"online"`
-	Messages []Message `json:"messages"`
-	Unread int `json:"unread"`
 
-}
 
 func (user *ServerUser) GetAvatarUrl() string {
 	if user.Avatar != "" {
-		return util.Asset(user.Avatar)
+		return image.Url(user.Avatar)
 	}
 	return ""
 }
@@ -60,41 +52,40 @@ func (user *ServerUser) Logout()  {
 }
 
 func (user *ServerUser) Auth(c *gin.Context) {
-	db.Db.Where("api_token= ?", util.GetToken(c)).Limit(1).First(user)
+	db.Db.Where("api_token= ?", util.GetToken(c)).First(user)
 }
 
 func (user *ServerUser) FindByName(username string) () {
-	db.Db.Where("username= ?", username).Limit(1).First(user)
+	db.Db.Where("username= ?", username).First(user)
 }
-func (user *ServerUser) chatUsersKey() string {
+func (user *ServerUser) ChatUsersKey() string {
 	return fmt.Sprintf(serverChatUserKey, user.ID)
 }
-// 检查聊天对象是否合法
+// 检查聊天对象是否过期
 func (user *ServerUser) CheckChatUserLegal(uid int64) bool {
 	ctx := context.Background()
-	cmd := db.Redis.ZScore(ctx, user.chatUsersKey(), strconv.FormatInt(uid , 10))
+	cmd := db.Redis.ZScore(ctx, user.ChatUsersKey(), strconv.FormatInt(uid , 10))
 	if cmd.Err() == redis.Nil {
 		return false
 	}
 	score := cmd.Val()
 	t := int64(score)
-	if (time.Now().Unix() - t) <= ChatUserValidDuration {
+	if (time.Now().Unix() - t) <= config.App.ChatSessionDuration * 24 * 60 * 60 {
 		return true
 	}
 	return false
 }
 // 获取聊天过的用户
-func (user *ServerUser) GetChatUsers() (users []*ChatUser) {
-	users = make([]*ChatUser, 0)
+func (user *ServerUser) GetChatUsers() (users []*User) {
+	users = make([]*User, 0)
 	ctx := context.Background()
-	cmd := db.Redis.ZRevRangeWithScores(ctx, user.chatUsersKey(), 0, -1)
-	if cmd.Err() != nil {
+	cmd := db.Redis.ZRange(ctx, user.ChatUsersKey(), 0, -1)
+	if cmd.Err() == redis.Nil {
 		return
 	}
 	uids := make([]int64, 0)
-	for _, v := range cmd.Val() {
-		member := v.Member.(string)
-		id, err := strconv.ParseInt(member, 10, 64)
+	for _, idStr := range cmd.Val() {
+		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err == nil {
 			uids = append(uids, id)
 		}
@@ -102,38 +93,20 @@ func (user *ServerUser) GetChatUsers() (users []*ChatUser) {
 	if len(uids) == 0 {
 		return
 	}
-	usesModel := make([]User, 0)
-	db.Db.Find(&usesModel, uids)
-	for _, v := range cmd.Val() {
-		member := v.Member.(string)
-		id, err := strconv.ParseInt(member, 10, 64)
-		if err == nil {
-			for _, u := range usesModel {
-				if u.ID == id {
-					item := &ChatUser{
-						ID: id,
-						Username: u.Username,
-						LastChatTime: int64(v.Score),
-						Messages: make([]Message, 0),
-					}
-					users = append(users, item)
-					break
-				}
-			}
-		}
-	}
+	db.Db.Find(&users, uids)
+	fmt.Println(users)
 	return
 }
 // 移除聊天用户
 func (user *ServerUser) RemoveChatUser(uid int64) error {
 	ctx := context.Background()
-	cmd := db.Redis.ZRem(ctx,  user.chatUsersKey(), uid)
+	cmd := db.Redis.ZRem(ctx,  user.ChatUsersKey(), uid)
 	return cmd.Err()
 }
 // 更新聊天用户
 func (user *ServerUser) UpdateChatUser(uid int64) error {
 	ctx := context.Background()
 	m := &redis.Z{Member: uid, Score: float64(time.Now().Unix())}
-	cmd := db.Redis.ZAdd(ctx,  user.chatUsersKey(),  m)
+	cmd := db.Redis.ZAdd(ctx,  user.ChatUsersKey(),  m)
 	return cmd.Err()
 }
