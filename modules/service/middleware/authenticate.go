@@ -6,7 +6,7 @@ import (
 )
 
 func Authenticate(c *gin.Context) {
-	user := &models.ServerUser{}
+	user := &models.ServiceUser{}
 	user.Auth(c)
 	if user.ID != 0 {
 		c.Set("user", user)

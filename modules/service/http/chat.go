@@ -33,7 +33,7 @@ func GetHistoryMessage(c *gin.Context) {
 		return
 	}
 	ui, _ := c.Get("user")
-	user := ui.(*models.ServerUser)
+	user := ui.(*models.ServiceUser)
 	var messages []*models.Message
 	query := db.Db.Where("service_id = ?", user.ID).
 		Where("user_id = ?", uid)
@@ -55,7 +55,7 @@ func GetHistoryMessage(c *gin.Context) {
 // 聊天用户列表
 func ChatUserList(c *gin.Context) {
 	ui, _ := c.Get("user")
-	user := ui.(*models.ServerUser)
+	user := ui.(*models.ServiceUser)
 
 	chatUsers := user.GetChatUsers()
 
@@ -90,7 +90,6 @@ func ChatUserList(c *gin.Context) {
 		Where("received_at > ?", last).
 		Where("service_id = ?", user.ID).
 		Find(&messages)
-
 	for _, u := range resp {
 		for _, m := range messages {
 			if m.UserId == u.ID {
@@ -103,10 +102,7 @@ func ChatUserList(c *gin.Context) {
 			}
 		}
 		u.Disabled = !user.CheckChatUserLegal(u.ID)
-		if _, ok := hub.Hub.User.AcceptedClient.GetClient(u.ID); ok {
-			u.Online = true
-		}
-		if _, ok := hub.Hub.User.WaitingClient.GetClient(u.ID); ok {
+		if _, ok := hub.UserHub.GetConn(u.ID); ok {
 			u.Online = true
 		}
 	}
@@ -124,8 +120,8 @@ func AcceptUser(c *gin.Context) {
 		return
 	}
 	ui, _ := c.Get("user")
-	serverUser := ui.(*models.ServerUser)
-	sClient, exist := hub.Hub.Server.GetClient(serverUser.ID)
+	serverUser := ui.(*models.ServiceUser)
+	_, exist := hub.ServiceHub.GetConn(serverUser.ID)
 	if !exist {
 		util.RespFail(c, "请先登录", 500)
 		return
@@ -136,7 +132,6 @@ func AcceptUser(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	sClient.Accept(&user)
 	unSendMsg := user.GetUnSendMsg()
 	now := time.Now().Unix()
 	// 更新未发送的消息
@@ -168,13 +163,16 @@ func RemoveUser(c *gin.Context) {
 	uid, err := strconv.ParseInt(uidStr, 10, 64)
 	if err == nil {
 		ui, _ := c.Get("user")
-		user := ui.(*models.ServerUser)
+		user := ui.(*models.ServiceUser)
 		_ = user.RemoveChatUser(uid)
-		if uClient, exist := hub.Hub.User.AcceptedClient.GetClient(uid); exist {
-			if uClient.ServerId == user.ID {
-				uClient.RemoveServerId()
-				hub.Hub.User.Change2waiting(uClient)
+		if ui, exist := hub.UserHub.GetConn(uid); exist {
+			userClient, ok := ui.(*hub.UserConn)
+			if ok {
+				if userClient.ServiceId == user.ID {
+					// todo
+				}
 			}
+
 		}
 	}
 	util.RespSuccess(c, nil)
@@ -188,7 +186,7 @@ func ReadAll(c *gin.Context) {
 	err := c.Bind(form)
 	if err == nil {
 		ui, _ := c.Get("user")
-		server := ui.(*models.ServerUser)
+		server := ui.(*models.ServiceUser)
 		db.Db.Model(&models.Message{}).
 			Where("service_id = ?", server.ID).
 			Where("user_id = ?", form.Id).

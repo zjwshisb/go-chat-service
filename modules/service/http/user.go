@@ -7,14 +7,13 @@ import (
 	"path"
 	"ws/core/image"
 	"ws/db"
-	"ws/hub"
 	"ws/models"
 	"ws/util"
 )
 
 func Me(c *gin.Context) {
 	ui, _ := c.Get("user")
-	user := ui.(*models.ServerUser)
+	user := ui.(*models.ServiceUser)
 	util.RespSuccess(c , gin.H{
 		"username": user.Username,
 		"id": user.ID,
@@ -43,13 +42,9 @@ func Avatar(c *gin.Context) {
 			util.RespError(c, err.Error())
 		} else {
 			ui, _ := c.Get("user")
-			user := ui.(*models.ServerUser)
+			user := ui.(*models.ServiceUser)
 			user.Avatar = imagePath
 			db.Db.Save(user)
-			client, exist := hub.Hub.Server.GetClient(user.ID)
-			if exist {
-				client.User = user
-			}
 			util.RespSuccess(c, gin.H{})
 		}
 		os.Remove(temp)

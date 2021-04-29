@@ -1,7 +1,6 @@
 package resources
 
 import (
-	"fmt"
 	"ws/db"
 	"ws/models"
 )
@@ -19,10 +18,11 @@ type Message struct {
 	IsRead bool `json:"is_read"`
 	Avatar string `json:"avatar"`
 }
+
 func NewMessage(model models.Message) *Message {
 	var avatar string
 	if model.IsServer {
-		var serverUser models.ServerUser
+		var serverUser models.ServiceUser
 		if model.ServerUser.ID == 0 {
 			_ = db.Db.Model(&model).Association("ServerUser").Find(&serverUser)
 		} else {
@@ -32,7 +32,6 @@ func NewMessage(model models.Message) *Message {
 	} else {
 		//avatar = model.User.g
 	}
-	fmt.Println(avatar)
 	return &Message{
 		Id: model.Id,
 		UserId: model.UserId,

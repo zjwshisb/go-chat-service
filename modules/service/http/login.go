@@ -19,7 +19,7 @@ func Login(c *gin.Context) {
 		util.RespValidateFail(c, "表单验证失败")
 		return
 	}
-	user := &models.ServerUser{}
+	user := &models.ServiceUser{}
 	user.FindByName(form.Username)
 	if user.ID !=  0 {
 		if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.Password)) == nil {

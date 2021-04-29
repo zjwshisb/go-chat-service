@@ -68,7 +68,7 @@ func NewReceiveAction (msg *models.Message) *Action {
 		Data: msg,
 	}
 }
-func NewReceipt(msg *models.Message) (act *Action) {
+func NewReceiptAction(msg *models.Message) (act *Action) {
 	data := make(map[string]interface{})
 	data["user_id"] = msg.UserId
 	data["req_id"] = msg.ReqId

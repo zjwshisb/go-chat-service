@@ -5,7 +5,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
-	"ws/action"
 	"ws/hub"
 	"ws/models"
 	sHttp "ws/modules/service/http"
@@ -40,18 +39,14 @@ func Setup() {
 
 		auth.GET("/ws", func(c *gin.Context) {
 			u, _ := c.Get("user")
-			serverUser := u.(*models.ServerUser)
+			serviceUser := u.(*models.ServiceUser)
 			conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 			if err != nil {
 				fmt.Println(err)
 			}
-			client := &hub.Client{
-				Conn:        conn,
-				User:      serverUser,
-				Send:        make(chan *action.Action, 1000),
-				CloseSignal: make(chan struct{}),
-			}
-			hub.Hub.Server.Login(client)
+			client := hub.NewServiceConn(serviceUser, conn)
+			client.Setup()
+			hub.ServiceHub.Login(client)
 		})
 
 	}
