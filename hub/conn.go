@@ -7,12 +7,15 @@ import (
 	"ws/action"
 	"ws/core/event"
 	"ws/core/log"
+	"ws/db"
+	"ws/models"
 )
 
 const (
-	onnSendSuccess = "onSendSuccess"
-	onReceiveMessage = "onReceiveMessage"
+	onnSendSuccess   = iota
+	onReceiveMessage
 )
+
 type AnonymousConn interface {
 	ping()
 	readMsg()
@@ -31,13 +34,12 @@ type WebsocketConn interface {
 }
 
 type BaseConn struct {
-	conn *websocket.Conn
+	conn        *websocket.Conn
 	closeSignal chan interface{}
-	send chan *action.Action
+	send        chan *action.Action
 	sync.Once
 	event.BaseEvent
 }
-
 
 func (c *BaseConn) run() {
 	go c.readMsg()
@@ -65,6 +67,7 @@ func (c *BaseConn) close() {
 		close(c.closeSignal)
 	})
 }
+
 // 读消息
 func (c *BaseConn) readMsg() {
 	var msg = make(chan []byte, 50)
@@ -92,8 +95,8 @@ func (c *BaseConn) readMsg() {
 	}
 END:
 }
-func (c *BaseConn) Deliver(act *action.Action)  {
-	c.send <-act
+func (c *BaseConn) Deliver(act *action.Action) {
+	c.send <- act
 }
 
 // 发消息
@@ -104,8 +107,15 @@ func (c *BaseConn) sendMsg() {
 			msgStr, err := act.Marshal()
 			if err == nil {
 				err := c.conn.WriteMessage(websocket.TextMessage, msgStr)
-				if err == nil { // 发送成功
-					c.Call(onnSendSuccess, act)
+				if err == nil {
+					if act.Action == action.ReceiveMessageAction {
+						msg, ok := act.Data.(*models.Message)
+						if ok {
+							msg.SendAt = time.Now().Unix()
+							db.Db.Save(msg)
+						}
+					}
+					go c.Call(onnSendSuccess, act)
 				} else {
 					c.close()
 					goto END

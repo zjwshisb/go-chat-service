@@ -1,7 +1,6 @@
 package hub
 
 import (
-	"fmt"
 	"github.com/gorilla/websocket"
 	"time"
 	"ws/action"
@@ -20,7 +19,6 @@ func (c *ServiceConn) Setup() {
 		if length >= 1 {
 			ai := i[0]
 			act, ok := ai.(*action.Action)
-			fmt.Println(act)
 			if ok {
 				switch act.Action {
 				case action.SendMessageAction:
@@ -31,6 +29,7 @@ func (c *ServiceConn) Setup() {
 							msg.IsServer = true
 							msg.ReceivedAT = time.Now().Unix()
 							db.Db.Save(msg)
+							_ = c.User.UpdateChatUser(msg.UserId)
 							c.Deliver(action.NewReceiptAction(msg))
 							userConn, ok := UserHub.GetConn(msg.UserId)
 							if ok { // 在线

@@ -121,11 +121,6 @@ func AcceptUser(c *gin.Context) {
 	}
 	ui, _ := c.Get("user")
 	serverUser := ui.(*models.ServiceUser)
-	_, exist := hub.ServiceHub.GetConn(serverUser.ID)
-	if !exist {
-		util.RespFail(c, "请先登录", 500)
-		return
-	}
 	var user models.User
 	db.Db.Where("id = ?", form.Uid).First(&user)
 	if user.ID == 0 {
@@ -144,16 +139,20 @@ func AcceptUser(c *gin.Context) {
 	messages := make([]*models.Message, 0)
 	db.Db.Where("user_id = ?", form.Uid).
 		Where("service_id = ?", serverUser.ID).
-		Where("received_at >= ?", now-2*24*60*60).Find(&messages)
+		Where("received_at >= ?", now - 2*24*60*60).Find(&messages)
+
+	_ = serverUser.UpdateChatUser(user.ID)
+	_ = user.SetServiceId(serverUser.ID)
+
 	chatUser := resources.NewChatUser(user)
 	chatUser.Unread = len(unSendMsg)
-	chatUser.Online = true
+	_, exist := hub.UserHub.GetConn(user.ID)
+	chatUser.Online = exist
 	chatUser.LastChatTime = time.Now().Unix()
 	for _, m := range messages {
 		rm := resources.NewMessage(*m)
 		chatUser.Messages = append(chatUser.Messages, rm)
 	}
-
 	util.RespSuccess(c, chatUser)
 }
 
@@ -163,17 +162,8 @@ func RemoveUser(c *gin.Context) {
 	uid, err := strconv.ParseInt(uidStr, 10, 64)
 	if err == nil {
 		ui, _ := c.Get("user")
-		user := ui.(*models.ServiceUser)
-		_ = user.RemoveChatUser(uid)
-		if ui, exist := hub.UserHub.GetConn(uid); exist {
-			userClient, ok := ui.(*hub.UserConn)
-			if ok {
-				if userClient.ServiceId == user.ID {
-					// todo
-				}
-			}
-
-		}
+		serviceUser := ui.(*models.ServiceUser)
+		_ = serviceUser.RemoveChatUser(uid)
 	}
 	util.RespSuccess(c, nil)
 }

@@ -3,6 +3,12 @@ package hub
 import (
 	"sync"
 	"ws/action"
+	"ws/core/event"
+)
+
+const (
+	UserLogin = iota
+	UserLogout
 )
 
 type WebsocketManager interface {
@@ -17,6 +23,7 @@ type WebsocketManager interface {
 type BaseHub struct {
 	Clients map[int64]WebsocketConn
 	lock    sync.RWMutex
+	event.BaseEvent
 }
 func (hub *BaseHub) SendAction(a  *action.Action, clients ...WebsocketConn) {
 	for _,c := range clients {
@@ -52,11 +59,13 @@ func (hub *BaseHub) GetAllConn() (s []WebsocketConn){
 func (hub *BaseHub) Logout(client WebsocketConn) {
 	hub.RemoveConn(client.GetUserId())
 	client.close()
+	go hub.Call(UserLogout, client)
 }
 
 func (hub *BaseHub) Login(client WebsocketConn) {
 	hub.AddConn(client)
 	client.run()
+	go hub.Call(UserLogin, client)
 }
 
 var UserHub *userHub
@@ -73,5 +82,6 @@ func Setup()  {
 			Clients: map[int64]WebsocketConn{},
 		},
 	}
+	ServiceHub.Setup()
 }
 

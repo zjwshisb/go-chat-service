@@ -14,7 +14,8 @@ const (
 	PingAction = "ping"
 	UserOnLineAction = "user-online"
 	UserOffLineAction = "user-offline"
-	UserWaitingCountAction = "waiting-users"
+	WaitingUserAction = "waiting-users"
+	ServiceUserAction = "service-users"
 	SendMessageAction = "send-message"
 	ReceiveMessageAction = "receive-message"
 )
@@ -79,6 +80,13 @@ func NewReceiptAction(msg *models.Message) (act *Action) {
 	}
 	return
 }
+func NewServiceUserAction(chatServiceUsers []resources.ChatServiceUser) *Action {
+	return &Action{
+		Action: ServiceUserAction,
+		Time: time.Now().Unix(),
+		Data: chatServiceUsers,
+	}
+}
 func NewUserOnline(uid int64) *Action {
 	data := make(map[string]interface{})
 	data["user_id"] = uid
@@ -105,7 +113,7 @@ func NewPing() *Action {
 }
 func NewWaitingUsers(i interface{}) *Action {
 	return &Action{
-		Action: UserWaitingCountAction,
+		Action: WaitingUserAction,
 		Time: time.Now().Unix(),
 		Data: i,
 	}

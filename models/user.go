@@ -8,6 +8,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"strconv"
 	"time"
+	"ws/config"
 	"ws/db"
 	"ws/util"
 )
@@ -52,7 +53,7 @@ func (user *User) Auth(c *gin.Context) {
 	db.Db.Where("api_token= ?", util.GetToken(c)).Limit(1).First(user)
 }
 // 设置客服对象id
-func (user *User) SetServerId(sid int64) error {
+func (user *User) SetServiceId(sid int64) error {
 	if user.ID == 0 {
 		return errors.New("user not exist")
 	}
@@ -61,13 +62,13 @@ func (user *User) SetServerId(sid int64) error {
 	return cmd.Err()
 }
 // 清除客服对象id
-func (user *User) RemoveServerId() error {
+func (user *User) RemoveServiceId() error {
 	ctx := context.Background()
 	cmd := db.Redis.HDel(ctx, User2ServerHashKey, strconv.FormatInt(user.ID, 10))
 	return cmd.Err()
 }
 // 获取最后一个客服id
-func (user *User) GetLastServerId() int64 {
+func (user *User) GetLastServiceId() int64 {
 	if user.ID == 0 {
 		return 0
 	}
@@ -81,7 +82,7 @@ func (user *User) GetLastServerId() int64 {
 			return 0
 		}
 		t := int64(cmd.Val())
-		if t <= (time.Now().Unix() - 3600 * 24 * 2) {
+		if t <= (time.Now().Unix() - config.App.ChatSessionDuration) {
 			return 0
 		}
 		return sid

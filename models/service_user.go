@@ -75,6 +75,23 @@ func (user *ServiceUser) CheckChatUserLegal(uid int64) bool {
 	}
 	return false
 }
+func (user *ServiceUser) GetTodayAcceptCount() (count int64) {
+	ctx := context.Background()
+	cmd := db.Redis.ZRangeWithScores(ctx, user.ChatUsersKey(), 0, -1)
+	if cmd.Err() == redis.Nil {
+		return
+	}
+	timeStr := time.Now().Format("2006-01-02")
+	t, _ := time.ParseInLocation("2006-01-02", timeStr, time.Local)
+	timeNumber := t.Unix()
+	for _, z := range cmd.Val() {
+		score := int64(z.Score)
+		if score > timeNumber {
+			count ++
+		}
+	}
+	return count
+}
 // 获取聊天过的用户
 func (user *ServiceUser) GetChatUsers() (users []*User) {
 	users = make([]*User, 0)

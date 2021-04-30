@@ -12,14 +12,14 @@ type Event interface {
 }
 
 type BaseEvent struct {
-	events map[string] []Handle
+	events map[int] []Handle
 	lock sync.RWMutex
 }
-func (e *BaseEvent) Register(name string, handle Handle) {
+func (e *BaseEvent) Register(name int, handle Handle) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	if e.events == nil {
-		e.events = map[string][]Handle{}
+		e.events = map[int][]Handle{}
 	}
 	callback, exist := e.events[name]
 	if exist {
@@ -31,7 +31,7 @@ func (e *BaseEvent) Register(name string, handle Handle) {
 	}
 	e.events[name] = callback
 }
-func (e *BaseEvent) Call(name string, i ...interface{}) {
+func (e *BaseEvent) Call(name int, i ...interface{}) {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 	callback, exist := e.events[name]

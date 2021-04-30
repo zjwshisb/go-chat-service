@@ -11,17 +11,12 @@ import (
 type UserConn struct {
 	BaseConn
 	User *models.User
-	ServiceId int64
 	CreatedAt int64
 }
 func (c *UserConn) GetUserId() int64 {
 	return c.User.ID
 }
 func (c *UserConn) Setup() {
-	sid := c.User.GetLastServerId()
-	if sid > 0 {
-		c.ServiceId = sid
-	}
 	c.Register(onReceiveMessage, func(i ...interface{}) {
 		length := len(i)
 		if length >= 1 {
@@ -37,10 +32,10 @@ func (c *UserConn) Setup() {
 							msg.UserId = c.User.ID
 							msg.ReceivedAT = time.Now().Unix()
 							c.Deliver(action.NewReceiptAction(msg))
-							msg.ServiceId = c.ServiceId
+							msg.ServiceId = c.User.GetLastServiceId()
 							db.Db.Save(msg)
-							if c.ServiceId > 0 {
-								serviceClient, exist := ServiceHub.GetConn(c.ServiceId)
+							if msg.ServiceId > 0 {
+								serviceClient, exist := ServiceHub.GetConn(msg.ServiceId)
 								if exist {
 									serviceClient.Deliver(action.NewReceiveAction(msg))
 								}
