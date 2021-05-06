@@ -1,7 +1,6 @@
 package hub
 
 import (
-	"fmt"
 	"sort"
 	"ws/action"
 	"ws/db"
@@ -15,18 +14,10 @@ type serviceHub struct {
 
 func (hub *serviceHub) Setup() {
 	hub.Register(UserLogin, func(i ...interface{}) {
-		if len(i) >= 1 {
-			serviceClient := i[0].(*ServiceConn)
-			fmt.Println(serviceClient.User.Username)
-		}
 		hub.BroadcastServiceUser()
 		hub.BroadcastWaitingUser()
 	})
 	hub.Register(UserLogout, func(i ...interface{}) {
-		if len(i) >= 1 {
-			serviceClient := i[0].(*ServiceConn)
-			fmt.Println(serviceClient.User.Username)
-		}
 		hub.BroadcastServiceUser()
 	})
 }
