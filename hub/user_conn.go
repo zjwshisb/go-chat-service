@@ -39,6 +39,8 @@ func (c *UserConn) Setup() {
 								if exist {
 									serviceClient.Deliver(action.NewReceiveAction(msg))
 								}
+							} else {
+								ServiceHub.BroadcastWaitingUser()
 							}
 						}
 					}

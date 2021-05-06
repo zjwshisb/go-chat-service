@@ -82,7 +82,7 @@ func (user *User) GetLastServiceId() int64 {
 			return 0
 		}
 		t := int64(cmd.Val())
-		if t <= (time.Now().Unix() - config.App.ChatSessionDuration) {
+		if t <= (time.Now().Unix() - config.App.ChatSessionDuration * 24 * 60 * 60) {
 			return 0
 		}
 		return sid

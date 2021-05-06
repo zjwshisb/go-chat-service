@@ -52,7 +52,7 @@ func (hub *BaseHub) GetAllConn() (s []WebsocketConn){
 	defer hub.lock.RUnlock()
 	r := make([]WebsocketConn, 0)
 	for _, c := range hub.Clients {
-		r = append(r, c.(WebsocketConn))
+		r = append(r, c)
 	}
 	return r
 }

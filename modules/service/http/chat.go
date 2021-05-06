@@ -144,7 +144,12 @@ func AcceptUser(c *gin.Context) {
 	_ = serverUser.UpdateChatUser(user.ID)
 	_ = user.SetServiceId(serverUser.ID)
 
-	chatUser := resources.NewChatUser(user)
+	chatUser := &resources.ChatUser{
+		ID: user.ID,
+		Username: user.Username,
+		LastChatTime: 0,
+		Messages: make([]*resources.Message, 0),
+	}
 	chatUser.Unread = len(unSendMsg)
 	_, exist := hub.UserHub.GetConn(user.ID)
 	chatUser.Online = exist
@@ -153,6 +158,7 @@ func AcceptUser(c *gin.Context) {
 		rm := resources.NewMessage(*m)
 		chatUser.Messages = append(chatUser.Messages, rm)
 	}
+	go hub.ServiceHub.BroadcastWaitingUser()
 	util.RespSuccess(c, chatUser)
 }
 
