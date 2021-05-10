@@ -76,7 +76,7 @@ func (user *User) GetLastServiceId() int64 {
 	key := strconv.FormatInt(user.ID, 10)
 	cmd := db.Redis.HGet(ctx, User2ServerHashKey, key)
 	if sid, err := cmd.Int64(); err == nil {
-		// 判断是否超时||已被客服端移除
+		// 判断是否超时|已被客服移除
 		cmd := db.Redis.ZScore(ctx, fmt.Sprintf(serverChatUserKey, sid), key)
 		if cmd.Err() == redis.Nil {
 			return 0

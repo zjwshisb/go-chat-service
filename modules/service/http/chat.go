@@ -127,6 +127,10 @@ func AcceptUser(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
+	if user.GetLastServiceId() != 0 {
+		util.RespFail(c, "use had been accepted", 10001)
+		return
+	}
 	unSendMsg := user.GetUnSendMsg()
 	now := time.Now().Unix()
 	// 更新未发送的消息

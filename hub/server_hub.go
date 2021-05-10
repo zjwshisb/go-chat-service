@@ -54,6 +54,7 @@ func (hub *serviceHub) BroadcastWaitingUser() {
 	conns := hub.GetAllConn()
 	hub.SendAction(action.NewWaitingUsers(waitingUserSlice),  conns...)
 }
+
 func (hub *serviceHub) BroadcastServiceUser() {
 	var serviceUsers []*models.ServiceUser
 	db.Db.Find(&serviceUsers)
