@@ -1,24 +1,20 @@
 package main
 
 import (
-	"ws/config"
-	"ws/core"
-	"ws/db"
-	"ws/hub"
-	"ws/modules"
-	"ws/routers"
+	"ws/configs"
+	"ws/internal/databases"
+	"ws/internal/routers"
+	hub "ws/internal/websocket"
 )
 
 func init()  {
-	config.Setup()
-	db.Setup()
-	core.Setup()
+	configs.Setup()
+	databases.Setup()
 	routers.Setup()
-	modules.Setup()
 	hub.Setup()
 }
 func main() {
-	routers.Router.Run(config.Http.Host +":" + config.Http.Port)
+	routers.Router.Run(configs.Http.Host +":" + configs.Http.Port)
 	//m := flag.String("m", "m", "模式")
 	//fmt.Println(*m)
 	//migrate.Seed()

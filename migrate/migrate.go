@@ -2,7 +2,7 @@ package migrate
 
 import (
 	"ws/db"
-	"ws/models"
+	"ws/internal/models"
 )
 
 func Migrate()  {

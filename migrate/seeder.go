@@ -3,7 +3,7 @@ package migrate
 import (
 	"golang.org/x/crypto/bcrypt"
 	"ws/db"
-	"ws/models"
+	"ws/internal/models"
 )
 
 func Seed() {
