@@ -11,7 +11,7 @@ const (
 	UserLogout
 )
 
-type WebsocketManager interface {
+type Manager interface {
 	SendAction(act *action.Action, conn ...WebsocketConn)
 	AddConn(connect WebsocketConn)
 	RemoveConn(key int64)

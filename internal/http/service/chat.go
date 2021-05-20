@@ -4,16 +4,14 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
-	"path"
 	"strconv"
 	"time"
 	"ws/configs"
-	"ws/core/image"
-	"ws/core/log"
-	"ws/db"
-	"ws/hub"
+	"ws/internal/databases"
+	"ws/internal/file"
 	"ws/internal/models"
 	resources2 "ws/internal/resources"
+	hub "ws/internal/websocket"
 	"ws/util"
 )
 
@@ -35,7 +33,7 @@ func GetHistoryMessage(c *gin.Context) {
 	ui, _ := c.Get("user")
 	user := ui.(*models.ServiceUser)
 	var messages []*models.Message
-	query := db.Db.Where("service_id = ?", user.ID).
+	query := databases.Db.Where("service_id = ?", user.ID).
 		Where("user_id = ?", uid)
 	midStr, exist := c.GetQuery("mid")
 	if exist {
@@ -60,13 +58,12 @@ func ChatUserList(c *gin.Context) {
 	chatUsers := user.GetChatUsers()
 
 	con := context.Background()
-	cmd := db.Redis.ZRevRangeWithScores(con, user.ChatUsersKey(), 0, -1)
+	cmd := databases.Redis.ZRevRangeWithScores(con, user.ChatUsersKey(), 0, -1)
 
 	resp := make([]*resources2.ChatUser, 0)
 
-
 	if cmd.Err() == redis.Nil {
-		util.RespSuccess(c , resp)
+		util.RespSuccess(c, resp)
 	} else {
 		for _, z := range cmd.Val() {
 			id, err := strconv.ParseInt(z.Member.(string), 10, 64)
@@ -83,9 +80,9 @@ func ChatUserList(c *gin.Context) {
 	}
 
 	// 获取3天内的聊天记录
-	last := time.Now().Unix() - configs.App.ChatSessionDuration * 24 * 60 * 60
+	last := time.Now().Unix() - configs.App.ChatSessionDuration*24*60*60
 	var messages []*models.Message
-	db.Db.Preload("ServerUser").
+	databases.Db.Preload("ServerUser").
 		Preload("User").
 		Where("received_at > ?", last).
 		Where("service_id = ?", user.ID).
@@ -122,7 +119,7 @@ func AcceptUser(c *gin.Context) {
 	ui, _ := c.Get("user")
 	serverUser := ui.(*models.ServiceUser)
 	var user models.User
-	db.Db.Where("id = ?", form.Uid).First(&user)
+	databases.Db.Where("id = ?", form.Uid).First(&user)
 	if user.ID == 0 {
 		util.RespValidateFail(c, "invalid params")
 		return
@@ -134,25 +131,25 @@ func AcceptUser(c *gin.Context) {
 	unSendMsg := user.GetUnSendMsg()
 	now := time.Now().Unix()
 	// 更新未发送的消息
-	db.Db.Table("messages").
+	databases.Db.Table("messages").
 		Where("user_id = ?", form.Uid).
 		Where("service_id = ?", 0).Updates(map[string]interface{}{
 		"service_id": serverUser.ID,
 		"send_at":    now,
 	})
 	messages := make([]*models.Message, 0)
-	db.Db.Where("user_id = ?", form.Uid).
+	databases.Db.Where("user_id = ?", form.Uid).
 		Where("service_id = ?", serverUser.ID).
-		Where("received_at >= ?", now - 2*24*60*60).Find(&messages)
+		Where("received_at >= ?", now-2*24*60*60).Find(&messages)
 
 	_ = serverUser.UpdateChatUser(user.ID)
 	_ = user.SetServiceId(serverUser.ID)
 
 	chatUser := &resources2.ChatUser{
-		ID: user.ID,
-		Username: user.Username,
+		ID:           user.ID,
+		Username:     user.Username,
 		LastChatTime: 0,
-		Messages: make([]*resources2.Message, 0),
+		Messages:     make([]*resources2.Message, 0),
 	}
 	chatUser.Unread = len(unSendMsg)
 	_, exist := hub.UserHub.GetConn(user.ID)
@@ -187,7 +184,7 @@ func ReadAll(c *gin.Context) {
 	if err == nil {
 		ui, _ := c.Get("user")
 		server := ui.(*models.ServiceUser)
-		db.Db.Model(&models.Message{}).
+		databases.Db.Model(&models.Message{}).
 			Where("service_id = ?", server.ID).
 			Where("user_id = ?", form.Id).
 			Update("is_read", 1)
@@ -199,17 +196,13 @@ func ReadAll(c *gin.Context) {
 
 // 聊天图片
 func Image(c *gin.Context) {
-	file, _ := c.FormFile("file")
-	ext := path.Ext(file.Filename)
-	filename := util.RandomStr(32) + ext
-	fullPath := image.BasePath + image.ChatDir + "/" + filename
-	err := c.SaveUploadedFile(file, fullPath)
+	f, _ := c.FormFile("file")
+	ff, err := file.Save(f, "chat")
 	if err != nil {
-		log.Log.Errorln(err)
-		util.RespError(c, err.Error())
+		util.RespFail(c, err.Error(), 500)
 	} else {
 		util.RespSuccess(c, gin.H{
-			"url": image.Url(image.ChatDir + "/" + filename),
+			"url": ff.FullUrl,
 		})
 	}
 }

@@ -24,14 +24,24 @@ type app struct {
 	Url string
 	ChatSessionDuration int64
 }
+type file struct {
+	Storage string
+	LocalPath string
+	LocalPrefix string
+	QiniuAk string
+	QiniuSK string
+	QiniuUrl string
+	QiniuBucket string
+}
 var (
 	Mysql = &mysql{}
 	Http  = &http{}
 	Redis = &redis{}
 	App = &app{}
+	File = &file{}
 )
-func Setup() {
-	cfg, err := ini.Load("configs.ini")
+func init() {
+	cfg, err := ini.Load("config.ini")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,6 +58,10 @@ func Setup() {
 		log.Fatal(err)
 	}
 	err = cfg.Section("App").MapTo(App)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = cfg.Section("File").MapTo(File)
 	if err != nil {
 		log.Fatal(err)
 	}

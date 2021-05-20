@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"ws/configs"
 )
 var Router *gin.Engine
 
@@ -24,7 +25,7 @@ func Setup() {
 		AllowHeaders:     []string{"*"},
 		AllowCredentials: true,
 	}))
-	Router.Static("/images","./storage/images")
+	Router.Static(configs.File.LocalPrefix,configs.File.LocalPath)
 	registerService()
 	registerUser()
 }
