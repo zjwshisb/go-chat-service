@@ -8,27 +8,35 @@ import (
 	"ws/util"
 )
 
-type Local struct {
-	BaseUrl string
+type local struct {
+	BaseUrl     string
 	StoragePath string
 }
 
-func NewLocal() *Local {
-	return &Local{
-		BaseUrl: configs.App.Url + configs.File.LocalPrefix,
+func NewLocal() *local {
+	return &local{
+		BaseUrl:     configs.App.Url + configs.File.LocalPrefix,
 		StoragePath: configs.File.LocalPath,
 	}
 }
 
-func (local *Local) createDir(filePath string)  error  {
+func (local *local) Url(path string) string {
+	first := path[0:1]
+	if first == "/" {
+		return local.BaseUrl + path
+	}
+	return local.BaseUrl + "/" + path
+}
+
+func (local *local) createDir(filePath string) error {
 	if !local.isExist(filePath) {
-		err := os.MkdirAll(filePath,os.ModePerm)
+		err := os.MkdirAll(filePath, os.ModePerm)
 		return err
 	}
 	return nil
 }
 
-func (local *Local) isExist(path string) bool {
+func (local *local) isExist(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsExist(err) {
@@ -39,7 +47,7 @@ func (local *Local) isExist(path string) bool {
 	return true
 }
 
-func (local *Local) Save(file *multipart.FileHeader, relativePath string) (*File, error) {
+func (local *local) Save(file *multipart.FileHeader, relativePath string) (*File, error) {
 	ff, err := file.Open()
 	if err != nil {
 		return nil, err
@@ -49,7 +57,7 @@ func (local *Local) Save(file *multipart.FileHeader, relativePath string) (*File
 	}()
 	ext := path.Ext(file.Filename)
 	fileByte := make([]byte, file.Size)
-	_ , err = ff.Read(fileByte)
+	_, err = ff.Read(fileByte)
 	if err != nil {
 		return nil, err
 	}
@@ -78,9 +86,8 @@ func (local *Local) Save(file *multipart.FileHeader, relativePath string) (*File
 		return nil, err
 	}
 	return &File{
-		Path: relativeName,
-		ThumbUrl: local.BaseUrl + "/" + relativeName,
-		FullUrl: local.BaseUrl + "/" + relativeName,
-		Storage: "local",
+		Path:     relativeName,
+		FullUrl:  local.Url(relativeName),
+		Storage:  "local",
 	}, nil
 }

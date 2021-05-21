@@ -10,8 +10,8 @@ import (
 	"ws/internal/databases"
 	"ws/internal/file"
 	"ws/internal/models"
-	resources2 "ws/internal/resources"
-	hub "ws/internal/websocket"
+	"ws/internal/resources"
+	"ws/internal/websocket"
 	"ws/util"
 )
 
@@ -43,9 +43,9 @@ func GetHistoryMessage(c *gin.Context) {
 		}
 	}
 	query.Order("id desc").Limit(20).Find(&messages)
-	res := make([]*resources2.Message, 0)
+	res := make([]*resources.Message, 0)
 	for _, m := range messages {
-		res = append(res, resources2.NewMessage(*m))
+		res = append(res, resources.NewMessage(*m))
 	}
 	util.RespSuccess(c, res)
 }
@@ -60,7 +60,7 @@ func ChatUserList(c *gin.Context) {
 	con := context.Background()
 	cmd := databases.Redis.ZRevRangeWithScores(con, user.ChatUsersKey(), 0, -1)
 
-	resp := make([]*resources2.ChatUser, 0)
+	resp := make([]*resources.ChatUser, 0)
 
 	if cmd.Err() == redis.Nil {
 		util.RespSuccess(c, resp)
@@ -70,7 +70,7 @@ func ChatUserList(c *gin.Context) {
 			if err == nil {
 				for _, user := range chatUsers {
 					if user.ID == id {
-						chatUserRes := resources2.NewChatUser(*user)
+						chatUserRes := resources.NewChatUser(*user)
 						chatUserRes.LastChatTime = int64(z.Score)
 						resp = append(resp, chatUserRes)
 					}
@@ -90,7 +90,7 @@ func ChatUserList(c *gin.Context) {
 	for _, u := range resp {
 		for _, m := range messages {
 			if m.UserId == u.ID {
-				rm := resources2.NewMessage(*m)
+				rm := resources.NewMessage(*m)
 				rm.IsSuccess = true
 				if !m.IsRead && !m.IsServer {
 					u.Unread += 1
@@ -99,7 +99,7 @@ func ChatUserList(c *gin.Context) {
 			}
 		}
 		u.Disabled = !user.CheckChatUserLegal(u.ID)
-		if _, ok := hub.UserHub.GetConn(u.ID); ok {
+		if _, ok := websocket.UserHub.GetConn(u.ID); ok {
 			u.Online = true
 		}
 	}
@@ -145,21 +145,21 @@ func AcceptUser(c *gin.Context) {
 	_ = serverUser.UpdateChatUser(user.ID)
 	_ = user.SetServiceId(serverUser.ID)
 
-	chatUser := &resources2.ChatUser{
+	chatUser := &resources.ChatUser{
 		ID:           user.ID,
 		Username:     user.Username,
 		LastChatTime: 0,
-		Messages:     make([]*resources2.Message, 0),
+		Messages:     make([]*resources.Message, 0),
 	}
 	chatUser.Unread = len(unSendMsg)
-	_, exist := hub.UserHub.GetConn(user.ID)
+	_, exist := websocket.UserHub.GetConn(user.ID)
 	chatUser.Online = exist
 	chatUser.LastChatTime = time.Now().Unix()
 	for _, m := range messages {
-		rm := resources2.NewMessage(*m)
+		rm := resources.NewMessage(*m)
 		chatUser.Messages = append(chatUser.Messages, rm)
 	}
-	go hub.ServiceHub.BroadcastWaitingUser()
+	go websocket.ServiceHub.BroadcastWaitingUser()
 	util.RespSuccess(c, chatUser)
 }
 

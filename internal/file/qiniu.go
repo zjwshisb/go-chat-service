@@ -13,7 +13,7 @@ type qiniu struct {
 	ak string
 	sk string
 	bucket string
-	baseUrl string
+	BaseUrl string
 }
 
 func newQiniu() *qiniu {
@@ -21,8 +21,15 @@ func newQiniu() *qiniu {
 		ak: configs.File.QiniuAk,
 		sk: configs.File.QiniuSK,
 		bucket: configs.File.QiniuBucket,
-		baseUrl: configs.File.QiniuUrl,
+		BaseUrl: configs.File.QiniuUrl,
 	}
+}
+func (qiniu *qiniu) Url(path string) string {
+	first := path[0:1]
+	if first == "/" {
+		return qiniu.BaseUrl + path
+	}
+	return qiniu.BaseUrl + "/" + path
 }
 func (qiniu *qiniu) Save(file *multipart.FileHeader, relativePath string) (*File, error) {
 	cfg := &storage.Config{}
@@ -47,8 +54,7 @@ func (qiniu *qiniu) Save(file *multipart.FileHeader, relativePath string) (*File
 		return nil, err
 	}
 	return &File{
-		ThumbUrl: qiniu.baseUrl + "/" + key,
-		FullUrl: qiniu.baseUrl + "/" +key,
+		FullUrl: qiniu.Url(key),
 		Path: key,
 		Storage: configs.File.Storage,
 	}, nil

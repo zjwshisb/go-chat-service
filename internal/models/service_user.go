@@ -9,7 +9,7 @@ import (
 	"time"
 	"ws/configs"
 	"ws/internal/databases"
-	"ws/internal/image"
+	"ws/internal/file"
 	"ws/util"
 )
 
@@ -38,7 +38,7 @@ type ServiceUser struct {
 
 func (user *ServiceUser) GetAvatarUrl() string {
 	if user.Avatar != "" {
-		return image.Url(user.Avatar)
+		return file.Disk("local").Url(user.Avatar)
 	}
 	return ""
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"time"
 	"ws/internal/models"
-	resources2 "ws/internal/resources"
+	"ws/internal/resources"
 )
 
 const (
@@ -39,7 +39,7 @@ func (action *Action) Marshal() (b []byte, err error) {
 		b, err = json.Marshal(Action{
 			Time:   action.Time,
 			Action: action.Action,
-			Data:   resources2.NewMessage(*msg),
+			Data:   resources.NewMessage(*msg),
 		})
 		return
 	}
@@ -80,7 +80,7 @@ func NewReceiptAction(msg *models.Message) (act *Action) {
 	}
 	return
 }
-func NewServiceUserAction(chatServiceUsers []resources2.ChatServiceUser) *Action {
+func NewServiceUserAction(chatServiceUsers []resources.ChatServiceUser) *Action {
 	return &Action{
 		Action: ServiceUserAction,
 		Time: time.Now().Unix(),

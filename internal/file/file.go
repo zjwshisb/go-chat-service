@@ -4,9 +4,7 @@ import (
 	"mime/multipart"
 	"ws/configs"
 )
-
 type File struct {
-	ThumbUrl string
 	FullUrl string
 	Path string
 	Storage string
@@ -14,18 +12,20 @@ type File struct {
 
 type Manager interface {
 	Save(file *multipart.FileHeader, path string) (*File, error)
+	Url(path string) string
 }
-
+func Disk(name string) Manager {
+	switch name {
+	case "qiniu":
+		return newQiniu()
+	case "local":
+		return NewLocal()
+	default:
+		return NewLocal()
+	}
+}
 func Save(file *multipart.FileHeader, path string) (*File, error) {
 	storage := configs.File.Storage
-	var disk Manager
-	switch storage {
-	case "qiniu":
-		disk = newQiniu()
-	case "local":
-		disk = NewLocal()
-	default:
-		disk = &Local{}
-	}
+	disk := Disk(storage)
 	return disk.Save(file, path)
 }
