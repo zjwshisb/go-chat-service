@@ -57,10 +57,9 @@ func ChatUserList(c *gin.Context) {
 
 	chatUsers := user.GetChatUsers()
 
-	con := context.Background()
-	cmd := databases.Redis.ZRevRangeWithScores(con, user.ChatUsersKey(), 0, -1)
+	cmd := databases.Redis.ZRevRangeWithScores(context.Background(), user.ChatUsersKey(), 0, -1)
 
-	resp := make([]*resources.ChatUser, 0)
+	resp := make([]*resources.ChatUser, 0, len(cmd.Val()))
 
 	if cmd.Err() == redis.Nil {
 		util.RespSuccess(c, resp)
@@ -79,8 +78,7 @@ func ChatUserList(c *gin.Context) {
 		}
 	}
 
-	// 获取3天内的聊天记录
-	last := time.Now().Unix() - configs.App.ChatSessionDuration*24*60*60
+	last := time.Now().Unix() - configs.App.ChatSessionDuration * 24 * 60 * 60
 	var messages []*models.Message
 	databases.Db.Preload("ServerUser").
 		Preload("User").
@@ -140,7 +138,8 @@ func AcceptUser(c *gin.Context) {
 	messages := make([]*models.Message, 0)
 	databases.Db.Where("user_id = ?", form.Uid).
 		Where("service_id = ?", serverUser.ID).
-		Where("received_at >= ?", now-2*24*60*60).Find(&messages)
+		Limit(20).
+		Find(&messages)
 
 	_ = serverUser.UpdateChatUser(user.ID)
 	_ = user.SetServiceId(serverUser.ID)
@@ -149,7 +148,7 @@ func AcceptUser(c *gin.Context) {
 		ID:           user.ID,
 		Username:     user.Username,
 		LastChatTime: 0,
-		Messages:     make([]*resources.Message, 0),
+		Messages:     make([]*resources.Message, 0, len(messages)),
 	}
 	chatUser.Unread = len(unSendMsg)
 	_, exist := websocket.UserHub.GetConn(user.ID)

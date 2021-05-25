@@ -100,7 +100,7 @@ func (user *ServiceUser) GetChatUsers() (users []*User) {
 	if cmd.Err() == redis.Nil {
 		return
 	}
-	uids := make([]int64, 0)
+	uids := make([]int64, 0, len(cmd.Val()))
 	for _, idStr := range cmd.Val() {
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err == nil {

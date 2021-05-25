@@ -2,12 +2,11 @@ package user
 
 import (
 	"github.com/gin-gonic/gin"
-	"path"
 	"strconv"
 	"ws/internal/databases"
-	"ws/internal/image"
+	"ws/internal/file"
 	"ws/internal/models"
-	resources2 "ws/internal/resources"
+	"ws/internal/resources"
 	"ws/util"
 )
 
@@ -25,25 +24,22 @@ func GetHistoryMessage(c *gin.Context) {
 		}
 	}
 	query.Order("id desc").Limit(20).Find(&messages)
-	messagesResources := make([]*resources2.Message, 0)
+	messagesResources := make([]*resources.Message, 0)
 	for _, msg := range messages {
-		messagesResources = append(messagesResources, resources2.NewMessage(*msg))
+		messagesResources = append(messagesResources, resources.NewMessage(*msg))
 	}
 	util.RespSuccess(c, messagesResources)
 }
 
 // 聊天图片
 func Image(c *gin.Context) {
-	file, _ := c.FormFile("file")
-	ext := path.Ext(file.Filename)
-	filename := util.RandomStr(32) + ext
-	fullPath := image.BasePath + image.ChatDir + "/" + filename
-	err := c.SaveUploadedFile(file, fullPath)
+	f, _ := c.FormFile("file")
+	ff, err := file.Save(f, "chat")
 	if err != nil {
-		util.RespError(c, err.Error())
+		util.RespFail(c, err.Error(), 500)
 	} else {
 		util.RespSuccess(c, gin.H{
-			"url": image.Url(image.ChatDir + "/" + filename),
+			"url": ff.FullUrl,
 		})
 	}
 }

@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 	"log"
 )
@@ -21,6 +22,7 @@ type redis struct {
 }
 type app struct {
 	LogPath string
+	LogLevel logrus.Level
 	Url string
 	ChatSessionDuration int64
 }

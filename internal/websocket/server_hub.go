@@ -5,7 +5,7 @@ import (
 	"ws/internal/action"
 	"ws/internal/databases"
 	"ws/internal/models"
-	resources2 "ws/internal/resources"
+	"ws/internal/resources"
 )
 
 type serviceHub struct {
@@ -26,11 +26,11 @@ func (hub *serviceHub) BroadcastWaitingUser() {
 	databases.Db.Preload("User").
 		Order("received_at desc").
 		Where("service_id = ?", 0).Find(&messages)
-	waitingUserMap := make(map[int64]*resources2.WaitingUser)
+	waitingUserMap := make(map[int64]*resources.WaitingUser)
 	for _, message := range messages {
 		if message.User.ID != 0{
 			if wU, exist := waitingUserMap[message.User.ID]; !exist {
-				waitingUserMap[message.User.ID] =  &resources2.WaitingUser{
+				waitingUserMap[message.User.ID] =  &resources.WaitingUser{
 					Username:     message.User.Username,
 					Avatar:       "",
 					Id:           message.User.ID,
@@ -44,7 +44,7 @@ func (hub *serviceHub) BroadcastWaitingUser() {
 			}
 		}
 	}
-	waitingUserSlice := make([]*resources2.WaitingUser, 0)
+	waitingUserSlice := make([]*resources.WaitingUser, 0, len(waitingUserMap))
 	for _, user := range waitingUserMap {
 		waitingUserSlice = append(waitingUserSlice, user)
 	}
@@ -59,10 +59,10 @@ func (hub *serviceHub) BroadcastServiceUser() {
 	var serviceUsers []*models.ServiceUser
 	databases.Db.Find(&serviceUsers)
 	conns := hub.GetAllConn()
-	data := make([]resources2.ChatServiceUser, 0)
+	data := make([]resources.ChatServiceUser, 0, len(serviceUsers))
 	for _, serviceUser := range serviceUsers {
 		_, online := hub.GetConn(serviceUser.ID)
-		data = append(data, resources2.ChatServiceUser{
+		data = append(data, resources.ChatServiceUser{
 			Avatar: serviceUser.GetAvatarUrl(),
 			Username: serviceUser.Username,
 			Online: online,

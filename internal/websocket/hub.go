@@ -12,31 +12,31 @@ const (
 )
 
 type Manager interface {
-	SendAction(act *action.Action, conn ...WebsocketConn)
-	AddConn(connect WebsocketConn)
+	SendAction(act *action.Action, conn ...Conn)
+	AddConn(connect Conn)
 	RemoveConn(key int64)
-	GetConn(key int64) (WebsocketConn, bool)
-	GetAllConn() []WebsocketConn
-	Login(connect WebsocketConn)
-	Logout(connect WebsocketConn)
+	GetConn(key int64) (Conn, bool)
+	GetAllConn() []Conn
+	Login(connect Conn)
+	Logout(connect Conn)
 }
 type BaseHub struct {
-	Clients map[int64]WebsocketConn
+	Clients map[int64]Conn
 	lock    sync.RWMutex
 	event.BaseEvent
 }
-func (hub *BaseHub) SendAction(a  *action.Action, clients ...WebsocketConn) {
+func (hub *BaseHub) SendAction(a  *action.Action, clients ...Conn) {
 	for _,c := range clients {
 		c.Deliver(a)
 	}
 }
-func (hub *BaseHub) GetConn(uid int64) (client WebsocketConn,ok bool) {
+func (hub *BaseHub) GetConn(uid int64) (client Conn,ok bool) {
 	hub.lock.RLock()
 	defer hub.lock.RUnlock()
 	client, ok = hub.Clients[uid]
 	return
 }
-func (hub *BaseHub) AddConn(client WebsocketConn) {
+func (hub *BaseHub) AddConn(client Conn) {
 	hub.lock.Lock()
 	defer hub.lock.Unlock()
 	hub.Clients[client.GetUserId()] = client
@@ -47,22 +47,22 @@ func (hub *BaseHub) RemoveConn(uid int64) {
 	defer hub.lock.Unlock()
 	delete(hub.Clients, uid)
 }
-func (hub *BaseHub) GetAllConn() (s []WebsocketConn){
+func (hub *BaseHub) GetAllConn() (s []Conn){
 	hub.lock.RLock()
 	defer hub.lock.RUnlock()
-	r := make([]WebsocketConn, 0)
+	r := make([]Conn, 0)
 	for _, c := range hub.Clients {
 		r = append(r, c)
 	}
 	return r
 }
-func (hub *BaseHub) Logout(client WebsocketConn) {
+func (hub *BaseHub) Logout(client Conn) {
 	hub.RemoveConn(client.GetUserId())
 	client.close()
 	go hub.Call(UserLogout, client)
 }
 
-func (hub *BaseHub) Login(client WebsocketConn) {
+func (hub *BaseHub) Login(client Conn) {
 	hub.AddConn(client)
 	client.run()
 	go hub.Call(UserLogin, client)
@@ -74,12 +74,12 @@ var ServiceHub *serviceHub
 func Setup()  {
 	UserHub = &userHub{
 		BaseHub{
-			Clients: map[int64]WebsocketConn{},
+			Clients: map[int64]Conn{},
 		},
 	}
 	ServiceHub = &serviceHub{
 		BaseHub{
-			Clients: map[int64]WebsocketConn{},
+			Clients: map[int64]Conn{},
 		},
 	}
 	ServiceHub.Setup()

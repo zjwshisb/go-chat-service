@@ -22,7 +22,9 @@ func Setup() {
 		configs.Mysql.Name,
 	)
 	db, err := gorm.Open(mysql.Open(dns),
-		&gorm.Config{})
+		&gorm.Config{
+			DisableForeignKeyConstraintWhenMigrating: true,
+		})
 	if err != nil {
 		log.Fatal(err)
 	}

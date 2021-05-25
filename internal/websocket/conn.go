@@ -28,7 +28,7 @@ type Authentic interface {
 	GetUserId() int64
 }
 
-type WebsocketConn interface {
+type Conn interface {
 	AnonymousConn
 	Authentic
 }
@@ -74,7 +74,9 @@ func (c *BaseConn) readMsg() {
 	for {
 		go func() {
 			_, message, err := c.conn.ReadMessage()
+			log.Log.Warning(string(message))
 			if err != nil {
+				log.Log.Error(err)
 				c.close()
 			} else {
 				msg <- message
@@ -89,7 +91,7 @@ func (c *BaseConn) readMsg() {
 			if err == nil {
 				c.Call(onReceiveMessage, act)
 			} else {
-				log.Log.Warning(err)
+				log.Log.Error(err)
 			}
 		}
 	}
@@ -106,6 +108,7 @@ func (c *BaseConn) sendMsg() {
 		case act := <-c.send:
 			msgStr, err := act.Marshal()
 			if err == nil {
+				log.Log.Warning(string(msgStr))
 				err := c.conn.WriteMessage(websocket.TextMessage, msgStr)
 				if err == nil {
 					if act.Action == action.ReceiveMessageAction {
@@ -120,6 +123,8 @@ func (c *BaseConn) sendMsg() {
 					c.close()
 					goto END
 				}
+			} else {
+				log.Log.Error(err)
 			}
 		case <-c.closeSignal:
 			goto END
