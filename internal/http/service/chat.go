@@ -69,7 +69,12 @@ func ChatUserList(c *gin.Context) {
 			if err == nil {
 				for _, user := range chatUsers {
 					if user.ID == id {
-						chatUserRes := resources.NewChatUser(*user)
+						chatUserRes := &resources.ChatUser{
+							ID:           user.ID,
+							Username:     user.Username,
+							Messages:     make([]*resources.Message, 0),
+							Unread:       0,
+						}
 						chatUserRes.LastChatTime = int64(z.Score)
 						resp = append(resp, chatUserRes)
 					}

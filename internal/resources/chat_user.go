@@ -1,9 +1,5 @@
 package resources
 
-import (
-	"ws/internal/models"
-)
-
 type ChatUser struct {
 	ID        int64     `json:"id"`
 	Username  string    `json:"username"`
@@ -12,13 +8,4 @@ type ChatUser struct {
 	Online bool         `json:"online"`
 	Messages []*Message `json:"messages"`
 	Unread int          `json:"unread"`
-}
-
-func NewChatUser(user models.User) *ChatUser {
-	return &ChatUser{
-		ID: user.ID,
-		Username: user.Username,
-		LastChatTime: 0,
-		Messages: make([]*Message, 0),
-	}
 }

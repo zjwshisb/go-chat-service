@@ -18,6 +18,8 @@ const (
 	ServiceUserAction = "service-users"
 	SendMessageAction = "send-message"
 	ReceiveMessageAction = "receive-message"
+	OtherLogin = "other-login"
+	MoreThanOne = "more-than-one"
 )
 
 type Action struct {
@@ -103,6 +105,18 @@ func NewUserOffline(uid int64) *Action {
 		Action: UserOffLineAction,
 		Time: time.Now().Unix(),
 		Data: data,
+	}
+}
+func NewMoreThanOne() *Action {
+	return &Action{
+		Action: MoreThanOne,
+		Time: time.Now().Unix(),
+	}
+}
+func NewOtherLogin() *Action {
+	return &Action{
+		Action: OtherLogin,
+		Time: time.Now().Unix(),
 	}
 }
 func NewPing() *Action {

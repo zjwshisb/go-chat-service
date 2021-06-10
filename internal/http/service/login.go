@@ -3,7 +3,9 @@ package service
 import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+	"ws/internal/action"
 	"ws/internal/models"
+	"ws/internal/websocket"
 	"ws/util"
 )
 
@@ -26,6 +28,10 @@ func Login(c *gin.Context) {
 			util.RespSuccess(c, gin.H{
 				"token": user.Login(),
 			})
+			old, exist := websocket.ServiceHub.GetConn(user.ID)
+			if exist {
+				old.Deliver(action.NewOtherLogin())
+			}
 			return
 		}
 	}

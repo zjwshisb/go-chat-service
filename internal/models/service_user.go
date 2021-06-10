@@ -17,10 +17,8 @@ const (
 	serverChatUserKey = "server-user:%d:chat-user"
 )
 
-type ServiceUserAuthenticate interface {
-	Login()
-	Logout()
-	Auth()
+type ChatUser struct {
+	
 }
 
 type ServiceUser struct {
@@ -34,8 +32,9 @@ type ServiceUser struct {
 	Avatar string 		`gorm:"string;size:512" json:"-"`
 }
 
-
-
+func (user *ServiceUser) GetPrimaryKey() int64 {
+	return user.ID
+}
 func (user *ServiceUser) GetAvatarUrl() string {
 	if user.Avatar != "" {
 		return file.Disk("local").Url(user.Avatar)
@@ -54,7 +53,6 @@ func (user *ServiceUser) Logout()  {
 func (user *ServiceUser) Auth(c *gin.Context) {
 	databases.Db.Where("api_token= ?", util.GetToken(c)).First(user)
 }
-
 func (user *ServiceUser) FindByName(username string) () {
 	databases.Db.Where("username= ?", username).First(user)
 }

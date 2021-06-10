@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"ws/internal/http/service"
-	service2 "ws/internal/middleware/service"
+	middleware "ws/internal/middleware/service"
 	"ws/internal/models"
-	hub "ws/internal/websocket"
+	"ws/internal/websocket"
 )
 
 func registerService()  {
@@ -16,7 +16,7 @@ func registerService()  {
 
 		auth := g.Group("/")
 
-		auth.Use(service2.Authenticate)
+		auth.Use(middleware.Authenticate)
 		auth.GET("/me", service.Me)
 		auth.POST("/me/avatar", service.Avatar)
 		auth.DELETE("/ws/chat-user/:id", service.RemoveUser)
@@ -33,9 +33,9 @@ func registerService()  {
 			if err != nil {
 				fmt.Println(err)
 			}
-			client := hub.NewServiceConn(serviceUser, conn)
+			client := websocket.NewServiceConn(serviceUser, conn)
 			client.Setup()
-			hub.ServiceHub.Login(client)
+			websocket.ServiceHub.Login(client)
 		})
 	}
 }

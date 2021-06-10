@@ -10,8 +10,7 @@ const (
 	UserLogin = iota
 	UserLogout
 )
-
-type Manager interface {
+type Container interface {
 	SendAction(act *action.Action, conn ...Conn)
 	AddConn(connect Conn)
 	RemoveConn(key int64)
@@ -47,6 +46,7 @@ func (hub *BaseHub) RemoveConn(uid int64) {
 	defer hub.lock.Unlock()
 	delete(hub.Clients, uid)
 }
+
 func (hub *BaseHub) GetAllConn() (s []Conn){
 	hub.lock.RLock()
 	defer hub.lock.RUnlock()
@@ -56,6 +56,7 @@ func (hub *BaseHub) GetAllConn() (s []Conn){
 	}
 	return r
 }
+
 func (hub *BaseHub) Logout(client Conn) {
 	hub.RemoveConn(client.GetUserId())
 	client.close()
@@ -63,6 +64,10 @@ func (hub *BaseHub) Logout(client Conn) {
 }
 
 func (hub *BaseHub) Login(client Conn) {
+	old , exist := hub.GetConn(client.GetUserId())
+	if exist {
+		hub.SendAction(action.NewMoreThanOne(), old)
+	}
 	hub.AddConn(client)
 	client.run()
 	go hub.Call(UserLogin, client)

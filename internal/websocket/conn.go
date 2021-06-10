@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	onnSendSuccess   = iota
+	onnSendSuccess  = iota
 	onReceiveMessage
 )
 
@@ -60,11 +60,10 @@ func (c *BaseConn) ping() {
 	}
 END:
 }
-
 func (c *BaseConn) close() {
 	c.Once.Do(func() {
-		_ = c.conn.Close()
 		close(c.closeSignal)
+		_ = c.conn.Close()
 	})
 }
 
@@ -120,6 +119,7 @@ func (c *BaseConn) sendMsg() {
 					}
 					go c.Call(onnSendSuccess, act)
 				} else {
+					log.Log.Error(err)
 					c.close()
 					goto END
 				}
