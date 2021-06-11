@@ -30,8 +30,7 @@ func GetHistoryMessage(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	ui, _ := c.Get("user")
-	user := ui.(*models.ServiceUser)
+	user := getUser(c)
 	var messages []*models.Message
 	query := databases.Db.Where("service_id = ?", user.ID).
 		Where("user_id = ?", uid)
@@ -52,15 +51,10 @@ func GetHistoryMessage(c *gin.Context) {
 
 // 聊天用户列表
 func ChatUserList(c *gin.Context) {
-	ui, _ := c.Get("user")
-	user := ui.(*models.ServiceUser)
-
+	user := getUser(c)
 	chatUsers := user.GetChatUsers()
-
 	cmd := databases.Redis.ZRevRangeWithScores(context.Background(), user.ChatUsersKey(), 0, -1)
-
 	resp := make([]*resources.ChatUser, 0, len(cmd.Val()))
-
 	if cmd.Err() == redis.Nil {
 		util.RespSuccess(c, resp)
 	} else {

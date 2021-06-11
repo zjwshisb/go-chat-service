@@ -30,6 +30,7 @@ type ServiceUser struct {
 	Password  string     `gorm:"string;size:255" json:"-"`
 	ApiToken string 	`gorm:"string;size:255"  json:"-"`
 	Avatar string 		`gorm:"string;size:512" json:"-"`
+	ShortcutReplies []*ShortcutReply `gorm:"foreignKey:UserId"`
 }
 
 func (user *ServiceUser) GetPrimaryKey() int64 {

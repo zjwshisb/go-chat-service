@@ -9,8 +9,7 @@ import (
 )
 
 func Me(c *gin.Context) {
-	ui, _ := c.Get("user")
-	user := ui.(*models.ServiceUser)
+	user := getUser(c)
 	util.RespSuccess(c, gin.H{
 		"username": user.Username,
 		"id":       user.ID,
