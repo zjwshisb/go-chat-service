@@ -83,6 +83,7 @@ func ChatUserList(c *gin.Context) {
 		Preload("User").
 		Where("received_at > ?", last).
 		Where("service_id = ?", user.ID).
+		Order("id desc").
 		Find(&messages)
 	for _, u := range resp {
 		for _, m := range messages {
@@ -137,25 +138,26 @@ func AcceptUser(c *gin.Context) {
 	messages := make([]*models.Message, 0)
 	databases.Db.Where("user_id = ?", form.Uid).
 		Where("service_id = ?", serverUser.ID).
+		Order("id desc").
 		Limit(20).
 		Find(&messages)
 
 	_ = serverUser.UpdateChatUser(user.ID)
 	_ = user.SetServiceId(serverUser.ID)
-
+	messageLength := len(messages)
 	chatUser := &resources.ChatUser{
 		ID:           user.ID,
 		Username:     user.Username,
 		LastChatTime: 0,
-		Messages:     make([]*resources.Message, 0, len(messages)),
+		Messages:     make([]*resources.Message, messageLength, messageLength),
 	}
 	chatUser.Unread = len(unSendMsg)
 	_, exist := websocket.UserHub.GetConn(user.ID)
 	chatUser.Online = exist
 	chatUser.LastChatTime = time.Now().Unix()
-	for _, m := range messages {
+	for index, m := range messages {
 		rm := resources.NewMessage(*m)
-		chatUser.Messages = append(chatUser.Messages, rm)
+		chatUser.Messages[messageLength - 1 - index] = rm
 	}
 	go websocket.ServiceHub.BroadcastWaitingUser()
 	util.RespSuccess(c, chatUser)
