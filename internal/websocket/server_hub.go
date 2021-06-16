@@ -5,6 +5,7 @@ import (
 	"ws/internal/action"
 	"ws/internal/databases"
 	"ws/internal/models"
+	"ws/internal/repositories"
 	"ws/internal/resources"
 )
 
@@ -22,18 +23,15 @@ func (hub *serviceHub) Setup() {
 	})
 }
 func (hub *serviceHub) BroadcastWaitingUser() {
-	var messages []*models.Message
-	databases.Db.Preload("User").
-		Order("received_at desc").
-		Where("service_id = ?", 0).Find(&messages)
+	messages := repositories.GetUnSendMessage(map[string]interface{}{})
 	waitingUserMap := make(map[int64]*resources.WaitingUser)
 	for _, message := range messages {
 		if message.User.ID != 0{
 			if wU, exist := waitingUserMap[message.User.ID]; !exist {
-				waitingUserMap[message.User.ID] =  &resources.WaitingUser{
-					Username:     message.User.Username,
+				waitingUserMap[message.User.GetPrimaryKey()] =  &resources.WaitingUser{
+					Username:     message.User.GetUsername(),
 					Avatar:       "",
-					Id:           message.User.ID,
+					Id:           message.User.GetPrimaryKey(),
 					LastMessage:  message.Content,
 					LastTime:     message.ReceivedAT,
 					MessageCount: 1,
@@ -56,7 +54,7 @@ func (hub *serviceHub) BroadcastWaitingUser() {
 }
 
 func (hub *serviceHub) BroadcastServiceUser() {
-	var serviceUsers []*models.ServiceUser
+	var serviceUsers []*models.BackendUser
 	databases.Db.Find(&serviceUsers)
 	conns := hub.GetAllConn()
 	data := make([]resources.ChatServiceUser, 0, len(serviceUsers))
@@ -66,7 +64,7 @@ func (hub *serviceHub) BroadcastServiceUser() {
 			Avatar: serviceUser.GetAvatarUrl(),
 			Username: serviceUser.Username,
 			Online: online,
-			Id: serviceUser.ID,
+			Id: serviceUser.GetPrimaryKey(),
 			TodayAcceptCount: serviceUser.GetTodayAcceptCount(),
 		})
 	}

@@ -22,13 +22,13 @@ type Message struct {
 func NewMessage(model models.Message) *Message {
 	var avatar string
 	if model.IsServer {
-		var serverUser models.ServiceUser
-		if model.ServerUser.ID == 0 {
-			_ = databases.Db.Model(&model).Association("ServerUser").Find(&serverUser)
+		var backendUser models.BackendUser
+		if model.BackendUser.ID == 0 {
+			_ = databases.Db.Model(&model).Association("ServerUser").Find(&backendUser)
 		} else {
-			serverUser = model.ServerUser
+			backendUser = model.BackendUser
 		}
-		avatar = serverUser.GetAvatarUrl()
+		avatar = backendUser.GetAvatarUrl()
 	} else {
 		//avatar = model.User.g
 	}

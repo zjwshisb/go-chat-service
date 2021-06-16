@@ -2,26 +2,17 @@ package models
 
 import (
 	"context"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"strconv"
 	"time"
-	"ws/configs"
+	"ws/internal/chat"
 	"ws/internal/databases"
 	"ws/internal/file"
 	"ws/util"
 )
 
-const (
-	serverChatUserKey = "server-user:%d:chat-user"
-)
-
-type ChatUser struct {
-	
-}
-
-type ServiceUser struct {
+type BackendUser struct {
 	ID        int64      `json:"id"`
 	CreatedAt *time.Time `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at"`
@@ -33,50 +24,36 @@ type ServiceUser struct {
 	ShortcutReplies []*ShortcutReply `gorm:"foreignKey:UserId"`
 }
 
-func (user *ServiceUser) GetPrimaryKey() int64 {
+func (user *BackendUser) GetPrimaryKey() int64 {
 	return user.ID
 }
-func (user *ServiceUser) GetAvatarUrl() string {
+func (user *BackendUser) GetAvatarUrl() string {
 	if user.Avatar != "" {
 		return file.Disk("local").Url(user.Avatar)
 	}
 	return ""
 }
-func (user *ServiceUser) Login() (token string) {
+func (user *BackendUser) Login() (token string) {
 	token = util.RandomStr(32)
 	databases.Db.Model(user).Update("api_token", token)
 	return
 }
-func (user *ServiceUser) Logout()  {
+func (user *BackendUser) Logout()  {
 	databases.Db.Model(user).Update("api_token", "")
 }
 
-func (user *ServiceUser) Auth(c *gin.Context) {
+func (user *BackendUser) Auth(c *gin.Context) bool {
 	databases.Db.Where("api_token= ?", util.GetToken(c)).First(user)
+	return user.ID > 0
 }
-func (user *ServiceUser) FindByName(username string) () {
+func (user *BackendUser) FindByName(username string) bool {
 	databases.Db.Where("username= ?", username).First(user)
+	return user.ID > 0
 }
-func (user *ServiceUser) ChatUsersKey() string {
-	return fmt.Sprintf(serverChatUserKey, user.ID)
-}
-// 检查聊天对象是否过期
-func (user *ServiceUser) CheckChatUserLegal(uid int64) bool {
+
+func (user *BackendUser) GetTodayAcceptCount() (count int64) {
 	ctx := context.Background()
-	cmd := databases.Redis.ZScore(ctx, user.ChatUsersKey(), strconv.FormatInt(uid , 10))
-	if cmd.Err() == redis.Nil {
-		return false
-	}
-	score := cmd.Val()
-	t := int64(score)
-	if (time.Now().Unix() - t) <= configs.App.ChatSessionDuration * 24 * 60 * 60 {
-		return true
-	}
-	return false
-}
-func (user *ServiceUser) GetTodayAcceptCount() (count int64) {
-	ctx := context.Background()
-	cmd := databases.Redis.ZRangeWithScores(ctx, user.ChatUsersKey(), 0, -1)
+	cmd := databases.Redis.ZRangeWithScores(ctx, chat.GetBackUserKey(user.GetPrimaryKey()), 0, -1)
 	if cmd.Err() == redis.Nil {
 		return
 	}
@@ -92,10 +69,10 @@ func (user *ServiceUser) GetTodayAcceptCount() (count int64) {
 	return count
 }
 // 获取聊天过的用户
-func (user *ServiceUser) GetChatUsers() (users []*User) {
+func (user *BackendUser) GetChatUsers() (users []*User) {
 	users = make([]*User, 0)
 	ctx := context.Background()
-	cmd := databases.Redis.ZRange(ctx, user.ChatUsersKey(), 0, -1)
+	cmd := databases.Redis.ZRange(ctx, chat.GetBackUserKey(user.GetPrimaryKey()), 0, -1)
 	if cmd.Err() == redis.Nil {
 		return
 	}
@@ -112,16 +89,4 @@ func (user *ServiceUser) GetChatUsers() (users []*User) {
 	databases.Db.Find(&users, uids)
 	return
 }
-// 移除聊天用户
-func (user *ServiceUser) RemoveChatUser(uid int64) error {
-	ctx := context.Background()
-	cmd := databases.Redis.ZRem(ctx,  user.ChatUsersKey(), uid)
-	return cmd.Err()
-}
-// 更新聊天用户
-func (user *ServiceUser) UpdateChatUser(uid int64) error {
-	ctx := context.Background()
-	m := &redis.Z{Member: uid, Score: float64(time.Now().Unix())}
-	cmd := databases.Redis.ZAdd(ctx,  user.ChatUsersKey(),  m)
-	return cmd.Err()
-}
+

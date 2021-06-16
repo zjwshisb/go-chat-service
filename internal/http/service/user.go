@@ -2,14 +2,14 @@ package service
 
 import (
 	"github.com/gin-gonic/gin"
+	"ws/internal/auth"
 	"ws/internal/databases"
 	"ws/internal/file"
-	"ws/internal/models"
 	"ws/util"
 )
 
 func Me(c *gin.Context) {
-	user := getUser(c)
+	user := auth.GetBackendUser(c)
 	util.RespSuccess(c, gin.H{
 		"username": user.Username,
 		"id":       user.ID,
@@ -25,8 +25,7 @@ func Avatar(c *gin.Context) {
 	if err != nil {
 		util.RespError(c, err.Error())
 	} else {
-		ui, _ := c.Get("user")
-		user := ui.(*models.ServiceUser)
+		user := auth.GetBackendUser(c)
 		user.Avatar = fileInfo.Path
 		databases.Db.Save(user)
 		util.RespSuccess(c, gin.H{})

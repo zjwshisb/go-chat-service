@@ -4,17 +4,19 @@ import (
 	"github.com/gorilla/websocket"
 	"time"
 	"ws/internal/action"
+	"ws/internal/auth"
+	"ws/internal/chat"
 	"ws/internal/databases"
 	"ws/internal/models"
 )
 
 type UserConn struct {
 	BaseConn
-	User *models.User
+	User auth.User
 	CreatedAt int64
 }
 func (c *UserConn) GetUserId() int64 {
-	return c.User.ID
+	return c.User.GetPrimaryKey()
 }
 func (c *UserConn) onReceiveMessage(act *action.Action) {
 	switch act.Action {
@@ -23,10 +25,10 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 		if err == nil {
 			if len(msg.Content) != 0 {
 				msg.IsServer = false
-				msg.UserId = c.User.ID
+				msg.UserId = c.GetUserId()
 				msg.ReceivedAT = time.Now().Unix()
 				c.Deliver(action.NewReceiptAction(msg))
-				msg.ServiceId = c.User.GetLastServiceId()
+				msg.ServiceId = chat.GetUserLastServerId(c.User.GetPrimaryKey())
 				databases.Db.Save(msg)
 				if msg.ServiceId > 0 {
 					serviceClient, exist := ServiceHub.GetConn(msg.ServiceId)

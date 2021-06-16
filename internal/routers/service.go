@@ -3,9 +3,9 @@ package routers
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"ws/internal/auth"
 	http "ws/internal/http/service"
 	middleware "ws/internal/middleware/service"
-	"ws/internal/models"
 	"ws/internal/websocket"
 )
 
@@ -14,26 +14,25 @@ func registerService()  {
 	{
 		g.POST("/login", http.Login)
 
-		auth := g.Group("/")
+		authGroup := g.Group("/")
 
-		auth.Use(middleware.Authenticate)
-		auth.GET("/me", http.Me)
-		auth.POST("/me/avatar", http.Avatar)
-		auth.DELETE("/ws/chat-user/:id", http.RemoveUser)
-		auth.POST("/ws/chat-user", http.AcceptUser)
-		auth.GET("/ws/chat-users", http.ChatUserList)
-		auth.POST("/ws/read-all", http.ReadAll)
-		auth.POST("/ws/image", http.Image)
-		auth.GET("/ws/messages", http.GetHistoryMessage)
+		authGroup.Use(middleware.Authenticate)
+		authGroup.GET("/me", http.Me)
+		authGroup.POST("/me/avatar", http.Avatar)
+		authGroup.DELETE("/ws/chat-user/:id", http.RemoveUser)
+		authGroup.POST("/ws/chat-user", http.AcceptUser)
+		authGroup.GET("/ws/chat-users", http.ChatUserList)
+		authGroup.POST("/ws/read-all", http.ReadAll)
+		authGroup.POST("/ws/image", http.Image)
+		authGroup.GET("/ws/messages", http.GetHistoryMessage)
 
-		auth.GET("/replies", http.GetShortcutReply)
-		auth.POST("/replies", http.StoreShortcutReply)
-		auth.PUT("/replies/:id", http.UpdateShortcutReply)
-		auth.DELETE("replies/:id", http.DeleteShortcutReply)
+		authGroup.GET("/replies", http.GetShortcutReply)
+		authGroup.POST("/replies", http.StoreShortcutReply)
+		authGroup.PUT("/replies/:id", http.UpdateShortcutReply)
+		authGroup.DELETE("replies/:id", http.DeleteShortcutReply)
 
-		auth.GET("/ws", func(c *gin.Context) {
-			ui, _ := c.Get("user")
-			serviceUser := ui.(*models.ServiceUser)
+		authGroup.GET("/ws", func(c *gin.Context) {
+			serviceUser := auth.GetBackendUser(c)
 			conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 			if err != nil {
 				fmt.Println(err)

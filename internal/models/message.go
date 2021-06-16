@@ -11,6 +11,6 @@ type Message struct {
 	IsServer   bool        `gorm:"is_server"`
 	ReqId      int64       `gorm:"index" mapstructure:"req_id"`
 	IsRead     bool        `gorm:"bool" json:"is_read"`
-	ServerUser ServiceUser `gorm:"foreignKey:service_id"`
+	BackendUser BackendUser `gorm:"foreignKey:service_id"`
 	User       User        `gorm:"foreignKey:user_id"`
 }

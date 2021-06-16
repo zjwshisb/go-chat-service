@@ -7,9 +7,12 @@ import (
 	"strconv"
 	"time"
 	"ws/configs"
+	"ws/internal/auth"
+	"ws/internal/chat"
 	"ws/internal/databases"
 	"ws/internal/file"
 	"ws/internal/models"
+	"ws/internal/repositories"
 	"ws/internal/resources"
 	"ws/internal/websocket"
 	"ws/util"
@@ -30,7 +33,7 @@ func GetHistoryMessage(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	user := getUser(c)
+	user := auth.GetBackendUser(c)
 	var messages []*models.Message
 	query := databases.Db.Where("service_id = ?", user.ID).
 		Where("user_id = ?", uid)
@@ -51,9 +54,9 @@ func GetHistoryMessage(c *gin.Context) {
 
 // 聊天用户列表
 func ChatUserList(c *gin.Context) {
-	user := getUser(c)
+	user := auth.GetBackendUser(c)
 	chatUsers := user.GetChatUsers()
-	cmd := databases.Redis.ZRevRangeWithScores(context.Background(), user.ChatUsersKey(), 0, -1)
+	cmd := databases.Redis.ZRevRangeWithScores(context.Background(), chat.GetBackUserKey(user.GetPrimaryKey()), 0, -1)
 	resp := make([]*resources.ChatUser, 0, len(cmd.Val()))
 	if cmd.Err() == redis.Nil {
 		util.RespSuccess(c, resp)
@@ -79,7 +82,7 @@ func ChatUserList(c *gin.Context) {
 
 	last := time.Now().Unix() - configs.App.ChatSessionDuration * 24 * 60 * 60
 	var messages []*models.Message
-	databases.Db.Preload("ServerUser").
+	databases.Db.Preload("BackendUser").
 		Preload("User").
 		Where("received_at > ?", last).
 		Where("service_id = ?", user.ID).
@@ -96,7 +99,7 @@ func ChatUserList(c *gin.Context) {
 				u.Messages = append(u.Messages, rm)
 			}
 		}
-		u.Disabled = !user.CheckChatUserLegal(u.ID)
+		u.Disabled = chat.CheckUserIdLegal(u.ID, user.GetPrimaryKey())
 		if _, ok := websocket.UserHub.GetConn(u.ID); ok {
 			u.Online = true
 		}
@@ -114,36 +117,33 @@ func AcceptUser(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	ui, _ := c.Get("user")
-	serverUser := ui.(*models.ServiceUser)
+	backendUser := auth.GetBackendUser(c)
 	var user models.User
 	databases.Db.Where("id = ?", form.Uid).First(&user)
 	if user.ID == 0 {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	if user.GetLastServiceId() != 0 {
+	if chat.GetUserLastServerId(user.ID) != 0 {
 		util.RespFail(c, "use had been accepted", 10001)
 		return
 	}
-	unSendMsg := user.GetUnSendMsg()
+	unSendMsg := repositories.GetUnSendMessage(user.GetPrimaryKey())
 	now := time.Now().Unix()
 	// 更新未发送的消息
 	databases.Db.Table("messages").
 		Where("user_id = ?", form.Uid).
 		Where("service_id = ?", 0).Updates(map[string]interface{}{
-		"service_id": serverUser.ID,
+		"service_id": backendUser.ID,
 		"send_at":    now,
 	})
 	messages := make([]*models.Message, 0)
 	databases.Db.Where("user_id = ?", form.Uid).
-		Where("service_id = ?", serverUser.ID).
+		Where("service_id = ?", backendUser.GetPrimaryKey()).
 		Order("id desc").
 		Limit(20).
 		Find(&messages)
-
-	_ = serverUser.UpdateChatUser(user.ID)
-	_ = user.SetServiceId(serverUser.ID)
+	_ = chat.SetUserServerId(user.GetPrimaryKey(), backendUser.GetPrimaryKey())
 	messageLength := len(messages)
 	chatUser := &resources.ChatUser{
 		ID:           user.ID,
@@ -168,9 +168,8 @@ func RemoveUser(c *gin.Context) {
 	uidStr := c.Param("id")
 	uid, err := strconv.ParseInt(uidStr, 10, 64)
 	if err == nil {
-		ui, _ := c.Get("user")
-		serviceUser := ui.(*models.ServiceUser)
-		_ = serviceUser.RemoveChatUser(uid)
+		BackendUser := auth.GetBackendUser(c)
+		_ = chat.RemoveUserServerId(uid, BackendUser.GetPrimaryKey())
 	}
 	util.RespSuccess(c, nil)
 }
@@ -183,7 +182,7 @@ func ReadAll(c *gin.Context) {
 	err := c.Bind(form)
 	if err == nil {
 		ui, _ := c.Get("user")
-		server := ui.(*models.ServiceUser)
+		server := ui.(*models.BackendUser)
 		databases.Db.Model(&models.Message{}).
 			Where("service_id = ?", server.ID).
 			Where("user_id = ?", form.Id).

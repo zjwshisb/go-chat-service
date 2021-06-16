@@ -7,6 +7,10 @@ import (
 	"ws/internal/websocket"
 )
 
+const (
+
+)
+
 func Setup() {
 	databases.Setup()
 	log.Setup()

@@ -3,6 +3,7 @@ package user
 import (
 	"github.com/gin-gonic/gin"
 	"strconv"
+	"ws/internal/auth"
 	"ws/internal/databases"
 	"ws/internal/file"
 	"ws/internal/models"
@@ -12,10 +13,9 @@ import (
 
 // 消息记录
 func GetHistoryMessage(c *gin.Context) {
-	ui, _ := c.Get("user")
-	user := ui.(*models.User)
+	user := auth.GetUser(c)
 	messages := make([]*models.Message, 0)
-	query := databases.Db.Preload("ServerUser").Where("user_id = ?", user.ID)
+	query := databases.Db.Preload("ServerUser").Where("user_id = ?", user.GetPrimaryKey())
 	id, exist := c.GetQuery("id")
 	if exist {
 		idInt, err := strconv.ParseInt(id, 10, 64)
@@ -24,7 +24,7 @@ func GetHistoryMessage(c *gin.Context) {
 		}
 	}
 	query.Order("id desc").Limit(20).Find(&messages)
-	messagesResources := make([]*resources.Message, 0)
+	messagesResources := make([]*resources.Message, 0, len(messages))
 	for _, msg := range messages {
 		messagesResources = append(messagesResources, resources.NewMessage(*msg))
 	}
