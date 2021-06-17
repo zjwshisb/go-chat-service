@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"time"
 	"ws/internal/databases"
 	"ws/util"
@@ -27,8 +28,11 @@ func (user *User) GetPrimaryKey() int64 {
 }
 
 func (user *User) Auth(c *gin.Context) bool {
-	databases.Db.Where("api_token= ?", util.GetToken(c)).Limit(1).First(user)
-	return user.ID > 0
+	query := databases.Db.Where("api_token= ?", util.GetToken(c)).Limit(1).First(user)
+	if query.Error == gorm.ErrRecordNotFound {
+		return false
+	}
+	return true
 }
 
 func (user *User) Login() (token string) {

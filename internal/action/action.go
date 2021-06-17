@@ -5,17 +5,17 @@ import (
 	"errors"
 	"github.com/mitchellh/mapstructure"
 	"time"
+	rs "ws/internal/json"
 	"ws/internal/models"
-	"ws/internal/resources"
 )
 
 const (
 	ReceiptAction = "receipt"
 	PingAction = "ping"
-	UserOnLineAction = "user-online"
-	UserOffLineAction = "user-offline"
+	UserOnLineAction = "frontend-online"
+	UserOffLineAction = "frontend-offline"
 	WaitingUserAction = "waiting-users"
-	ServiceUserAction = "service-users"
+	ServiceUserAction = "backend-users"
 	SendMessageAction = "send-message"
 	ReceiveMessageAction = "receive-message"
 	OtherLogin = "other-login"
@@ -41,7 +41,7 @@ func (action *Action) Marshal() (b []byte, err error) {
 		b, err = json.Marshal(Action{
 			Time:   action.Time,
 			Action: action.Action,
-			Data:   resources.NewMessage(*msg),
+			Data:   rs.NewMessage(msg),
 		})
 		return
 	}
@@ -82,7 +82,7 @@ func NewReceiptAction(msg *models.Message) (act *Action) {
 	}
 	return
 }
-func NewServiceUserAction(chatServiceUsers []resources.ChatServiceUser) *Action {
+func NewServiceUserAction(chatServiceUsers []rs.ChatServiceUser) *Action {
 	return &Action{
 		Action: ServiceUserAction,
 		Time: time.Now().Unix(),

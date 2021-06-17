@@ -14,7 +14,22 @@ const (
 	user2ServerHashKey = "user-to-server"
 	serverChatUserKey = "server-user:%d:chat-user"
 )
-
+// 获取聊天过的用户ids以及对于的最后聊天时间
+func GetChatUserIds(sid int64)  ([]int64, []int64) {
+	ctx := context.Background()
+	cmd := databases.Redis.ZRangeWithScores(ctx, GetBackUserKey(sid), 0, -1)
+	uids := make([]int64, 0, len(cmd.Val()))
+	times :=  make([]int64, 0, len(cmd.Val()))
+	for _, item := range cmd.Val() {
+		id, err := strconv.ParseInt(item.Member.(string), 10, 64)
+		if err == nil {
+			uids = append(uids, id)
+		}
+		score := int64(item.Score)
+		times = append(times, score)
+	}
+	return uids, times
+}
 // 设置用户客服对象id
 func SetUserServerId(uid int64,sid int64) error {
 	ctx := context.Background()
@@ -70,9 +85,10 @@ func CheckUserIdLegal(uid int64, sid int64) bool {
 		return false
 	}
 	score := cmd.Val()
-	t := int64(score)
-	if (time.Now().Unix() - t) <= configs.App.ChatSessionDuration * 24 * 60 * 60 {
-		return true
-	}
-	return false
+	lastChatTime := int64(score)
+	return lastChatTime > GetDeadlineTime()
+}
+// 聊天用户的最后的有效时间
+func GetDeadlineTime() int64 {
+	return time.Now().Unix() - configs.App.ChatSessionDuration*24* 60*60
 }

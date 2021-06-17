@@ -1,4 +1,4 @@
-package service
+package backend
 
 import (
 	"github.com/gin-gonic/gin"

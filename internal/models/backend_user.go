@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
-	"strconv"
+	"gorm.io/gorm"
 	"time"
 	"ws/internal/chat"
 	"ws/internal/databases"
@@ -43,8 +43,11 @@ func (user *BackendUser) Logout()  {
 }
 
 func (user *BackendUser) Auth(c *gin.Context) bool {
-	databases.Db.Where("api_token= ?", util.GetToken(c)).First(user)
-	return user.ID > 0
+	query := databases.Db.Where("api_token= ?", util.GetToken(c)).First(user)
+	if query.Error == gorm.ErrRecordNotFound {
+		return false
+	}
+	return true
 }
 func (user *BackendUser) FindByName(username string) bool {
 	databases.Db.Where("username= ?", username).First(user)
@@ -68,25 +71,3 @@ func (user *BackendUser) GetTodayAcceptCount() (count int64) {
 	}
 	return count
 }
-// 获取聊天过的用户
-func (user *BackendUser) GetChatUsers() (users []*User) {
-	users = make([]*User, 0)
-	ctx := context.Background()
-	cmd := databases.Redis.ZRange(ctx, chat.GetBackUserKey(user.GetPrimaryKey()), 0, -1)
-	if cmd.Err() == redis.Nil {
-		return
-	}
-	uids := make([]int64, 0, len(cmd.Val()))
-	for _, idStr := range cmd.Val() {
-		id, err := strconv.ParseInt(idStr, 10, 64)
-		if err == nil {
-			uids = append(uids, id)
-		}
-	}
-	if len(uids) == 0 {
-		return
-	}
-	databases.Db.Find(&users, uids)
-	return
-}
-

@@ -1,4 +1,4 @@
-package resources
+package json
 
 
 type ChatServiceUser struct {

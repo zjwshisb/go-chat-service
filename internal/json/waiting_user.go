@@ -1,4 +1,4 @@
-package resources
+package json
 
 type WaitingUser struct {
 	Username string `json:"username"`

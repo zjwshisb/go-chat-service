@@ -6,11 +6,11 @@ import (
 )
 
 func GetBackendUser(c *gin.Context) *models.BackendUser {
-	ui, _ := c.Get("user")
+	ui, _ := c.Get("frontend")
 	user := ui.(*models.BackendUser)
 	return user
 }
-func PutBackendUser(c *gin.Context, user *models.BackendUser) {
-	c.Set("user", user)
+func SetBackendUser(c *gin.Context, user *models.BackendUser) {
+	c.Set("frontend", user)
 }
 

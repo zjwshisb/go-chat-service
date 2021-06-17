@@ -10,6 +10,6 @@ func init()  {
 	databases.Setup()
 }
 func main()  {
-	err := databases.Db.AutoMigrate(&models.ServiceUser{}, &models.User{}, &models.Message{})
+	err := databases.Db.AutoMigrate(&models.BackendUser{}, &models.User{}, &models.Message{})
 	fmt.Println(err)
 }

@@ -1,4 +1,4 @@
-package service
+package backend
 
 import (
 	"github.com/gin-gonic/gin"
@@ -9,8 +9,7 @@ import (
 func Authenticate(c *gin.Context) {
 	user := &models.BackendUser{}
 	if user.Auth(c) {
-		auth.PutBackendUser(c, user)
-		c.Set("user", user)
+		auth.SetBackendUser(c, user)
 	} else {
 		c.JSON(401, gin.H{
 			"message": "Unauthorized",

@@ -1,7 +1,6 @@
-package resources
+package json
 
 import (
-	"ws/internal/databases"
 	"ws/internal/models"
 )
 
@@ -19,18 +18,12 @@ type Message struct {
 	Avatar string `json:"avatar"`
 }
 
-func NewMessage(model models.Message) *Message {
+func NewMessage(model *models.Message) *Message {
 	var avatar string
 	if model.IsServer {
-		var backendUser models.BackendUser
-		if model.BackendUser.ID == 0 {
-			_ = databases.Db.Model(&model).Association("ServerUser").Find(&backendUser)
-		} else {
-			backendUser = model.BackendUser
-		}
-		avatar = backendUser.GetAvatarUrl()
+		avatar = model.BackendUser.GetAvatarUrl()
 	} else {
-		//avatar = model.User.g
+		avatar = model.User.GetAvatarUrl()
 	}
 	return &Message{
 		Id: model.Id,

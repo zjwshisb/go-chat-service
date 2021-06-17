@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"ws/configs"
 )
+
 var Router *gin.Engine
 
 var (
@@ -25,7 +26,7 @@ func Setup() {
 		AllowHeaders:     []string{"*"},
 		AllowCredentials: true,
 	}))
-	Router.Static(configs.File.LocalPrefix,configs.File.LocalPath)
-	registerService()
-	registerUser()
+	Router.Static(configs.File.LocalPrefix, configs.File.LocalPath)
+	registerBackend()
+	registerFrontend()
 }

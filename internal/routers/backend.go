@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"ws/internal/auth"
-	http "ws/internal/http/service"
-	middleware "ws/internal/middleware/service"
+	http "ws/internal/http/backend"
+	middleware "ws/internal/middleware/backend"
 	"ws/internal/websocket"
 )
 
-func registerService()  {
-	g := Router.Group("/service")
+func registerBackend()  {
+	g := Router.Group("/backend")
 	{
 		g.POST("/login", http.Login)
 
@@ -19,8 +19,8 @@ func registerService()  {
 		authGroup.Use(middleware.Authenticate)
 		authGroup.GET("/me", http.Me)
 		authGroup.POST("/me/avatar", http.Avatar)
-		authGroup.DELETE("/ws/chat-user/:id", http.RemoveUser)
-		authGroup.POST("/ws/chat-user", http.AcceptUser)
+		authGroup.DELETE("/ws/chat-frontend/:id", http.RemoveUser)
+		authGroup.POST("/ws/chat-frontend", http.AcceptUser)
 		authGroup.GET("/ws/chat-users", http.ChatUserList)
 		authGroup.POST("/ws/read-all", http.ReadAll)
 		authGroup.POST("/ws/image", http.Image)

@@ -1,6 +1,6 @@
-package resources
+package json
 
-type ChatUser struct {
+type User struct {
 	ID        int64     `json:"id"`
 	Username  string    `json:"username"`
 	LastChatTime int64  `json:"last_chat_time"`

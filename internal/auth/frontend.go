@@ -5,21 +5,21 @@ import (
 	"ws/internal/models"
 )
 
-func UserGuard() User {
-	return &models.User{}
-}
-func SetUser(c *gin.Context, user User)  {
-	c.Set("user", user)
-}
-func GetUser(c *gin.Context) User {
-	ui, _ := c.Get("user")
-	user := ui.(User)
-	return user
-}
-
 type User interface {
 	GetPrimaryKey() int64
 	GetUsername() string
 	GetAvatarUrl() string
 	Auth(c *gin.Context) bool
+}
+
+func UserGuard() User {
+	return &models.User{}
+}
+func SetUser(c *gin.Context, user User)  {
+	c.Set("frontend", user)
+}
+func GetUser(c *gin.Context) User {
+	ui, _ := c.Get("frontend")
+	user := ui.(User)
+	return user
 }
