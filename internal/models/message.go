@@ -13,4 +13,5 @@ type Message struct {
 	IsRead     bool        `gorm:"bool" json:"is_read"`
 	BackendUser BackendUser `gorm:"foreignKey:service_id"`
 	User       User        `gorm:"foreignKey:user_id"`
+	Avatar    string       `gorm:"-"`
 }

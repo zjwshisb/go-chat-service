@@ -9,7 +9,7 @@ import (
 )
 
 func registerFrontend()  {
-	u := Router.Group("/frontend")
+	u := Router.Group("/user")
 	{
 		u.POST("/login", frontend.Login)
 		auth := u.Group("/")

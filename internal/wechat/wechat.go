@@ -7,6 +7,7 @@ import (
 	"github.com/silenceper/wechat/v2/miniprogram/config"
 	systemConfig "ws/configs"
 )
+
 var (
 	mp *miniprogram.MiniProgram
 )

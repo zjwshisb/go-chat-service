@@ -9,7 +9,7 @@ import (
 func GetUserById(id int64) (auth.User,  bool) {
 	var user models.User
 	var exist bool
-	query := databases.Db.Where("id = ?", id).First(user)
+	query := databases.Db.Where("id = ?", id).First(&user)
 	if query.Error == gorm.ErrRecordNotFound {
 		return &user, exist
 	}

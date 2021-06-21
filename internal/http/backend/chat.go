@@ -28,11 +28,16 @@ func GetHistoryMessage(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	user := auth.GetBackendUser(c)
+	user, exist := repositories.GetUserById(uid)
+	if !exist {
+		util.RespValidateFail(c, "invalid params")
+		return
+	}
+	backendUser := auth.GetBackendUser(c)
 	wheres := []repositories.Where{
 		{
 			Filed: "service_id = ?",
-			Value: user.GetPrimaryKey(),
+			Value: backendUser.GetPrimaryKey(),
 		},
 		{
 			Filed: "user_id = ?",
@@ -49,10 +54,28 @@ func GetHistoryMessage(c *gin.Context) {
 			})
 		}
 	}
-	messages := repositories.GetMessages(wheres, 20, []string{"frontend"})
+	messages := repositories.GetMessages(wheres, 20, []string{"User"})
 	res := make([]*json.Message, 0)
 	for _, m := range messages {
-		res = append(res, json.NewMessage(m))
+		var avatar string
+		if m.IsServer {
+			avatar = backendUser.GetAvatarUrl()
+		} else {
+			avatar = user.GetAvatarUrl()
+		}
+		res = append(res, &json.Message{
+			Id:         m.Id,
+			UserId:     m.UserId,
+			ServiceId:  m.ServiceId,
+			Type:       m.Type,
+			Content:    m.Content,
+			IsSuccess:  true,
+			ReceivedAT: m.ReceivedAT,
+			IsServer:   m.IsServer,
+			ReqId:      m.ReqId,
+			IsRead:     m.IsRead,
+			Avatar:    avatar,
+		})
 	}
 	util.RespSuccess(c, res)
 }
@@ -98,7 +121,24 @@ func ChatUserList(c *gin.Context) {
 	for _, u := range resp {
 		for _, m := range messages {
 			if m.UserId == u.ID {
-				rm := json.NewMessage(m)
+				var avatar string
+				if m.IsServer {
+					avatar = backendUser.GetAvatarUrl()
+				} else {
+					avatar = userMap[u.ID].GetAvatarUrl()
+				}
+				rm := &json.Message{
+					Id:         m.Id,
+					UserId:     m.UserId,
+					ServiceId:  m.ServiceId,
+					Type:       m.Type,
+					Content:    m.Content,
+					ReceivedAT: m.ReceivedAT,
+					IsServer:   m.IsServer,
+					ReqId:      m.ReqId,
+					IsRead:     m.IsRead,
+					Avatar:     avatar,
+				}
 				rm.IsSuccess = true
 				if !m.IsRead && !m.IsServer {
 					u.Unread += 1
@@ -160,7 +200,7 @@ func AcceptUser(c *gin.Context) {
 			Value: user.GetPrimaryKey(),
 		},
 		{
-			Filed: "service_id = ",
+			Filed: "service_id = ?",
 			Value: backendUser.GetPrimaryKey(),
 		},
 	}, 20, []string{})
@@ -177,8 +217,20 @@ func AcceptUser(c *gin.Context) {
 	chatUser.Online = exist
 	chatUser.LastChatTime = time.Now().Unix()
 	for index, m := range messages {
-		rm := json.NewMessage(m)
-		chatUser.Messages[messageLength-1-index] = rm
+		rm := &json.Message{
+			Id:         m.Id,
+			UserId:     m.UserId,
+			ServiceId:  m.ServiceId,
+			Type:       m.Type,
+			Content:    m.Content,
+			ReceivedAT: m.ReceivedAT,
+			IsServer:   m.IsServer,
+			ReqId:      m.ReqId,
+			IsSuccess:  true,
+			IsRead:     m.IsRead,
+			Avatar:     user.GetAvatarUrl(),
+		}
+		chatUser.Messages[index] = rm
 	}
 	go websocket.ServiceHub.BroadcastWaitingUser()
 	util.RespSuccess(c, chatUser)

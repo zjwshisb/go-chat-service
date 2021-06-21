@@ -27,6 +27,7 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 				msg.IsServer = false
 				msg.UserId = c.GetUserId()
 				msg.ReceivedAT = time.Now().Unix()
+				msg.Avatar = c.User.GetAvatarUrl()
 				c.Deliver(action.NewReceiptAction(msg))
 				msg.ServiceId = chat.GetUserLastServerId(c.User.GetPrimaryKey())
 				databases.Db.Save(msg)

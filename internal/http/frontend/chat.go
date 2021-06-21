@@ -29,10 +29,21 @@ func GetHistoryMessage(c *gin.Context) {
 			})
 		}
 	}
-	messages := repositories.GetMessages(wheres, 20, []string{"BackendUser"})
+	messages := repositories.GetMessages(wheres, 100, []string{"BackendUser"})
 	messagesResources := make([]*json.Message, 0, len(messages))
-	for _, msg := range messages {
-		messagesResources = append(messagesResources, json.NewMessage(msg))
+	for _, m := range messages {
+		messagesResources = append(messagesResources, &json.Message{
+			Id:         m.Id,
+			UserId:     m.UserId,
+			ServiceId:  m.ServiceId,
+			Type:       m.Type,
+			Content:    m.Content,
+			ReceivedAT: m.ReceivedAT,
+			IsServer:   m.IsServer,
+			ReqId:      m.ReqId,
+			IsRead:     m.IsRead,
+			Avatar:     m.BackendUser.GetAvatarUrl(),
+		})
 	}
 	util.RespSuccess(c, messagesResources)
 }

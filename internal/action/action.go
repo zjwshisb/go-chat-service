@@ -41,7 +41,19 @@ func (action *Action) Marshal() (b []byte, err error) {
 		b, err = json.Marshal(Action{
 			Time:   action.Time,
 			Action: action.Action,
-			Data:   rs.NewMessage(msg),
+			Data: rs.Message{
+				Id:         msg.Id,
+				UserId:     msg.UserId,
+				ServiceId:  msg.ServiceId,
+				Type:       msg.Type,
+				Content:    msg.Content,
+				ReceivedAT: msg.ReceivedAT,
+				IsServer:   msg.IsServer,
+				ReqId:      msg.ReqId,
+				IsSuccess:  true,
+				IsRead:     msg.IsRead,
+				Avatar:     msg.Avatar,
+			},
 		})
 		return
 	}
