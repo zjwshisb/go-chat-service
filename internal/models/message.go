@@ -8,7 +8,7 @@ type Message struct {
 	Content    string `gorm:"size:1024" mapstructure:"content"`
 	ReceivedAT int64 `json:"received_at"`
 	SendAt     int64
-	IsServer   bool        `gorm:"is_server"`
+	IsServer   bool        `gorm:"bool"`
 	ReqId      int64       `gorm:"index" mapstructure:"req_id"`
 	IsRead     bool        `gorm:"bool" json:"is_read"`
 	BackendUser BackendUser `gorm:"foreignKey:service_id"`

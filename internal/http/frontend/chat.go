@@ -3,6 +3,7 @@ package frontend
 import (
 	"github.com/gin-gonic/gin"
 	"strconv"
+	"ws/configs"
 	"ws/internal/auth"
 	"ws/internal/file"
 	"ws/internal/json"
@@ -49,7 +50,9 @@ func GetHistoryMessage(c *gin.Context) {
 }
 
 func GetTemplateId(c *gin.Context) {
-
+	util.RespSuccess(c , gin.H{
+		"id": configs.Wechat.SubscribeTemplateIdOne,
+	})
 }
 
 // 聊天图片
