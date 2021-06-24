@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 	"ws/configs"
-	"ws/util"
+	"ws/internal/util"
 )
 
 type local struct {

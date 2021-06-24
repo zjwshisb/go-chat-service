@@ -6,6 +6,7 @@ import (
 	"ws/internal/databases"
 	"ws/internal/models"
 )
+
 func GetUserById(id int64) (auth.User,  bool) {
 	var user models.User
 	var exist bool

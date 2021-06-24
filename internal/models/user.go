@@ -5,7 +5,7 @@ import (
 	"gorm.io/gorm"
 	"time"
 	"ws/internal/databases"
-	"ws/util"
+	"ws/internal/util"
 )
 
 type User struct {

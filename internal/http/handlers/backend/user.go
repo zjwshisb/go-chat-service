@@ -5,7 +5,7 @@ import (
 	"ws/internal/auth"
 	"ws/internal/databases"
 	"ws/internal/file"
-	"ws/util"
+	"ws/internal/util"
 )
 
 func Me(c *gin.Context) {

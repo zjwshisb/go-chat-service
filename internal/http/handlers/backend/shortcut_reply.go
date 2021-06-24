@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"ws/internal/auth"
 	"ws/internal/repositories"
-	"ws/util"
+	"ws/internal/util"
 )
 
 type ShortcutForm struct {

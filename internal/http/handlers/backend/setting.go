@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"ws/internal/databases"
 	"ws/internal/models"
-	"ws/util"
+	"ws/internal/util"
 )
 
 func UpdateSetting(c *gin.Context) {

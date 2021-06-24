@@ -9,7 +9,7 @@ import (
 	"ws/internal/chat"
 	"ws/internal/databases"
 	"ws/internal/file"
-	"ws/util"
+	"ws/internal/util"
 )
 
 type BackendUser struct {

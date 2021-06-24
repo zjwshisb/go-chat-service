@@ -13,3 +13,5 @@ type Message struct {
 	IsRead     bool   `json:"is_read"`
 	Avatar     string `json:"avatar"`
 }
+
+

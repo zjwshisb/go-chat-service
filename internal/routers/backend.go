@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"ws/internal/auth"
-	http "ws/internal/http/backend"
-	middleware "ws/internal/middleware/backend"
+	http "ws/internal/http/handlers/backend"
+	middleware "ws/internal/http/middleware/backend"
 	"ws/internal/websocket"
 )
 

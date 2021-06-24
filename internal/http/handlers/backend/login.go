@@ -5,8 +5,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"ws/internal/action"
 	"ws/internal/models"
+	"ws/internal/util"
 	"ws/internal/websocket"
-	"ws/util"
 )
 
 type loginForm struct {

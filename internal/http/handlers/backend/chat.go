@@ -9,8 +9,8 @@ import (
 	"ws/internal/file"
 	"ws/internal/json"
 	"ws/internal/repositories"
+	"ws/internal/util"
 	"ws/internal/websocket"
-	"ws/util"
 )
 
 // 获取消息
@@ -34,7 +34,7 @@ func GetHistoryMessage(c *gin.Context) {
 		return
 	}
 	backendUser := auth.GetBackendUser(c)
-	wheres := []repositories.Where{
+	wheres := []*repositories.Where{
 		{
 			Filed: "service_id = ?",
 			Value: backendUser.GetPrimaryKey(),
@@ -48,7 +48,7 @@ func GetHistoryMessage(c *gin.Context) {
 	if exist {
 		mid, err = strconv.ParseInt(midStr, 10, 64)
 		if err == nil {
-			wheres = append(wheres, repositories.Where{
+			wheres = append(wheres, &repositories.Where{
 				Filed: "id < ?",
 				Value: mid,
 			})
@@ -108,7 +108,7 @@ func ChatUserList(c *gin.Context) {
 		}
 		resp = append(resp, chatUserRes)
 	}
-	messages := repositories.GetMessages([]repositories.Where{
+	messages := repositories.GetMessages([]*repositories.Where{
 		{
 			Filed: "received_at > ?",
 			Value: deadline,
@@ -172,7 +172,7 @@ func AcceptUser(c *gin.Context) {
 		util.RespFail(c, "frontend had been accepted", 10001)
 		return
 	}
-	unSendMsg := repositories.GetUnSendMessage([]repositories.Where{
+	unSendMsg := repositories.GetUnSendMessage([]*repositories.Where{
 		{
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
@@ -181,7 +181,7 @@ func AcceptUser(c *gin.Context) {
 	backendUser := auth.GetBackendUser(c)
 	now := time.Now().Unix()
 	// 更新未发送的消息
-	repositories.UpdateMessages([]repositories.Where{
+	repositories.UpdateMessages([]*repositories.Where{
 		{
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
@@ -194,7 +194,7 @@ func AcceptUser(c *gin.Context) {
 		"service_id": backendUser.ID,
 		"send_at":    now,
 	})
-	messages := repositories.GetMessages([]repositories.Where{
+	messages := repositories.GetMessages([]*repositories.Where{
 		{
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
@@ -255,7 +255,7 @@ func ReadAll(c *gin.Context) {
 	err := c.Bind(form)
 	if err == nil {
 		backendUser := auth.GetBackendUser(c)
-		wheres := []repositories.Where{
+		wheres := []*repositories.Where{
 			{
 				Filed: "service_id = ?",
 				Value: backendUser.GetPrimaryKey(),

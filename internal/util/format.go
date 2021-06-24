@@ -2,25 +2,31 @@ package util
 
 import (
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
+
 func RespNotFound(c *gin.Context) {
-	c.JSON(404, "404 not found")
+	c.JSON(http.StatusNotFound, "404 not found")
 }
 func RespSuccess(c *gin.Context, data interface{}) {
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"data": data,
 		"success": true,
 		"code": 0,
 	})
 }
+func RespPagination(c *gin.Context, pagination interface{}) {
+	c.JSON(http.StatusOK, pagination)
+
+}
 func RespValidateFail(c *gin.Context, msg interface{}) {
-	c.JSON(422, gin.H{
+	c.JSON(http.StatusUnprocessableEntity, gin.H{
 		"message": msg,
 		"success": false,
 	})
 }
 func RespFail(c *gin.Context, msg interface{} , code int) {
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"success": false,
 		"code":code,
 		"message": msg,

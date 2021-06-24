@@ -6,7 +6,7 @@ import (
 	"github.com/qiniu/go-sdk/v7/storage"
 	"mime/multipart"
 	"ws/configs"
-	"ws/util"
+	"ws/internal/util"
 )
 
 type qiniu struct {

@@ -8,13 +8,13 @@ import (
 	"ws/internal/file"
 	"ws/internal/json"
 	"ws/internal/repositories"
-	"ws/util"
+	"ws/internal/util"
 )
 
 // 消息记录
 func GetHistoryMessage(c *gin.Context) {
 	user := auth.GetUser(c)
-	wheres := []repositories.Where{
+	wheres := []*repositories.Where{
 		{
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
@@ -24,7 +24,7 @@ func GetHistoryMessage(c *gin.Context) {
 	if exist {
 		idInt, err := strconv.ParseInt(id, 10, 64)
 		if err == nil {
-			wheres = append(wheres, repositories.Where{
+			wheres = append(wheres, &repositories.Where{
 				Filed: "id < ?",
 				Value: idInt,
 			})

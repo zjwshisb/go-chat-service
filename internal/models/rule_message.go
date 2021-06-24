@@ -14,12 +14,12 @@ const (
 )
 
 type AutoMessage struct {
-	ID uint `gorm:"column:id;primaryKey"`
-	Name string `gorm:"size:255"`
-	Type string  `gorm:"size:255"`
-	Content string `gorm:"type:text"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID uint `gorm:"column:id;primaryKey" json:"id"`
+	Name string `gorm:"size:255" json:"name"`
+	Type string  `gorm:"size:255" json:"type"`
+	Content string `gorm:"type:text" json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 

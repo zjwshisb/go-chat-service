@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"ws/internal/models"
-	"ws/util"
+	"ws/internal/util"
 )
 
 type loginForm struct {

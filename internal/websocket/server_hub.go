@@ -4,9 +4,9 @@ import (
 	"sort"
 	"ws/internal/action"
 	"ws/internal/databases"
+	"ws/internal/json"
 	"ws/internal/models"
 	"ws/internal/repositories"
-	"ws/internal/json"
 )
 
 type serviceHub struct {
@@ -23,7 +23,7 @@ func (hub *serviceHub) Setup() {
 	})
 }
 func (hub *serviceHub) BroadcastWaitingUser() {
-	messages := repositories.GetUnSendMessage([]repositories.Where{}, []string{"User"})
+	messages := repositories.GetUnSendMessage([]*repositories.Where{}, []string{"User"})
 	waitingUserMap := make(map[int64]*json.WaitingUser)
 	for _, message := range messages {
 		if message.User.ID != 0{
