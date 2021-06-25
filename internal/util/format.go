@@ -3,11 +3,13 @@ package util
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"ws/internal/databases"
 )
 
 func RespNotFound(c *gin.Context) {
 	c.JSON(http.StatusNotFound, "404 not found")
 }
+
 func RespSuccess(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, gin.H{
 		"data": data,
@@ -15,7 +17,7 @@ func RespSuccess(c *gin.Context, data interface{}) {
 		"code": 0,
 	})
 }
-func RespPagination(c *gin.Context, pagination interface{}) {
+func RespPagination(c *gin.Context, pagination *databases.Pagination) {
 	c.JSON(http.StatusOK, pagination)
 
 }

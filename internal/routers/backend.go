@@ -34,6 +34,7 @@ func registerBackend() {
 	authGroup.POST("/auto-message", http.StoreAutoMessage)
 	authGroup.PUT("/auto-message/:id", http.UpdateAutoMessage)
 	authGroup.DELETE("/auto-message/:id", http.DeleteAutoMessage)
+	authGroup.GET("/auto-message/:id", http.ShowAutoMessage)
 	authGroup.POST("/auto-message/image", http.StoreAutoMessageImage)
 
 	authGroup.GET("/ws", func(c *gin.Context) {

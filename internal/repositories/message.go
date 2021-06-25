@@ -1,13 +1,14 @@
 package repositories
 
 import (
+	"github.com/gin-gonic/gin"
 	"ws/internal/databases"
 	"ws/internal/models"
 )
 
 
 func UpdateMessages(wheres []*Where, values map[string]interface{}) int64 {
-	query := databases.Db.Table("messages").Scopes(Filter(wheres))
+	query := databases.Db.Table("messages").Scopes(AddWhere(wheres))
 	query.Updates(values)
 	return query.RowsAffected
 }
@@ -17,7 +18,7 @@ func GetMessages(wheres []*Where, limit int, load []string) []*models.Message  {
 	query := databases.Db.Order("received_at desc").
 		Order("id desc").
 		Limit(limit).
-		Scopes(Filter(wheres))
+		Scopes(AddWhere(wheres))
 	for _, relate := range load {
 		query = query.Preload(relate)
 	}
@@ -33,16 +34,17 @@ func GetUnSendMessage(wheres []*Where, load []string) []*models.Message {
 	return GetMessages(wheres, -1, load)
 }
 
-func GetAutoMessage(wheres []*Where, page int, limit int) *Pagination {
+func GetAutoMessagePagination(c *gin.Context, wheres ...*Where) *databases.Pagination {
 	messages := make([]*models.AutoMessage, 0)
 	databases.Db.Order("id desc").
-		Scopes(Paginate(page, limit)).
-		Scopes(Filter(wheres)).
-		Limit(limit).
+		Scopes(databases.Filter(c, []string{"type"})).
+		Scopes(databases.Paginate(c)).
+		Scopes(AddWhere(wheres)).
 		Find(&messages)
 	var total int64
 	databases.Db.Model(&models.AutoMessage{}).
-		Scopes(Filter(wheres)).
+		Scopes(databases.Filter(c, []string{"type"})).
+		Scopes(AddWhere(wheres)).
 		Count(&total)
-	return NewPagination(messages, total)
+	return databases.NewPagination(messages, total)
 }
