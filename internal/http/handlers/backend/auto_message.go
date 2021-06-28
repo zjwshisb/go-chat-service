@@ -6,18 +6,11 @@ import (
 	"gorm.io/gorm"
 	"ws/internal/databases"
 	"ws/internal/file"
+	"ws/internal/http/requests"
 	"ws/internal/models"
 	"ws/internal/repositories"
 	"ws/internal/util"
 )
-
-type autoMessageForm struct {
-	Name string `form:"name" binding:"required,max=32"`
-	Type string `form:"type" binding:"required,autoMessageType"`
-	Content string `form:"content" binding:"required,max=512"`
-	Title string `form:"title" binding:"max=32"`
-	Url string `form:"url" binding:"max=512"`
-}
 
 func StoreAutoMessageImage(c *gin.Context) {
 	f, _ := c.FormFile("file")
@@ -47,7 +40,7 @@ func ShowAutoMessage(c *gin.Context) {
 }
 
 func StoreAutoMessage(c *gin.Context)  {
-	form := autoMessageForm{}
+	form := requests.AutoMessageForm{}
 	err := c.ShouldBind(&form)
 	if err != nil {
 		util.RespValidateFail(c, err.Error())
@@ -82,7 +75,7 @@ func UpdateAutoMessage(c *gin.Context) {
 	if query.Error == gorm.ErrRecordNotFound {
 		util.RespNotFound(c)
 	} else {
-		form := autoMessageForm{}
+		form := requests.AutoMessageForm{}
 		err := c.ShouldBind(&form)
 		if err != nil {
 			util.RespValidateFail(c, err.Error())

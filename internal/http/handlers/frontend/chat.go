@@ -40,7 +40,7 @@ func GetHistoryMessage(c *gin.Context) {
 			Type:       m.Type,
 			Content:    m.Content,
 			ReceivedAT: m.ReceivedAT,
-			IsServer:   m.IsServer,
+			Source:   m.Source,
 			ReqId:      m.ReqId,
 			IsRead:     m.IsRead,
 			Avatar:     m.BackendUser.GetAvatarUrl(),

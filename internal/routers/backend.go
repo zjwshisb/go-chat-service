@@ -37,6 +37,15 @@ func registerBackend() {
 	authGroup.GET("/auto-message/:id", http.ShowAutoMessage)
 	authGroup.POST("/auto-message/image", http.StoreAutoMessageImage)
 
+	authGroup.GET("/system-auto-rules", http.GetSystemRules)
+	authGroup.PUT("/system-auto-rules", http.UpdateSystemRules)
+
+	authGroup.GET("/auto-rules/options/messages", http.GetSelectAutoMessage)
+	authGroup.POST("/auto-rule", http.StoreAutoRule)
+	authGroup.GET("/auto-rule/:id", http.ShowAutoRule)
+	authGroup.GET("/auto-rules", http.GetAutoRules)
+	authGroup.PUT("/auto-rule/:id", http.UpdateAutoRule)
+
 	authGroup.GET("/ws", func(c *gin.Context) {
 		serviceUser := auth.GetBackendUser(c)
 		conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)

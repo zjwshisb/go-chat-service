@@ -27,6 +27,7 @@ func Setup() {
 		AllowCredentials: true,
 	}))
 	Router.Static(configs.File.LocalPrefix, configs.File.LocalPath)
+	Router.Static("/public", "./public")
 	registerBackend()
 	registerFrontend()
 }

@@ -24,7 +24,7 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 		msg, err := act.GetMessage()
 		if err == nil {
 			if len(msg.Content) != 0 {
-				msg.IsServer = false
+				msg.Source = 0
 				msg.UserId = c.GetUserId()
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Avatar = c.User.GetAvatarUrl()

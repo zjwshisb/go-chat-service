@@ -20,7 +20,7 @@ func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 		if err == nil {
 			if msg.UserId > 0 && len(msg.Content) != 0 && chat.CheckUserIdLegal(msg.UserId, c.User.GetPrimaryKey()) {
 				msg.ServiceId = c.User.ID
-				msg.IsServer = true
+				msg.Source = 1
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Avatar = c.User.GetAvatarUrl()
 				databases.Db.Save(msg)

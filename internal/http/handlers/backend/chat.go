@@ -58,10 +58,12 @@ func GetHistoryMessage(c *gin.Context) {
 	res := make([]*json.Message, 0)
 	for _, m := range messages {
 		var avatar string
-		if m.IsServer {
+		if m.Source == 1 {
 			avatar = backendUser.GetAvatarUrl()
-		} else {
+		} else if m.Source == 0 {
 			avatar = user.GetAvatarUrl()
+		} else if m.Source == 2 {
+			avatar = util.PublicAsset("avatar.jpeg")
 		}
 		res = append(res, &json.Message{
 			Id:         m.Id,
@@ -71,7 +73,7 @@ func GetHistoryMessage(c *gin.Context) {
 			Content:    m.Content,
 			IsSuccess:  true,
 			ReceivedAT: m.ReceivedAT,
-			IsServer:   m.IsServer,
+			Source:   m.Source,
 			ReqId:      m.ReqId,
 			IsRead:     m.IsRead,
 			Avatar:    avatar,
@@ -122,10 +124,12 @@ func ChatUserList(c *gin.Context) {
 		for _, m := range messages {
 			if m.UserId == u.ID {
 				var avatar string
-				if m.IsServer {
-					avatar = backendUser.GetAvatarUrl()
-				} else {
+				if m.Source == 0 {
 					avatar = userMap[u.ID].GetAvatarUrl()
+				} else if m.Source == 1 {
+					avatar = backendUser.GetAvatarUrl()
+				}else if m.Source == 2 {
+					avatar = util.PublicAsset("avatar.jpeg")
 				}
 				rm := &json.Message{
 					Id:         m.Id,
@@ -134,13 +138,13 @@ func ChatUserList(c *gin.Context) {
 					Type:       m.Type,
 					Content:    m.Content,
 					ReceivedAT: m.ReceivedAT,
-					IsServer:   m.IsServer,
+					Source:   m.Source,
 					ReqId:      m.ReqId,
 					IsRead:     m.IsRead,
 					Avatar:     avatar,
 				}
 				rm.IsSuccess = true
-				if !m.IsRead && !m.IsServer {
+				if !m.IsRead && m.Source == 0 {
 					u.Unread += 1
 				}
 				u.Messages = append(u.Messages, rm)
@@ -224,7 +228,7 @@ func AcceptUser(c *gin.Context) {
 			Type:       m.Type,
 			Content:    m.Content,
 			ReceivedAT: m.ReceivedAT,
-			IsServer:   m.IsServer,
+			Source:   m.Source,
 			ReqId:      m.ReqId,
 			IsSuccess:  true,
 			IsRead:     m.IsRead,

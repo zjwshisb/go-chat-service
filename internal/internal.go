@@ -2,7 +2,7 @@ package internal
 
 import (
 	"ws/internal/databases"
-	_ "ws/internal/http/validators"
+	_ "ws/internal/http/requests"
 	"ws/internal/log"
 	"ws/internal/routers"
 	"ws/internal/websocket"

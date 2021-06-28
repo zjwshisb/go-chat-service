@@ -7,7 +7,7 @@ type Message struct {
 	Type       string `json:"type"`
 	Content    string `json:"content"`
 	ReceivedAT int64  `json:"received_at"`
-	IsServer   bool   `json:"is_server"`
+	Source   int8   `json:"source"`
 	ReqId      int64  `json:"req_id"`
 	IsSuccess  bool   `json:"is_success"`
 	IsRead     bool   `json:"is_read"`

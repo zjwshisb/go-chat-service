@@ -48,7 +48,7 @@ func (action *Action) Marshal() (b []byte, err error) {
 				Type:       msg.Type,
 				Content:    msg.Content,
 				ReceivedAT: msg.ReceivedAT,
-				IsServer:   msg.IsServer,
+				Source:   msg.Source,
 				ReqId:      msg.ReqId,
 				IsSuccess:  true,
 				IsRead:     msg.IsRead,

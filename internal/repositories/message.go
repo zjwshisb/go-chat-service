@@ -48,3 +48,24 @@ func GetAutoMessagePagination(c *gin.Context, wheres ...*Where) *databases.Pagin
 		Count(&total)
 	return databases.NewPagination(messages, total)
 }
+
+
+func GetAutoRulePagination(c *gin.Context, wheres ...*Where) *databases.Pagination {
+	rules := make([]*models.AutoRule, 0)
+	wheres = append(wheres, &Where{
+		Value: 0,
+		Filed: "is_system = ?",
+	})
+	databases.Db.Order("id desc").
+		Scopes(databases.Filter(c, []string{"reply_type"})).
+		Scopes(databases.Paginate(c)).
+		Scopes(AddWhere(wheres)).
+		Preload("Message").
+		Find(&rules)
+	var total int64
+	databases.Db.Model(&models.AutoRule{}).
+		Scopes(databases.Filter(c, []string{"reply_type"})).
+		Scopes(AddWhere(wheres)).
+		Count(&total)
+	return databases.NewPagination(rules, total)
+}

@@ -2,6 +2,7 @@ package util
 
 import (
 	"github.com/gin-gonic/gin"
+	"ws/configs"
 )
 
 func GetToken(c *gin.Context) (token string) {
@@ -17,4 +18,6 @@ func GetToken(c *gin.Context) (token string) {
 	}
 	return token
 }
-
+func PublicAsset(path string) string {
+	return configs.App.Url + "/public/" + path
+}
