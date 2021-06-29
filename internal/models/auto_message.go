@@ -2,11 +2,7 @@ package models
 
 import "time"
 
-const (
-	TypeImage = "image"
-	TypeText = "text"
-	TypeNavigate = "navigator"
-)
+
 
 
 type AutoMessage struct {

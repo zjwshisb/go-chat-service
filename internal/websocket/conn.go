@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	onnSendSuccess  = iota
+	onSendSuccess  = iota
+	onEnter
 	onReceiveMessage
 )
 
@@ -45,6 +46,7 @@ func (c *BaseConn) run() {
 	go c.readMsg()
 	go c.sendMsg()
 	go c.ping()
+	c.Call(onEnter)
 }
 
 func (c *BaseConn) ping() {
@@ -117,7 +119,7 @@ func (c *BaseConn) sendMsg() {
 							databases.Db.Save(msg)
 						}
 					}
-					go c.Call(onnSendSuccess, act)
+					go c.Call(onSendSuccess, act)
 				} else {
 					log.Log.Error(err)
 					c.close()

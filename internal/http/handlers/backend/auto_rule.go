@@ -35,8 +35,12 @@ func UpdateSystemRules(c *gin.Context) {
 	if err != nil {
 		util.RespError(c, err.Error())
 	}
+	databases.Db.Model(&models.AutoRule{}).
+		Where("is_system", 1).
+		Update("message_id", 0)
 	for id, v := range m {
 		databases.Db.Model(&models.AutoRule{}).
+			Where("is_system", 1).
 			Where("id = ?", id).
 			Update("message_id", v)
 	}

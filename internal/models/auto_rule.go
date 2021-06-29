@@ -8,13 +8,9 @@ const (
 
 	MatchEnter = "enter"
 	MatchServiceAllOffLine = "u-offline"
-
-
-
+	
 	ReplyTypeMessage = "message"
 	ReplyTypeTransfer = "transfer"
-
-
 )
 
 type AutoRule struct {

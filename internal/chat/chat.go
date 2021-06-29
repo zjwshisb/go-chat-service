@@ -8,13 +8,44 @@ import (
 	"time"
 	"ws/configs"
 	"ws/internal/databases"
+	"ws/internal/util"
 )
 
 const (
 	user2ServerHashKey = "user-to-server"
 	serverChatUserKey = "server-user:%d:chat-user"
+	manualUserKey = "user:manual"
 )
-// 获取聊天过的用户ids以及对于的最后聊天时间
+// 系统头像
+func SystemAvatar() string  {
+	return  util.PublicAsset("avatar.jpeg")
+}
+// 添加用户到人工客服列表
+func AddToManual(uid int64) error  {
+	ctx := context.Background()
+	cmd := databases.Redis.SAdd(ctx, manualUserKey, uid)
+	return cmd.Err()
+}
+// 从人工客服列表移除用户id
+func RemoveManual(uid int64) error {
+	ctx := context.Background()
+	cmd := databases.Redis.SRem(ctx, manualUserKey, uid)
+	return cmd.Err()
+}
+// 转接人工客服的用户ids
+func GetManualUserIds() []int64 {
+	ctx := context.Background()
+	cmd := databases.Redis.SMembers(ctx, manualUserKey)
+	uid := make([]int64, 0, len(cmd.Val()))
+	for _, uidStr := range cmd.Val() {
+		id , err := strconv.ParseInt(uidStr, 10, 64)
+		if err == nil {
+			uid = append(uid, id)
+		}
+	}
+	return uid
+}
+// 获取聊天过的用户ids以及对应的最后聊天时间
 func GetChatUserIds(sid int64)  ([]int64, []int64) {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRangeWithScores(ctx, GetBackUserKey(sid), 0, -1)

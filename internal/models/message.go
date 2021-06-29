@@ -1,5 +1,15 @@
 package models
 
+const (
+	TypeImage = "image"
+	TypeText = "text"
+	TypeNavigate = "navigator"
+
+	SourceUser = 0
+	SourceBackendUser = 1
+	SourceSystem = 2
+)
+
 type Message struct {
 	Id         uint64 `gorm:"primaryKey"`
 	UserId     int64 `gorm:"index" mapstructure:"user_id"`

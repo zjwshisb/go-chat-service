@@ -20,7 +20,7 @@ func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 		if err == nil {
 			if msg.UserId > 0 && len(msg.Content) != 0 && chat.CheckUserIdLegal(msg.UserId, c.User.GetPrimaryKey()) {
 				msg.ServiceId = c.User.ID
-				msg.Source = 1
+				msg.Source = models.SourceBackendUser
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Avatar = c.User.GetAvatarUrl()
 				databases.Db.Save(msg)
@@ -55,7 +55,7 @@ func (c *ServiceConn) Setup() {
 			}
 		}
 	})
-	c.Register(onnSendSuccess, func(i ...interface{}) {
+	c.Register(onSendSuccess, func(i ...interface{}) {
 		length := len(i)
 		if length >= 1 {
 			ai := i[0]

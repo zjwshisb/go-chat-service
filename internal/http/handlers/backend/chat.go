@@ -8,6 +8,7 @@ import (
 	"ws/internal/chat"
 	"ws/internal/file"
 	"ws/internal/json"
+	"ws/internal/models"
 	"ws/internal/repositories"
 	"ws/internal/util"
 	"ws/internal/websocket"
@@ -58,12 +59,13 @@ func GetHistoryMessage(c *gin.Context) {
 	res := make([]*json.Message, 0)
 	for _, m := range messages {
 		var avatar string
-		if m.Source == 1 {
-			avatar = backendUser.GetAvatarUrl()
-		} else if m.Source == 0 {
+		switch m.Source {
+		case models.SourceUser:
 			avatar = user.GetAvatarUrl()
-		} else if m.Source == 2 {
-			avatar = util.PublicAsset("avatar.jpeg")
+		case models.SourceBackendUser:
+			avatar = backendUser.GetAvatarUrl()
+		case models.SourceSystem:
+			avatar = chat.SystemAvatar()
 		}
 		res = append(res, &json.Message{
 			Id:         m.Id,
@@ -124,12 +126,13 @@ func ChatUserList(c *gin.Context) {
 		for _, m := range messages {
 			if m.UserId == u.ID {
 				var avatar string
-				if m.Source == 0 {
-					avatar = userMap[u.ID].GetAvatarUrl()
-				} else if m.Source == 1 {
+				switch m.Source {
+				case models.SourceUser:
+					avatar = m.User.GetAvatarUrl()
+				case models.SourceBackendUser:
 					avatar = backendUser.GetAvatarUrl()
-				}else if m.Source == 2 {
-					avatar = util.PublicAsset("avatar.jpeg")
+				case models.SourceSystem:
+					avatar = chat.SystemAvatar()
 				}
 				rm := &json.Message{
 					Id:         m.Id,
@@ -144,7 +147,7 @@ func ChatUserList(c *gin.Context) {
 					Avatar:     avatar,
 				}
 				rm.IsSuccess = true
-				if !m.IsRead && m.Source == 0 {
+				if !m.IsRead && m.Source == models.SourceUser {
 					u.Unread += 1
 				}
 				u.Messages = append(u.Messages, rm)
@@ -173,15 +176,16 @@ func AcceptUser(c *gin.Context) {
 		return
 	}
 	if chat.GetUserLastServerId(user.GetPrimaryKey()) != 0 {
-		util.RespFail(c, "frontend had been accepted", 10001)
+		util.RespFail(c, "user had been accepted", 10001)
 		return
 	}
-	unSendMsg := repositories.GetUnSendMessage([]*repositories.Where{
-		{
+	_ = chat.RemoveManual(user.GetPrimaryKey())
+	unSendMsg := repositories.GetUnSendMessage(
+		&repositories.Where{
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
 		},
-	}, []string{"User"})
+	)
 	backendUser := auth.GetBackendUser(c)
 	now := time.Now().Unix()
 	// 更新未发送的消息

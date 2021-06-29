@@ -26,12 +26,12 @@ func GetMessages(wheres []*Where, limit int, load []string) []*models.Message  {
 	return messages
 }
 
-func GetUnSendMessage(wheres []*Where, load []string) []*models.Message {
+func GetUnSendMessage(wheres ...*Where) []*models.Message {
 	wheres = append(wheres, &Where{
 		Filed: "service_id = ?",
 		Value: 0,
 	})
-	return GetMessages(wheres, -1, load)
+	return GetMessages(wheres, -1, []string{})
 }
 
 func GetAutoMessagePagination(c *gin.Context, wheres ...*Where) *databases.Pagination {
