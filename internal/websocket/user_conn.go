@@ -9,7 +9,6 @@ import (
 	"ws/internal/chat"
 	"ws/internal/databases"
 	"ws/internal/models"
-	"ws/internal/util"
 )
 
 type UserConn struct {
@@ -44,22 +43,17 @@ func (c *UserConn) autoReply(content string) {
 		case models.ReplyTypeTransfer:
 			_ = chat.AddToManual(c.GetUserId())
 			ServiceHub.BroadcastWaitingUser()
+			rule.Count ++
+			databases.Db.Save(rule)
 			break LOOP
 		case models.ReplyTypeMessage:
-			msg := models.Message{
-				UserId:      c.User.GetPrimaryKey(),
-				ServiceId:   0,
-				Type:        rule.Message.Type,
-				Content:     rule.Message.Content,
-				ReceivedAT:  time.Now().Unix(),
-				SendAt:      0,
-				Source:      models.SourceSystem,
-				ReqId:       util.CreateReqId(),
-				IsRead:      true,
-				Avatar: chat.SystemAvatar(),
+			msg := rule.GetMessages(c.User.GetPrimaryKey())
+			if msg != nil{
+				databases.Db.Save(msg)
+				c.Deliver(action.NewReceiveAction(msg))
 			}
-			databases.Db.Save(&msg)
-			c.Deliver(action.NewReceiveAction(&msg))
+			rule.Count ++
+			databases.Db.Save(rule)
 			break LOOP
 		}
 	}
@@ -97,20 +91,11 @@ func (c *UserConn) Setup() {
 			Where("match", "enter").Preload("Message").First(&rule)
 		if query.RowsAffected > 0 {
 			if rule.Message != nil {
-				msg := models.Message{
-					UserId:      c.User.GetPrimaryKey(),
-					ServiceId:   0,
-					Type:        rule.Message.Type,
-					Content:     rule.Message.Content,
-					ReceivedAT:  time.Now().Unix(),
-					SendAt:      0,
-					Source:      models.SourceSystem,
-					ReqId:       util.CreateReqId(),
-					IsRead:      true,
-					Avatar: chat.SystemAvatar(),
+				msg := rule.GetMessages(c.User.GetPrimaryKey())
+				if msg != nil {
+					databases.Db.Save(msg)
+					c.Deliver(action.NewReceiveAction(msg))
 				}
-				databases.Db.Save(&msg)
-				c.Deliver(action.NewReceiveAction(&msg))
 			}
 		}
 	})
