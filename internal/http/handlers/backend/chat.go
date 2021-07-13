@@ -185,6 +185,10 @@ func AcceptUser(c *gin.Context) {
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
 		},
+		&repositories.Where{
+			Filed: "source = ?",
+			Value: models.SourceUser,
+		},
 	)
 	backendUser := auth.GetBackendUser(c)
 	now := time.Now().Unix()
@@ -193,6 +197,10 @@ func AcceptUser(c *gin.Context) {
 		{
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
+		},
+		{
+			Filed: "source = ?",
+			Value: models.SourceUser,
 		},
 		{
 			Filed: "service_id = ?",

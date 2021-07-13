@@ -2,9 +2,6 @@ package models
 
 import "time"
 
-
-
-
 type AutoMessage struct {
 	ID uint `gorm:"column:id;primaryKey" json:"id"`
 	Name string `gorm:"size:255" json:"name"`

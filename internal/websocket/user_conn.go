@@ -13,20 +13,23 @@ import (
 
 type UserConn struct {
 	BaseConn
-	User auth.User
+	User      auth.User
 	CreatedAt int64
 }
+
 func (c *UserConn) GetUserId() int64 {
 	return c.User.GetPrimaryKey()
 }
 func (c *UserConn) autoReply(content string) {
 	rules := make([]*models.AutoRule, 0)
-	databases.Db.Where("is_system", 0).
+	databases.Db.
+		Where("is_system", 0).
 		Where("is_open", 1).
 		Order("sort").
 		Preload("Message").
 		Find(&rules)
-	LOOP: for _, rule := range rules {
+LOOP:
+	for _, rule := range rules {
 		switch rule.MatchType {
 		case models.MatchTypeAll:
 			if rule.Match != content {
@@ -40,22 +43,46 @@ func (c *UserConn) autoReply(content string) {
 			continue
 		}
 		switch rule.ReplyType {
+		// 转接人工客服
 		case models.ReplyTypeTransfer:
-			_ = chat.AddToManual(c.GetUserId())
-			ServiceHub.BroadcastWaitingUser()
-			rule.Count ++
-			databases.Db.Save(rule)
-			break LOOP
+			onlineServerCount := len(ServiceHub.Clients)
+			// 没有客服在线时
+			if onlineServerCount == 0 {
+				otherRule := models.AutoRule{}
+				query := databases.Db.Where("is_system", 1).
+					Where("match", models.MatchServiceAllOffLine).Preload("Message").First(&rule)
+				if query.RowsAffected > 0 {
+					msg := otherRule.GetMessages(c.User.GetPrimaryKey())
+					switch otherRule.ReplyType {
+					case models.ReplyTypeTransfer:
+						_ = chat.AddToManual(c.GetUserId())
+						ServiceHub.BroadcastWaitingUser()
+					case models.ReplyTypeMessage:
+						if msg != nil {
+							databases.Db.Save(msg)
+							otherRule.Count++
+							databases.Db.Save(&otherRule)
+							c.Deliver(action.NewReceiveAction(msg))
+						}
+					}
+				}
+			} else {
+				_ = chat.AddToManual(c.GetUserId())
+
+				ServiceHub.BroadcastWaitingUser()
+				break LOOP
+			}
+		// 回复消息
 		case models.ReplyTypeMessage:
 			msg := rule.GetMessages(c.User.GetPrimaryKey())
-			if msg != nil{
+			if msg != nil {
 				databases.Db.Save(msg)
 				c.Deliver(action.NewReceiveAction(msg))
 			}
-			rule.Count ++
-			databases.Db.Save(rule)
 			break LOOP
 		}
+		rule.Count++
+		databases.Db.Save(rule)
 	}
 }
 func (c *UserConn) onReceiveMessage(act *action.Action) {
@@ -71,13 +98,16 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 				databases.Db.Save(msg)
 				c.Deliver(action.NewReceiptAction(msg))
 				msg.ServiceId = chat.GetUserLastServerId(c.User.GetPrimaryKey())
+				// 有对应的客服对象
 				if msg.ServiceId > 0 {
 					serviceClient, exist := ServiceHub.GetConn(msg.ServiceId)
 					if exist {
 						serviceClient.Deliver(action.NewReceiveAction(msg))
 					}
 				} else {
-					c.autoReply(msg.Content)
+					if !chat.IsInManual(c.GetUserId()) {
+						c.autoReply(msg.Content)
+					}
 				}
 			}
 		}
@@ -87,13 +117,18 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 func (c *UserConn) Setup() {
 	c.Register(onEnter, func(i ...interface{}) {
 		rule := models.AutoRule{}
-		query := databases.Db.Where("is_system", 1).
-			Where("match", "enter").Preload("Message").First(&rule)
+		query := databases.Db.
+			Where("is_system", 1).
+			Where("match", models.MatchEnter).
+			Preload("Message").
+			First(&rule)
 		if query.RowsAffected > 0 {
 			if rule.Message != nil {
 				msg := rule.GetMessages(c.User.GetPrimaryKey())
 				if msg != nil {
 					databases.Db.Save(msg)
+					rule.Count++
+					databases.Db.Save(&rule)
 					c.Deliver(action.NewReceiveAction(msg))
 				}
 			}
@@ -116,9 +151,9 @@ func NewUserConn(user *models.User, conn *websocket.Conn) *UserConn {
 	return &UserConn{
 		User: user,
 		BaseConn: BaseConn{
-			conn: conn,
+			conn:        conn,
 			closeSignal: make(chan interface{}),
-			send: make(chan *action.Action, 100),
+			send:        make(chan *action.Action, 100),
 		},
 	}
 }

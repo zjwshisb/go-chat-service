@@ -26,6 +26,12 @@ func AddToManual(uid int64) error  {
 	cmd := databases.Redis.SAdd(ctx, manualUserKey, uid)
 	return cmd.Err()
 }
+// 判断用户是否在人工客服等待区
+func IsInManual(uid int64) bool  {
+	ctx := context.Background()
+	cmd := databases.Redis.SIsMember(ctx, manualUserKey, uid)
+	return cmd.Val()
+}
 // 从人工客服列表移除用户id
 func RemoveManual(uid int64) error {
 	ctx := context.Background()

@@ -92,7 +92,6 @@ func UpdateAutoRule(c *gin.Context) {
 	form := requests.AutoRuleForm{}
 	err := c.ShouldBind(&form)
 	if err != nil {
-		fmt.Println(err)
 		util.RespValidateFail(c, err.Error())
 		return
 	}

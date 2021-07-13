@@ -46,10 +46,19 @@ func StoreAutoMessage(c *gin.Context)  {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
+	var  exist int64
+	databases.Db.Table("auto_messages").
+		Where("name = ?" , form.Name).Count(&exist)
+	if exist > 0 {
+		util.RespValidateFail(c, "已存在同名的消息")
+		return
+	}
+
 	message := &models.AutoMessage{
 		Name: form.Name,
 		Type: form.Type,
 	}
+
 	if message.Type == models.TypeText  || message.Type == models.TypeImage {
 		message.Content = form.Content
 	}
@@ -79,6 +88,15 @@ func UpdateAutoMessage(c *gin.Context) {
 		err := c.ShouldBind(&form)
 		if err != nil {
 			util.RespValidateFail(c, err.Error())
+			return
+		}
+		var  exist int64
+		databases.Db.Table("auto_messages").
+			Where("name = ?" , form.Name).
+			Where("id != ?", c.Param("id")).
+			Count(&exist)
+		if exist > 0 {
+			util.RespValidateFail(c, "已存在同名的其他消息")
 			return
 		}
 		if message.Type == models.TypeText  || message.Type == models.TypeImage {
