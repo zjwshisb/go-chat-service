@@ -33,13 +33,13 @@ func IsInManual(uid int64) bool  {
 	cmd := databases.Redis.SIsMember(ctx, manualUserKey, uid)
 	return cmd.Val()
 }
-// 从人工客服列表移除用户id
+// 从人工客服列表移除用户
 func RemoveManual(uid int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.SRem(ctx, manualUserKey, uid)
 	return cmd.Err()
 }
-// 转接人工客服的用户ids
+// 转接人工客服的用户
 func GetManualUserIds() []int64 {
 	ctx := context.Background()
 	cmd := databases.Redis.SMembers(ctx, manualUserKey)
@@ -73,6 +73,7 @@ func SetUserServerId(uid int64,sid int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.HSet(ctx, user2ServerHashKey,uid, sid)
 	_ = UpdateUserServerId(uid, sid)
+	_ = RemoveManual(uid)
 	return cmd.Err()
 }
 // 更新客服的用户的最后聊天时间

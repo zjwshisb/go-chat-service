@@ -50,6 +50,8 @@ func (hub *serviceHub) BroadcastWaitingUser() {
 			if wU.LastTime == 0 {
 				wU.LastTime = message.ReceivedAT
 				wU.LastMessage = message.Content
+				wU.MessageCount += 1
+				wU.LastType = message.Type
 			} else {
 				wU.MessageCount += 1
 			}

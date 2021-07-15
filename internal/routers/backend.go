@@ -44,6 +44,8 @@ func registerBackend() {
 	authGroup.GET("/auto-rules", http.GetAutoRules)
 	authGroup.PUT("/auto-rule/:id", http.UpdateAutoRule)
 
+	authGroup.GET("/dashboard/query-info", http.GetUserQueryInfo)
+
 	authGroup.GET("/ws", func(c *gin.Context) {
 		serviceUser := auth.GetBackendUser(c)
 		conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)

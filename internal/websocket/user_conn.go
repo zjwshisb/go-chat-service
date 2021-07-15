@@ -105,14 +105,21 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 						serviceClient.Deliver(action.NewReceiveAction(msg))
 					}
 				} else {
-					isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
-					if exist  && isAutoTransfer.GetValue() == "1"{
-						UserHub.addToManual(c.GetUserId())
+					if chat.IsInManual(c.GetUserId()) {
+						ServiceHub.BroadcastWaitingUser()
 					} else {
-						if !chat.IsInManual(c.GetUserId()) {
-							c.autoReply(msg.Content)
+						isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
+						if exist  && isAutoTransfer.GetValue() == "1"{
+							if !chat.IsInManual(c.GetUserId()) {
+								UserHub.addToManual(c.GetUserId())
+							}
+						} else {
+							if !chat.IsInManual(c.GetUserId()) {
+								c.autoReply(msg.Content)
+							}
 						}
 					}
+
 				}
 			}
 		}

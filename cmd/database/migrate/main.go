@@ -6,11 +6,14 @@ import (
 	"ws/internal/models"
 )
 
-func init()  {
+func init() {
 	databases.Setup()
 }
-func main()  {
-	err := databases.Db.AutoMigrate(&models.BackendUser{}, &models.User{}, &models.Message{},
-	&models.Setting{}, &models.AutoMessage{}, &models.AutoRule{})
+func main() {
+	err := databases.Db.AutoMigrate(
+		&models.QueryRecord{},
+		&models.Message{},
+		&models.AutoMessage{},
+		&models.AutoRule{})
 	fmt.Println(err)
 }

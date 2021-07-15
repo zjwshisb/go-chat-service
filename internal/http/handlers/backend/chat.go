@@ -6,6 +6,7 @@ import (
 	"time"
 	"ws/internal/auth"
 	"ws/internal/chat"
+	"ws/internal/databases"
 	"ws/internal/file"
 	"ws/internal/json"
 	"ws/internal/models"
@@ -219,8 +220,19 @@ func AcceptUser(c *gin.Context) {
 			Value: backendUser.GetPrimaryKey(),
 		},
 	}, 20, []string{})
+
 	_ = chat.SetUserServerId(user.GetPrimaryKey(), backendUser.GetPrimaryKey())
-	_ = chat.RemoveManual(user.GetPrimaryKey())
+
+	record := &models.QueryRecord{}
+	databases.Db.Where("user_id = ?", user.GetPrimaryKey()).
+		Where("service_id = ?" , 0).
+		Find(record)
+	if record.Id > 0 {
+		record.AcceptedAt = time.Now().Unix()
+		record.ServiceId = backendUser.GetPrimaryKey()
+		databases.Db.Save(record)
+	}
+
 	messageLength := len(messages)
 	chatUser := &json.User{
 		ID:           user.GetPrimaryKey(),
@@ -256,9 +268,17 @@ func AcceptUser(c *gin.Context) {
 func RemoveUser(c *gin.Context) {
 	uidStr := c.Param("id")
 	uid, err := strconv.ParseInt(uidStr, 10, 64)
+	backendUser := auth.GetBackendUser(c)
 	if err == nil {
-		BackendUser := auth.GetBackendUser(c)
-		_ = chat.RemoveUserServerId(uid, BackendUser.GetPrimaryKey())
+		_ = chat.RemoveUserServerId(uid, backendUser.GetPrimaryKey())
+	}
+	record := &models.QueryRecord{}
+	databases.Db.Where("user_id = ?", uidStr).
+		Where("service_id = ?" , backendUser.GetPrimaryKey()).
+		Order("queried_at desc").First(record)
+	if record.Id > 0 {
+		record.BrokeAt = time.Now().Unix()
+		databases.Db.Save(record)
 	}
 	util.RespSuccess(c, nil)
 }

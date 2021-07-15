@@ -8,7 +8,6 @@ func init()  {
 	databases.Setup()
 }
 func main()  {
-	setting()
 	rules()
 }
 
