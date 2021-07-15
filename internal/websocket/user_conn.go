@@ -55,8 +55,7 @@ LOOP:
 					msg := otherRule.GetMessages(c.User.GetPrimaryKey())
 					switch otherRule.ReplyType {
 					case models.ReplyTypeTransfer:
-						_ = chat.AddToManual(c.GetUserId())
-						ServiceHub.BroadcastWaitingUser()
+						UserHub.addToManual(c.GetUserId())
 					case models.ReplyTypeMessage:
 						if msg != nil {
 							databases.Db.Save(msg)
@@ -65,11 +64,12 @@ LOOP:
 							c.Deliver(action.NewReceiveAction(msg))
 						}
 					}
+				} else {
+					UserHub.addToManual(c.GetUserId())
+					break LOOP
 				}
 			} else {
-				_ = chat.AddToManual(c.GetUserId())
-
-				ServiceHub.BroadcastWaitingUser()
+				UserHub.addToManual(c.GetUserId())
 				break LOOP
 			}
 		// 回复消息
@@ -95,9 +95,9 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 				msg.UserId = c.GetUserId()
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Avatar = c.User.GetAvatarUrl()
+				msg.ServiceId = chat.GetUserLastServerId(c.User.GetPrimaryKey())
 				databases.Db.Save(msg)
 				c.Deliver(action.NewReceiptAction(msg))
-				msg.ServiceId = chat.GetUserLastServerId(c.User.GetPrimaryKey())
 				// 有对应的客服对象
 				if msg.ServiceId > 0 {
 					serviceClient, exist := ServiceHub.GetConn(msg.ServiceId)
@@ -105,8 +105,13 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 						serviceClient.Deliver(action.NewReceiveAction(msg))
 					}
 				} else {
-					if !chat.IsInManual(c.GetUserId()) {
-						c.autoReply(msg.Content)
+					isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
+					if exist  && isAutoTransfer.GetValue() == "1"{
+						UserHub.addToManual(c.GetUserId())
+					} else {
+						if !chat.IsInManual(c.GetUserId()) {
+							c.autoReply(msg.Content)
+						}
 					}
 				}
 			}

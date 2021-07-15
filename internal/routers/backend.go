@@ -23,12 +23,10 @@ func registerBackend() {
 	authGroup.POST("/ws/image", http.Image)
 	authGroup.GET("/ws/messages", http.GetHistoryMessage)
 
-	authGroup.GET("/replies", http.GetShortcutReply)
-	authGroup.POST("/replies", http.StoreShortcutReply)
-	authGroup.PUT("/replies/:id", http.UpdateShortcutReply)
-	authGroup.DELETE("replies/:id", http.DeleteShortcutReply)
+	//authGroup.GET("/user/:id", http.GetUserInfo)
 
 	authGroup.GET("/settings", http.GetSettings)
+	authGroup.PUT("/settings/:name", http.UpdateSetting)
 
 	authGroup.GET("/auto-messages", http.GetAutoMessages)
 	authGroup.POST("/auto-message", http.StoreAutoMessage)

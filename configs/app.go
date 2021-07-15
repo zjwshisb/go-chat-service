@@ -5,6 +5,7 @@ import (
 	"gopkg.in/ini.v1"
 	"log"
 )
+
 type wechat struct {
 	MiniProgramAppId string
 	MiniProgramAppSecret string
@@ -50,29 +51,17 @@ var (
 )
 func init() {
 	cfg, err := ini.Load("config.ini")
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	err = cfg.Section("Mysql").MapTo(Mysql)
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	err = cfg.Section("Http").MapTo(Http)
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	err = cfg.Section("Redis").MapTo(Redis)
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	err = cfg.Section("App").MapTo(App)
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	err = cfg.Section("File").MapTo(File)
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	err = cfg.Section("Wechat").MapTo(Wechat)
 	if err != nil {
 		log.Fatal(err)

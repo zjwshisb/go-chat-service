@@ -4,6 +4,7 @@ import (
 	"mime/multipart"
 	"ws/configs"
 )
+
 type File struct {
 	FullUrl string
 	Path string
@@ -14,6 +15,7 @@ type Manager interface {
 	Save(file *multipart.FileHeader, path string) (*File, error)
 	Url(path string) string
 }
+
 func Disk(name string) Manager {
 	switch name {
 	case "qiniu":

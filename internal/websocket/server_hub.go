@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"fmt"
 	"sort"
 	"ws/internal/action"
 	"ws/internal/chat"
@@ -32,7 +31,10 @@ func (hub *serviceHub) BroadcastWaitingUser() {
 	messages := repositories.GetUnSendMessage(&repositories.Where{
 		Filed: "user_id in ?",
 		Value: manualUid,
-	})
+	}, &repositories.Where{
+		Filed: "source = ?",
+		Value: models.SourceUser,
+	}, )
 	waitingUserMap := make(map[int64]*json.WaitingUser)
 	for _, user := range users {
 		waitingUserMap[user.GetPrimaryKey()] = &json.WaitingUser{
@@ -60,7 +62,6 @@ func (hub *serviceHub) BroadcastWaitingUser() {
 	sort.Slice(waitingUserSlice, func(i, j int) bool {
 		return waitingUserSlice[i].LastTime > waitingUserSlice[j].LastTime
 	})
-	fmt.Println(waitingUserSlice)
 	conns := hub.GetAllConn()
 	hub.SendAction(action.NewWaitingUsers(waitingUserSlice), conns...)
 }

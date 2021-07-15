@@ -179,7 +179,6 @@ func AcceptUser(c *gin.Context) {
 		util.RespFail(c, "user had been accepted", 10001)
 		return
 	}
-	_ = chat.RemoveManual(user.GetPrimaryKey())
 	unSendMsg := repositories.GetUnSendMessage(
 		&repositories.Where{
 			Filed: "user_id = ?",
@@ -221,6 +220,7 @@ func AcceptUser(c *gin.Context) {
 		},
 	}, 20, []string{})
 	_ = chat.SetUserServerId(user.GetPrimaryKey(), backendUser.GetPrimaryKey())
+	_ = chat.RemoveManual(user.GetPrimaryKey())
 	messageLength := len(messages)
 	chatUser := &json.User{
 		ID:           user.GetPrimaryKey(),

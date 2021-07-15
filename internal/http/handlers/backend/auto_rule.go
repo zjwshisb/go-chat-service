@@ -11,6 +11,7 @@ import (
 	"ws/internal/repositories"
 	"ws/internal/util"
 )
+
 func GetSelectAutoMessage(c *gin.Context)  {
 	messages := make([]*models.AutoMessage, 0)
 	databases.Db.Find(&messages)
