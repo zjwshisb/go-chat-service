@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"ws/internal/databases"
@@ -18,6 +19,8 @@ type Field struct {
 	Title string
 	val string
 	Options map[string]string
+	defVal string
+	Validator func(val string, field *Field) error
 }
 
 func (field *Field) GetValue() string  {
@@ -25,19 +28,24 @@ func (field *Field) GetValue() string  {
 		ctx := context.Background()
 		cmd := databases.Redis.Get(ctx, fmt.Sprintf(Key, field.Name))
 		if cmd.Err() == redis.Nil {
-			field.val =  "0"
+			field.val = field.defVal
 		} else {
-			field.val = "1"
+			field.val = field.defVal
 		}
 	}
 	return field.val
 }
 
 func (field *Field) SetValue(val string) error {
-	field.val = val
-	ctx := context.Background()
-	cmd := databases.Redis.Set(ctx, fmt.Sprintf(Key, field.Name), val, 0)
-	return cmd.Err()
+	for v := range field.Options {
+		if v == val {
+			field.val = val
+			ctx := context.Background()
+			cmd := databases.Redis.Set(ctx, fmt.Sprintf(Key, field.Name), val, 0)
+			return cmd.Err()
+		}
+	}
+	return errors.New("validated failed")
 }
 
 var Settings map[string]*Field
@@ -51,6 +59,7 @@ func init() {
 			"0": "否",
 			"1": "是",
 		},
+		defVal: "1",
 	}
 }
 

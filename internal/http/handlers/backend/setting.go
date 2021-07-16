@@ -23,7 +23,10 @@ func UpdateSetting(c *gin.Context) {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
-	_ = setting.SetValue(form.Value)
+	err = setting.SetValue(form.Value)
+	if err !=nil {
+		util.RespValidateFail(c , err.Error())
+	}
 	util.RespSuccess(c, gin.H{})
 }
 
