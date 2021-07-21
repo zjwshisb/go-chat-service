@@ -30,7 +30,6 @@ type app struct {
 	LogPath string
 	LogLevel logrus.Level
 	Url string
-	ChatSessionDuration int64
 }
 type file struct {
 	Storage string

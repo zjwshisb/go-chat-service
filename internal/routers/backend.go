@@ -45,6 +45,7 @@ func registerBackend() {
 	authGroup.PUT("/auto-rule/:id", http.UpdateAutoRule)
 
 	authGroup.GET("/dashboard/query-info", http.GetUserQueryInfo)
+	authGroup.GET("/dashboard/online-info", http.GetOnlineInfo)
 
 	authGroup.GET("/ws", func(c *gin.Context) {
 		serviceUser := auth.GetBackendUser(c)

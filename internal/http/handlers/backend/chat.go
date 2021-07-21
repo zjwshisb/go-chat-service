@@ -95,7 +95,6 @@ func ChatUserList(c *gin.Context) {
 	for _, user := range users {
 		userMap[user.GetPrimaryKey()] = user
 	}
-	deadline := chat.GetDeadlineTime()
 	for index, id := range ids {
 		u := userMap[id]
 		chatUserRes := &json.User{
@@ -104,9 +103,9 @@ func ChatUserList(c *gin.Context) {
 			Messages: make([]*json.Message, 0),
 			Unread:   0,
 		}
-		lastChatTime := times[index]
-		chatUserRes.LastChatTime =lastChatTime
-		chatUserRes.Disabled = lastChatTime < deadline
+		limitTime := times[index]
+		chatUserRes.LastChatTime = chat.GetServerUserLastChatTime(backendUser.ID, u.GetPrimaryKey())
+		chatUserRes.Disabled = limitTime <= time.Now().Unix()
 		if _, ok := websocket.UserHub.GetConn(u.GetPrimaryKey()); ok {
 			chatUserRes.Online = true
 
@@ -116,13 +115,13 @@ func ChatUserList(c *gin.Context) {
 	messages := repositories.GetMessages([]*repositories.Where{
 		{
 			Filed: "received_at > ?",
-			Value: deadline,
+			Value: time.Now().Unix() - 3 * 24 * 60 * 60,
 		},
 		{
 			Filed: "service_id = ?",
 			Value: backendUser.GetPrimaryKey(),
 		},
-	}, -1, []string{"User", "BackendUser"})
+	}, -1, []string{"User"})
 	for _, u := range resp {
 		for _, m := range messages {
 			if m.UserId == u.ID {
@@ -221,7 +220,8 @@ func AcceptUser(c *gin.Context) {
 		},
 	}, 20, []string{})
 
-	_ = chat.SetUserServerId(user.GetPrimaryKey(), backendUser.GetPrimaryKey())
+
+	_ = chat.SetUserServerId(user.GetPrimaryKey(), backendUser.GetPrimaryKey(), chat.GetServiceSessionSecond())
 
 	record := &models.QueryRecord{}
 	databases.Db.Where("user_id = ?", user.GetPrimaryKey()).

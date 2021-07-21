@@ -24,7 +24,7 @@ func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Avatar = c.User.GetAvatarUrl()
 				databases.Db.Save(msg)
-				_ = chat.UpdateUserServerId(msg.UserId, c.User.GetPrimaryKey())
+				_ = chat.UpdateUserServerId(msg.UserId, c.User.GetPrimaryKey(), chat.GetUserSessionSecond())
 				c.Deliver(action.NewReceiptAction(msg))
 				userConn, ok := UserHub.GetConn(msg.UserId)
 				if ok { // 在线

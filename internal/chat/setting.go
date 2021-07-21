@@ -10,6 +10,8 @@ import (
 
 const (
 	IsAutoTransfer = "is-auto-transfer"
+	ServiceSessionDuration = "service-session-duration"
+	UserSessionDuration = "user-session-duration"
 )
 
 const Key = "chat:%s:setting"
@@ -30,7 +32,7 @@ func (field *Field) GetValue() string  {
 		if cmd.Err() == redis.Nil {
 			field.val = field.defVal
 		} else {
-			field.val = field.defVal
+			field.val = cmd.Val()
 		}
 	}
 	return field.val
@@ -60,6 +62,34 @@ func init() {
 			"1": "是",
 		},
 		defVal: "1",
+	}
+	Settings[ServiceSessionDuration] = &Field{
+		Name: ServiceSessionDuration,
+		Title: "当用户给客服发消息时，客服多久没回复就断开会话",
+		Options: map[string]string{
+			"0.3333": "8小时",
+			"0.1666": "4小时",
+			"0.0833": "2小时",
+			"0.0416": "1小时",
+			"0.0208": "30分钟",
+			"0.5": "12小时",
+			"1": "1天",
+		},
+		defVal: "1",
+	}
+	Settings[UserSessionDuration] = &Field{
+		Name: UserSessionDuration,
+		Title: "当客服给用户发消息时，用户多久没回复就断开会话",
+		Options: map[string]string{
+			"0.3333": "8小时",
+			"0.1666": "4小时",
+			"0.0833": "2小时",
+			"0.0416": "1小时",
+			"0.0208": "30分钟",
+			"0.5": "12小时",
+			"1": "1天",
+		},
+		defVal: "0.0208",
 	}
 }
 

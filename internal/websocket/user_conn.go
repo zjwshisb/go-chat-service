@@ -100,6 +100,8 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 				c.Deliver(action.NewReceiptAction(msg))
 				// 有对应的客服对象
 				if msg.ServiceId > 0 {
+					// 更新会话有效期
+					_ = chat.UpdateUserServerId(msg.UserId, msg.ServiceId, chat.GetServiceSessionSecond())
 					serviceClient, exist := ServiceHub.GetConn(msg.ServiceId)
 					if exist {
 						serviceClient.Deliver(action.NewReceiveAction(msg))
@@ -128,20 +130,22 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 }
 func (c *UserConn) Setup() {
 	c.Register(onEnter, func(i ...interface{}) {
-		rule := models.AutoRule{}
-		query := databases.Db.
-			Where("is_system", 1).
-			Where("match", models.MatchEnter).
-			Preload("Message").
-			First(&rule)
-		if query.RowsAffected > 0 {
-			if rule.Message != nil {
-				msg := rule.GetMessages(c.User.GetPrimaryKey())
-				if msg != nil {
-					databases.Db.Save(msg)
-					rule.Count++
-					databases.Db.Save(&rule)
-					c.Deliver(action.NewReceiveAction(msg))
+		if chat.GetUserLastServerId(c.GetUserId()) == 0 {
+			rule := models.AutoRule{}
+			query := databases.Db.
+				Where("is_system", 1).
+				Where("match", models.MatchEnter).
+				Preload("Message").
+				First(&rule)
+			if query.RowsAffected > 0 {
+				if rule.Message != nil {
+					msg := rule.GetMessages(c.User.GetPrimaryKey())
+					if msg != nil {
+						databases.Db.Save(msg)
+						rule.Count++
+						databases.Db.Save(&rule)
+						c.Deliver(action.NewReceiveAction(msg))
+					}
 				}
 			}
 		}
@@ -159,7 +163,7 @@ func (c *UserConn) Setup() {
 	c.Register(onSendSuccess, func(i ...interface{}) {
 	})
 }
-func NewUserConn(user *models.User, conn *websocket.Conn) *UserConn {
+func NewUserConn(user auth.User, conn *websocket.Conn) *UserConn {
 	return &UserConn{
 		User: user,
 		BaseConn: BaseConn{

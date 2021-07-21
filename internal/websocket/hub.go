@@ -39,7 +39,6 @@ func (hub *BaseHub) AddConn(client Conn) {
 	hub.lock.Lock()
 	defer hub.lock.Unlock()
 	hub.Clients[client.GetUserId()] = client
-	return
 }
 func (hub *BaseHub) RemoveConn(uid int64) {
 	hub.lock.Lock()

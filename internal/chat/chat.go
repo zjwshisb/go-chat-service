@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"log"
 	"strconv"
 	"time"
-	"ws/configs"
 	"ws/internal/databases"
 	"ws/internal/util"
 )
@@ -15,6 +15,7 @@ import (
 const (
 	user2ServerHashKey = "user-to-server"
 	serverChatUserKey = "server-user:%d:chat-user"
+	serverUserLastChatKey = "server-user:%d:chat-user:last-time"
 	manualUserKey = "user:manual"
 )
 // 系统头像
@@ -39,6 +40,7 @@ func RemoveManual(uid int64) error {
 	cmd := databases.Redis.SRem(ctx, manualUserKey, uid)
 	return cmd.Err()
 }
+
 // 转接人工客服的用户
 func GetManualUserIds() []int64 {
 	ctx := context.Background()
@@ -68,18 +70,32 @@ func GetChatUserIds(sid int64)  ([]int64, []int64) {
 	}
 	return uids, times
 }
+// 设置客服用户最后聊天时间
+func SetServerUserLastChatTime(uid int64,sid int64) error {
+	ctx := context.Background()
+	cmd := databases.Redis.HSet(ctx, fmt.Sprintf(serverUserLastChatKey, sid), uid, time.Now().Unix())
+	return cmd.Err()
+}
+// 获取客服用户最后聊天时间
+func GetServerUserLastChatTime(uid int64, sid int64)  int64 {
+	ctx := context.Background()
+	cmd := databases.Redis.HGet(ctx, fmt.Sprintf(serverUserLastChatKey, sid), strconv.FormatInt(uid, 10))
+	t, _ := strconv.ParseInt(cmd.Val(), 10, 64)
+	return t
+}
 // 设置用户客服对象id
-func SetUserServerId(uid int64,sid int64) error {
+func SetUserServerId(uid int64,sid int64, duration int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.HSet(ctx, user2ServerHashKey,uid, sid)
-	_ = UpdateUserServerId(uid, sid)
+	_ = UpdateUserServerId(uid, sid, duration)
 	_ = RemoveManual(uid)
 	return cmd.Err()
 }
-// 更新客服的用户的最后聊天时间
-func UpdateUserServerId(uid int64, sid int64) error {
+// 更新客服用户会话时间
+func UpdateUserServerId(uid int64, sid int64, duration int64) error {
 	ctx := context.Background()
-	m := &redis.Z{Member: uid, Score: float64(time.Now().Unix())}
+	m := &redis.Z{Member: uid, Score: float64(time.Now().Unix() + duration)}
+	_ = SetServerUserLastChatTime(uid, sid)
 	cmd := databases.Redis.ZAdd(ctx, GetBackUserKey(sid),  m)
 	return cmd.Err()
 }
@@ -87,12 +103,11 @@ func UpdateUserServerId(uid int64, sid int64) error {
 func RemoveUserServerId(uid int64, sid int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.HDel(ctx, user2ServerHashKey, strconv.FormatInt(uid, 10))
-	if cmd.Err() != nil {
-		return cmd.Err()
-	}
+	cmd = databases.Redis.HDel(ctx, fmt.Sprintf(serverUserLastChatKey, sid), strconv.FormatInt(uid, 10))
 	cmd = databases.Redis.ZRem(ctx, GetBackUserKey(sid), uid)
 	return cmd.Err()
 }
+
 // 获取用户最后一个客服id
 func GetUserLastServerId(uid int64) int64 {
 	ctx := context.Background()
@@ -105,14 +120,34 @@ func GetUserLastServerId(uid int64) int64 {
 			return 0
 		}
 		t := int64(cmd.Val())
-		if t <= (time.Now().Unix() - configs.App.ChatSessionDuration * 24 * 60 * 60) {
+		if t <=  time.Now().Unix() {
 			return 0
 		}
 		return sid
 	}
 	return 0
 }
-// 获取redis 客服的聊天用户SortedSet 的key
+// 客服给用户发消息的会话有效期
+func GetUserSessionSecond() int64 {
+	setting := Settings[UserSessionDuration]
+	dayFloat, err := strconv.ParseFloat(setting.GetValue(), 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	second := int64(dayFloat* 24 * 60 * 60)
+	return second
+}
+// 用户给客服发消息的会话有效期
+func GetServiceSessionSecond() int64 {
+	setting := Settings[ServiceSessionDuration]
+	dayFloat, err := strconv.ParseFloat(setting.GetValue(), 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	second := int64(dayFloat * 24 * 60 * 60)
+	return second
+}
+// 客服的聊天用户SortedSet 的key
 func GetBackUserKey(sid int64) string {
 	return fmt.Sprintf(serverChatUserKey, sid)
 }
@@ -124,10 +159,6 @@ func CheckUserIdLegal(uid int64, sid int64) bool {
 		return false
 	}
 	score := cmd.Val()
-	lastChatTime := int64(score)
-	return lastChatTime > GetDeadlineTime()
-}
-// 聊天用户的最后的有效时间
-func GetDeadlineTime() int64 {
-	return time.Now().Unix() - configs.App.ChatSessionDuration*24* 60*60
+	limitTime := int64(score)
+	return limitTime > time.Now().Unix()
 }
