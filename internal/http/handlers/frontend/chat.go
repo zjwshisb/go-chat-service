@@ -58,11 +58,22 @@ func GetHistoryMessage(c *gin.Context) {
 	}
 	util.RespSuccess(c, messagesResources)
 }
-
+// 获取微信订阅消息ID，只有当前没有订阅的时候才会返回
 func GetTemplateId(c *gin.Context) {
+	user := auth.GetUser(c)
+	id := ""
+	if !chat.IsSubScribe(user.GetPrimaryKey()) {
+		id = configs.Wechat.SubscribeTemplateIdOne
+	}
 	util.RespSuccess(c , gin.H{
-		"id": configs.Wechat.SubscribeTemplateIdOne,
+		"id": id,
 	})
+}
+// 标记已订阅微信订阅消息
+func Subscribe(c *gin.Context) {
+	user := auth.GetUser(c)
+	_ = chat.SetSubscribe(user.GetPrimaryKey())
+	util.RespSuccess(c, gin.H{})
 }
 
 // 聊天图片
