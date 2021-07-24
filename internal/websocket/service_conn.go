@@ -15,6 +15,7 @@ type ServiceConn struct {
 }
 func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 	switch act.Action {
+	// 客服发送消息给用户
 	case action.SendMessageAction:
 		msg, err := act.GetMessage()
 		if err == nil {
@@ -24,7 +25,17 @@ func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Avatar = c.User.GetAvatarUrl()
 				databases.Db.Save(msg)
-				_ = chat.UpdateUserServerId(msg.UserId, c.User.GetPrimaryKey(), chat.GetUserSessionSecond())
+
+				addTime := chat.GetUserSessionSecond()
+				record := &models.QueryRecord{}
+				databases.Db.Where("user_id = ?" , msg.UserId).
+					Where("service_id = ?", msg.ServiceId).
+					Order("id desc").First(record)
+				if record.Id > 0 {
+					record.BrokeAt = time.Now().Unix() + addTime
+					databases.Db.Save(record)
+				}
+				_ = chat.UpdateUserServerId(msg.UserId, c.User.GetPrimaryKey(), addTime)
 				c.Deliver(action.NewReceiptAction(msg))
 				userConn, ok := UserHub.GetConn(msg.UserId)
 				if ok { // 在线

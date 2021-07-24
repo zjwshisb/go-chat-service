@@ -20,6 +20,7 @@ type UserConn struct {
 func (c *UserConn) GetUserId() int64 {
 	return c.User.GetPrimaryKey()
 }
+
 func (c *UserConn) autoReply(content string) {
 	rules := make([]*models.AutoRule, 0)
 	databases.Db.
@@ -100,8 +101,17 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 				c.Deliver(action.NewReceiptAction(msg))
 				// 有对应的客服对象
 				if msg.ServiceId > 0 {
+					addTime := chat.GetServiceSessionSecond()
 					// 更新会话有效期
-					_ = chat.UpdateUserServerId(msg.UserId, msg.ServiceId, chat.GetServiceSessionSecond())
+					_ = chat.UpdateUserServerId(msg.UserId, msg.ServiceId, addTime)
+					record := &models.QueryRecord{}
+					databases.Db.Where("user_id = ?" , msg.UserId).
+						Where("service_id = ?", msg.ServiceId).
+						Order("id desc").First(record)
+					if record.Id > 0 {
+						record.BrokeAt = time.Now().Unix() + addTime
+						databases.Db.Save(record)
+					}
 					serviceClient, exist := ServiceHub.GetConn(msg.ServiceId)
 					if exist {
 						serviceClient.Deliver(action.NewReceiveAction(msg))

@@ -12,8 +12,11 @@ import (
 )
 
 const (
+	// conn向客户端发送消息成功事件
 	onSendSuccess  = iota
+	// 客服端连接成功事件
 	onEnter
+	// conn读取客服端消息事件
 	onReceiveMessage
 )
 

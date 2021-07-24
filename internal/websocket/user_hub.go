@@ -17,7 +17,8 @@ func (userHub *userHub) addToManual(uid int64)  {
 	var record = &models.QueryRecord{}
 	databases.Db.Table("query_records").
 		Where("user_id = ?" , uid).
-		Where("service_id = ?", 0).Find(record)
+		Where("service_id = ?", 0).
+		Find(record)
 	if record.Id == 0 {
 		record.UserId = uid
 		record.QueriedAt = time.Now().Unix()

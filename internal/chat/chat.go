@@ -13,9 +13,13 @@ import (
 
 
 const (
+	// 用户 => 客服 hashes
 	user2ServerHashKey = "user-to-server"
+	// 客服 => {value: userId, source: limitTime}[] sorted sets
 	serverChatUserKey = "server-user:%d:chat-user"
+	// 客服 => {uid: lastTime} hashes
 	serverUserLastChatKey = "server-user:%d:chat-user:last-time"
+	// 待人工接入的用户 sets
 	manualUserKey = "user:manual"
 )
 // 系统头像
@@ -91,7 +95,7 @@ func SetUserServerId(uid int64,sid int64, duration int64) error {
 	_ = RemoveManual(uid)
 	return cmd.Err()
 }
-// 更新客服用户会话时间
+// 更新会话时间
 func UpdateUserServerId(uid int64, sid int64, duration int64) error {
 	ctx := context.Background()
 	m := &redis.Z{Member: uid, Score: float64(time.Now().Unix() + duration)}
@@ -108,7 +112,7 @@ func RemoveUserServerId(uid int64, sid int64) error {
 	return cmd.Err()
 }
 
-// 获取用户最后一个客服id
+// 获取用户最后一个会话客服id
 func GetUserLastServerId(uid int64) int64 {
 	ctx := context.Background()
 	key := strconv.FormatInt(uid, 10)
