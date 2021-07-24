@@ -97,26 +97,30 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Avatar = c.User.GetAvatarUrl()
 				msg.ServiceId = chat.GetUserLastServerId(c.User.GetPrimaryKey())
-				databases.Db.Save(msg)
 				c.Deliver(action.NewReceiptAction(msg))
 				// 有对应的客服对象
 				if msg.ServiceId > 0 {
-					addTime := chat.GetServiceSessionSecond()
 					// 更新会话有效期
-					_ = chat.UpdateUserServerId(msg.UserId, msg.ServiceId, addTime)
-					record := &models.QueryRecord{}
+					session := &models.ChatSession{}
 					databases.Db.Where("user_id = ?" , msg.UserId).
 						Where("service_id = ?", msg.ServiceId).
-						Order("id desc").First(record)
-					if record.Id > 0 {
-						record.BrokeAt = time.Now().Unix() + addTime
-						databases.Db.Save(record)
+						Order("id desc").First(session)
+					if session.Id <= 0 {
+						return
 					}
+					addTime := chat.GetServiceSessionSecond()
+					_ = chat.UpdateUserServerId(msg.UserId, msg.ServiceId, addTime)
+
+					msg.SessionId = session.Id
+					databases.Db.Save(msg)
+					session.BrokeAt = time.Now().Unix() + addTime
+					databases.Db.Save(session)
 					serviceClient, exist := ServiceHub.GetConn(msg.ServiceId)
 					if exist {
 						serviceClient.Deliver(action.NewReceiveAction(msg))
 					}
 				} else {
+					databases.Db.Save(msg)
 					if chat.IsInManual(c.GetUserId()) {
 						ServiceHub.BroadcastWaitingUser()
 					} else {

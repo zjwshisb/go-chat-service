@@ -131,7 +131,7 @@ func GetUserLastServerId(uid int64) int64 {
 	}
 	return 0
 }
-// 客服给用户发消息的会话有效期
+// 客服给用户发消息的会话有效期, 既用户在这时间内可以回复客服
 func GetUserSessionSecond() int64 {
 	setting := Settings[UserSessionDuration]
 	dayFloat, err := strconv.ParseFloat(setting.GetValue(), 64)
@@ -141,7 +141,7 @@ func GetUserSessionSecond() int64 {
 	second := int64(dayFloat* 24 * 60 * 60)
 	return second
 }
-// 用户给客服发消息的会话有效期
+// 用户给客服发消息的会话有效期, 既客服在这时间内可以回复用户
 func GetServiceSessionSecond() int64 {
 	setting := Settings[ServiceSessionDuration]
 	dayFloat, err := strconv.ParseFloat(setting.GetValue(), 64)

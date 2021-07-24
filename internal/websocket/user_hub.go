@@ -14,15 +14,15 @@ type userHub struct {
 func (userHub *userHub) addToManual(uid int64)  {
 	_ = chat.AddToManual(uid)
 	ServiceHub.BroadcastWaitingUser()
-	var record = &models.QueryRecord{}
+	var session = &models.ChatSession{}
 	databases.Db.Table("query_records").
 		Where("user_id = ?" , uid).
 		Where("service_id = ?", 0).
-		Find(record)
-	if record.Id == 0 {
-		record.UserId = uid
-		record.QueriedAt = time.Now().Unix()
-		record.ServiceId = 0
-		databases.Db.Save(record)
+		Find(session)
+	if session.Id == 0 {
+		session.UserId = uid
+		session.QueriedAt = time.Now().Unix()
+		session.ServiceId = 0
+		databases.Db.Save(session)
 	}
 }

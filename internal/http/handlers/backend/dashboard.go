@@ -15,7 +15,7 @@ import (
 func GetUserQueryInfo(c *gin.Context) {
 	startTime := carbon.Now().StartOfDay().ToTimestamp()
 	endTime := carbon.Now().EndOfDay().ToTimestamp()
-	records := make([]models.QueryRecord, 0)
+	records := make([]models.ChatSession, 0)
 	static := make(map[int64]map[string]int64)
 	var i int64
 	for i = 0; i<=23; i++ {

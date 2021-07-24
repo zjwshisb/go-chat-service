@@ -1,6 +1,6 @@
 package models
 
-type QueryRecord struct {
+type ChatSession struct {
 	Id uint64 `gorm:"primaryKey" json:"id"`
 	UserId int64 `gorm:"index"`
 	QueriedAt int64 `json:"queried_at"`

@@ -190,6 +190,20 @@ func AcceptUser(c *gin.Context) {
 		},
 	)
 	backendUser := auth.GetBackendUser(c)
+	session := &models.ChatSession{}
+	databases.Db.Where("user_id = ?", user.GetPrimaryKey()).
+		Where("service_id = ?" , 0).
+		Find(session)
+	if session.Id <= 0 {
+		util.RespError(c , "chat session error")
+		return
+	}
+	sessionDuration := chat.GetServiceSessionSecond()
+	session.AcceptedAt = time.Now().Unix()
+	session.ServiceId = backendUser.GetPrimaryKey()
+	session.BrokeAt = time.Now().Unix() + sessionDuration
+	databases.Db.Save(session)
+	_ = chat.SetUserServerId(user.GetPrimaryKey(), backendUser.GetPrimaryKey(), sessionDuration)
 	now := time.Now().Unix()
 	// 更新未发送的消息
 	repositories.UpdateMessages([]*repositories.Where{
@@ -208,6 +222,7 @@ func AcceptUser(c *gin.Context) {
 	}, map[string]interface{}{
 		"service_id": backendUser.ID,
 		"send_at":    now,
+		"session_id": session.Id,
 	})
 	messages := repositories.GetMessages([]*repositories.Where{
 		{
@@ -221,17 +236,8 @@ func AcceptUser(c *gin.Context) {
 	}, 20, []string{})
 
 
-	_ = chat.SetUserServerId(user.GetPrimaryKey(), backendUser.GetPrimaryKey(), chat.GetServiceSessionSecond())
 
-	record := &models.QueryRecord{}
-	databases.Db.Where("user_id = ?", user.GetPrimaryKey()).
-		Where("service_id = ?" , 0).
-		Find(record)
-	if record.Id > 0 {
-		record.AcceptedAt = time.Now().Unix()
-		record.ServiceId = backendUser.GetPrimaryKey()
-		databases.Db.Save(record)
-	}
+
 
 	messageLength := len(messages)
 	chatUser := &json.User{
@@ -272,10 +278,10 @@ func RemoveUser(c *gin.Context) {
 	if err == nil {
 		_ = chat.RemoveUserServerId(uid, backendUser.GetPrimaryKey())
 	}
-	record := &models.QueryRecord{}
+	record := &models.ChatSession{}
 	databases.Db.Where("user_id = ?", uidStr).
 		Where("service_id = ?" , backendUser.GetPrimaryKey()).
-		Order("queried_at desc").First(record)
+		Order("id desc").First(record)
 	if record.Id > 0 {
 		record.BrokeAt = time.Now().Unix()
 		databases.Db.Save(record)

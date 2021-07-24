@@ -19,6 +19,7 @@ type Message struct {
 	ReceivedAT int64 `json:"received_at"`
 	SendAt     int64 `json:"send_at" gorm:"send_at"`
 	Source   int8        `gorm:"source"`
+	SessionId uint64 `gorm:"session_id"`
 	ReqId      int64       `gorm:"index" mapstructure:"req_id"`
 	IsRead     bool        `gorm:"bool" json:"is_read"`
 	BackendUser BackendUser `gorm:"foreignKey:service_id"`

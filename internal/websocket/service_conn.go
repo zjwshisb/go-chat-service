@@ -20,22 +20,23 @@ func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 		msg, err := act.GetMessage()
 		if err == nil {
 			if msg.UserId > 0 && len(msg.Content) != 0 && chat.CheckUserIdLegal(msg.UserId, c.User.GetPrimaryKey()) {
+				session := &models.ChatSession{}
+				databases.Db.Where("user_id = ?" , msg.UserId).
+					Where("service_id = ?", msg.ServiceId).
+					Order("id desc").First(session)
+				if session.Id <= 0 {
+					return
+				}
+				sessionAddTime := chat.GetUserSessionSecond()
+				session.BrokeAt = time.Now().Unix() + sessionAddTime
+				databases.Db.Save(session)
 				msg.ServiceId = c.User.ID
 				msg.Source = models.SourceBackendUser
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Avatar = c.User.GetAvatarUrl()
+				msg.SessionId = session.Id
 				databases.Db.Save(msg)
-
-				addTime := chat.GetUserSessionSecond()
-				record := &models.QueryRecord{}
-				databases.Db.Where("user_id = ?" , msg.UserId).
-					Where("service_id = ?", msg.ServiceId).
-					Order("id desc").First(record)
-				if record.Id > 0 {
-					record.BrokeAt = time.Now().Unix() + addTime
-					databases.Db.Save(record)
-				}
-				_ = chat.UpdateUserServerId(msg.UserId, c.User.GetPrimaryKey(), addTime)
+				_ = chat.UpdateUserServerId(msg.UserId, c.User.GetPrimaryKey(), sessionAddTime)
 				c.Deliver(action.NewReceiptAction(msg))
 				userConn, ok := UserHub.GetConn(msg.UserId)
 				if ok { // 在线
