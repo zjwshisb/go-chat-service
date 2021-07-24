@@ -68,14 +68,6 @@ func (c *ServiceConn) Setup() {
 		}
 	})
 	c.Register(onSendSuccess, func(i ...interface{}) {
-		length := len(i)
-		if length >= 1 {
-			ai := i[0]
-			act, ok := ai.(*action.Action)
-			if ok {
-				c.onReceiveMessage(act)
-			}
-		}
 	})
 }
 func (c *ServiceConn) GetUserId() int64 {
