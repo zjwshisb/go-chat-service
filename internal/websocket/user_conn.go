@@ -96,7 +96,7 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 				msg.UserId = c.GetUserId()
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Avatar = c.User.GetAvatarUrl()
-				msg.ServiceId = chat.GetUserLastServerId(c.User.GetPrimaryKey())
+				msg.ServiceId = chat.GetUserLastServerId(c.GetUserId())
 				c.Deliver(action.NewReceiptAction(msg))
 				// 有对应的客服对象
 				if msg.ServiceId > 0 {

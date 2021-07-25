@@ -2,11 +2,15 @@ package websocket
 
 import (
 	"github.com/gorilla/websocket"
+	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
 	"time"
+	"ws/configs"
 	"ws/internal/action"
 	"ws/internal/chat"
 	"ws/internal/databases"
 	"ws/internal/models"
+	"ws/internal/repositories"
+	"ws/internal/wechat"
 )
 
 type ServiceConn struct {
@@ -38,9 +42,28 @@ func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 				databases.Db.Save(msg)
 				_ = chat.UpdateUserServerId(msg.UserId, c.User.GetPrimaryKey(), sessionAddTime)
 				c.Deliver(action.NewReceiptAction(msg))
-				userConn, ok := UserHub.GetConn(msg.UserId)
-				if ok { // 在线
+				userConn, exist := UserHub.GetConn(msg.UserId)
+				if exist { // 在线
 					userConn.Deliver(action.NewReceiveAction(msg))
+				} else {
+					hadSubscribe := chat.IsSubScribe(msg.UserId)
+					user, exist := repositories.GetUserById(msg.UserId)
+					if hadSubscribe && exist && user.GetMpOpenId() != "" {
+						_ = wechat.GetMp().GetSubscribe().Send(&subscribe.Message{
+							ToUser:           user.GetMpOpenId(),
+							TemplateID:       configs.Wechat.SubscribeTemplateIdOne,
+							Page:             "/pages/chat/index",
+							Data: map[string]*subscribe.DataItem{
+								"thing1": {
+									Value: msg.Content,
+								},
+								"thing2": {
+									Value: "客服给你回复了一条消息",
+								},
+							},
+						})
+						chat.DelSubScribe(msg.UserId)
+					}
 				}
 			}
 		}

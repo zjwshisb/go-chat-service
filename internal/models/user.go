@@ -15,6 +15,7 @@ type User struct {
 	Username  string     `gorm:"string;size:255" json:"username"`
 	Password  string     `gorm:"string;size:255" json:"-"`
 	ApiToken  string     `gogm:"string;size:255"  json:"-"`
+	OpenId string `gorm:"string;size:255"`
 }
 
 func (user *User) GetUsername() string  {
@@ -25,6 +26,9 @@ func (user *User) GetAvatarUrl() string {
 }
 func (user *User) GetPrimaryKey() int64 {
 	return user.ID
+}
+func (user *User) GetMpOpenId() string {
+	return user.OpenId
 }
 
 func (user *User) Auth(c *gin.Context) bool {
