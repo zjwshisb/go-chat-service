@@ -24,11 +24,8 @@ func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 		msg, err := act.GetMessage()
 		if err == nil {
 			if msg.UserId > 0 && len(msg.Content) != 0 && chat.CheckUserIdLegal(msg.UserId, c.User.GetPrimaryKey()) {
-				session := &models.ChatSession{}
-				databases.Db.Where("user_id = ?" , msg.UserId).
-					Where("service_id = ?", msg.ServiceId).
-					Order("id desc").First(session)
-				if session.Id <= 0 {
+				session := chat.GetSession(msg.UserId, c.GetUserId())
+				if session == nil {
 					return
 				}
 				sessionAddTime := chat.GetUserSessionSecond()
@@ -55,7 +52,7 @@ func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 							Page:             "/pages/chat/index",
 							Data: map[string]*subscribe.DataItem{
 								"thing1": {
-									Value: msg.Content,
+									Value: "请点击卡片查看",
 								},
 								"thing2": {
 									Value: "客服给你回复了一条消息",

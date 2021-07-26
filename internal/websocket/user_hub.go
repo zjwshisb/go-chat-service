@@ -14,12 +14,9 @@ type userHub struct {
 func (userHub *userHub) addToManual(uid int64)  {
 	_ = chat.AddToManual(uid)
 	ServiceHub.BroadcastWaitingUser()
-	var session = &models.ChatSession{}
-	databases.Db.Table("query_records").
-		Where("user_id = ?" , uid).
-		Where("service_id = ?", 0).
-		Find(session)
-	if session.Id == 0 {
+	var session = chat.GetSession(uid, 0)
+	if session == nil {
+		session = &models.ChatSession{}
 		session.UserId = uid
 		session.QueriedAt = time.Now().Unix()
 		session.ServiceId = 0

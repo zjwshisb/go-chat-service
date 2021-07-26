@@ -8,6 +8,7 @@ import (
 	"ws/internal/websocket"
 )
 
+
 func Setup() {
 	databases.Setup()
 	log.Setup()

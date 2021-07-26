@@ -1,7 +1,9 @@
 package websocket
 
 import (
+	"fmt"
 	"sync"
+	"time"
 	"ws/internal/action"
 	"ws/internal/event"
 )
@@ -10,15 +12,7 @@ const (
 	UserLogin = iota
 	UserLogout
 )
-type Container interface {
-	SendAction(act *action.Action, conn ...Conn)
-	AddConn(connect Conn)
-	RemoveConn(key int64)
-	GetConn(key int64) (Conn, bool)
-	GetAllConn() []Conn
-	Login(connect Conn)
-	Logout(connect Conn)
-}
+
 type BaseHub struct {
 	Clients map[int64]Conn
 	lock    sync.RWMutex
@@ -46,6 +40,7 @@ func (hub *BaseHub) RemoveConn(uid int64) {
 	delete(hub.Clients, uid)
 }
 
+
 func (hub *BaseHub) GetAllConn() (s []Conn){
 	hub.lock.RLock()
 	defer hub.lock.RUnlock()
@@ -71,6 +66,23 @@ func (hub *BaseHub) Login(client Conn) {
 	client.run()
 	go hub.Call(UserLogin, client)
 }
+func (hub *BaseHub) Ping()  {
+	ticker := time.NewTicker(time.Second * 10)
+	for {
+		select {
+		case <-ticker.C:
+			fmt.Println("hub")
+			conns := hub.GetAllConn()
+			ping := action.NewPing()
+			for _, conn := range conns {
+				conn.Deliver(ping)
+			}
+		}
+	}
+}
+func (hub *BaseHub) Run() {
+	go hub.Ping()
+}
 
 var UserHub *userHub
 var ServiceHub *serviceHub
@@ -81,11 +93,12 @@ func Setup()  {
 			Clients: map[int64]Conn{},
 		},
 	}
+	UserHub.Run()
 	ServiceHub = &serviceHub{
 		BaseHub{
 			Clients: map[int64]Conn{},
 		},
 	}
-	ServiceHub.Setup()
+	ServiceHub.Run()
 }
 

@@ -8,7 +8,6 @@ import (
 	"ws/internal/chat"
 	"ws/internal/databases"
 	"ws/internal/file"
-	"ws/internal/json"
 	"ws/internal/models"
 	"ws/internal/repositories"
 	"ws/internal/util"
@@ -30,12 +29,18 @@ func GetHistoryMessage(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	user, exist := repositories.GetUserById(uid)
-	if !exist {
+	backendUser := auth.GetBackendUser(c)
+	chatIds, _ := chat.GetChatUserIds(backendUser.GetPrimaryKey())
+	userExist := false
+	for _, chatId := range  chatIds {
+		if chatId == uid {
+			userExist = true
+		}
+	}
+	if !userExist {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	backendUser := auth.GetBackendUser(c)
 	wheres := []*repositories.Where{
 		{
 			Filed: "service_id = ?",
@@ -56,31 +61,10 @@ func GetHistoryMessage(c *gin.Context) {
 			})
 		}
 	}
-	messages := repositories.GetMessages(wheres, 20, []string{"User"})
-	res := make([]*json.Message, 0)
+	messages := repositories.GetMessages(wheres, 20, []string{"User", "BackendUser"})
+	res := make([]*models.MessageJson, 0)
 	for _, m := range messages {
-		var avatar string
-		switch m.Source {
-		case models.SourceUser:
-			avatar = user.GetAvatarUrl()
-		case models.SourceBackendUser:
-			avatar = backendUser.GetAvatarUrl()
-		case models.SourceSystem:
-			avatar = chat.SystemAvatar()
-		}
-		res = append(res, &json.Message{
-			Id:         m.Id,
-			UserId:     m.UserId,
-			ServiceId:  m.ServiceId,
-			Type:       m.Type,
-			Content:    m.Content,
-			IsSuccess:  true,
-			ReceivedAT: m.ReceivedAT,
-			Source:   m.Source,
-			ReqId:      m.ReqId,
-			IsRead:     m.IsRead,
-			Avatar:    avatar,
-		})
+		res = append(res, m.ToJson())
 	}
 	util.RespSuccess(c, res)
 }
@@ -90,17 +74,17 @@ func ChatUserList(c *gin.Context) {
 	backendUser := auth.GetBackendUser(c)
 	ids, times := chat.GetChatUserIds(backendUser.GetPrimaryKey())
 	users := repositories.GetUserByIds(ids)
-	resp := make([]*json.User, 0, len(users))
+	resp := make([]*models.UserJson, 0, len(users))
 	userMap := make(map[int64]auth.User)
 	for _, user := range users {
 		userMap[user.GetPrimaryKey()] = user
 	}
 	for index, id := range ids {
 		u := userMap[id]
-		chatUserRes := &json.User{
+		chatUserRes := &models.UserJson{
 			ID:       u.GetPrimaryKey(),
 			Username: u.GetUsername(),
-			Messages: make([]*json.Message, 0),
+			Messages: make([]*models.MessageJson, 0),
 			Unread:   0,
 		}
 		limitTime := times[index]
@@ -121,32 +105,11 @@ func ChatUserList(c *gin.Context) {
 			Filed: "service_id = ?",
 			Value: backendUser.GetPrimaryKey(),
 		},
-	}, -1, []string{"User"})
+	}, -1, []string{"User","BackendUser"})
 	for _, u := range resp {
 		for _, m := range messages {
 			if m.UserId == u.ID {
-				var avatar string
-				switch m.Source {
-				case models.SourceUser:
-					avatar = m.User.GetAvatarUrl()
-				case models.SourceBackendUser:
-					avatar = backendUser.GetAvatarUrl()
-				case models.SourceSystem:
-					avatar = chat.SystemAvatar()
-				}
-				rm := &json.Message{
-					Id:         m.Id,
-					UserId:     m.UserId,
-					ServiceId:  m.ServiceId,
-					Type:       m.Type,
-					Content:    m.Content,
-					ReceivedAT: m.ReceivedAT,
-					Source:   m.Source,
-					ReqId:      m.ReqId,
-					IsRead:     m.IsRead,
-					Avatar:     avatar,
-				}
-				rm.IsSuccess = true
+				rm := m.ToJson()
 				if !m.IsRead && m.Source == models.SourceUser {
 					u.Unread += 1
 				}
@@ -190,11 +153,8 @@ func AcceptUser(c *gin.Context) {
 		},
 	)
 	backendUser := auth.GetBackendUser(c)
-	session := &models.ChatSession{}
-	databases.Db.Where("user_id = ?", user.GetPrimaryKey()).
-		Where("service_id = ?" , 0).
-		Find(session)
-	if session.Id <= 0 {
+	session := chat.GetSession(user.GetPrimaryKey(), 0)
+	if session == nil {
 		util.RespError(c , "chat session error")
 		return
 	}
@@ -233,37 +193,20 @@ func AcceptUser(c *gin.Context) {
 			Filed: "service_id = ?",
 			Value: backendUser.GetPrimaryKey(),
 		},
-	}, 20, []string{})
-
-
-
-
-
+	}, 20, []string{"User", "BackendUser"})
 	messageLength := len(messages)
-	chatUser := &json.User{
+	chatUser := &models.UserJson{
 		ID:           user.GetPrimaryKey(),
 		Username:     user.GetUsername(),
 		LastChatTime: 0,
-		Messages:     make([]*json.Message, messageLength, messageLength),
+		Messages:     make([]*models.MessageJson, messageLength, messageLength),
 	}
 	chatUser.Unread = len(unSendMsg)
 	_, exist = websocket.UserHub.GetConn(user.GetPrimaryKey())
 	chatUser.Online = exist
 	chatUser.LastChatTime = time.Now().Unix()
 	for index, m := range messages {
-		rm := &json.Message{
-			Id:         m.Id,
-			UserId:     m.UserId,
-			ServiceId:  m.ServiceId,
-			Type:       m.Type,
-			Content:    m.Content,
-			ReceivedAT: m.ReceivedAT,
-			Source:   m.Source,
-			ReqId:      m.ReqId,
-			IsSuccess:  true,
-			IsRead:     m.IsRead,
-			Avatar:     user.GetAvatarUrl(),
-		}
+		rm := m.ToJson()
 		chatUser.Messages[index] = rm
 	}
 	go websocket.ServiceHub.BroadcastWaitingUser()

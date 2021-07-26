@@ -9,7 +9,7 @@ import (
 	"time"
 	"ws/configs"
 	"ws/internal/databases"
-	"ws/internal/util"
+	"ws/internal/models"
 )
 
 
@@ -23,10 +23,7 @@ const (
 	// 待人工接入的用户 sets
 	manualUserKey = "user:manual"
 )
-// 系统头像
-func SystemAvatar() string  {
-	return  util.PublicAsset("avatar.jpeg")
-}
+
 // 添加用户到人工客服列表
 func AddToManual(uid int64) error  {
 	ctx := context.Background()
@@ -193,4 +190,15 @@ func DelSubScribe(uid int64) bool {
 	key := fmt.Sprintf("user:%d:subscribe:%s", uid, templateId)
 	databases.Redis.Del(ctx, key)
 	return true
+}
+// 获取会话
+func GetSession(uid int64, sid int64) *models.ChatSession {
+	session := &models.ChatSession{}
+	databases.Db.Where("user_id = ?" , uid).
+		Where("service_id = ?", sid).
+		Order("id desc").First(session)
+	if session.Id <= 0 {
+		return nil
+	}
+	return session
 }

@@ -101,16 +101,12 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 				// 有对应的客服对象
 				if msg.ServiceId > 0 {
 					// 更新会话有效期
-					session := &models.ChatSession{}
-					databases.Db.Where("user_id = ?" , msg.UserId).
-						Where("service_id = ?", msg.ServiceId).
-						Order("id desc").First(session)
-					if session.Id <= 0 {
+					session := chat.GetSession(c.GetUserId(), msg.ServiceId)
+					if session == nil {
 						return
 					}
 					addTime := chat.GetServiceSessionSecond()
 					_ = chat.UpdateUserServerId(msg.UserId, msg.ServiceId, addTime)
-
 					msg.SessionId = session.Id
 					databases.Db.Save(msg)
 					session.BrokeAt = time.Now().Unix() + addTime

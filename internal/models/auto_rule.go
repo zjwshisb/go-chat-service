@@ -2,7 +2,6 @@ package models
 
 import (
 	"time"
-	"ws/internal/chat"
 	"ws/internal/util"
 )
 
@@ -45,7 +44,7 @@ func (rule *AutoRule) GetMessages(uid int64) (message *Message) {
 			Source:     SourceSystem,
 			ReqId:      util.CreateReqId(),
 			IsRead:     true,
-			Avatar:     chat.SystemAvatar(),
+			Avatar:     util.SystemAvatar(),
 		}
 	}
 	return

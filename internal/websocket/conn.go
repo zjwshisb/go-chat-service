@@ -20,18 +20,6 @@ const (
 	onReceiveMessage
 )
 
-type AnonymousConn interface {
-	ping()
-	readMsg()
-	sendMsg()
-	close()
-	run()
-	Deliver(action *action.Action)
-}
-type Authentic interface {
-	GetUserId() int64
-}
-
 type Conn interface {
 	AnonymousConn
 	Authentic
@@ -48,22 +36,7 @@ type BaseConn struct {
 func (c *BaseConn) run() {
 	go c.readMsg()
 	go c.sendMsg()
-	go c.ping()
 	c.Call(onEnter)
-}
-
-func (c *BaseConn) ping() {
-	ticker := time.NewTicker(time.Second * 10)
-	for {
-		select {
-		case <-ticker.C:
-			c.send <- action.NewPing()
-		case <-c.closeSignal:
-			ticker.Stop()
-			goto END
-		}
-	}
-END:
 }
 func (c *BaseConn) close() {
 	c.Once.Do(func() {

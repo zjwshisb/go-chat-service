@@ -8,6 +8,18 @@ import (
 	"ws/internal/util"
 )
 
+
+type UserJson struct {
+	ID        int64     `json:"id"`
+	Username  string    `json:"username"`
+	LastChatTime int64  `json:"last_chat_time"`
+	Disabled bool       `json:"disabled"`
+	Online bool         `json:"online"`
+	Messages []*MessageJson `json:"messages"`
+	Unread int          `json:"unread"`
+}
+
+
 type User struct {
 	ID        int64      `json:"id"`
 	CreatedAt *time.Time `json:"created_at"`
@@ -17,6 +29,7 @@ type User struct {
 	ApiToken  string     `gogm:"string;size:255"  json:"-"`
 	OpenId string `gorm:"string;size:255"`
 }
+
 
 func (user *User) GetUsername() string  {
 	return user.Username

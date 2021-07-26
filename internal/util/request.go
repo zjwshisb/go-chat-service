@@ -21,3 +21,8 @@ func GetToken(c *gin.Context) (token string) {
 func PublicAsset(path string) string {
 	return configs.App.Url + "/public/" + path
 }
+
+// 系统头像
+func SystemAvatar() string  {
+	return  PublicAsset("avatar.jpeg")
+}

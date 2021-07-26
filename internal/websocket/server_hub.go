@@ -14,7 +14,7 @@ type serviceHub struct {
 	BaseHub
 }
 
-func (hub *serviceHub) Setup() {
+func (hub *serviceHub) Run() {
 	hub.Register(UserLogin, func(i ...interface{}) {
 		hub.BroadcastServiceUser()
 		hub.BroadcastWaitingUser()
@@ -22,6 +22,7 @@ func (hub *serviceHub) Setup() {
 	hub.Register(UserLogout, func(i ...interface{}) {
 		hub.BroadcastServiceUser()
 	})
+	hub.BaseHub.Run()
 }
 func (hub *serviceHub) BroadcastWaitingUser() {
 	manualUid := chat.GetManualUserIds()
@@ -80,7 +81,6 @@ func (hub *serviceHub) BroadcastServiceUser() {
 			Username:         serviceUser.Username,
 			Online:           online,
 			Id:               serviceUser.GetPrimaryKey(),
-			TodayAcceptCount: serviceUser.GetTodayAcceptCount(),
 		})
 	}
 	hub.SendAction(action.NewServiceUserAction(data), conns...)

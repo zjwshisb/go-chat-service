@@ -10,6 +10,7 @@ func GetBackendUser(c *gin.Context) *models.BackendUser {
 	user := ui.(*models.BackendUser)
 	return user
 }
+
 func SetBackendUser(c *gin.Context, user *models.BackendUser) {
 	c.Set("frontend", user)
 }

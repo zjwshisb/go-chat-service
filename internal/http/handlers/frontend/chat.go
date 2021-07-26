@@ -41,7 +41,7 @@ func GetHistoryMessage(c *gin.Context) {
 		case 1:
 			avatar = m.BackendUser.GetAvatarUrl()
 		case 2:
-			avatar = chat.SystemAvatar()
+			avatar = util.SystemAvatar()
 		}
 		messagesResources = append(messagesResources, &json.Message{
 			Id:         m.Id,
