@@ -1,4 +1,4 @@
-package frontend
+package user
 
 import (
 	"github.com/gin-gonic/gin"

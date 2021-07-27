@@ -30,9 +30,9 @@ type WaitingUserJson struct {
 }
 
 type User struct {
-	ID        int64      `json:"id"`
-	CreatedAt *time.Time `json:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at"`
+	ID        int64
+	CreatedAt *time.Time
+	UpdatedAt *time.Time
 	Username  string     `gorm:"string;size:255" json:"username"`
 	Password  string     `gorm:"string;size:255" json:"-"`
 	ApiToken  string     `gogm:"string;size:255"  json:"-"`

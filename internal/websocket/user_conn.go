@@ -46,7 +46,7 @@ LOOP:
 		switch rule.ReplyType {
 		// 转接人工客服
 		case models.ReplyTypeTransfer:
-			onlineServerCount := len(ServiceHub.Clients)
+			onlineServerCount := len(AdminHub.Clients)
 			// 没有客服在线时
 			if onlineServerCount == 0 {
 				otherRule := models.AutoRule{}
@@ -111,14 +111,14 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 					databases.Db.Save(msg)
 					session.BrokeAt = time.Now().Unix() + addTime
 					databases.Db.Save(session)
-					serviceClient, exist := ServiceHub.GetConn(msg.AdminId)
+					adminConn, exist := AdminHub.GetConn(msg.AdminId)
 					if exist {
-						serviceClient.Deliver(action.NewReceiveAction(msg))
+						adminConn.Deliver(action.NewReceiveAction(msg))
 					}
 				} else {
 					databases.Db.Save(msg)
 					if chat.IsInManual(c.GetUserId()) {
-						ServiceHub.BroadcastWaitingUser()
+						AdminHub.BroadcastWaitingUser()
 					} else {
 						isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
 						if exist  && isAutoTransfer.GetValue() == "1"{

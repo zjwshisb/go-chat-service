@@ -13,14 +13,14 @@ import (
 	"ws/internal/wechat"
 )
 
-type ServiceConn struct {
+type AdminConn struct {
 	User *models.Admin
 	BaseConn
 }
-func (c *ServiceConn) GetUserId() int64 {
+func (c *AdminConn) GetUserId() int64 {
 	return c.User.ID
 }
-func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
+func (c *AdminConn) onReceiveMessage(act *action.Action)  {
 	switch act.Action {
 	// 客服发送消息给用户
 	case action.SendMessageAction:
@@ -71,7 +71,7 @@ func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 	}
 }
 
-func (c *ServiceConn) Setup() {
+func (c *AdminConn) Setup() {
 	c.Register(onReceiveMessage, func(i ...interface{}) {
 		length := len(i)
 		if length >= 1 {
@@ -83,13 +83,13 @@ func (c *ServiceConn) Setup() {
 		}
 	})
 	c.Register(onClose, func(i ...interface{}) {
-		ServiceHub.Logout(c)
+		AdminHub.Logout(c)
 	})
 }
 
 
-func NewServiceConn(user *models.Admin, conn *websocket.Conn) *ServiceConn {
-	return &ServiceConn{
+func NewAdminConn(user *models.Admin, conn *websocket.Conn) *AdminConn {
+	return &AdminConn{
 		User: user,
 		BaseConn: BaseConn{
 			conn:        conn,

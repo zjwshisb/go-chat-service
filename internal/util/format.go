@@ -3,7 +3,6 @@ package util
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"ws/internal/databases"
 )
 
 func RespNotFound(c *gin.Context) {
@@ -17,8 +16,8 @@ func RespSuccess(c *gin.Context, data interface{}) {
 		"code": 0,
 	})
 }
-func RespPagination(c *gin.Context, pagination *databases.Pagination) {
-	c.JSON(http.StatusOK, pagination)
+func RespPagination(c *gin.Context, p interface{}) {
+	c.JSON(http.StatusOK, p)
 
 }
 func RespValidateFail(c *gin.Context, msg interface{}) {

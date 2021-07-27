@@ -12,9 +12,9 @@ type ChatSession struct {
 }
 
 func (chatSession *ChatSession) ToJson() *ChatSessionJson {
-	var userName, serviceName string
+	var userName, adminName string
 	if chatSession.Admin != nil {
-		serviceName = chatSession.Admin.Username
+		adminName = chatSession.Admin.Username
 	}
 	if chatSession.User != nil {
 		userName = chatSession.User.Username
@@ -27,7 +27,7 @@ func (chatSession *ChatSession) ToJson() *ChatSessionJson {
 		BrokeAt:     chatSession.BrokeAt * 1000,
 		AdminId:   chatSession.AdminId,
 		UserName:    userName,
-		ServiceName: serviceName,
+		AdminName: adminName,
 	}
 }
 
@@ -39,6 +39,6 @@ type ChatSessionJson struct {
 	BrokeAt int64	`json:"broke_at"`
 	AdminId int64  `json:"Admin_id"`
 	UserName string `json:"user_name"`
-	ServiceName string `json:"service_name"`
+	AdminName string `json:"admin_name"`
 }
 

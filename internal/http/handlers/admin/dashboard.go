@@ -1,4 +1,4 @@
-package backend
+package admin
 
 import (
 	"github.com/gin-gonic/gin"
@@ -87,8 +87,8 @@ func GetUserQueryInfo(c *gin.Context) {
 
 func GetOnlineInfo(c *gin.Context)  {
 	util.RespSuccess(c, gin.H{
-		"user_count": len(websocket.UserHub.GetAllConn()),
-		"service_count": len(websocket.ServiceHub.GetAllConn()),
+		"user_count": websocket.UserHub.GetTotal(),
+		"admin_count": websocket.UserHub.GetTotal(),
 		"waiting_user_count": len(chat.GetManualUserIds()),
 	})
 }

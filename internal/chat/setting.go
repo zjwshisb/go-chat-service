@@ -10,7 +10,7 @@ import (
 
 const (
 	IsAutoTransfer = "is-auto-transfer"
-	ServiceSessionDuration = "service-session-duration"
+	AdminSessionDuration = "admin-session-duration"
 	UserSessionDuration = "user-session-duration"
 )
 
@@ -63,8 +63,8 @@ func init() {
 		},
 		defVal: "1",
 	}
-	Settings[ServiceSessionDuration] = &Field{
-		Name: ServiceSessionDuration,
+	Settings[AdminSessionDuration] = &Field{
+		Name: AdminSessionDuration,
 		Title: "当用户给客服发消息时，客服多久没回复就断开会话",
 		Options: map[string]string{
 			"0.3333": "8小时",

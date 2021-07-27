@@ -22,9 +22,9 @@ func (userHub *userHub) Run() {
 				uid := conn.GetUserId()
 				sid := chat.GetUserLastServerId(uid)
 				if sid > 0 {
-					serviceConn, exist := ServiceHub.GetConn(sid)
+					adminConn, exist := AdminHub.GetConn(sid)
 					if exist {
-						serviceConn.Deliver(action.NewUserOnline(uid))
+						adminConn.Deliver(action.NewUserOnline(uid))
 					}
 				}
 			}
@@ -39,9 +39,9 @@ func (userHub *userHub) Run() {
 				uid := conn.GetUserId()
 				sid := chat.GetUserLastServerId(uid)
 				if sid > 0 {
-					serviceConn, exist := ServiceHub.GetConn(sid)
+					adminConn, exist := AdminHub.GetConn(sid)
 					if exist {
-						serviceConn.Deliver(action.NewUserOffline(uid))
+						adminConn.Deliver(action.NewUserOffline(uid))
 					}
 				}
 			}
@@ -51,7 +51,7 @@ func (userHub *userHub) Run() {
 }
 func (userHub *userHub) addToManual(uid int64)  {
 	_ = chat.AddToManual(uid)
-	ServiceHub.BroadcastWaitingUser()
+	AdminHub.BroadcastWaitingUser()
 	session := chat.GetSession(uid, 0)
 	if session == nil {
 		session = &models.ChatSession{}

@@ -54,9 +54,8 @@ func (c *BaseConn) readMsg() {
 	for {
 		go func() {
 			_, message, err := c.conn.ReadMessage()
-			log.Log.Warning(string(message))
+			log.Log.Info(string(message))
 			if err != nil {
-				log.Log.Error(err)
 				c.close()
 			} else {
 				msg <- message
@@ -88,7 +87,7 @@ func (c *BaseConn) sendMsg() {
 		case act := <-c.send:
 			msgStr, err := act.Marshal()
 			if err == nil {
-				log.Log.Warning(string(msgStr))
+				log.Log.Info(string(msgStr))
 				err := c.conn.WriteMessage(websocket.TextMessage, msgStr)
 				if err == nil {
 					switch act.Action {
@@ -106,7 +105,6 @@ func (c *BaseConn) sendMsg() {
 					}
 					go c.Call(onSendSuccess, act)
 				} else {
-					log.Log.Error(err)
 					c.close()
 					goto END
 				}

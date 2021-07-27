@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"ws/internal/auth"
-	http "ws/internal/http/handlers/backend"
+	http "ws/internal/http/handlers/admin"
 	middleware "ws/internal/http/middleware/backend"
 	"ws/internal/websocket"
 )
 
-func registerBackend() {
+func registerAdmin() {
 	g := Router.Group("/backend")
 	g.POST("/login", http.Login)
 	authGroup := g.Group("/")
@@ -58,8 +58,8 @@ func registerBackend() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		client := websocket.NewServiceConn(serviceUser, conn)
+		client := websocket.NewAdminConn(serviceUser, conn)
 		client.Setup()
-		websocket.ServiceHub.Login(client)
+		websocket.AdminHub.Login(client)
 	})
 }

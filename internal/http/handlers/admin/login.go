@@ -1,4 +1,4 @@
-package backend
+package admin
 
 import (
 	"github.com/gin-gonic/gin"
@@ -28,7 +28,7 @@ func Login(c *gin.Context) {
 			util.RespSuccess(c, gin.H{
 				"token": user.Login(),
 			})
-			old, exist := websocket.ServiceHub.GetConn(user.ID)
+			old, exist := websocket.AdminHub.GetConn(user.ID)
 			if exist {
 				old.Deliver(action.NewOtherLogin())
 			}

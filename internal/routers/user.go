@@ -2,7 +2,7 @@ package routers
 
 import (
 	"github.com/gin-gonic/gin"
-	http "ws/internal/http/handlers/frontend"
+	http "ws/internal/http/handlers/user"
 	middleware "ws/internal/http/middleware/user"
 	"ws/internal/models"
 	hub "ws/internal/websocket"

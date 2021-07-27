@@ -34,38 +34,38 @@ func GetUnSendMessage(wheres ...*Where) []*models.Message {
 	return GetMessages(wheres, -1, []string{})
 }
 
-func GetAutoMessagePagination(c *gin.Context, wheres ...*Where) *databases.Pagination {
+func GetAutoMessagePagination(c *gin.Context, wheres ...*Where) *Pagination {
 	messages := make([]*models.AutoMessage, 0)
 	databases.Db.Order("id desc").
-		Scopes(databases.Filter(c, []string{"type"})).
-		Scopes(databases.Paginate(c)).
+		Scopes(Filter(c, []string{"type"})).
+		Scopes(Paginate(c)).
 		Scopes(AddWhere(wheres)).
 		Find(&messages)
 	var total int64
 	databases.Db.Model(&models.AutoMessage{}).
-		Scopes(databases.Filter(c, []string{"type"})).
+		Scopes(Filter(c, []string{"type"})).
 		Scopes(AddWhere(wheres)).
 		Count(&total)
-	return databases.NewPagination(messages, total)
+	return NewPagination(messages, total)
 }
 
 
-func GetAutoRulePagination(c *gin.Context, wheres ...*Where) *databases.Pagination {
+func GetAutoRulePagination(c *gin.Context, wheres ...*Where) *Pagination {
 	rules := make([]*models.AutoRule, 0)
 	wheres = append(wheres, &Where{
 		Value: 0,
 		Filed: "is_system = ?",
 	})
 	databases.Db.Order("id desc").
-		Scopes(databases.Filter(c, []string{"reply_type"})).
-		Scopes(databases.Paginate(c)).
+		Scopes(Filter(c, []string{"reply_type"})).
+		Scopes(Paginate(c)).
 		Scopes(AddWhere(wheres)).
 		Preload("Message").
 		Find(&rules)
 	var total int64
 	databases.Db.Model(&models.AutoRule{}).
-		Scopes(databases.Filter(c, []string{"reply_type"})).
+		Scopes(Filter(c, []string{"reply_type"})).
 		Scopes(AddWhere(wheres)).
 		Count(&total)
-	return databases.NewPagination(rules, total)
+	return NewPagination(rules, total)
 }

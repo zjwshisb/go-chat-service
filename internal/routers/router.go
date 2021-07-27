@@ -28,6 +28,6 @@ func Setup() {
 	}))
 	Router.Static(configs.File.LocalPrefix, configs.File.LocalPath)
 	Router.Static("/public", "./public")
-	registerBackend()
+	registerAdmin()
 	registerFrontend()
 }

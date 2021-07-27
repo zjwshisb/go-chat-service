@@ -9,11 +9,11 @@ import (
 	"ws/internal/repositories"
 )
 
-type serviceHub struct {
+type adminHub struct {
 	BaseHub
 }
 
-func (hub *serviceHub) Run() {
+func (hub *adminHub) Run() {
 	hub.Register(UserLogin, func(i ...interface{}) {
 		hub.BroadcastServiceUser()
 		hub.BroadcastWaitingUser()
@@ -24,7 +24,7 @@ func (hub *serviceHub) Run() {
 	hub.BaseHub.Run()
 }
 
-func (hub *serviceHub) BroadcastWaitingUser() {
+func (hub *adminHub) BroadcastWaitingUser() {
 	manualUid := chat.GetManualUserIds()
 	users := make([]models.User, 0)
 	databases.Db.Where("id in ?", manualUid).
@@ -69,7 +69,7 @@ func (hub *serviceHub) BroadcastWaitingUser() {
 	hub.SendAction(action.NewWaitingUsers(waitingUserSlice), conns...)
 }
 
-func (hub *serviceHub) BroadcastServiceUser() {
+func (hub *adminHub) BroadcastServiceUser() {
 	var serviceUsers []*models.Admin
 	databases.Db.Find(&serviceUsers)
 	conns := hub.GetAllConn()

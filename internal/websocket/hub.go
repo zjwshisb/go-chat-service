@@ -17,6 +17,10 @@ type BaseHub struct {
 	lock    sync.RWMutex
 	event.BaseEvent
 }
+
+func (hub *BaseHub) GetTotal() int  {
+	return len(hub.GetAllConn())
+}
 func (hub *BaseHub) SendAction(a  *action.Action, clients ...Conn) {
 	for _,c := range clients {
 		c.Deliver(a)
@@ -89,7 +93,7 @@ func (hub *BaseHub) Run() {
 }
 
 var UserHub *userHub
-var ServiceHub *serviceHub
+var AdminHub *adminHub
 
 func Setup()  {
 	UserHub = &userHub{
@@ -98,11 +102,11 @@ func Setup()  {
 		},
 	}
 	UserHub.Run()
-	ServiceHub = &serviceHub{
+	AdminHub = &adminHub{
 		BaseHub{
 			Clients: map[int64]Conn{},
 		},
 	}
-	ServiceHub.Run()
+	AdminHub.Run()
 }
 

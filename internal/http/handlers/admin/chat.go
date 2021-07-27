@@ -1,4 +1,4 @@
-package backend
+package admin
 
 import (
 	"github.com/gin-gonic/gin"
@@ -209,7 +209,7 @@ func AcceptUser(c *gin.Context) {
 		rm := m.ToJson()
 		chatUser.Messages[index] = rm
 	}
-	go websocket.ServiceHub.BroadcastWaitingUser()
+	go websocket.AdminHub.BroadcastWaitingUser()
 	util.RespSuccess(c, chatUser)
 }
 
