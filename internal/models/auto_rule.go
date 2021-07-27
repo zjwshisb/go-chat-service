@@ -36,7 +36,7 @@ func (rule *AutoRule) GetMessages(uid int64) (message *Message) {
 	if rule.Message != nil {
 		message = &Message{
 			UserId:     uid,
-			ServiceId:  0,
+			AdminId:  0,
 			Type:       rule.Message.Type,
 			Content:    rule.Message.Content,
 			ReceivedAT: time.Now().Unix(),

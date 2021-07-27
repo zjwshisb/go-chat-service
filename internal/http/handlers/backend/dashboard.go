@@ -15,7 +15,7 @@ import (
 func GetUserQueryInfo(c *gin.Context) {
 	startTime := carbon.Now().StartOfDay().ToTimestamp()
 	endTime := carbon.Now().EndOfDay().ToTimestamp()
-	records := make([]models.ChatSession, 0)
+	sessions := make([]models.ChatSession, 0)
 	static := make(map[int64]map[string]int64)
 	var i int64
 	for i = 0; i<=23; i++ {
@@ -24,14 +24,14 @@ func GetUserQueryInfo(c *gin.Context) {
 		static[i] = item
 	}
 	var total int64
-	databases.Db.Table("query_records").
+	databases.Db.Model(&models.ChatSession{}).
 		Where("queried_at >= ?", startTime).
 		Where("queried_at <= ?", endTime).
 		Count(&total)
 
 
 	var messageCount int64
-	databases.Db.Table("messages").
+	databases.Db.Model(&models.Message{}).
 		Where("received_at >= ?", startTime).
 		Where("received_at <= ?" , endTime).
 		Where("source = ?" , models.SourceUser).
@@ -41,20 +41,20 @@ func GetUserQueryInfo(c *gin.Context) {
 	var maxTime int64
 	var acceptCount int64
 
-	databases.Db.Table("query_records").
+	databases.Db.
 		Order("queried_at desc").
 		Where("queried_at >= ?", startTime).
 		Where("queried_at <= ?", endTime).
-		FindInBatches(&records,
+		FindInBatches(&sessions,
 			100,
 			func(tx *gorm.DB, batch int) error {
-				for _, model := range records {
+				for _, model := range sessions {
 					hour := (model.QueriedAt - startTime) / 3600
 					item ,exist := static[hour]
 					if exist {
 						item["count"] = item["count"] + 1
 					}
-					if model.ServiceId > 0 {
+					if model.AdminId > 0 {
 						dura :=  model.AcceptedAt - model.QueriedAt
 						totalTime += dura
 						if dura > maxTime {

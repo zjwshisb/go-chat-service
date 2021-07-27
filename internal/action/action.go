@@ -5,17 +5,16 @@ import (
 	"errors"
 	"github.com/mitchellh/mapstructure"
 	"time"
-	rs "ws/internal/json"
 	"ws/internal/models"
 )
 
 const (
 	ReceiptAction = "receipt"
 	PingAction = "ping"
-	UserOnLineAction = "frontend-online"
-	UserOffLineAction = "frontend-offline"
+	UserOnLineAction = "user-online"
+	UserOffLineAction = "user-offline"
 	WaitingUserAction = "waiting-users"
-	ServiceUserAction = "backend-users"
+	ServiceUserAction = "service-users"
 	SendMessageAction = "send-message"
 	ReceiveMessageAction = "receive-message"
 	OtherLogin = "other-login"
@@ -41,19 +40,7 @@ func (action *Action) Marshal() (b []byte, err error) {
 		b, err = json.Marshal(Action{
 			Time:   action.Time,
 			Action: action.Action,
-			Data: rs.Message{
-				Id:         msg.Id,
-				UserId:     msg.UserId,
-				ServiceId:  msg.ServiceId,
-				Type:       msg.Type,
-				Content:    msg.Content,
-				ReceivedAT: msg.ReceivedAT,
-				Source:   msg.Source,
-				ReqId:      msg.ReqId,
-				IsSuccess:  true,
-				IsRead:     msg.IsRead,
-				Avatar:     msg.Avatar,
-			},
+			Data: msg.ToJson(),
 		})
 		return
 	}
@@ -94,11 +81,11 @@ func NewReceiptAction(msg *models.Message) (act *Action) {
 	}
 	return
 }
-func NewServiceUserAction(chatServiceUsers []rs.ChatServiceUser) *Action {
+func NewServiceUserAction(i interface{}) *Action {
 	return &Action{
 		Action: ServiceUserAction,
 		Time: time.Now().Unix(),
-		Data: chatServiceUsers,
+		Data: i,
 	}
 }
 func NewUserOnline(uid int64) *Action {

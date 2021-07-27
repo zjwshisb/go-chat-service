@@ -9,11 +9,11 @@ import (
 )
 
 func Me(c *gin.Context) {
-	user := auth.GetBackendUser(c)
+	admin := auth.GetAdmin(c)
 	util.RespSuccess(c, gin.H{
-		"username": user.Username,
-		"id":       user.ID,
-		"avatar":   user.GetAvatarUrl(),
+		"username": admin.Username,
+		"id":       admin.ID,
+		"avatar":   admin.GetAvatarUrl(),
 	})
 }
 
@@ -25,9 +25,9 @@ func Avatar(c *gin.Context) {
 	if err != nil {
 		util.RespError(c, err.Error())
 	} else {
-		user := auth.GetBackendUser(c)
-		user.Avatar = fileInfo.Path
-		databases.Db.Save(user)
+		admin := auth.GetAdmin(c)
+		admin.Avatar = fileInfo.Path
+		databases.Db.Save(admin)
 		util.RespSuccess(c, gin.H{})
 	}
 }

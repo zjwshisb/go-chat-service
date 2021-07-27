@@ -11,7 +11,7 @@ func GetChatSession(c *gin.Context)  {
 	sessions := make([]*models.ChatSession, 0 ,0)
 	var total int64
 	databases.Db.Scopes(databases.Paginate(c)).
-		Preload("BackendUser").Preload("User").Order("id desc").Find(&sessions)
+		Preload("Admin").Preload("User").Order("id desc").Find(&sessions)
 	databases.Db.Model(&models.ChatSession{}).Order("id desc").Count(&total)
 	 data := make([]*models.ChatSessionJson, 0, len(sessions))
 	for _, session := range sessions {
@@ -19,12 +19,13 @@ func GetChatSession(c *gin.Context)  {
 	}
 	util.RespPagination(c, databases.NewPagination(data, total))
 }
+
 func GetChatSessionDetail(c *gin.Context) {
 	sessionId := c.Param("id")
 	session := &models.ChatSession{}
-	databases.Db.Preload("BackendUser").Preload("User").Find(session ,sessionId)
+	databases.Db.Preload("Admin").Preload("User").Find(session ,sessionId)
 	messages := make([]*models.Message, 0, 0)
-	databases.Db.Preload("User").Preload("BackendUser").
+	databases.Db.Preload("User").Preload("Admin").
 		Where("session_id = ?" , sessionId).
 		Find(&messages)
 	data := make([]*models.MessageJson, 0, 0)

@@ -37,7 +37,7 @@ func (e *BaseEvent) Call(name int, i ...interface{}) {
 	callback, exist := e.events[name]
 	if exist {
 		for _, f := range callback {
-			f(i...)
+			go f(i...)
 		}
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"ws/internal/action"
 	"ws/internal/chat"
 	"ws/internal/databases"
-	"ws/internal/json"
 	"ws/internal/models"
 	"ws/internal/repositories"
 )
@@ -24,6 +23,7 @@ func (hub *serviceHub) Run() {
 	})
 	hub.BaseHub.Run()
 }
+
 func (hub *serviceHub) BroadcastWaitingUser() {
 	manualUid := chat.GetManualUserIds()
 	users := make([]models.User, 0)
@@ -36,9 +36,9 @@ func (hub *serviceHub) BroadcastWaitingUser() {
 		Filed: "source = ?",
 		Value: models.SourceUser,
 	}, )
-	waitingUserMap := make(map[int64]*json.WaitingUser)
+	waitingUserMap := make(map[int64]*models.WaitingUserJson)
 	for _, user := range users {
-		waitingUserMap[user.GetPrimaryKey()] = &json.WaitingUser{
+		waitingUserMap[user.GetPrimaryKey()] = &models.WaitingUserJson{
 			Username:     user.GetUsername(),
 			Avatar:       user.GetAvatarUrl(),
 			Id:           user.GetPrimaryKey(),
@@ -58,7 +58,7 @@ func (hub *serviceHub) BroadcastWaitingUser() {
 			}
 		}
 	}
-	waitingUserSlice := make([]*json.WaitingUser, 0, len(waitingUserMap))
+	waitingUserSlice := make([]*models.WaitingUserJson, 0, len(waitingUserMap))
 	for _, user := range waitingUserMap {
 		waitingUserSlice = append(waitingUserSlice, user)
 	}
@@ -70,13 +70,13 @@ func (hub *serviceHub) BroadcastWaitingUser() {
 }
 
 func (hub *serviceHub) BroadcastServiceUser() {
-	var serviceUsers []*models.BackendUser
+	var serviceUsers []*models.Admin
 	databases.Db.Find(&serviceUsers)
 	conns := hub.GetAllConn()
-	data := make([]json.ChatServiceUser, 0, len(serviceUsers))
+	data := make([]models.AdminJson, 0, len(serviceUsers))
 	for _, serviceUser := range serviceUsers {
 		_, online := hub.GetConn(serviceUser.ID)
-		data = append(data, json.ChatServiceUser{
+		data = append(data, models.AdminJson{
 			Avatar:           serviceUser.GetAvatarUrl(),
 			Username:         serviceUser.Username,
 			Online:           online,

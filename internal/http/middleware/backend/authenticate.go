@@ -7,9 +7,9 @@ import (
 )
 
 func Authenticate(c *gin.Context) {
-	user := &models.BackendUser{}
+	user := &models.Admin{}
 	if user.Auth(c) {
-		auth.SetBackendUser(c, user)
+		auth.SetAdmin(c, user)
 	} else {
 		c.JSON(401, gin.H{
 			"message": "Unauthorized",

@@ -18,6 +18,8 @@ const (
 	onEnter
 	// conn读取客服端消息事件
 	onReceiveMessage
+	// 关闭
+	onClose
 )
 
 type Conn interface {
@@ -32,16 +34,17 @@ type BaseConn struct {
 	sync.Once
 	event.BaseEvent
 }
-
 func (c *BaseConn) run() {
 	go c.readMsg()
 	go c.sendMsg()
 	c.Call(onEnter)
 }
+
 func (c *BaseConn) close() {
 	c.Once.Do(func() {
 		close(c.closeSignal)
 		_ = c.conn.Close()
+		c.Call(onClose)
 	})
 }
 
@@ -88,12 +91,18 @@ func (c *BaseConn) sendMsg() {
 				log.Log.Warning(string(msgStr))
 				err := c.conn.WriteMessage(websocket.TextMessage, msgStr)
 				if err == nil {
-					if act.Action == action.ReceiveMessageAction {
+					switch act.Action {
+					case action.MoreThanOne:
+						c.close()
+					case action.OtherLogin:
+						c.close()
+					case action.ReceiveMessageAction:
 						msg, ok := act.Data.(*models.Message)
 						if ok {
 							msg.SendAt = time.Now().Unix()
 							databases.Db.Save(msg)
 						}
+					default:
 					}
 					go c.Call(onSendSuccess, act)
 				} else {

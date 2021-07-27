@@ -8,7 +8,6 @@ import (
 	"ws/internal/util"
 )
 
-
 type UserJson struct {
 	ID        int64     `json:"id"`
 	Username  string    `json:"username"`
@@ -19,6 +18,16 @@ type UserJson struct {
 	Unread int          `json:"unread"`
 }
 
+type WaitingUserJson struct {
+	Username string `json:"username"`
+	Avatar string `json:"avatar"`
+	Id int64 `json:"id"`
+	LastMessage string `json:"last_message"`
+	LastTime int64 `json:"last_time"`
+	LastType string `json:"last_type"`
+	MessageCount int `json:"message_count"`
+	Description string `json:"description"`
+}
 
 type User struct {
 	ID        int64      `json:"id"`

@@ -14,8 +14,11 @@ import (
 )
 
 type ServiceConn struct {
-	User *models.BackendUser
+	User *models.Admin
 	BaseConn
+}
+func (c *ServiceConn) GetUserId() int64 {
+	return c.User.ID
 }
 func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 	switch act.Action {
@@ -31,8 +34,8 @@ func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 				sessionAddTime := chat.GetUserSessionSecond()
 				session.BrokeAt = time.Now().Unix() + sessionAddTime
 				databases.Db.Save(session)
-				msg.ServiceId = c.User.ID
-				msg.Source = models.SourceBackendUser
+				msg.AdminId = c.GetUserId()
+				msg.Source = models.SourceAdmin
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Avatar = c.User.GetAvatarUrl()
 				msg.SessionId = session.Id
@@ -67,15 +70,7 @@ func (c *ServiceConn) onReceiveMessage(act *action.Action)  {
 		break
 	}
 }
-func (c *ServiceConn) onSendSuccess(act *action.Action) {
-	switch act.Action {
-	case action.MoreThanOne:
-		c.close()
-		break
-	case action.OtherLogin:
-		c.close()
-	}
-}
+
 func (c *ServiceConn) Setup() {
 	c.Register(onReceiveMessage, func(i ...interface{}) {
 		length := len(i)
@@ -87,14 +82,13 @@ func (c *ServiceConn) Setup() {
 			}
 		}
 	})
-	c.Register(onSendSuccess, func(i ...interface{}) {
+	c.Register(onClose, func(i ...interface{}) {
+		ServiceHub.Logout(c)
 	})
 }
-func (c *ServiceConn) GetUserId() int64 {
-	return c.User.ID
-}
 
-func NewServiceConn(user *models.BackendUser, conn *websocket.Conn) *ServiceConn {
+
+func NewServiceConn(user *models.Admin, conn *websocket.Conn) *ServiceConn {
 	return &ServiceConn{
 		User: user,
 		BaseConn: BaseConn{

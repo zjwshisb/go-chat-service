@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"fmt"
 	"sync"
 	"time"
 	"ws/internal/action"
@@ -52,26 +51,31 @@ func (hub *BaseHub) GetAllConn() (s []Conn){
 }
 
 func (hub *BaseHub) Logout(client Conn) {
-	hub.RemoveConn(client.GetUserId())
-	client.close()
-	go hub.Call(UserLogout, client)
+	existConn, exist := hub.GetConn(client.GetUserId())
+	if exist {
+		if existConn == client {
+			hub.RemoveConn(client.GetUserId())
+			client.close()
+			hub.Call(UserLogout, client)
+		}
+	}
 }
-
 func (hub *BaseHub) Login(client Conn) {
 	old , exist := hub.GetConn(client.GetUserId())
+	timer := time.After(1 * time.Second)
 	if exist {
 		hub.SendAction(action.NewMoreThanOne(), old)
 	}
 	hub.AddConn(client)
 	client.run()
-	go hub.Call(UserLogin, client)
+	<-timer
+	hub.Call(UserLogin, client)
 }
 func (hub *BaseHub) Ping()  {
 	ticker := time.NewTicker(time.Second * 10)
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("hub")
 			conns := hub.GetAllConn()
 			ping := action.NewPing()
 			for _, conn := range conns {

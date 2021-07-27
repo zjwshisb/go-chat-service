@@ -3,7 +3,7 @@ package json
 type Message struct {
 	Id         uint64 `json:"id"`
 	UserId     int64  `json:"user_id"`
-	ServiceId  int64  `json:"service_id"`
+	AdminId  int64  `json:"admin_id"`
 	Type       string `json:"type"`
 	Content    string `json:"content"`
 	ReceivedAT int64  `json:"received_at"`

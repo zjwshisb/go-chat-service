@@ -29,8 +29,8 @@ func GetHistoryMessage(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	backendUser := auth.GetBackendUser(c)
-	chatIds, _ := chat.GetChatUserIds(backendUser.GetPrimaryKey())
+	admin := auth.GetAdmin(c)
+	chatIds, _ := chat.GetChatUserIds(admin.GetPrimaryKey())
 	userExist := false
 	for _, chatId := range  chatIds {
 		if chatId == uid {
@@ -43,8 +43,8 @@ func GetHistoryMessage(c *gin.Context) {
 	}
 	wheres := []*repositories.Where{
 		{
-			Filed: "service_id = ?",
-			Value: backendUser.GetPrimaryKey(),
+			Filed: "admin_id = ?",
+			Value: admin.GetPrimaryKey(),
 		},
 		{
 			Filed: "user_id = ?",
@@ -61,7 +61,7 @@ func GetHistoryMessage(c *gin.Context) {
 			})
 		}
 	}
-	messages := repositories.GetMessages(wheres, 20, []string{"User", "BackendUser"})
+	messages := repositories.GetMessages(wheres, 20, []string{"User", "Admin"})
 	res := make([]*models.MessageJson, 0)
 	for _, m := range messages {
 		res = append(res, m.ToJson())
@@ -71,8 +71,8 @@ func GetHistoryMessage(c *gin.Context) {
 
 // 聊天用户列表
 func ChatUserList(c *gin.Context) {
-	backendUser := auth.GetBackendUser(c)
-	ids, times := chat.GetChatUserIds(backendUser.GetPrimaryKey())
+	admin := auth.GetAdmin(c)
+	ids, times := chat.GetChatUserIds(admin.GetPrimaryKey())
 	users := repositories.GetUserByIds(ids)
 	resp := make([]*models.UserJson, 0, len(users))
 	userMap := make(map[int64]auth.User)
@@ -88,7 +88,7 @@ func ChatUserList(c *gin.Context) {
 			Unread:   0,
 		}
 		limitTime := times[index]
-		chatUserRes.LastChatTime = chat.GetServerUserLastChatTime(backendUser.ID, u.GetPrimaryKey())
+		chatUserRes.LastChatTime = chat.GetServerUserLastChatTime(admin.GetPrimaryKey(), u.GetPrimaryKey())
 		chatUserRes.Disabled = limitTime <= time.Now().Unix()
 		if _, ok := websocket.UserHub.GetConn(u.GetPrimaryKey()); ok {
 			chatUserRes.Online = true
@@ -102,10 +102,10 @@ func ChatUserList(c *gin.Context) {
 			Value: time.Now().Unix() - 3 * 24 * 60 * 60,
 		},
 		{
-			Filed: "service_id = ?",
-			Value: backendUser.GetPrimaryKey(),
+			Filed: "admin_id = ?",
+			Value: admin.GetPrimaryKey(),
 		},
-	}, -1, []string{"User","BackendUser"})
+	}, -1, []string{"User","Admin"})
 	for _, u := range resp {
 		for _, m := range messages {
 			if m.UserId == u.ID {
@@ -152,7 +152,7 @@ func AcceptUser(c *gin.Context) {
 			Value: models.SourceUser,
 		},
 	)
-	backendUser := auth.GetBackendUser(c)
+	admin := auth.GetAdmin(c)
 	session := chat.GetSession(user.GetPrimaryKey(), 0)
 	if session == nil {
 		util.RespError(c , "chat session error")
@@ -160,10 +160,10 @@ func AcceptUser(c *gin.Context) {
 	}
 	sessionDuration := chat.GetServiceSessionSecond()
 	session.AcceptedAt = time.Now().Unix()
-	session.ServiceId = backendUser.GetPrimaryKey()
+	session.AdminId = admin.GetPrimaryKey()
 	session.BrokeAt = time.Now().Unix() + sessionDuration
 	databases.Db.Save(session)
-	_ = chat.SetUserServerId(user.GetPrimaryKey(), backendUser.GetPrimaryKey(), sessionDuration)
+	_ = chat.SetUserServerId(user.GetPrimaryKey(), admin.GetPrimaryKey(), sessionDuration)
 	now := time.Now().Unix()
 	// 更新未发送的消息
 	repositories.UpdateMessages([]*repositories.Where{
@@ -176,11 +176,11 @@ func AcceptUser(c *gin.Context) {
 			Value: models.SourceUser,
 		},
 		{
-			Filed: "service_id = ?",
+			Filed: "admin_id = ?",
 			Value: 0,
 		},
 	}, map[string]interface{}{
-		"service_id": backendUser.ID,
+		"admin_id": admin.ID,
 		"send_at":    now,
 		"session_id": session.Id,
 	})
@@ -190,10 +190,10 @@ func AcceptUser(c *gin.Context) {
 			Value: user.GetPrimaryKey(),
 		},
 		{
-			Filed: "service_id = ?",
-			Value: backendUser.GetPrimaryKey(),
+			Filed: "admin_id = ?",
+			Value: admin.GetPrimaryKey(),
 		},
-	}, 20, []string{"User", "BackendUser"})
+	}, 20, []string{"User", "Admin"})
 	messageLength := len(messages)
 	chatUser := &models.UserJson{
 		ID:           user.GetPrimaryKey(),
@@ -217,13 +217,13 @@ func AcceptUser(c *gin.Context) {
 func RemoveUser(c *gin.Context) {
 	uidStr := c.Param("id")
 	uid, err := strconv.ParseInt(uidStr, 10, 64)
-	backendUser := auth.GetBackendUser(c)
+	admin := auth.GetAdmin(c)
 	if err == nil {
-		_ = chat.RemoveUserServerId(uid, backendUser.GetPrimaryKey())
+		_ = chat.RemoveUserServerId(uid, admin.GetPrimaryKey())
 	}
 	record := &models.ChatSession{}
 	databases.Db.Where("user_id = ?", uidStr).
-		Where("service_id = ?" , backendUser.GetPrimaryKey()).
+		Where("admin_id = ?" , admin.GetPrimaryKey()).
 		Order("id desc").First(record)
 	if record.Id > 0 {
 		record.BrokeAt = time.Now().Unix()
@@ -239,11 +239,11 @@ func ReadAll(c *gin.Context) {
 	}{}
 	err := c.Bind(form)
 	if err == nil {
-		backendUser := auth.GetBackendUser(c)
+		admin := auth.GetAdmin(c)
 		wheres := []*repositories.Where{
 			{
-				Filed: "service_id = ?",
-				Value: backendUser.GetPrimaryKey(),
+				Filed: "admin_id = ?",
+				Value: admin.GetPrimaryKey(),
 			},
 			{
 				Filed: "user_id = ?",
@@ -262,7 +262,24 @@ func ReadAll(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 	}
 }
+func GetUserInfo(c *gin.Context)  {
+	uidStr := c.Param("id")
+	uid, err := strconv.ParseInt(uidStr, 10, 64)
+	if err != nil {
+		util.RespValidateFail(c, err.Error())
+		return
+	}
+	user, exist := repositories.GetUserById(uid)
+	if !exist {
+		util.RespNotFound(c)
+		return
+	}
+	util.RespSuccess(c, gin.H{
+		"username": user.GetUsername(),
+		// other info
+	})
 
+}
 // 聊天图片
 func Image(c *gin.Context) {
 	f, _ := c.FormFile("file")

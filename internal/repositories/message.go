@@ -28,7 +28,7 @@ func GetMessages(wheres []*Where, limit int, load []string) []*models.Message  {
 
 func GetUnSendMessage(wheres ...*Where) []*models.Message {
 	wheres = append(wheres, &Where{
-		Filed: "service_id = ?",
+		Filed: "admin_id = ?",
 		Value: 0,
 	})
 	return GetMessages(wheres, -1, []string{})

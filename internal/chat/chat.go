@@ -15,11 +15,11 @@ import (
 
 const (
 	// 用户 => 客服 hashes
-	user2ServerHashKey = "user-to-server"
+	user2ServerHashKey = "user-to-admin"
 	// 客服 => {value: userId, source: limitTime}[] sorted sets
-	serverChatUserKey = "server-user:%d:chat-user"
+	serverChatUserKey = "admin:%d:chat-user"
 	// 客服 => {uid: lastTime} hashes
-	serverUserLastChatKey = "server-user:%d:chat-user:last-time"
+	serverUserLastChatKey = "admin:%d:chat-user:last-time"
 	// 待人工接入的用户 sets
 	manualUserKey = "user:manual"
 )
@@ -57,9 +57,9 @@ func GetManualUserIds() []int64 {
 	return uid
 }
 // 获取聊天过的用户ids以及对应的最后聊天时间
-func GetChatUserIds(sid int64)  ([]int64, []int64) {
+func GetChatUserIds(adminId int64)  ([]int64, []int64) {
 	ctx := context.Background()
-	cmd := databases.Redis.ZRangeWithScores(ctx, GetBackUserKey(sid), 0, -1)
+	cmd := databases.Redis.ZRangeWithScores(ctx, GetBackUserKey(adminId), 0, -1)
 	uids := make([]int64, 0, len(cmd.Val()))
 	times :=  make([]int64, 0, len(cmd.Val()))
 	for _, item := range cmd.Val() {
@@ -73,40 +73,40 @@ func GetChatUserIds(sid int64)  ([]int64, []int64) {
 	return uids, times
 }
 // 设置客服用户最后聊天时间
-func SetServerUserLastChatTime(uid int64,sid int64) error {
+func SetServerUserLastChatTime(uid int64,adminId int64) error {
 	ctx := context.Background()
-	cmd := databases.Redis.HSet(ctx, fmt.Sprintf(serverUserLastChatKey, sid), uid, time.Now().Unix())
+	cmd := databases.Redis.HSet(ctx, fmt.Sprintf(serverUserLastChatKey, adminId), uid, time.Now().Unix())
 	return cmd.Err()
 }
 // 获取客服用户最后聊天时间
-func GetServerUserLastChatTime(uid int64, sid int64)  int64 {
+func GetServerUserLastChatTime(uid int64, adminId int64)  int64 {
 	ctx := context.Background()
-	cmd := databases.Redis.HGet(ctx, fmt.Sprintf(serverUserLastChatKey, sid), strconv.FormatInt(uid, 10))
+	cmd := databases.Redis.HGet(ctx, fmt.Sprintf(serverUserLastChatKey, adminId), strconv.FormatInt(uid, 10))
 	t, _ := strconv.ParseInt(cmd.Val(), 10, 64)
 	return t
 }
 // 设置用户客服对象id
-func SetUserServerId(uid int64,sid int64, duration int64) error {
+func SetUserServerId(uid int64,adminId int64, duration int64) error {
 	ctx := context.Background()
-	cmd := databases.Redis.HSet(ctx, user2ServerHashKey,uid, sid)
-	_ = UpdateUserServerId(uid, sid, duration)
+	cmd := databases.Redis.HSet(ctx, user2ServerHashKey,uid, adminId)
+	_ = UpdateUserServerId(uid, adminId, duration)
 	_ = RemoveManual(uid)
 	return cmd.Err()
 }
 // 更新会话时间
-func UpdateUserServerId(uid int64, sid int64, duration int64) error {
+func UpdateUserServerId(uid int64, adminId int64, duration int64) error {
 	ctx := context.Background()
 	m := &redis.Z{Member: uid, Score: float64(time.Now().Unix() + duration)}
-	_ = SetServerUserLastChatTime(uid, sid)
-	cmd := databases.Redis.ZAdd(ctx, GetBackUserKey(sid),  m)
+	_ = SetServerUserLastChatTime(uid, adminId)
+	cmd := databases.Redis.ZAdd(ctx, GetBackUserKey(adminId),  m)
 	return cmd.Err()
 }
 // 清除用户客服对象id
-func RemoveUserServerId(uid int64, sid int64) error {
+func RemoveUserServerId(uid int64, adminId int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.HDel(ctx, user2ServerHashKey, strconv.FormatInt(uid, 10))
-	cmd = databases.Redis.HDel(ctx, fmt.Sprintf(serverUserLastChatKey, sid), strconv.FormatInt(uid, 10))
-	cmd = databases.Redis.ZRem(ctx, GetBackUserKey(sid), uid)
+	cmd = databases.Redis.HDel(ctx, fmt.Sprintf(serverUserLastChatKey, adminId), strconv.FormatInt(uid, 10))
+	cmd = databases.Redis.ZRem(ctx, GetBackUserKey(adminId), uid)
 	return cmd.Err()
 }
 
@@ -150,13 +150,13 @@ func GetServiceSessionSecond() int64 {
 	return second
 }
 // 客服的聊天用户SortedSet 的key
-func GetBackUserKey(sid int64) string {
-	return fmt.Sprintf(serverChatUserKey, sid)
+func GetBackUserKey(adminId int64) string {
+	return fmt.Sprintf(serverChatUserKey, adminId)
 }
 // 检查用户对于客服是否合法
-func CheckUserIdLegal(uid int64, sid int64) bool {
+func CheckUserIdLegal(uid int64, adminId int64) bool {
 	ctx := context.Background()
-	cmd := databases.Redis.ZScore(ctx, GetBackUserKey(sid), strconv.FormatInt(uid , 10))
+	cmd := databases.Redis.ZScore(ctx, GetBackUserKey(adminId), strconv.FormatInt(uid , 10))
 	if cmd.Err() == redis.Nil {
 		return false
 	}
@@ -192,10 +192,10 @@ func DelSubScribe(uid int64) bool {
 	return true
 }
 // 获取会话
-func GetSession(uid int64, sid int64) *models.ChatSession {
+func GetSession(uid int64, adminId int64) *models.ChatSession {
 	session := &models.ChatSession{}
 	databases.Db.Where("user_id = ?" , uid).
-		Where("service_id = ?", sid).
+		Where("admin_id = ?", adminId).
 		Order("id desc").First(session)
 	if session.Id <= 0 {
 		return nil

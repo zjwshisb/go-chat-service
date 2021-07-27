@@ -24,11 +24,13 @@ func GetSelectAutoMessage(c *gin.Context)  {
 	}
 	util.RespSuccess(c, options)
 }
+
 func GetSystemRules(c *gin.Context)  {
 	rules := make([]models.AutoRule, 0)
 	databases.Db.Where("is_system", 1).Find(&rules)
 	util.RespSuccess(c, rules)
 }
+
 func UpdateSystemRules(c *gin.Context) {
 	 m := make(map[int]int)
 	err := c.ShouldBind(&m)

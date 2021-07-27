@@ -7,7 +7,7 @@ import (
 	"ws/internal/auth"
 	"ws/internal/chat"
 	"ws/internal/file"
-	"ws/internal/json"
+	"ws/internal/models"
 	"ws/internal/repositories"
 	"ws/internal/util"
 )
@@ -31,30 +31,10 @@ func GetHistoryMessage(c *gin.Context) {
 			})
 		}
 	}
-	messages := repositories.GetMessages(wheres, 100, []string{"BackendUser"})
-	messagesResources := make([]*json.Message, 0, len(messages))
+	messages := repositories.GetMessages(wheres, 100, []string{"Admin","User"})
+	messagesResources := make([]*models.MessageJson, 0, len(messages))
 	for _, m := range messages {
-		var avatar string
-		switch m.Source {
-		case 0:
-			avatar = user.GetAvatarUrl()
-		case 1:
-			avatar = m.BackendUser.GetAvatarUrl()
-		case 2:
-			avatar = util.SystemAvatar()
-		}
-		messagesResources = append(messagesResources, &json.Message{
-			Id:         m.Id,
-			UserId:     m.UserId,
-			ServiceId:  m.ServiceId,
-			Type:       m.Type,
-			Content:    m.Content,
-			ReceivedAT: m.ReceivedAT,
-			Source:   m.Source,
-			ReqId:      m.ReqId,
-			IsRead:     m.IsRead,
-			Avatar:     avatar,
-		})
+		messagesResources = append(messagesResources, m.ToJson())
 	}
 	util.RespSuccess(c, messagesResources)
 }

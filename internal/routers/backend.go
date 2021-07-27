@@ -22,6 +22,7 @@ func registerBackend() {
 	authGroup.POST("/ws/read-all", http.ReadAll)
 	authGroup.POST("/ws/image", http.Image)
 	authGroup.GET("/ws/messages", http.GetHistoryMessage)
+	authGroup.GET("/ws/user/:id", http.GetUserInfo)
 
 	//authGroup.GET("/user/:id", http.GetUserInfo)
 
@@ -52,7 +53,7 @@ func registerBackend() {
 
 
 	authGroup.GET("/ws", func(c *gin.Context) {
-		serviceUser := auth.GetBackendUser(c)
+		serviceUser := auth.GetAdmin(c)
 		conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			fmt.Println(err)

@@ -11,7 +11,7 @@ func init() {
 }
 func main() {
 	err := databases.Db.AutoMigrate(
-		&models.QueryRecord{},
+		&models.ChatSession{},
 		&models.Message{},
 		&models.AutoMessage{},
 		&models.AutoRule{})

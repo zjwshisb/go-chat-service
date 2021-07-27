@@ -96,22 +96,22 @@ func (c *UserConn) onReceiveMessage(act *action.Action) {
 				msg.UserId = c.GetUserId()
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Avatar = c.User.GetAvatarUrl()
-				msg.ServiceId = chat.GetUserLastServerId(c.GetUserId())
+				msg.AdminId = chat.GetUserLastServerId(c.GetUserId())
 				c.Deliver(action.NewReceiptAction(msg))
 				// 有对应的客服对象
-				if msg.ServiceId > 0 {
+				if msg.AdminId > 0 {
 					// 更新会话有效期
-					session := chat.GetSession(c.GetUserId(), msg.ServiceId)
+					session := chat.GetSession(c.GetUserId(), msg.AdminId)
 					if session == nil {
 						return
 					}
 					addTime := chat.GetServiceSessionSecond()
-					_ = chat.UpdateUserServerId(msg.UserId, msg.ServiceId, addTime)
+					_ = chat.UpdateUserServerId(msg.UserId, msg.AdminId, addTime)
 					msg.SessionId = session.Id
 					databases.Db.Save(msg)
 					session.BrokeAt = time.Now().Unix() + addTime
 					databases.Db.Save(session)
-					serviceClient, exist := ServiceHub.GetConn(msg.ServiceId)
+					serviceClient, exist := ServiceHub.GetConn(msg.AdminId)
 					if exist {
 						serviceClient.Deliver(action.NewReceiveAction(msg))
 					}
@@ -159,6 +159,9 @@ func (c *UserConn) Setup() {
 				}
 			}
 		}
+	})
+	c.Register(onClose, func(i ...interface{}) {
+		UserHub.Logout(c)
 	})
 	c.Register(onReceiveMessage, func(i ...interface{}) {
 		length := len(i)
