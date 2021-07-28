@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"ws/internal/databases"
-	"ws/internal/models"
+	"log"
+	"ws/app/databases"
+	"ws/app/models"
 )
 
 func init() {
@@ -14,6 +14,11 @@ func main() {
 		&models.ChatSession{},
 		&models.Message{},
 		&models.AutoMessage{},
+		&models.AdminChatSetting{},
 		&models.AutoRule{})
-	fmt.Println(err)
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		log.Println("migrate success")
+	}
 }

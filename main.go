@@ -8,13 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"ws/app"
+	"ws/app/routers"
 	"ws/configs"
-	"ws/internal"
-	"ws/internal/routers"
 )
 
 func main() {
-	internal.Setup()
+	app.Setup()
 
 	srv := &http.Server{
 		Addr:    configs.Http.Host +":" + configs.Http.Port,
