@@ -14,11 +14,12 @@ const (
 	UserOnLineAction = "user-online"
 	UserOffLineAction = "user-offline"
 	WaitingUserAction = "waiting-users"
-	ServiceUserAction = "service-users"
+	AdminsAction = "admins"
 	SendMessageAction = "send-message"
 	ReceiveMessageAction = "receive-message"
 	OtherLogin = "other-login"
 	MoreThanOne = "more-than-one"
+	UserTransfer = "user-transfer"
 )
 
 type Action struct {
@@ -83,7 +84,7 @@ func NewReceiptAction(msg *models.Message) (act *Action) {
 }
 func NewServiceUserAction(i interface{}) *Action {
 	return &Action{
-		Action: ServiceUserAction,
+		Action: AdminsAction,
 		Time: time.Now().Unix(),
 		Data: i,
 	}
@@ -129,6 +130,13 @@ func NewWaitingUsers(i interface{}) *Action {
 		Action: WaitingUserAction,
 		Time: time.Now().Unix(),
 		Data: i,
+	}
+}
+func NewUserTransfer(i interface{}) *Action {
+	return &Action{
+		Data:   i,
+		Time:   time.Now().Unix(),
+		Action: UserTransfer,
 	}
 }
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ws/internal/databases"
+	"ws/app/databases"
 )
 
 func init()  {

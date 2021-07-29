@@ -2,8 +2,8 @@ package main
 
 import (
 	"gorm.io/gorm"
-	"ws/internal/databases"
-	"ws/internal/models"
+	"ws/app/databases"
+	"ws/app/models"
 )
 
 func rules()  {

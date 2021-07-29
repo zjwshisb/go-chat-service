@@ -15,6 +15,7 @@ func main() {
 		&models.Message{},
 		&models.AutoMessage{},
 		&models.AdminChatSetting{},
+		&models.ChatTransfer{},
 		&models.AutoRule{})
 	if err != nil {
 		log.Fatal(err)

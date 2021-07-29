@@ -16,6 +16,12 @@ func (hub *adminHub) Run() {
 	hub.Register(UserLogin, func(i ...interface{}) {
 		hub.BroadcastServiceUser()
 		hub.BroadcastWaitingUser()
+		if len(i) > 0 {
+			ii := i[0]
+			if client, ok := ii.(Conn); ok {
+				hub.BroadcastUserTransfer(client.GetUserId())
+			}
+		}
 	})
 	hub.Register(UserLogout, func(i ...interface{}) {
 		hub.BroadcastServiceUser()
@@ -63,6 +69,24 @@ func (hub *adminHub) BroadcastWaitingUser() {
 	})
 	conns := hub.GetAllConn()
 	hub.SendAction(NewWaitingUsers(waitingUserSlice), conns...)
+}
+
+func (hub *adminHub) BroadcastUserTransfer(adminId int64)   {
+	client, exist := hub.GetConn(adminId)
+	if exist {
+		transfers := make([]*models.ChatTransfer, 0)
+		databases.Db.Where("to_admin_id = ?", adminId).
+			Where("is_accepted = ?", 0).
+			Order("id desc").
+			Preload("FromAdmin").
+			Preload("User").
+			Find(&transfers)
+		data := make([]*models.ChatTransferJson, 0, len(transfers))
+		for _, transfer := range transfers {
+			data = append(data, transfer.ToJson())
+		}
+		client.Deliver(NewUserTransfer(data))
+	}
 }
 
 func (hub *adminHub) BroadcastServiceUser() {

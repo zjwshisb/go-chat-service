@@ -48,7 +48,15 @@ func UpdateSystemRules(c *gin.Context) {
 	util.RespSuccess(c, m)
 }
 func GetAutoRules(c *gin.Context)  {
-	pagination := repositories.GetAutoRulePagination(c)
+	wheres := make([]*repositories.Where, 0)
+	name, _ := c.GetQuery("name")
+	if name != "" {
+		wheres = append(wheres, &repositories.Where{
+			Filed: "name like ?",
+			Value: "%" + name + "%",
+		})
+	}
+	pagination := repositories.GetAutoRulePagination(c, wheres)
 	util.RespPagination(c , pagination)
 }
 func ShowAutoRule(c *gin.Context) {

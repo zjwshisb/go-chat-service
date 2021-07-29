@@ -66,11 +66,9 @@ LOOP:
 					}
 				} else {
 					UserHub.addToManual(c.GetUserId())
-					break LOOP
 				}
 			} else {
 				UserHub.addToManual(c.GetUserId())
-				break LOOP
 			}
 		// 回复消息
 		case models.ReplyTypeMessage:
@@ -79,13 +77,12 @@ LOOP:
 				databases.Db.Save(msg)
 				c.Deliver(NewReceiveAction(msg))
 			}
-			break LOOP
 		case models.ReplyTypeEvent:
 			c.triggerEvent(rule.Key)
-			break LOOP
 		}
 		rule.Count++
 		databases.Db.Save(rule)
+		break LOOP
 	}
 }
 

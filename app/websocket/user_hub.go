@@ -1,10 +1,7 @@
 package websocket
 
 import (
-	"time"
 	"ws/app/chat"
-	"ws/app/databases"
-	"ws/app/models"
 )
 
 type userHub struct {
@@ -48,15 +45,15 @@ func (userHub *userHub) Run() {
 	})
 	userHub.BaseHub.Run()
 }
+// 加入人工列表
+// 如果是在转接中，则不会加入
 func (userHub *userHub) addToManual(uid int64)  {
-	_ = chat.AddToManual(uid)
-	AdminHub.BroadcastWaitingUser()
-	session := chat.GetSession(uid, 0)
-	if session == nil {
-		session = &models.ChatSession{}
-		session.UserId = uid
-		session.QueriedAt = time.Now().Unix()
-		session.AdminId = 0
-		databases.Db.Save(session)
+	if chat.GetUserTransferId(uid) == 0 {
+		_ = chat.AddToManual(uid)
+		AdminHub.BroadcastWaitingUser()
+		session := chat.GetSession(uid, 0)
+		if session == nil {
+			chat.CreateSession(uid)
+		}
 	}
 }

@@ -54,7 +54,11 @@ func (user *User) GetMpOpenId() string {
 }
 
 func (user *User) Auth(c *gin.Context) bool {
-	query := databases.Db.Where("api_token= ?", util.GetToken(c)).Limit(1).First(user)
+	token := util.GetToken(c)
+	if token == "" {
+		return false
+	}
+	query := databases.Db.Where("api_token= ?", token).Limit(1).First(user)
 	if query.Error == gorm.ErrRecordNotFound {
 		return false
 	}

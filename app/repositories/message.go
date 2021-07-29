@@ -52,7 +52,7 @@ func GetAutoMessagePagination(c *gin.Context, wheres ...*Where) *Pagination {
 }
 
 
-func GetAutoRulePagination(c *gin.Context, wheres ...*Where) *Pagination {
+func GetAutoRulePagination(c *gin.Context, wheres []*Where) *Pagination {
 	rules := make([]*models.AutoRule, 0)
 	wheres = append(wheres, &Where{
 		Value: 0,

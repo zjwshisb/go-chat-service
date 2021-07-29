@@ -22,7 +22,31 @@ const (
 	adminUserLastChatKey = "admin:%d:chat-user:last-time"
 	// 待人工接入的用户 sets
 	manualUserKey = "user:manual"
+	// 转接待接入的用户 sets
+	transferUserKey = "user:transfer"
 )
+// 从转接韩系表移除用户
+func RemoveTransfer(uid int64) error {
+	ctx := context.Background()
+	cmd := databases.Redis.HDel(ctx, transferUserKey, strconv.FormatInt(uid, 10))
+	return cmd.Err()
+}
+// 获取user转接adminId
+func GetUserTransferId(uid int64) int64 {
+	ctx := context.Background()
+	cmd := databases.Redis.HGet(ctx, transferUserKey, strconv.FormatInt(uid, 10))
+	if cmd.Err() == redis.Nil {
+		return 0
+	}
+	adminId, _ := strconv.ParseInt(cmd.Val(), 10, 64)
+	return adminId
+}
+//  添加用户到转接哈希表中
+func AddToTransfer(uid int64, adminId int64) error {
+	ctx := context.Background()
+	cmd := databases.Redis.HSet(ctx, transferUserKey, uid, adminId)
+	return cmd.Err()
+}
 
 // 添加用户到人工客服列表
 func AddToManual(uid int64) error  {
@@ -42,7 +66,6 @@ func RemoveManual(uid int64) error {
 	cmd := databases.Redis.SRem(ctx, manualUserKey, uid)
 	return cmd.Err()
 }
-
 // 转接人工客服的用户
 func GetManualUserIds() []int64 {
 	ctx := context.Background()
@@ -190,6 +213,14 @@ func DelSubScribe(uid int64) bool {
 	key := fmt.Sprintf("user:%d:subscribe:%s", uid, templateId)
 	databases.Redis.Del(ctx, key)
 	return true
+}
+func CreateSession(uid int64) *models.ChatSession {
+	session := &models.ChatSession{}
+	session.UserId = uid
+	session.QueriedAt = time.Now().Unix()
+	session.AdminId = 0
+	databases.Db.Save(session)
+	return session
 }
 // 获取会话
 func GetSession(uid int64, adminId int64) *models.ChatSession {

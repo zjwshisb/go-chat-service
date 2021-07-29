@@ -88,7 +88,7 @@ func ChatUserList(c *gin.Context) {
 			Unread:   0,
 		}
 		limitTime := times[index]
-		chatUserRes.LastChatTime = chat.GetAdminUserLastChatTime(admin.GetPrimaryKey(), u.GetPrimaryKey())
+		chatUserRes.LastChatTime = chat.GetAdminUserLastChatTime(u.GetPrimaryKey(), admin.GetPrimaryKey() )
 		chatUserRes.Disabled = limitTime <= time.Now().Unix()
 		if _, ok := websocket.UserHub.GetConn(u.GetPrimaryKey()); ok {
 			chatUserRes.Online = true
@@ -124,6 +124,9 @@ func ChatUserList(c *gin.Context) {
 }
 
 // 接入用户
+// 分两种情况
+// 一种是普通的接入
+// 一种是转接的接入，转接的接入要判断转接的对象是否当前admin
 func AcceptUser(c *gin.Context) {
 	form := &struct {
 		Uid int64
@@ -142,6 +145,33 @@ func AcceptUser(c *gin.Context) {
 		util.RespFail(c, "user had been accepted", 10001)
 		return
 	}
+	session := chat.GetSession(user.GetPrimaryKey(), 0)
+	if session == nil {
+		util.RespValidateFail(c , "chat session error")
+		return
+	}
+	transferAdminId := chat.GetUserTransferId(user.GetPrimaryKey())
+	admin := auth.GetAdmin(c)
+	// 如果是客服转接过来的
+	if transferAdminId > 0 {
+		if transferAdminId != admin.GetPrimaryKey() {
+			util.RespValidateFail(c, "transfer error ")
+			return
+		}
+		transfer := &models.ChatTransfer{}
+		databases.Db.Where("to_admin_id = ?", admin.GetPrimaryKey()).
+			Where("user_id = ?", user.GetPrimaryKey()).
+			Where("is_accepted = ?" ,0).Find(transfer)
+		if transfer.Id == 0 {
+			util.RespValidateFail(c, "transfer error ")
+			return
+		}
+		transfer.AcceptedAt = &time.Time{}
+		transfer.IsAccepted = true
+		databases.Db.Save(transfer)
+		_ = chat.RemoveTransfer(user.GetPrimaryKey())
+		websocket.AdminHub.BroadcastUserTransfer(admin.GetPrimaryKey())
+	}
 	unSendMsg := repositories.GetUnSendMessage(
 		&repositories.Where{
 			Filed: "user_id = ?",
@@ -152,12 +182,6 @@ func AcceptUser(c *gin.Context) {
 			Value: models.SourceUser,
 		},
 	)
-	admin := auth.GetAdmin(c)
-	session := chat.GetSession(user.GetPrimaryKey(), 0)
-	if session == nil {
-		util.RespError(c , "chat session error")
-		return
-	}
 	sessionDuration := chat.GetServiceSessionSecond()
 	session.AcceptedAt = time.Now().Unix()
 	session.AdminId = admin.GetPrimaryKey()
@@ -231,7 +255,6 @@ func RemoveUser(c *gin.Context) {
 	}
 	util.RespSuccess(c, nil)
 }
-
 // 已读
 func ReadAll(c *gin.Context) {
 	form := &struct {
@@ -278,6 +301,44 @@ func GetUserInfo(c *gin.Context)  {
 		"username": user.GetUsername(),
 		// other info
 	})
+
+}
+func Transfer(c *gin.Context) {
+	admin := auth.GetAdmin(c)
+	form := &struct {
+		UserId int64 `json:"user_id" binding:"required"`
+		ToId int64 `json:"to_id" binding:"required,max=255"`
+		Remark string `json:"remark"`
+	}{}
+	err := c.ShouldBind(form)
+	if err != nil {
+		util.RespValidateFail(c , err.Error())
+		return
+	}
+	toAdmin := &models.Admin{}
+	databases.Db.Find(toAdmin, form.ToId)
+	if toAdmin.ID == 0 {
+		util.RespValidateFail(c , "admin_not_exist")
+		return
+	}
+	session := chat.GetSession(form.UserId, admin.GetPrimaryKey())
+	if session == nil {
+		util.RespValidateFail(c , "error")
+		return
+	}
+	transfer := &models.ChatTransfer{
+		UserId:      form.UserId,
+		SessionId:   session.Id,
+		FromAdminId: admin.ID,
+		ToAdminId:   form.ToId,
+		Remark:      form.Remark,
+		CreatedAt:   &time.Time{},
+	}
+	databases.Db.Save(transfer)
+	_ = chat.AddToTransfer(form.UserId, form.ToId)
+	chat.CreateSession(form.UserId)
+	go websocket.AdminHub.BroadcastUserTransfer(form.ToId)
+	util.RespSuccess(c, gin.H{})
 
 }
 // 聊天图片
