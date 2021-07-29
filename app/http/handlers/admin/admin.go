@@ -19,6 +19,7 @@ func Me(c *gin.Context) {
 		"avatar":   admin.GetAvatarUrl(),
 	})
 }
+// 聊天设置
 func GetChatSetting(c *gin.Context) {
 	admin := auth.GetAdmin(c)
 	setting := &models.AdminChatSetting{}
@@ -36,6 +37,7 @@ func GetChatSetting(c *gin.Context) {
 	}
 	util.RespSuccess(c, setting)
 }
+// 更新聊天设置
 func UpdateChatSetting(c *gin.Context)  {
 	admin := auth.GetAdmin(c)
 	form  := requests.AdminChatSettingForm{}
@@ -52,6 +54,7 @@ func UpdateChatSetting(c *gin.Context)  {
 	databases.Db.Save(setting)
 	util.RespSuccess(c, gin.H{})
 }
+// 聊天设置图片
 func ChatSettingImage(c *gin.Context) {
 	f, _ := c.FormFile("file")
 	ff, err := file.Save(f, "chat-settings")
