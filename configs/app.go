@@ -50,7 +50,7 @@ var (
 )
 func init() {
 
-	cfg, err := ini.Load("config.ini")
+	cfg, err := ini.Load("../../../config.ini")
 
 	err = cfg.Section("Mysql").MapTo(Mysql)
 
