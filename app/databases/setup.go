@@ -1,6 +1,7 @@
 package databases
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/mysql"
@@ -34,4 +35,8 @@ func Setup() {
 		Password: configs.Redis.Auth, // no password set
 		DB:       0,                  // use default DB
 	})
+	cmd := Redis.Ping(context.Background())
+	if cmd.Err() != nil {
+		log.Fatal(cmd.Err().Error())
+	}
 }

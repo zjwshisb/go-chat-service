@@ -25,6 +25,7 @@ func UpdateSetting(c *gin.Context) {
 	err = setting.SetValue(form.Value)
 	if err !=nil {
 		util.RespValidateFail(c , err.Error())
+		return
 	}
 	util.RespSuccess(c, gin.H{})
 }
