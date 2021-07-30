@@ -1,9 +1,11 @@
 package configs
 
 import (
+	"flag"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 	"log"
+	"os"
 )
 
 type wechat struct {
@@ -50,7 +52,14 @@ var (
 )
 func init() {
 
-	cfg, err := ini.Load("../../../config.ini")
+	file := flag.String("-c", "config.ini", "config file")
+
+	_, err := os.Stat(*file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cfg, err := ini.Load(*file)
 
 	err = cfg.Section("Mysql").MapTo(Mysql)
 
