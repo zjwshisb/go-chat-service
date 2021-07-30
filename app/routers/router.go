@@ -28,6 +28,9 @@ func Setup() {
 	}))
 	Router.Static(configs.File.LocalPrefix, configs.File.LocalPath)
 	Router.Static("/public", "./public")
+	Router.GET("/", func(c *gin.Context) {
+		c.JSON(200, "hello world")
+	})
 	registerAdmin()
 	registerFrontend()
 }
