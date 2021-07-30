@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"ws/app/chat"
+	"ws/app/models"
 )
 
 type userHub struct {
@@ -53,7 +54,7 @@ func (userHub *userHub) addToManual(uid int64)  {
 		AdminHub.BroadcastWaitingUser()
 		session := chat.GetSession(uid, 0)
 		if session == nil {
-			chat.CreateSession(uid)
+			chat.CreateSession(uid, models.ChatSessionTypeNormal)
 		}
 	}
 }

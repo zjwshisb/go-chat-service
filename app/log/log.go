@@ -7,6 +7,7 @@ import (
 	"time"
 	"ws/configs"
 )
+
 var Log *logrus.Logger
 
 func Setup()  {

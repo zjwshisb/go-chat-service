@@ -25,7 +25,7 @@ const (
 	// 转接待接入的用户 sets
 	transferUserKey = "user:transfer"
 )
-// 从转接韩系表移除用户
+// 从转接hash表移除用户
 func RemoveTransfer(uid int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.HDel(ctx, transferUserKey, strconv.FormatInt(uid, 10))
@@ -214,11 +214,12 @@ func DelSubScribe(uid int64) bool {
 	databases.Redis.Del(ctx, key)
 	return true
 }
-func CreateSession(uid int64) *models.ChatSession {
+func CreateSession(uid int64, t int) *models.ChatSession {
 	session := &models.ChatSession{}
 	session.UserId = uid
 	session.QueriedAt = time.Now().Unix()
 	session.AdminId = 0
+	session.Type = t
 	databases.Db.Save(session)
 	return session
 }

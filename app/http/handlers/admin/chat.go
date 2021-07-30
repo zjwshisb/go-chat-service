@@ -150,10 +150,13 @@ func AcceptUser(c *gin.Context) {
 		util.RespValidateFail(c , "chat session error")
 		return
 	}
-	transferAdminId := chat.GetUserTransferId(user.GetPrimaryKey())
 	admin := auth.GetAdmin(c)
-	// 如果是客服转接过来的
-	if transferAdminId > 0 {
+	if session.Type == models.ChatSessionTypeTransfer {
+		transferAdminId := chat.GetUserTransferId(user.GetPrimaryKey())
+		if transferAdminId == 0 {
+			util.RespValidateFail(c, "transfer error ")
+			return
+		}
 		if transferAdminId != admin.GetPrimaryKey() {
 			util.RespValidateFail(c, "transfer error ")
 			return
@@ -166,7 +169,8 @@ func AcceptUser(c *gin.Context) {
 			util.RespValidateFail(c, "transfer error ")
 			return
 		}
-		transfer.AcceptedAt = &time.Time{}
+		now := time.Now()
+		transfer.AcceptedAt = &now
 		transfer.IsAccepted = true
 		databases.Db.Save(transfer)
 		_ = chat.RemoveTransfer(user.GetPrimaryKey())
@@ -303,6 +307,24 @@ func GetUserInfo(c *gin.Context)  {
 	})
 
 }
+func TransferMessages(c *gin.Context) {
+	transfer := &models.ChatTransfer{}
+	admin := auth.GetAdmin(c)
+	databases.Db.Where("to_admin_id = ?", admin.GetPrimaryKey()).Find(transfer, c.Param("id"))
+	if transfer.Id == 0 {
+		util.RespNotFound(c)
+		return
+	}
+	messages := make([]*models.Message, 0)
+	databases.Db.Where("session_id = ?", transfer.SessionId).Preload("Admin").
+		Preload("User").Find(&messages)
+	res := make([]*models.MessageJson, 0, len(messages))
+	for _, m := range messages {
+		res = append(res, m.ToJson())
+	}
+	util.RespSuccess(c, res)
+}
+
 func Transfer(c *gin.Context) {
 	admin := auth.GetAdmin(c)
 	form := &struct {
@@ -326,17 +348,19 @@ func Transfer(c *gin.Context) {
 		util.RespValidateFail(c , "error")
 		return
 	}
+	now := time.Now()
 	transfer := &models.ChatTransfer{
 		UserId:      form.UserId,
 		SessionId:   session.Id,
 		FromAdminId: admin.ID,
 		ToAdminId:   form.ToId,
 		Remark:      form.Remark,
-		CreatedAt:   &time.Time{},
+		CreatedAt:   &now,
 	}
 	databases.Db.Save(transfer)
+	_ = chat.RemoveUserAdminId(form.UserId, admin.GetPrimaryKey())
 	_ = chat.AddToTransfer(form.UserId, form.ToId)
-	chat.CreateSession(form.UserId)
+	chat.CreateSession(form.UserId, models.ChatSessionTypeTransfer)
 	go websocket.AdminHub.BroadcastUserTransfer(form.ToId)
 	util.RespSuccess(c, gin.H{})
 

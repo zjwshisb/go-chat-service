@@ -1,5 +1,8 @@
 package models
 
+const ChatSessionTypeNormal = 0
+const ChatSessionTypeTransfer = 1
+
 type ChatSession struct {
 	Id uint64 `gorm:"primaryKey" json:"id"`
 	UserId int64 `gorm:"index"`
@@ -8,9 +11,20 @@ type ChatSession struct {
 	BrokeAt int64
 	AdminId int64 `gorm:"index"`
 	Admin  *Admin `gorm:"foreignKey:admin_id"`
+	Type int `gorm:"default:0"`
 	User       *User        `gorm:"foreignKey:user_id"`
 }
 
+func (chatSession *ChatSession) getTypeLabel() string  {
+	switch chatSession.Type {
+	case ChatSessionTypeTransfer:
+		return "转接"
+	case ChatSessionTypeNormal:
+		return "普通"
+	default:
+		return ""
+	}
+}
 func (chatSession *ChatSession) ToJson() *ChatSessionJson {
 	var userName, adminName string
 	if chatSession.Admin != nil {
@@ -26,6 +40,7 @@ func (chatSession *ChatSession) ToJson() *ChatSessionJson {
 		AcceptedAt:  chatSession.AcceptedAt * 1000,
 		BrokeAt:     chatSession.BrokeAt * 1000,
 		AdminId:   chatSession.AdminId,
+		TypeLabel: chatSession.getTypeLabel(),
 		UserName:    userName,
 		AdminName: adminName,
 	}
@@ -40,5 +55,6 @@ type ChatSessionJson struct {
 	AdminId int64  `json:"Admin_id"`
 	UserName string `json:"user_name"`
 	AdminName string `json:"admin_name"`
+	TypeLabel string `json:"type_label"`
 }
 

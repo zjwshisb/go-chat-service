@@ -2,6 +2,16 @@ package models
 
 import "time"
 
+type AutoMessageJson struct {
+	ID uint `json:"id"`
+	Name string `json:"name"`
+	Type string  `json:"type"`
+	Content string `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	RulesCount int `json:"rules_count"`
+}
+
 type AutoMessage struct {
 	ID uint `gorm:"column:id;primaryKey" json:"id"`
 	Name string `gorm:"size:255" json:"name"`
@@ -9,8 +19,24 @@ type AutoMessage struct {
 	Content string `gorm:"type:text" json:"content"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	Rules []*AutoRule `gorm:"foreignKey:message_id"`
 }
 
+func (message *AutoMessage) ToJson() *AutoMessageJson {
+	count := 0
+	if message.Rules != nil {
+		count = len(message.Rules)
+	}
+	return &AutoMessageJson{
+		ID:         message.ID,
+		Name:       message.Name,
+		Type:       message.Type,
+		Content:    message.Content,
+		CreatedAt:  message.CreatedAt,
+		UpdatedAt:  message.UpdatedAt,
+		RulesCount: count,
+	}
+}
 func (message *AutoMessage) TypeLabel() string {
 	switch message.Type {
 	case TypeText:

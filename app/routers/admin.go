@@ -26,7 +26,9 @@ func registerAdmin() {
 	authGroup.POST("/ws/image", http.Image)
 	authGroup.GET("/ws/messages", http.GetHistoryMessage)
 	authGroup.GET("/ws/user/:id", http.GetUserInfo)
+
 	authGroup.POST("/ws/transfer", http.Transfer)
+	authGroup.GET("/ws/transfer/:id/messages", http.TransferMessages)
 
 
 	authGroup.GET("/settings", http.GetSettings)

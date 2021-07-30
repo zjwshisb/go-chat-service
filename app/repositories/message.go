@@ -35,23 +35,6 @@ func GetUnSendMessage(wheres ...*Where) []*models.Message {
 	})
 	return GetMessages(wheres, -1, []string{})
 }
-
-func GetAutoMessagePagination(c *gin.Context, wheres ...*Where) *Pagination {
-	messages := make([]*models.AutoMessage, 0)
-	databases.Db.Order("id desc").
-		Scopes(Filter(c, []string{"type"})).
-		Scopes(Paginate(c)).
-		Scopes(AddWhere(wheres)).
-		Find(&messages)
-	var total int64
-	databases.Db.Model(&models.AutoMessage{}).
-		Scopes(Filter(c, []string{"type"})).
-		Scopes(AddWhere(wheres)).
-		Count(&total)
-	return NewPagination(messages, total)
-}
-
-
 func GetAutoRulePagination(c *gin.Context, wheres []*Where) *Pagination {
 	rules := make([]*models.AutoRule, 0)
 	wheres = append(wheres, &Where{

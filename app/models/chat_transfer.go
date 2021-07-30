@@ -24,6 +24,7 @@ func (transfer *ChatTransfer) ToJson() *ChatTransferJson {
 		SessionId: transfer.SessionId,
 		CreatedAt: transfer.CreatedAt.Unix(),
 		UserId: transfer.UserId,
+		Remark: transfer.Remark,
 	}
 	if transfer.FromAdmin != nil{
 		json.FromAdminName = transfer.FromAdmin.Username
@@ -44,6 +45,7 @@ type ChatTransferJson struct {
 	Id int64 `json:"id"`
 	SessionId uint64 `json:"session_id"`
 	UserId int64 `json:"user_id"`
+	Remark string `json:"remark"`
 	FromAdminName string `json:"from_admin_name"`
 	Username string `json:"username"`
 	CreatedAt int64 `json:"created_at"`

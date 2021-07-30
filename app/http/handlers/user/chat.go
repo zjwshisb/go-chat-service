@@ -3,13 +3,13 @@ package user
 import (
 	"github.com/gin-gonic/gin"
 	"strconv"
-	"ws/configs"
 	"ws/app/auth"
 	"ws/app/chat"
 	"ws/app/file"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/util"
+	"ws/configs"
 )
 
 // 消息记录
@@ -31,7 +31,16 @@ func GetHistoryMessage(c *gin.Context) {
 			})
 		}
 	}
-	messages := repositories.GetMessages(wheres, 100, []string{"Admin","User"})
+	var size = 100
+	sizeStr, exist := c.GetQuery("size")
+	if exist {
+		sizeInt, err := strconv.Atoi(sizeStr)
+		if err == nil {
+			size = sizeInt
+		}
+	}
+
+	messages := repositories.GetMessages(wheres, size, []string{"Admin","User"})
 	messagesResources := make([]*models.MessageJson, 0, len(messages))
 	for _, m := range messages {
 		messagesResources = append(messagesResources, m.ToJson())

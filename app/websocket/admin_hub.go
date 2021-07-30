@@ -14,7 +14,7 @@ type adminHub struct {
 
 func (hub *adminHub) Run() {
 	hub.Register(UserLogin, func(i ...interface{}) {
-		hub.BroadcastServiceUser()
+		hub.BroadcastAdmins()
 		hub.BroadcastWaitingUser()
 		if len(i) > 0 {
 			ii := i[0]
@@ -24,7 +24,7 @@ func (hub *adminHub) Run() {
 		}
 	})
 	hub.Register(UserLogout, func(i ...interface{}) {
-		hub.BroadcastServiceUser()
+		hub.BroadcastAdmins()
 	})
 	hub.BaseHub.Run()
 }
@@ -89,19 +89,21 @@ func (hub *adminHub) BroadcastUserTransfer(adminId int64)   {
 	}
 }
 
-func (hub *adminHub) BroadcastServiceUser() {
+func (hub *adminHub) BroadcastAdmins() {
 	var serviceUsers []*models.Admin
 	databases.Db.Find(&serviceUsers)
 	conns := hub.GetAllConn()
 	data := make([]models.AdminJson, 0, len(serviceUsers))
 	for _, serviceUser := range serviceUsers {
 		_, online := hub.GetConn(serviceUser.ID)
-		data = append(data, models.AdminJson{
-			Avatar:           serviceUser.GetAvatarUrl(),
-			Username:         serviceUser.Username,
-			Online:           online,
-			Id:               serviceUser.GetPrimaryKey(),
-		})
+		if online {
+			data = append(data, models.AdminJson{
+				Avatar:           serviceUser.GetAvatarUrl(),
+				Username:         serviceUser.Username,
+				Online:           online,
+				Id:               serviceUser.GetPrimaryKey(),
+			})
+		}
 	}
 	hub.SendAction(NewServiceUserAction(data), conns...)
 }
