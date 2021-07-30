@@ -17,7 +17,8 @@ func init() {
 
 func autoMessageTypeValidator(fl validator.FieldLevel) bool {
 	if fl.Field().String() == models.TypeText ||
-		fl.Field().String() == models.TypeNavigate{
+		fl.Field().String() == models.TypeNavigate ||
+		fl.Field().String() == models.TypeImage {
 		if fl.Field().String() == models.TypeNavigate {
 			parent := fl.Parent()
 			form, _ := parent.Interface().(*AutoMessageForm)
