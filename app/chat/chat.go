@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"time"
 	"ws/app/databases"
-	"ws/app/models"
-	"ws/configs"
 )
 
 
@@ -22,31 +20,8 @@ const (
 	adminUserLastChatKey = "admin:%d:chat-user:last-time"
 	// 待人工接入的用户 sets
 	manualUserKey = "user:manual"
-	// 转接待接入的用户 sets
-	transferUserKey = "user:transfer"
 )
-// 从转接hash表移除用户
-func RemoveTransfer(uid int64) error {
-	ctx := context.Background()
-	cmd := databases.Redis.HDel(ctx, transferUserKey, strconv.FormatInt(uid, 10))
-	return cmd.Err()
-}
-// 获取user转接adminId
-func GetUserTransferId(uid int64) int64 {
-	ctx := context.Background()
-	cmd := databases.Redis.HGet(ctx, transferUserKey, strconv.FormatInt(uid, 10))
-	if cmd.Err() == redis.Nil {
-		return 0
-	}
-	adminId, _ := strconv.ParseInt(cmd.Val(), 10, 64)
-	return adminId
-}
-//  添加用户到转接哈希表中
-func AddToTransfer(uid int64, adminId int64) error {
-	ctx := context.Background()
-	cmd := databases.Redis.HSet(ctx, transferUserKey, uid, adminId)
-	return cmd.Err()
-}
+
 
 // 添加用户到人工客服列表
 func AddToManual(uid int64) error  {
@@ -176,6 +151,7 @@ func GetServiceSessionSecond() int64 {
 func GetAdminUserKey(adminId int64) string {
 	return fmt.Sprintf(adminChatUserKey, adminId)
 }
+
 // 检查用户对于客服是否合法
 func CheckUserIdLegal(uid int64, adminId int64) bool {
 	ctx := context.Background()
@@ -187,50 +163,4 @@ func CheckUserIdLegal(uid int64, adminId int64) bool {
 	limitTime := int64(score)
 	return limitTime > time.Now().Unix()
 }
-// 标记 用户微信订阅消息 已订阅
-func SetSubscribe(uid int64) error {
-	ctx := context.Background()
-	templateId := configs.Wechat.SubscribeTemplateIdOne
-	key := fmt.Sprintf("user:%d:subscribe:%s", uid, templateId)
-	cmd := databases.Redis.Set(ctx, key, 1, 0)
-	return cmd.Err()
-}
-// 查询 用户微信订阅消息
-func IsSubScribe(uid int64) bool  {
-	ctx := context.Background()
-	templateId := configs.Wechat.SubscribeTemplateIdOne
-	key := fmt.Sprintf("user:%d:subscribe:%s", uid, templateId)
-	cmd := databases.Redis.Get(ctx, key)
-	if cmd.Err() == redis.Nil {
-		return false
-	}
-	return true
-}
-// 删除 用户微信订阅消息 标记
-func DelSubScribe(uid int64) bool {
-	ctx := context.Background()
-	templateId := configs.Wechat.SubscribeTemplateIdOne
-	key := fmt.Sprintf("user:%d:subscribe:%s", uid, templateId)
-	databases.Redis.Del(ctx, key)
-	return true
-}
-func CreateSession(uid int64, t int) *models.ChatSession {
-	session := &models.ChatSession{}
-	session.UserId = uid
-	session.QueriedAt = time.Now().Unix()
-	session.AdminId = 0
-	session.Type = t
-	databases.Db.Save(session)
-	return session
-}
-// 获取会话
-func GetSession(uid int64, adminId int64) *models.ChatSession {
-	session := &models.ChatSession{}
-	databases.Db.Where("user_id = ?" , uid).
-		Where("admin_id = ?", adminId).
-		Order("id desc").First(session)
-	if session.Id <= 0 {
-		return nil
-	}
-	return session
-}
+

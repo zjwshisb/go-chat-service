@@ -324,7 +324,7 @@ func TransferMessages(c *gin.Context) {
 	}
 	util.RespSuccess(c, res)
 }
-
+// 转发
 func Transfer(c *gin.Context) {
 	admin := auth.GetAdmin(c)
 	form := &struct {
@@ -343,27 +343,13 @@ func Transfer(c *gin.Context) {
 		util.RespValidateFail(c , "admin_not_exist")
 		return
 	}
-	session := chat.GetSession(form.UserId, admin.GetPrimaryKey())
-	if session == nil {
-		util.RespValidateFail(c , "error")
+	err = chat.Transfer(admin.GetPrimaryKey(), form.ToId, form.UserId, form.Remark)
+	if err != nil {
+		util.RespValidateFail(c , err.Error())
 		return
 	}
-	now := time.Now()
-	transfer := &models.ChatTransfer{
-		UserId:      form.UserId,
-		SessionId:   session.Id,
-		FromAdminId: admin.ID,
-		ToAdminId:   form.ToId,
-		Remark:      form.Remark,
-		CreatedAt:   &now,
-	}
-	databases.Db.Save(transfer)
-	_ = chat.RemoveUserAdminId(form.UserId, admin.GetPrimaryKey())
-	_ = chat.AddToTransfer(form.UserId, form.ToId)
-	chat.CreateSession(form.UserId, models.ChatSessionTypeTransfer)
 	go websocket.AdminHub.BroadcastUserTransfer(form.ToId)
 	util.RespSuccess(c, gin.H{})
-
 }
 // 聊天图片
 func Image(c *gin.Context) {
