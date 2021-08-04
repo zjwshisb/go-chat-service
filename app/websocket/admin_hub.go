@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"sort"
+	"time"
 	"ws/app/chat"
 	"ws/app/databases"
 	"ws/app/models"
@@ -24,6 +25,18 @@ func (hub *adminHub) Run() {
 		}
 	})
 	hub.Register(UserLogout, func(i ...interface{}) {
+		if len(i) > 0 {
+			ii := i[0]
+			if client, ok := ii.(*AdminConn); ok {
+				admin := client.User
+				adminSetting := &models.AdminChatSetting{}
+				databases.Db.Model(admin).Association("Setting").Find(adminSetting)
+				if adminSetting.Id > 0 {
+					adminSetting.LastOnline  = time.Now()
+					databases.Db.Save(adminSetting)
+				}
+			}
+		}
 		hub.BroadcastAdmins()
 	})
 	hub.BaseHub.Run()

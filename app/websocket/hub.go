@@ -9,13 +9,11 @@ const (
 	UserLogin = iota
 	UserLogout
 )
-
 type BaseHub struct {
 	Clients map[int64]Conn
 	lock    sync.RWMutex
 	baseEvent
 }
-
 func (hub *BaseHub) GetTotal() int  {
 	return len(hub.GetAllConn())
 }
@@ -40,8 +38,6 @@ func (hub *BaseHub) RemoveConn(uid int64) {
 	defer hub.lock.Unlock()
 	delete(hub.Clients, uid)
 }
-
-
 func (hub *BaseHub) GetAllConn() (s []Conn){
 	hub.lock.RLock()
 	defer hub.lock.RUnlock()
@@ -51,16 +47,15 @@ func (hub *BaseHub) GetAllConn() (s []Conn){
 	}
 	return r
 }
-
 func (hub *BaseHub) Logout(client Conn) {
 	existConn, exist := hub.GetConn(client.GetUserId())
 	if exist {
 		if existConn == client {
 			hub.RemoveConn(client.GetUserId())
 			client.close()
-			hub.Call(UserLogout, client)
 		}
 	}
+	hub.Call(UserLogout, client)
 }
 func (hub *BaseHub) Login(client Conn) {
 	old , exist := hub.GetConn(client.GetUserId())

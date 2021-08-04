@@ -10,13 +10,12 @@ func init() {
 	databases.Setup()
 }
 func main() {
-	err := databases.Db.AutoMigrate(
-		&models.ChatSession{},
-		&models.Message{},
-		&models.AutoMessage{},
-		&models.AdminChatSetting{},
-		&models.ChatTransfer{},
-		&models.AutoRule{})
+	err := databases.Db.Migrator().CreateTable(&models.ChatSession{})
+	err = databases.Db.Migrator().CreateTable(&models.Message{})
+	err = databases.Db.Migrator().CreateTable(&models.AutoMessage{})
+	err = databases.Db.Migrator().CreateTable(&models.AdminChatSetting{})
+	err = databases.Db.Migrator().CreateTable(&models.ChatTransfer{})
+	err = databases.Db.Migrator().CreateTable(&models.AutoRule{})
 	if err != nil {
 		log.Fatal(err)
 	} else {

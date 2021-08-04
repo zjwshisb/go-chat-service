@@ -11,7 +11,8 @@ func init()  {
 	databases.Setup()
 }
 func main()  {
-	databases.Db.AutoMigrate(&models.Admin{}, &models.User{})
+	_ = databases.Db.Migrator().CreateTable(&models.Admin{})
+	_ = databases.Db.Migrator().CreateTable(&models.User{})
 	for i:=1; i<=20; i++ {
 		adminName :=  "admin" + strconv.Itoa(i)
 		var count int64

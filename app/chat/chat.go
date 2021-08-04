@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
-	"log"
 	"strconv"
 	"time"
 	"ws/app/databases"
@@ -127,26 +126,7 @@ func GetUserLastAdminId(uid int64) int64 {
 	}
 	return 0
 }
-// 客服给用户发消息的会话有效期, 既用户在这时间内可以回复客服
-func GetUserSessionSecond() int64 {
-	setting := Settings[UserSessionDuration]
-	dayFloat, err := strconv.ParseFloat(setting.GetValue(), 64)
-	if err != nil {
-		log.Fatal(err)
-	}
-	second := int64(dayFloat* 24 * 60 * 60)
-	return second
-}
-// 用户给客服发消息的会话有效期, 既客服在这时间内可以回复用户
-func GetServiceSessionSecond() int64 {
-	setting := Settings[AdminSessionDuration]
-	dayFloat, err := strconv.ParseFloat(setting.GetValue(), 64)
-	if err != nil {
-		log.Fatal(err)
-	}
-	second := int64(dayFloat * 24 * 60 * 60)
-	return second
-}
+
 // 客服的聊天用户SortedSet 的key
 func GetAdminUserKey(adminId int64) string {
 	return fmt.Sprintf(adminChatUserKey, adminId)

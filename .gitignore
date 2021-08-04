@@ -3,3 +3,4 @@ vendor
 .env
 config.ini
 asset/storage/
+*.pid
