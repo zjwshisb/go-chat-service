@@ -51,6 +51,7 @@ func UpdateChatSetting(c *gin.Context)  {
 	setting.Background = form.Background
 	setting.IsAutoAccept = form.IsAutoAccept
 	setting.WelcomeContent = form.WelcomeContent
+	setting.OfflineContent = form.OfflineContent
 	databases.Db.Save(setting)
 	util.RespSuccess(c, gin.H{})
 }
