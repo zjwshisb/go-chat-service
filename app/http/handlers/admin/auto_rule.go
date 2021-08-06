@@ -23,15 +23,25 @@ func GetSelectAutoMessage(c *gin.Context)  {
 	}
 	util.RespSuccess(c, options)
 }
+func GetSelectScene(c *gin.Context) {
+	util.RespSuccess(c , models.ScenesOptions)
+}
+func GetSelectEvent(c *gin.Context)  {
+	util.RespSuccess(c , models.EventOptions)
+}
 
 func GetSystemRules(c *gin.Context)  {
 	rules := make([]models.AutoRule, 0)
 	databases.Db.Where("is_system", 1).Find(&rules)
-	util.RespSuccess(c, rules)
+	result := make([]*models.AutoRuleJson, len(rules), len(rules))
+	for i, rule := range rules {
+		result[i] = rule.ToJson()
+	}
+	util.RespSuccess(c, result)
 }
 
 func UpdateSystemRules(c *gin.Context) {
-	 m := make(map[int]int)
+	m := make(map[int]int)
 	err := c.ShouldBind(&m)
 	if err != nil {
 		util.RespError(c, err.Error())
@@ -56,15 +66,25 @@ func GetAutoRules(c *gin.Context)  {
 			Value: "%" + name + "%",
 		})
 	}
+	scene, _ := c.GetQuery("scenes")
+	if scene != "" {
+		ids := make([]string, 0)
+		databases.Db.Model(&models.AutoRuleScene{}).Where("name = ?" , scene).Pluck("rule_id", &ids)
+		wheres = append(wheres, &repositories.Where{
+			Filed: "id in ?",
+			Value: ids,
+		})
+	}
 	pagination := repositories.GetAutoRulePagination(c, wheres)
+
 	util.RespPagination(c , pagination)
 }
 func ShowAutoRule(c *gin.Context) {
 	id := c.Param("id")
 	rule := models.AutoRule{}
-	query := databases.Db.Where("is_system = ?", 0).Find(&rule, id)
+	query := databases.Db.Preload("Scenes").Where("is_system = ?", 0).Find(&rule, id)
 	if query.RowsAffected > 0 {
-		util.RespSuccess(c, rule)
+		util.RespSuccess(c, rule.ToJson())
 	} else {
 		util.RespNotFound(c)
 	}
@@ -76,6 +96,11 @@ func StoreAutoRule(c *gin.Context)  {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
+	if form.ReplyType == models.ReplyTypeTransfer {
+		form.Scenes = []string{
+			models.SceneNotAccepted,
+		}
+	}
 	rule := &models.AutoRule{
 		Name: form.Name,
 		Match: form.Match,
@@ -85,17 +110,28 @@ func StoreAutoRule(c *gin.Context)  {
 		IsOpen: form.IsOpen,
 		Key: form.Key,
 	}
-	if rule.ReplyType == models.ReplyTypeMessage {
+	var scenes = make([]*models.AutoRuleScene, 0)
+	for _, name := range form.Scenes {
+		scenes = append(scenes, &models.AutoRuleScene{
+			Name:   name,
+		})
+	}
+	rule.Scenes = scenes
+	if rule.ReplyType == models.ReplyTypeMessage  || rule.ReplyType == models.ReplyTypeEvent {
 		rule.MessageId = form.MessageId
 	}
-	databases.Db.Save(rule)
-	util.RespSuccess(c, rule)
+	databases.Db.Create(rule)
+	util.RespSuccess(c, rule.ToJson())
 }
 func UpdateAutoRule(c *gin.Context) {
 	rule := models.AutoRule{}
 	result := databases.Db.
 		Where("is_system = ?", 0).
+		Preload("Scenes").
 		Find(&rule,  c.Param("id"))
+	for _, s := range rule.Scenes {
+		databases.Db.Delete(s)
+	}
 	if result.Error == gorm.ErrRecordNotFound {
 		util.RespNotFound(c)
 		return
@@ -105,6 +141,11 @@ func UpdateAutoRule(c *gin.Context) {
 	if err != nil {
 		util.RespValidateFail(c, err.Error())
 		return
+	}
+	if form.ReplyType == models.ReplyTypeTransfer {
+		form.Scenes = []string{
+			models.SceneNotAccepted,
+		}
 	}
 	rule.Name = form.Name
 	rule.IsOpen = form.IsOpen
@@ -117,10 +158,18 @@ func UpdateAutoRule(c *gin.Context) {
 	} else {
 		rule.MessageId = form.MessageId
 	}
+	var scenes = make([]*models.AutoRuleScene, 0)
+
+	for _, name := range form.Scenes {
+		scenes = append(scenes, &models.AutoRuleScene{
+			Name:   name,
+		})
+	}
+	rule.Scenes = scenes
 	rule.Sort = form.Sort
 	rule.MessageId = form.MessageId
-	databases.Db.Save(&rule)
-	util.RespSuccess(c, rule)
+	databases.Db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&rule)
+	util.RespSuccess(c, rule.ToJson())
 }
 func DeleteAutoRule(c *gin.Context)  {
 	id := c.Param("id")

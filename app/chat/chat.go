@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"log"
 	"strconv"
 	"time"
 	"ws/app/databases"
@@ -143,4 +144,13 @@ func CheckUserIdLegal(uid int64, adminId int64) bool {
 	limitTime := int64(score)
 	return limitTime > time.Now().Unix()
 }
-
+// 离线时超过多久就自动断开会话
+func GetOfflineDuration() int64 {
+	setting := Settings[MinuteToBreak]
+	minuteStr := setting.GetValue()
+	minute, err := strconv.ParseInt(minuteStr, 10,64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return minute * 60
+}

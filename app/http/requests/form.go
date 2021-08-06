@@ -7,7 +7,6 @@ type AutoMessageForm struct {
 	Title string `json:"title" form:"title" binding:"max=32"`
 	Url string `json:"url" form:"url" binding:"max=512"`
 }
-
 type AutoRuleForm struct {
 	Name string `json:"name" binding:"required,max=32"`
 	Match string `json:"match" binding:"required,autoRule"`
@@ -17,9 +16,11 @@ type AutoRuleForm struct {
 	IsOpen bool `json:"is_open" form:"is_open"`
 	Key string `json:"key" form:"key"`
 	Sort uint8 `json:"sort" form:"sort" binding:"required,max=128,min=0"`
+	Scenes []string `json:"scenes" form:"scenes"`
 }
 type AdminChatSettingForm struct {
 	Background string `json:"background" binding:"max=512"`
 	IsAutoAccept bool `json:"is_auto_accept"`
 	WelcomeContent string `json:"welcome_content" binding:"max=512"`
+	OfflineContent string `json:"offline_content" binding:"max=512"`
 }

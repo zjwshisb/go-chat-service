@@ -45,6 +45,9 @@ func registerAdmin() {
 	authGroup.PUT("/system-auto-rules", http.UpdateSystemRules)
 
 	authGroup.GET("/options/messages", http.GetSelectAutoMessage)
+	authGroup.GET("/options/scenes", http.GetSelectScene)
+	authGroup.GET("/options/events", http.GetSelectEvent)
+
 	authGroup.POST("/auto-rules", http.StoreAutoRule)
 	authGroup.PUT("/auto-rules/:id", http.UpdateAutoRule)
 	authGroup.GET("/auto-rules", http.GetAutoRules)

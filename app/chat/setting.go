@@ -12,6 +12,7 @@ const (
 	IsAutoTransfer = "is-auto-transfer"
 	AdminSessionDuration = "admin-session-duration"
 	UserSessionDuration = "user-session-duration"
+	MinuteToBreak = "minute-to-break"
 )
 
 const Key = "chat:%s:setting"
@@ -105,6 +106,20 @@ func init() {
 			"1": "1天",
 		},
 		defVal: "0.0208",
+	}
+	Settings[MinuteToBreak] = &Field{
+		Name:      MinuteToBreak,
+		Title:     "客服离线多少分钟(用户发送消息时)自动断开会话",
+		Options:   map[string]string{
+			"5": "5分钟",
+			"10": "10分钟",
+			"15": "15分钟",
+			"20": "20分钟",
+			"30": "30分钟",
+			"60": "60分钟",
+		},
+		defVal:    "10",
+		Validator: nil,
 	}
 }
 

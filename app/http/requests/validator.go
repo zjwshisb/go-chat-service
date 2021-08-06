@@ -33,6 +33,16 @@ func autoMessageTypeValidator(fl validator.FieldLevel) bool {
 func autoRuleValidator(fl validator.FieldLevel) bool {
 	parent := fl.Parent()
 	form, _ := parent.Interface().(*AutoRuleForm)
+	if len(form.Scenes) > len(models.ScenesOptions) {
+		return false
+	}
+	for _, name := range form.Scenes {
+		if name != models.SceneNotAccepted &&
+			name != models.SceneAdminOnline &&
+			name != models.SceneAdminOffline {
+			return false
+		}
+	}
 	if form.MatchType != models.MatchTypeAll && form.MatchType != models.MatchTypePart {
 		return false
 	}
@@ -46,8 +56,10 @@ func autoRuleValidator(fl validator.FieldLevel) bool {
 			return false
 		}
 	}
-	if form.ReplyType == models.ReplyTypeEvent && form.Key == ""{
-		return false
+	if form.ReplyType == models.ReplyTypeEvent{
+		if form.Key != models.EventBreak {
+			return  false
+		}
 	}
 	return true
 }
