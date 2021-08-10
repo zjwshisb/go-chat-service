@@ -18,7 +18,7 @@ type UserConn struct {
 func (c *UserConn) GetUserId() int64 {
 	return c.User.GetPrimaryKey()
 }
-func (c *UserConn) triggerMessageEvent(scene string, message *models.Message)  {
+func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, session *models.ChatSession)  {
 	rules := make([]*models.AutoRule, 0)
 	databases.Db.
 		Where("is_system", 0).
@@ -27,6 +27,9 @@ func (c *UserConn) triggerMessageEvent(scene string, message *models.Message)  {
 		Preload("Message").
 		Preload("Scenes").
 		Find(&rules)
+	if session == nil {
+		session = &models.ChatSession{}
+	}
 LOOP:
 	for _, rule := range rules {
 		if rule.IsMatch(message.Content) && rule.SceneInclude(scene) {
@@ -40,11 +43,12 @@ LOOP:
 					query := databases.Db.Where("is_system", 1).
 						Where("match", models.MatchServiceAllOffLine).Preload("Message").First(&rule)
 					if query.RowsAffected > 0 {
-						msg := otherRule.GetReplyMessage(c.User.GetPrimaryKey())
 						switch otherRule.ReplyType {
 						case models.ReplyTypeTransfer:
 							UserHub.addToManual(c.GetUserId())
 						case models.ReplyTypeMessage:
+							msg := otherRule.GetReplyMessage(c.User.GetPrimaryKey())
+							msg.SessionId = session.Id
 							if msg != nil {
 								databases.Db.Save(msg)
 								otherRule.Count++
@@ -62,6 +66,7 @@ LOOP:
 			case models.ReplyTypeMessage:
 				msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
 				if msg != nil {
+					msg.SessionId = session.Id
 					databases.Db.Save(msg)
 					c.Deliver(NewReceiveAction(msg))
 				}
@@ -75,6 +80,7 @@ LOOP:
 					}
 					msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
 					if msg != nil {
+						msg.Id = session.Id
 						databases.Db.Save(msg)
 						c.Deliver(NewReceiveAction(msg))
 					}
@@ -114,10 +120,10 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 					databases.Db.Save(msg)
 					adminConn, exist := AdminHub.GetConn(msg.AdminId)
 					if exist {
-						c.triggerMessageEvent(models.SceneAdminOnline, msg)
+						c.triggerMessageEvent(models.SceneAdminOnline, msg, session)
 						adminConn.Deliver(NewReceiveAction(msg))
 					} else {
-						c.triggerMessageEvent(models.SceneAdminOffline, msg)
+						c.triggerMessageEvent(models.SceneAdminOffline, msg, session)
 						adminSetting := &models.AdminChatSetting{}
 						databases.Db.Where("admin_id = ?" , msg.AdminId).Find(adminSetting)
 						if adminSetting.OfflineContent != "" {
@@ -145,7 +151,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 							}
 						} else {
 							if !chat.IsInManual(c.GetUserId()) {
-								c.triggerMessageEvent(models.SceneNotAccepted, msg)
+								c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
 							}
 						}
 					}
