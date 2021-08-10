@@ -17,6 +17,8 @@ func init()  {
 	if err := syscall.Flock(int(pidFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		log.Fatalln("server is running ...")
 	}
+	pidFile.Truncate(0)
+	pidFile.Seek(0,0)
 	pid := os.Getpid()
 	_, err := pidFile.Write([]byte(strconv.Itoa(pid)))
 	if err != nil {

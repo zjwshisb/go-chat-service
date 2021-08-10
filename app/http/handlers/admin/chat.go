@@ -14,6 +14,22 @@ import (
 	"ws/app/websocket"
 )
 
+// 查看历史对话
+func GetHistorySession(c *gin.Context) {
+	useId := c.Param("uid")
+	sessions := make([]*models.ChatSession, 0, 0)
+	databases.Db.Where("user_id = ?" , useId).Order("id desc").
+		Where("admin_id > ?", 0).
+		Preload("Admin").
+		Preload("User").
+		Find(&sessions)
+	resp := make([]*models.ChatSessionJson, len(sessions))
+	for i, session := range sessions {
+		resp[i] = session.ToJson()
+	}
+	util.RespSuccess(c, resp)
+}
+
 // 获取消息
 func GetHistoryMessage(c *gin.Context) {
 	var uid int64

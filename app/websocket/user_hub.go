@@ -49,12 +49,10 @@ func (userHub *userHub) Run() {
 // 加入人工列表
 // 如果是在转接中，则不会加入
 func (userHub *userHub) addToManual(uid int64)  {
-	if chat.GetUserTransferId(uid) == 0 {
-		_ = chat.AddToManual(uid)
-		AdminHub.BroadcastWaitingUser()
-		session := chat.GetSession(uid, 0)
-		if session == nil {
-			chat.CreateSession(uid, models.ChatSessionTypeNormal)
-		}
+	_ = chat.AddToManual(uid)
+	AdminHub.BroadcastWaitingUser()
+	session := chat.GetSession(uid, 0)
+	if session == nil {
+		chat.CreateSession(uid, models.ChatSessionTypeNormal)
 	}
 }

@@ -18,8 +18,37 @@ type UserConn struct {
 func (c *UserConn) GetUserId() int64 {
 	return c.User.GetPrimaryKey()
 }
+// 转接到人工客服列表
+func (c *UserConn) handleTransferToManual() {
+	if !chat.IsInManual(c.GetUserId()) {
+		onlineServerCount := len(AdminHub.Clients)
+		if onlineServerCount == 0 { // 如果没有在线客服
+			rule := models.AutoRule{}
+			query := databases.Db.Where("is_system", 1).
+				Where("match", models.MatchServiceAllOffLine).Preload("Message").First(&rule)
+			if query.RowsAffected > 0 {
+				switch rule.ReplyType {
+				case models.ReplyTypeMessage:
+					msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
+					if msg != nil {
+						databases.Db.Save(msg)
+						rule.Count++
+						databases.Db.Save(&rule)
+						c.Deliver(NewReceiveAction(msg))
+						return
+					}
+				default:
+				}
+			}
+		}
+		UserHub.addToManual(c.GetUserId())
+	}
+}
 func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, session *models.ChatSession)  {
 	rules := make([]*models.AutoRule, 0)
+	if session == nil {
+		session = &models.ChatSession{}
+	}
 	databases.Db.
 		Where("is_system", 0).
 		Where("is_open", 1).
@@ -27,41 +56,13 @@ func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, se
 		Preload("Message").
 		Preload("Scenes").
 		Find(&rules)
-	if session == nil {
-		session = &models.ChatSession{}
-	}
 LOOP:
 	for _, rule := range rules {
 		if rule.IsMatch(message.Content) && rule.SceneInclude(scene) {
 			switch rule.ReplyType {
 			// 转接人工客服
 			case models.ReplyTypeTransfer:
-				onlineServerCount := len(AdminHub.Clients)
-				// 没有客服在线时
-				if onlineServerCount == 0 {
-					otherRule := models.AutoRule{}
-					query := databases.Db.Where("is_system", 1).
-						Where("match", models.MatchServiceAllOffLine).Preload("Message").First(&rule)
-					if query.RowsAffected > 0 {
-						switch otherRule.ReplyType {
-						case models.ReplyTypeTransfer:
-							UserHub.addToManual(c.GetUserId())
-						case models.ReplyTypeMessage:
-							msg := otherRule.GetReplyMessage(c.User.GetPrimaryKey())
-							msg.SessionId = session.Id
-							if msg != nil {
-								databases.Db.Save(msg)
-								otherRule.Count++
-								databases.Db.Save(&otherRule)
-								c.Deliver(NewReceiveAction(msg))
-							}
-						}
-					} else {
-						UserHub.addToManual(c.GetUserId())
-					}
-				} else {
-					UserHub.addToManual(c.GetUserId())
-				}
+				c.handleTransferToManual()
 			// 回复消息
 			case models.ReplyTypeMessage:
 				msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
@@ -70,7 +71,7 @@ LOOP:
 					databases.Db.Save(msg)
 					c.Deliver(NewReceiveAction(msg))
 				}
-				//触发事件
+			//触发事件
 			case models.ReplyTypeEvent:
 				switch rule.Key {
 				case "break":
@@ -80,7 +81,7 @@ LOOP:
 					}
 					msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
 					if msg != nil {
-						msg.Id = session.Id
+						msg.SessionId = session.Id
 						databases.Db.Save(msg)
 						c.Deliver(NewReceiveAction(msg))
 					}
@@ -141,21 +142,20 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 					}
 				} else {
 					databases.Db.Save(msg)
-					if chat.IsInManual(c.GetUserId()) {
-						AdminHub.BroadcastWaitingUser()
-					} else {
-						isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
-						if exist  && isAutoTransfer.GetValue() == "1"{ // 自动转人工
-							if !chat.IsInManual(c.GetUserId()) {
-								UserHub.addToManual(c.GetUserId())
-							}
+					if chat.GetUserTransferId(c.GetUserId()) == 0 {
+						if chat.IsInManual(c.GetUserId()) {
+							AdminHub.BroadcastWaitingUser()
 						} else {
-							if !chat.IsInManual(c.GetUserId()) {
-								c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
+							isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
+							if exist  && isAutoTransfer.GetValue() == "1"{ // 自动转人工
+								c.handleTransferToManual()
+							} else {
+								if !chat.IsInManual(c.GetUserId()) {
+									c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
+								}
 							}
 						}
 					}
-
 				}
 			}
 		}
