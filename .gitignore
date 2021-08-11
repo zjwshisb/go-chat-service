@@ -4,3 +4,4 @@ vendor
 config.ini
 asset/storage/
 *.pid
+ws

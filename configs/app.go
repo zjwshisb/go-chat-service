@@ -52,14 +52,18 @@ var (
 )
 func init() {
 
-	file := flag.String("-c", "config.ini", "config file")
+	var file string
 
-	_, err := os.Stat(*file)
+	flag.StringVar(&file,"c", "config.ini", "config file")
+
+	flag.Parse()
+
+	_, err := os.Stat(file)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	cfg, err := ini.Load(*file)
+	cfg, err := ini.Load(file)
 
 	err = cfg.Section("Mysql").MapTo(Mysql)
 

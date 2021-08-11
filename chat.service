@@ -1,0 +1,16 @@
+[Unit]
+Description=go-chat-service
+After=chat.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+PIDFile=
+ExecStart=/home/go/chat-backend/start.sh
+ExecReload=
+ExecStop=/home/go/chat-backend/stop.sh
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
