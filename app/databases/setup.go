@@ -13,7 +13,7 @@ import (
 var Db *gorm.DB
 var Redis *redis.Client
 
-func Setup() {
+func init() {
 	dns := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		configs.Mysql.Username,
@@ -29,6 +29,9 @@ func Setup() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	sqlDB, _ := db.DB()
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetMaxIdleConns(20)
 	Db = db
 	Redis = redis.NewClient(&redis.Options{
 		Addr:     configs.Redis.Addr,

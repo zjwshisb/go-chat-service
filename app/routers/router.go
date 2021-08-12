@@ -18,7 +18,7 @@ var (
 	}
 )
 
-func Setup() {
+func init() {
 	Router = gin.New()
 	Router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},

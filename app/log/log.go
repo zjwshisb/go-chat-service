@@ -10,7 +10,7 @@ import (
 
 var Log *logrus.Logger
 
-func Setup()  {
+func init()  {
 	Log = logrus.New()
 	Log.SetLevel(configs.App.LogLevel)
 	Log.SetReportCaller(true)
