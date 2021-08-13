@@ -3,6 +3,7 @@ package websocket
 import (
 	"github.com/gorilla/websocket"
 	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
+	"gorm.io/gorm/clause"
 	"time"
 	"ws/app/chat"
 	"ws/app/databases"
@@ -16,6 +17,13 @@ type AdminConn struct {
 	User *models.Admin
 	BaseConn
 }
+
+func (c *AdminConn) UpdateSetting() {
+	setting := &models.AdminChatSetting{}
+	databases.Db.Model(c.User).Association("Setting").Find(setting)
+	c.User.Setting = setting
+}
+
 func (c *AdminConn) GetUserId() int64 {
 	return c.User.ID
 }
@@ -25,7 +33,11 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 	case SendMessageAction:
 		msg, err := act.GetMessage()
 		if err == nil {
-			if msg.UserId > 0 && len(msg.Content) != 0 && chat.CheckUserIdLegal(msg.UserId, c.User.GetPrimaryKey()) {
+			if msg.UserId > 0 && len(msg.Content) != 0 {
+				if !chat.CheckUserIdLegal(msg.UserId, c.User.GetPrimaryKey()) {
+					c.Deliver(NewErrorMessage("该用户已失效，无法发送消息"))
+					return
+				}
 				session := chat.GetSession(msg.UserId, c.GetUserId())
 				if session == nil {
 					return
@@ -36,9 +48,9 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 				msg.AdminId = c.GetUserId()
 				msg.Source = models.SourceAdmin
 				msg.ReceivedAT = time.Now().Unix()
-				msg.Avatar = c.User.GetAvatarUrl()
+				msg.Admin = c.User
 				msg.SessionId = session.Id
-				databases.Db.Save(msg)
+				databases.Db.Omit(clause.Associations).Save(msg)
 				_ = chat.UpdateUserAdminId(msg.UserId, c.User.GetPrimaryKey(), sessionAddTime)
 				c.Deliver(NewReceiptAction(msg))
 				userConn, exist := UserHub.GetConn(msg.UserId)

@@ -13,7 +13,6 @@ func GetChatSession(c *gin.Context)  {
 	sessions := make([]*models.ChatSession, 0 ,0)
 	var total int64
 	wheres := make([]*repositories.Where, 0)
-
 	if c.Query("admin_name") != "" {
 		admins := make([]*models.Admin, 0)
 		databases.Db.Where("username like ?" ,
@@ -66,6 +65,7 @@ func GetChatSessionDetail(c *gin.Context) {
 	messages := make([]*models.Message, 0, 0)
 	databases.Db.Preload("User").Preload("Admin").
 		Where("session_id = ?" , sessionId).
+		Where("source in ?", []int{models.SourceAdmin, models.SourceUser}).
 		Find(&messages)
 	data := make([]*models.MessageJson, 0, 0)
 	for _, msg:= range messages {

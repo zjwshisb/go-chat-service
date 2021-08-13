@@ -2,6 +2,7 @@ package admin
 
 import (
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"strconv"
 	"time"
 	"ws/app/auth"
@@ -246,9 +247,22 @@ func AcceptUser(c *gin.Context) {
 		Messages:     make([]*models.MessageJson, messageLength, messageLength),
 	}
 	chatUser.Unread = len(unSendMsg)
-	_, exist = websocket.UserHub.GetConn(user.GetPrimaryKey())
+	userConn, exist := websocket.UserHub.GetConn(user.GetPrimaryKey())
 	chatUser.Online = exist
 	chatUser.LastChatTime = time.Now().Unix()
+	if exist {
+		noticeMessage := &models.Message{
+			UserId:     user.GetPrimaryKey(),
+			AdminId:    admin.GetPrimaryKey(),
+			Type:       models.TypeNotice,
+			Content:    admin.GetChatName() + "为您服务",
+			ReceivedAT: time.Now().Unix(),
+			Source:     models.SourceSystem,
+			SessionId:  session.Id,
+			ReqId:      util.CreateReqId(),
+		}
+		userConn.Deliver(websocket.NewReceiveAction(noticeMessage))
+	}
 	for index, m := range messages {
 		rm := m.ToJson()
 		chatUser.Messages[index] = rm
@@ -339,6 +353,30 @@ func TransferMessages(c *gin.Context) {
 		res = append(res, m.ToJson())
 	}
 	util.RespSuccess(c, res)
+}
+func ChatCancelTransfer(c *gin.Context) {
+	id := c.Param("id")
+	transfer := &models.ChatTransfer{}
+	admin := auth.GetAdmin(c)
+	query := databases.Db.Where("to_admin_id = ?", admin.GetPrimaryKey()).Find(transfer, id)
+	if query.Error == gorm.ErrRecordNotFound {
+		util.RespNotFound(c)
+		return
+	}
+	if transfer.IsCanceled {
+		util.RespValidateFail(c, "transfer is canceled")
+		return
+	}
+	if transfer.IsAccepted {
+		util.RespValidateFail(c, "transfer is accepted")
+		return
+	}
+	t := time.Now()
+	transfer.CanceledAt = &t
+	transfer.IsCanceled = true
+	_ = chat.CancelTransfer(transfer)
+	websocket.AdminHub.BroadcastUserTransfer(admin.GetPrimaryKey())
+	util.RespSuccess(c , gin.H{})
 }
 // 转发
 func Transfer(c *gin.Context) {

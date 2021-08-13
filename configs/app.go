@@ -32,6 +32,8 @@ type app struct {
 	LogPath string
 	LogLevel logrus.Level
 	Url string
+	Env string
+	SystemChatName string
 }
 type file struct {
 	Storage string

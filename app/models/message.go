@@ -1,16 +1,21 @@
 package models
 
-import "ws/app/util"
+import (
+	"ws/app/util"
+	"ws/configs"
+)
 
 const (
 	TypeImage = "image"
 	TypeText = "text"
 	TypeNavigate = "navigator"
-
+	TypeNotice = "notice"
 	SourceUser = 0
 	SourceAdmin = 1
 	SourceSystem = 2
 )
+
+
 
 type Message struct {
 	Id         uint64 `gorm:"primaryKey"`
@@ -18,21 +23,28 @@ type Message struct {
 	AdminId  int64 `gorm:"index"`
 	Type       string `gorm:"size:16" mapstructure:"type"`
 	Content    string `gorm:"size:1024" mapstructure:"content"`
-	ReceivedAT int64 `json:"received_at"`
-	SendAt     int64 `json:"send_at" gorm:"send_at"`
+	ReceivedAT int64
+	SendAt     int64 `gorm:"send_at"`
 	Source   int8        `gorm:"source"`
 	SessionId uint64 `gorm:"session_id"`
 	ReqId      int64       `gorm:"index" mapstructure:"req_id"`
-	IsRead     bool        `gorm:"bool" json:"is_read"`
+	IsRead     bool        `gorm:"bool"`
 	Admin *Admin `gorm:"foreignKey:admin_id"`
 	User       *User        `gorm:"foreignKey:user_id"`
-	Avatar    string       `gorm:"-"`
 }
 
-func (message *Message) GetAvatar() (avatar string)  {
-	if message.Avatar != "" {
-		return message.Avatar
+func (message *Message) GetAdminName() string {
+	switch message.Source {
+	case SourceAdmin:
+		if message.Admin != nil {
+			return message.Admin.GetChatName()
+		}
+	case SourceSystem:
+		return configs.App.SystemChatName
 	}
+	return ""
+}
+func (message *Message) GetAvatar() (avatar string)  {
 	switch message.Source {
 	case SourceUser:
 		if message.User != nil {
@@ -53,6 +65,7 @@ func (message *Message) ToJson() *MessageJson {
 		Id:         message.Id,
 		UserId:     message.UserId,
 		AdminId:  message.AdminId,
+		AdminName: message.GetAdminName(),
 		Type:       message.Type,
 		Content:    message.Content,
 		ReceivedAT: message.ReceivedAT,
@@ -61,6 +74,7 @@ func (message *Message) ToJson() *MessageJson {
 		IsSuccess:  true,
 		IsRead:     message.IsRead,
 		Avatar:     message.GetAvatar(),
+
 	}
 }
 
@@ -68,6 +82,7 @@ type MessageJson struct {
 	Id         uint64 `json:"id"`
 	UserId     int64  `json:"user_id"`
 	AdminId  int64  `json:"admin_id"`
+	AdminName string `json:"admin_name"`
 	Type       string `json:"type"`
 	Content    string `json:"content"`
 	ReceivedAT int64  `json:"received_at"`

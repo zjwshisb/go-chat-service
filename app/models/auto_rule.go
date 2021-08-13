@@ -165,7 +165,6 @@ func (rule *AutoRule) GetReplyMessage(uid int64) (message *Message) {
 			Source:     SourceSystem,
 			ReqId:      util.CreateReqId(),
 			IsRead:     true,
-			Avatar:     util.SystemAvatar(),
 		}
 	}
 	return

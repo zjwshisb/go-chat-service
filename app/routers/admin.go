@@ -3,8 +3,10 @@ package routers
 import (
 	"github.com/gin-gonic/gin"
 	"ws/app/auth"
+	"ws/app/databases"
 	http "ws/app/http/handlers/admin"
 	middleware "ws/app/http/middleware/admin"
+	"ws/app/models"
 	"ws/app/util"
 	"ws/app/websocket"
 )
@@ -27,7 +29,7 @@ func registerAdmin() {
 	authGroup.GET("/ws/messages", http.GetHistoryMessage)
 	authGroup.GET("/ws/user/:id", http.GetUserInfo)
 	authGroup.GET("/ws/sessions/:uid", http.GetHistorySession)
-
+	authGroup.POST("/ws/transfer/:id/cancel", http.ChatCancelTransfer)
 	authGroup.POST("/ws/transfer", http.Transfer)
 	authGroup.GET("/ws/transfer/:id/messages", http.TransferMessages)
 
@@ -63,9 +65,14 @@ func registerAdmin() {
 	authGroup.GET("/dashboard/query-info", http.GetUserQueryInfo)
 	authGroup.GET("/dashboard/online-info", http.GetOnlineInfo)
 
+	authGroup.GET("/transfers", http.GetTransfer)
+	authGroup.POST("/transfers/:id/cancel", http.CancelTransfer)
 
 	authGroup.GET("/ws", func(c *gin.Context) {
 		serviceUser := auth.GetAdmin(c)
+		setting := &models.AdminChatSetting{}
+		databases.Db.Model(serviceUser).Association("Setting").Find(setting)
+		serviceUser.Setting = setting
 		conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			util.RespError(c , err.Error())

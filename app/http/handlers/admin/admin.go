@@ -9,6 +9,7 @@ import (
 	"ws/app/http/requests"
 	"ws/app/models"
 	"ws/app/util"
+	"ws/app/websocket"
 )
 
 func Me(c *gin.Context) {
@@ -53,6 +54,13 @@ func UpdateChatSetting(c *gin.Context)  {
 	setting.WelcomeContent = form.WelcomeContent
 	setting.OfflineContent = form.OfflineContent
 	databases.Db.Save(setting)
+	connI , exist := websocket.AdminHub.GetConn(admin.GetPrimaryKey())
+	if exist {
+		adminConn, ok := connI.(*websocket.AdminConn)
+		if ok {
+			adminConn.UpdateSetting()
+		}
+	}
 	util.RespSuccess(c, gin.H{})
 }
 // 聊天设置图片
@@ -77,6 +85,16 @@ func Avatar(c *gin.Context) {
 	} else {
 		admin := auth.GetAdmin(c)
 		admin.Avatar = fileInfo.Path
+		connI , exist := websocket.AdminHub.GetConn(admin.GetPrimaryKey())
+		if exist {
+			setting := &models.AdminChatSetting{}
+			databases.Db.Model(admin).Association("Setting").Find(setting)
+			admin.Setting = setting
+			adminConn, ok := connI.(*websocket.AdminConn)
+			if ok {
+				adminConn.User = admin
+			}
+		}
 		databases.Db.Save(admin)
 		util.RespSuccess(c, gin.H{})
 	}

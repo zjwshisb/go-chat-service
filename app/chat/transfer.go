@@ -15,6 +15,19 @@ const (
 	transferUserKey = "user:transfer"
 )
 
+func CancelTransfer(transfer *models.ChatTransfer) error {
+	databases.Db.Where("admin_id = ?" , 0).
+		Where("user_id = ?" , transfer.UserId).Where("type = ?", models.ChatSessionTypeTransfer).
+		Delete(&models.ChatSession{})
+	transfer.IsCanceled = true
+	t := time.Now()
+	transfer.CanceledAt = &t
+	databases.Db.Save(transfer)
+	_ = RemoveTransfer(transfer.UserId)
+	return nil
+}
+
+
 func Transfer(fromId int64, toId int64, uid int64, remark  string) error {
 	session := GetSession(uid, fromId)
 	if session == nil {

@@ -90,6 +90,7 @@ func (hub *adminHub) BroadcastUserTransfer(adminId int64)   {
 		transfers := make([]*models.ChatTransfer, 0)
 		databases.Db.Where("to_admin_id = ?", adminId).
 			Where("is_accepted = ?", 0).
+			Where("is_canceled = ?", 0).
 			Order("id desc").
 			Preload("FromAdmin").
 			Preload("User").

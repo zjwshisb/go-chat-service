@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"github.com/gorilla/websocket"
+	"gorm.io/gorm/clause"
 	"time"
 	"ws/app/auth"
 	"ws/app/chat"
@@ -103,8 +104,9 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 				msg.Source = models.SourceUser
 				msg.UserId = c.GetUserId()
 				msg.ReceivedAT = time.Now().Unix()
-				msg.Avatar = c.User.GetAvatarUrl()
+				msg.User = c.User.(*models.User)
 				msg.AdminId = chat.GetUserLastAdminId(c.GetUserId())
+				// 发送回执
 				c.Deliver(NewReceiptAction(msg))
 				// 有对应的客服对象
 				if msg.AdminId > 0 {
@@ -118,30 +120,35 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 					msg.SessionId = session.Id
 					session.BrokeAt = time.Now().Unix() + addTime
 					databases.Db.Save(session)
-					databases.Db.Save(msg)
+					databases.Db.Omit(clause.Associations).Save(msg)
 					adminConn, exist := AdminHub.GetConn(msg.AdminId)
+					// 客服在线
 					if exist {
 						c.triggerMessageEvent(models.SceneAdminOnline, msg, session)
 						adminConn.Deliver(NewReceiveAction(msg))
-					} else {
+					} else { // 客服不在线
+						admin := &models.Admin{}
+						databases.Db.Where("id = ?" , msg.AdminId).Preload("Setting").Find(admin)
+						msg.Admin = admin
 						c.triggerMessageEvent(models.SceneAdminOffline, msg, session)
-						adminSetting := &models.AdminChatSetting{}
-						databases.Db.Where("admin_id = ?" , msg.AdminId).Find(adminSetting)
-						if adminSetting.OfflineContent != "" {
-							offlineMsg := adminSetting.GetOfflineMsg(c.GetUserId(), session.Id)
-							c.Deliver(NewReceiveAction(offlineMsg))
-						}
-						// 客服不在线，判断是否超过了不在线自动断开的时间设置，超过了则自动断开会话
-						if adminSetting.Id > 0 {
-							lastOnline := adminSetting.LastOnline
+						if admin.Setting != nil {
+							setting := admin.Setting
+							// 发送离线消息
+							if admin.Setting.OfflineContent != "" {
+								offlineMsg := setting.GetOfflineMsg(c.GetUserId(), session.Id)
+								offlineMsg.Admin = admin
+								c.Deliver(NewReceiveAction(offlineMsg))
+							}
+							// 判断是否自动断开
+							lastOnline := setting.LastOnline
 							duration := chat.GetOfflineDuration()
 							if (lastOnline.Unix() + duration) < time.Now().Unix() {
 								_ = chat.RemoveUserAdminId(msg.UserId, msg.AdminId )
 							}
 						}
 					}
-				} else {
-					databases.Db.Save(msg)
+				} else { // 没有客服对象
+					databases.Db.Omit(clause.Associations).Save(msg)
 					if chat.GetUserTransferId(c.GetUserId()) == 0 {
 						if chat.IsInManual(c.GetUserId()) {
 							AdminHub.BroadcastWaitingUser()

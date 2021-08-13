@@ -41,6 +41,19 @@ func (user *Admin) GetAvatarUrl() string {
 func (user *Admin) GetUsername() string  {
 	return user.Username
 }
+func (user *Admin) GetChatName() string {
+	if user.Setting == nil {
+		setting := &AdminChatSetting{}
+		databases.Db.Model(user).Association("Setting").Find(setting)
+		user.Setting = setting
+	}
+	if user.Setting != nil {
+		if user.Setting.Name != "" {
+			return user.Setting.Name
+		}
+	}
+	return user.Username
+}
 func (user *Admin) Login() (token string) {
 	token = util.RandomStr(32)
 	databases.Db.Model(user).Update("api_token", token)

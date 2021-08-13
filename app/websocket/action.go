@@ -20,6 +20,7 @@ const (
 	OtherLogin = "other-login"
 	MoreThanOne = "more-than-one"
 	UserTransfer = "user-transfer"
+	ErrorMessage = "error-message"
 )
 
 type Action struct {
@@ -139,5 +140,11 @@ func NewUserTransfer(i interface{}) *Action {
 		Action: UserTransfer,
 	}
 }
-
+func NewErrorMessage(msg string)  *Action {
+	return &Action{
+		Data:   msg,
+		Time:   time.Now().Unix(),
+		Action: ErrorMessage,
+	}
+}
 
