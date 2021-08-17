@@ -67,6 +67,10 @@ func GetHistoryMessage(c *gin.Context) {
 			Filed: "user_id = ?",
 			Value: uid,
 		},
+		{
+			Filed: "source in ?",
+			Value: []int{models.SourceAdmin, models.SourceUser},
+		},
 	}
 	midStr, exist := c.GetQuery("mid")
 	if exist {
@@ -121,6 +125,10 @@ func ChatUserList(c *gin.Context) {
 		{
 			Filed: "admin_id = ?",
 			Value: admin.GetPrimaryKey(),
+		},
+		{
+			Filed: "source in ?",
+			Value: []int{models.SourceAdmin, models.SourceUser},
 		},
 	}, -1, []string{"User","Admin"})
 	for _, u := range resp {
@@ -237,6 +245,10 @@ func AcceptUser(c *gin.Context) {
 		{
 			Filed: "admin_id = ?",
 			Value: admin.GetPrimaryKey(),
+		},
+		{
+			Filed: "source in ?",
+			Value: []int{models.SourceAdmin, models.SourceUser},
 		},
 	}, 20, []string{"User", "Admin"})
 	messageLength := len(messages)
