@@ -1,40 +1,29 @@
 package main
 
 import (
-	"context"
 	"log"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 	"ws/app"
-	"ws/app/routers"
-	"ws/configs"
 )
 
 func main() {
-	app.Setup()
-	srv := &http.Server{
-		Addr:    configs.Http.Host +":" + configs.Http.Port,
-		Handler: routers.Router,
-	}
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen:%s\n", err)
+	args := os.Args
+	var command string
+	if len(args) < 2 {
+		command = "start"
+	} else {
+		command = args[1]
+		if command[0:1] == "-" {
+			command = "start"
 		}
-	}()
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-	<-quit
-	log.Println("Shutdown Server ...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
-	defer func() {
-		app.Clear()
-		cancel()
-	}()
-	if err:= srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server Shutdown:", err)
 	}
-	log.Println("Server exiting")
+	if command != "start" && command != "stop" && command != "restart" {
+		log.Fatal("use ws start|stop -c=config.ini")
+	}
+	switch command {
+	case "start":
+		app.Start()
+	case "stop":
+		app.Stop()
+	}
 }

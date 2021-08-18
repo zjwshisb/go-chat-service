@@ -27,6 +27,7 @@ type http struct {
 type redis struct {
 	Addr string
 	Auth string
+	Db int
 }
 type app struct {
 	LogPath string
@@ -34,6 +35,7 @@ type app struct {
 	Url string
 	Env string
 	SystemChatName string
+	PidFile string
 }
 type file struct {
 	Storage string
@@ -57,8 +59,8 @@ func init() {
 	var file string
 
 	flag.StringVar(&file,"c", "config.ini", "config file")
-
 	flag.Parse()
+
 
 	_, err := os.Stat(file)
 	if err != nil {

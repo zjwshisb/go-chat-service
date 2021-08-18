@@ -5,3 +5,4 @@ config.ini
 asset/storage/
 *.pid
 ws
+main

@@ -8,7 +8,7 @@ import (
 )
 
 func init()  {
-	databases.Setup()
+
 }
 func main()  {
 	_ = databases.Db.Migrator().CreateTable(&models.Admin{})

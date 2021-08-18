@@ -36,7 +36,7 @@ func init() {
 	Redis = redis.NewClient(&redis.Options{
 		Addr:     configs.Redis.Addr,
 		Password: configs.Redis.Auth, // no password set
-		DB:       0,                  // use default DB
+		DB:       configs.Redis.Db,
 	})
 	cmd := Redis.Ping(context.Background())
 	if cmd.Err() != nil {
