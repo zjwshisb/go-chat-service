@@ -4,7 +4,6 @@ import (
 	"github.com/gorilla/websocket"
 	"sync"
 	"time"
-	"ws/app/databases"
 	"ws/app/log"
 	"ws/app/models"
 )
@@ -97,7 +96,7 @@ func (c *BaseConn) sendMsg() {
 						msg, ok := act.Data.(*models.Message)
 						if ok {
 							msg.SendAt = time.Now().Unix()
-							databases.Db.Save(msg)
+							msg.Save()
 						}
 					default:
 					}

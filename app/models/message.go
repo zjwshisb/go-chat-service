@@ -1,6 +1,8 @@
 package models
 
 import (
+	"gorm.io/gorm/clause"
+	"ws/app/databases"
 	"ws/app/util"
 	"ws/configs"
 )
@@ -31,6 +33,10 @@ type Message struct {
 	IsRead     bool        `gorm:"bool"`
 	Admin *Admin `gorm:"foreignKey:admin_id"`
 	User       *User        `gorm:"foreignKey:user_id"`
+}
+
+func (message *Message) Save()  {
+	databases.Db.Omit(clause.Associations).Save(message)
 }
 
 func (message *Message) GetAdminName() string {

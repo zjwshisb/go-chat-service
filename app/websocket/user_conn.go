@@ -2,7 +2,6 @@ package websocket
 
 import (
 	"github.com/gorilla/websocket"
-	"gorm.io/gorm/clause"
 	"time"
 	"ws/app/auth"
 	"ws/app/chat"
@@ -20,7 +19,7 @@ func (c *UserConn) GetUserId() int64 {
 	return c.User.GetPrimaryKey()
 }
 // 转接到人工客服列表
-func (c *UserConn) handleTransferToManual() {
+func (c *UserConn) handleTransferToManual() *models.ChatSession {
 	if !chat.IsInManual(c.GetUserId()) {
 		onlineServerCount := len(AdminHub.Clients)
 		if onlineServerCount == 0 { // 如果没有在线客服
@@ -36,14 +35,16 @@ func (c *UserConn) handleTransferToManual() {
 						rule.Count++
 						databases.Db.Save(&rule)
 						c.Deliver(NewReceiveAction(msg))
-						return
+						return nil
 					}
 				default:
 				}
 			}
 		}
-		UserHub.addToManual(c.GetUserId())
+		return UserHub.addToManual(c.GetUserId())
+
 	}
+	return nil
 }
 func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, session *models.ChatSession)  {
 	rules := make([]*models.AutoRule, 0)
@@ -63,13 +64,17 @@ LOOP:
 			switch rule.ReplyType {
 			// 转接人工客服
 			case models.ReplyTypeTransfer:
-				c.handleTransferToManual()
+				session := c.handleTransferToManual()
+				if session != nil {
+					message.SessionId = session.Id
+					message.Save()
+				}
 			// 回复消息
 			case models.ReplyTypeMessage:
 				msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
 				if msg != nil {
 					msg.SessionId = session.Id
-					databases.Db.Save(msg)
+					msg.Save()
 					c.Deliver(NewReceiveAction(msg))
 				}
 			//触发事件
@@ -120,7 +125,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 					msg.SessionId = session.Id
 					session.BrokeAt = time.Now().Unix() + addTime
 					databases.Db.Save(session)
-					databases.Db.Omit(clause.Associations).Save(msg)
+					msg.Save()
 					adminConn, exist := AdminHub.GetConn(msg.AdminId)
 					// 客服在线
 					if exist {
@@ -147,19 +152,24 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 						}
 					}
 				} else { // 没有客服对象
-					databases.Db.Omit(clause.Associations).Save(msg)
+					msg.Save()
 					if chat.GetUserTransferId(c.GetUserId()) == 0 {
 						if chat.IsInManual(c.GetUserId()) {
 							session := chat.GetSession(c.GetUserId(), msg.AdminId)
 							if session != nil {
 								msg.SessionId = session.Id
-								databases.Db.Save(&msg)
+								msg.Save()
 							}
 							AdminHub.BroadcastWaitingUser()
 						} else {
 							isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
 							if exist  && isAutoTransfer.GetValue() == "1"{ // 自动转人工
-								c.handleTransferToManual()
+								session := c.handleTransferToManual()
+								if session != nil {
+									msg.SessionId = session.Id
+									msg.Save()
+									databases.Db.Save(&msg)
+								}
 							} else {
 								c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
 							}

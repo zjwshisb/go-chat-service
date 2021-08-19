@@ -3,7 +3,6 @@ package websocket
 import (
 	"github.com/gorilla/websocket"
 	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
-	"gorm.io/gorm/clause"
 	"time"
 	"ws/app/chat"
 	"ws/app/databases"
@@ -50,7 +49,7 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Admin = c.User
 				msg.SessionId = session.Id
-				databases.Db.Omit(clause.Associations).Save(msg)
+				msg.Save()
 				_ = chat.UpdateUserAdminId(msg.UserId, c.User.GetPrimaryKey(), sessionAddTime)
 				c.Deliver(NewReceiptAction(msg))
 				userConn, exist := UserHub.GetConn(msg.UserId)
