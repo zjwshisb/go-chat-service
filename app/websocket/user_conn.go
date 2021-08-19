@@ -150,6 +150,11 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 					databases.Db.Omit(clause.Associations).Save(msg)
 					if chat.GetUserTransferId(c.GetUserId()) == 0 {
 						if chat.IsInManual(c.GetUserId()) {
+							session := chat.GetSession(c.GetUserId(), msg.AdminId)
+							if session != nil {
+								msg.SessionId = session.Id
+								databases.Db.Save(&msg)
+							}
 							AdminHub.BroadcastWaitingUser()
 						} else {
 							isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
