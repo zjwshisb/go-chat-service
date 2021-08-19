@@ -129,7 +129,6 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 					} else { // 客服不在线
 						admin := &models.Admin{}
 						databases.Db.Where("id = ?" , msg.AdminId).Preload("Setting").Find(admin)
-						msg.Admin = admin
 						c.triggerMessageEvent(models.SceneAdminOffline, msg, session)
 						if admin.Setting != nil {
 							setting := admin.Setting
@@ -157,9 +156,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 							if exist  && isAutoTransfer.GetValue() == "1"{ // 自动转人工
 								c.handleTransferToManual()
 							} else {
-								if !chat.IsInManual(c.GetUserId()) {
-									c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
-								}
+								c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
 							}
 						}
 					}

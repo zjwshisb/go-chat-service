@@ -6,10 +6,6 @@ import (
 	"ws/app/databases"
 	"ws/app/models"
 )
-
-func init()  {
-
-}
 func main()  {
 	_ = databases.Db.Migrator().CreateTable(&models.Admin{})
 	_ = databases.Db.Migrator().CreateTable(&models.User{})

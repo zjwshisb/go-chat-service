@@ -9,6 +9,7 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/util"
+	"ws/app/websocket"
 )
 
 func CancelTransfer(c *gin.Context)  {
@@ -19,11 +20,11 @@ func CancelTransfer(c *gin.Context)  {
 		util.RespNotFound(c)
 		return
 	}
-	if transfer.CanceledAt != nil {
+	if transfer.IsCanceled {
 		util.RespValidateFail(c, "transfer is canceled")
 		return
 	}
-	if transfer.AcceptedAt != nil {
+	if transfer.IsAccepted {
 		util.RespValidateFail(c, "transfer is accepted")
 		return
 	}
@@ -31,6 +32,10 @@ func CancelTransfer(c *gin.Context)  {
 	transfer.CanceledAt = &t
 	transfer.IsCanceled = true
 	_ = chat.CancelTransfer(transfer)
+	_ , exist := websocket.AdminHub.GetConn(transfer.ToAdminId)
+	if exist {
+		websocket.AdminHub.BroadcastUserTransfer(transfer.ToAdminId)
+	}
 	util.RespSuccess(c , gin.H{})
 }
 

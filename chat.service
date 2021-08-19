@@ -7,9 +7,9 @@ Type=simple
 User=root
 Group=root
 PIDFile=
-ExecStart=/home/go/chat-backend/start.sh
+ExecStart=/yourpath/ws start -c=config.ini
 ExecReload=
-ExecStop=/home/go/chat-backend/stop.sh
+ExecStop=/yourpath/ws stop
 PrivateTmp=true
 
 [Install]

@@ -6,9 +6,6 @@ import (
 	"ws/app/models"
 )
 
-func init()  {
-	databases.Setup()
-}
 func rules()  {
 	rules := []models.AutoRule{
 		{

@@ -6,9 +6,6 @@ import (
 	"ws/app/models"
 )
 
-func init() {
-	databases.Setup()
-}
 func main() {
 	err := databases.Db.Migrator().CreateTable(&models.ChatSession{})
 	err = databases.Db.Migrator().CreateTable(&models.Message{})
