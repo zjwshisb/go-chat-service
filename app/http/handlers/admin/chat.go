@@ -166,6 +166,11 @@ func AcceptUser(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
+	admin := auth.GetAdmin(c)
+	if !admin.AccessTo(user.GetPrimaryKey()) {
+		util.RespNotFound(c)
+		return
+	}
 	if chat.GetUserLastAdminId(user.GetPrimaryKey()) != 0 {
 		util.RespFail(c, "user had been accepted", 10001)
 		return
@@ -175,7 +180,7 @@ func AcceptUser(c *gin.Context) {
 		util.RespValidateFail(c , "chat session error")
 		return
 	}
-	admin := auth.GetAdmin(c)
+
 	if session.Type == models.ChatSessionTypeTransfer {
 		transferAdminId := chat.GetUserTransferId(user.GetPrimaryKey())
 		if transferAdminId == 0 {
@@ -343,6 +348,11 @@ func GetUserInfo(c *gin.Context)  {
 		util.RespNotFound(c)
 		return
 	}
+	admin := auth.GetAdmin(c)
+	if !admin.AccessTo(user.GetPrimaryKey()) {
+		util.RespNotFound(c)
+		return
+	}
 	util.RespSuccess(c, gin.H{
 		"username": user.GetUsername(),
 		// other info
@@ -392,7 +402,7 @@ func ChatCancelTransfer(c *gin.Context) {
 }
 // 转发
 func Transfer(c *gin.Context) {
-	admin := auth.GetAdmin(c)
+
 	form := &struct {
 		UserId int64 `json:"user_id" binding:"required"`
 		ToId int64 `json:"to_id" binding:"required,max=255"`
@@ -401,6 +411,11 @@ func Transfer(c *gin.Context) {
 	err := c.ShouldBind(form)
 	if err != nil {
 		util.RespValidateFail(c , err.Error())
+		return
+	}
+	admin := auth.GetAdmin(c)
+	if !admin.AccessTo(form.UserId) {
+		util.RespNotFound(c)
 		return
 	}
 	toAdmin := &models.Admin{}

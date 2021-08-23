@@ -29,6 +29,10 @@ type Admin struct {
 	Setting *AdminChatSetting `json:"message" gorm:"foreignKey:admin_id"`
 }
 
+func (user *Admin) AccessTo(uid int64)  bool {
+	return true
+}
+
 func (user *Admin) GetPrimaryKey() int64 {
 	return user.ID
 }

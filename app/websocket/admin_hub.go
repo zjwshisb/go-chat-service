@@ -81,7 +81,19 @@ func (hub *adminHub) BroadcastWaitingUser() {
 		return waitingUserSlice[i].LastTime > waitingUserSlice[j].LastTime
 	})
 	conns := hub.GetAllConn()
-	hub.SendAction(NewWaitingUsers(waitingUserSlice), conns...)
+	for _, adminConnI := range conns {
+		adminConn, ok := adminConnI.(*AdminConn)
+		if ok {
+			adminUserSlice := make([]*models.WaitingUserJson, 0)
+			for _, userJson := range waitingUserSlice {
+				if adminConn.User.AccessTo(userJson.Id) {
+					adminUserSlice = append(adminUserSlice, userJson)
+				}
+			}
+			adminConn.Deliver(NewWaitingUsers(adminUserSlice))
+		}
+
+	}
 }
 
 func (hub *adminHub) BroadcastUserTransfer(adminId int64)   {
