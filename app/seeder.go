@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"gorm.io/gorm"
@@ -6,7 +6,7 @@ import (
 	"ws/app/models"
 )
 
-func rules()  {
+func Seeder()  {
 	rules := []models.AutoRule{
 		{
 			Name: "用户进入客服系统时",
@@ -32,8 +32,3 @@ func rules()  {
 		}
 	}
 }
-
-func main()  {
-	rules()
-}
-

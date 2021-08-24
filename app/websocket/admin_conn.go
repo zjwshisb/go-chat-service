@@ -62,7 +62,8 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 						_ = wechat.GetMp().GetSubscribe().Send(&subscribe.Message{
 							ToUser:           user.GetMpOpenId(),
 							TemplateID:       configs.Wechat.SubscribeTemplateIdOne,
-							Page:             "/pages/chat/index",
+							Page:             configs.Wechat.ChatPath,
+							MiniprogramState: "",
 							Data: map[string]*subscribe.DataItem{
 								"thing1": {
 									Value: "请点击卡片查看",

@@ -1,17 +1,18 @@
 package configs
 
 import (
-	"flag"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 	"log"
 	"os"
+	"ws/command"
 )
 
 type wechat struct {
 	MiniProgramAppId string
 	MiniProgramAppSecret string
-	SubscribeTemplateIdOne string
+	SubscribeTemplateIdOne string // 订阅消息模板id
+	ChatPath string // 小程序客户页面路径
 }
 type mysql struct {
 	Username string
@@ -34,8 +35,8 @@ type app struct {
 	LogLevel logrus.Level
 	Url string
 	Env string
-	SystemChatName string
-	PidFile string
+	SystemChatName string // 系统消息客服名称
+	PidFile string  // pid文件
 }
 type file struct {
 	Storage string
@@ -54,20 +55,14 @@ var (
 	File = &file{}
 	Wechat = &wechat{}
 )
+
+
 func init() {
-
-	var file string
-
-	flag.StringVar(&file,"c", "config.ini", "config file")
-	flag.Parse()
-
-
-	_, err := os.Stat(file)
+	_, err := os.Stat(command.ConfigFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	cfg, err := ini.Load(file)
+	cfg, err := ini.Load(command.ConfigFile)
 
 	err = cfg.Section("Mysql").MapTo(Mysql)
 

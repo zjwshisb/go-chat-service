@@ -70,14 +70,12 @@ func Start()  {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			quit<-syscall.SIGINT
 			log.Fatalln(err)
-		} else {
-			fmt.Println("start success")
 		}
 	}()
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	logPid(os.Getpid())
 	<-quit
-	log.Println("Shutdown Server ...")
+	log.Println("Shutdown Server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
 	defer func() {
 		cancel()

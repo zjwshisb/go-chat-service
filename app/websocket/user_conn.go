@@ -31,7 +31,7 @@ func (c *UserConn) handleTransferToManual() *models.ChatSession {
 				case models.ReplyTypeMessage:
 					msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
 					if msg != nil {
-						databases.Db.Save(msg)
+						msg.Save()
 						rule.Count++
 						databases.Db.Save(&rule)
 						c.Deliver(NewReceiveAction(msg))
@@ -152,14 +152,13 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 						}
 					}
 				} else { // 没有客服对象
-					msg.Save()
 					if chat.GetUserTransferId(c.GetUserId()) == 0 {
 						if chat.IsInManual(c.GetUserId()) {
 							session := chat.GetSession(c.GetUserId(), msg.AdminId)
 							if session != nil {
 								msg.SessionId = session.Id
-								msg.Save()
 							}
+							msg.Save()
 							AdminHub.BroadcastWaitingUser()
 						} else {
 							isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
@@ -167,9 +166,8 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 								session := c.handleTransferToManual()
 								if session != nil {
 									msg.SessionId = session.Id
-									msg.Save()
-									databases.Db.Save(&msg)
 								}
+								msg.Save()
 							} else {
 								c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
 							}

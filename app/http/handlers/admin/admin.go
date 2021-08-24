@@ -28,9 +28,6 @@ func GetChatSetting(c *gin.Context) {
 	if setting.Id == 0 {
 		setting = &models.AdminChatSetting{
 			AdminId:        admin.GetPrimaryKey(),
-			Background:     "",
-			IsAutoAccept:   false,
-			WelcomeContent: "",
 			CreatedAt:      time.Time{},
 			UpdatedAt:      time.Time{},
 		}
@@ -85,6 +82,7 @@ func Avatar(c *gin.Context) {
 	} else {
 		admin := auth.GetAdmin(c)
 		admin.Avatar = fileInfo.Path
+		databases.Db.Save(admin)
 		connI , exist := websocket.AdminHub.GetConn(admin.GetPrimaryKey())
 		if exist {
 			setting := &models.AdminChatSetting{}
@@ -95,7 +93,6 @@ func Avatar(c *gin.Context) {
 				adminConn.User = admin
 			}
 		}
-		databases.Db.Save(admin)
 		util.RespSuccess(c, gin.H{})
 	}
 }
