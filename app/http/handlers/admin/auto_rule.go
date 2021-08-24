@@ -180,5 +180,7 @@ func DeleteAutoRule(c *gin.Context)  {
 		return
 	}
 	databases.Db.Delete(rule)
+	databases.Db.Table("auto_rule_scenes").Where("rule_id = ?", rule.ID).
+		Delete(&models.AutoRuleScene{})
 	util.RespSuccess(c, gin.H{})
 }
