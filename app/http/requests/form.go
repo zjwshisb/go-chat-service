@@ -23,4 +23,5 @@ type AdminChatSettingForm struct {
 	IsAutoAccept bool `json:"is_auto_accept"`
 	WelcomeContent string `json:"welcome_content" binding:"max=512"`
 	OfflineContent string `json:"offline_content" binding:"max=512"`
+	Name string `json:"name" binding:"max=20"`
 }

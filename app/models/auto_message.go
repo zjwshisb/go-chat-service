@@ -3,23 +3,23 @@ package models
 import "time"
 
 type AutoMessageJson struct {
-	ID uint `json:"id"`
-	Name string `json:"name"`
-	Type string  `json:"type"`
-	Content string `json:"content"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	RulesCount int `json:"rules_count"`
+	ID         uint      `json:"id"`
+	Name       string    `json:"name"`
+	Type       string    `json:"type"`
+	Content    string    `json:"content"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	RulesCount int       `json:"rules_count"`
 }
 
 type AutoMessage struct {
-	ID uint `gorm:"column:id;primaryKey" json:"id"`
-	Name string `gorm:"size:255" json:"name"`
-	Type string  `gorm:"size:255" json:"type"`
-	Content string `gorm:"type:text" json:"content"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Rules []*AutoRule `gorm:"foreignKey:message_id"`
+	ID        uint   `gorm:"column:id;primaryKey"`
+	Name      string `gorm:"size:255"`
+	Type      string `gorm:"size:255"`
+	Content   string `gorm:"type:text"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Rules     []*AutoRule `gorm:"foreignKey:message_id"`
 }
 
 func (message *AutoMessage) ToJson() *AutoMessageJson {
@@ -49,5 +49,3 @@ func (message *AutoMessage) TypeLabel() string {
 		return "未知类型"
 	}
 }
-
-

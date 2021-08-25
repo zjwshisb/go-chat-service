@@ -5,8 +5,8 @@ import (
 	"github.com/qiniu/go-sdk/v7/auth/qbox"
 	"github.com/qiniu/go-sdk/v7/storage"
 	"mime/multipart"
-	"ws/configs"
 	"ws/app/util"
+	"ws/configs"
 )
 
 type qiniu struct {

@@ -14,7 +14,7 @@ var (
 func init()  {
 	flag.StringVar(&Command, "m", "start" , "mode start|stop|migrate|fake|seeder")
 	flag.StringVar(&ConfigFile,"c", "config.ini", "config file")
-	flag.BoolVar(&WithUser, "u", false, "if create user table when migrate")
+	flag.BoolVar(&WithUser, "u", false, "create user table when migrate")
 	flag.Parse()
 	if Command != "start" &&
 		Command != "stop" &&

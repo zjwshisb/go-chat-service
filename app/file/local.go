@@ -4,8 +4,8 @@ import (
 	"mime/multipart"
 	"os"
 	"path"
-	"ws/configs"
 	"ws/app/util"
+	"ws/configs"
 )
 
 type local struct {

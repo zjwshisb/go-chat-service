@@ -31,7 +31,7 @@ type redis struct {
 	Db int
 }
 type app struct {
-	LogPath string
+	LogFile string
 	LogLevel logrus.Level
 	Url string
 	Env string

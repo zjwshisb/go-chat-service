@@ -28,6 +28,7 @@ func GetChatSetting(c *gin.Context) {
 	if setting.Id == 0 {
 		setting = &models.AdminChatSetting{
 			AdminId:        admin.GetPrimaryKey(),
+			Name: admin.GetUsername(),
 			CreatedAt:      time.Time{},
 			UpdatedAt:      time.Time{},
 		}
@@ -50,6 +51,7 @@ func UpdateChatSetting(c *gin.Context)  {
 	setting.IsAutoAccept = form.IsAutoAccept
 	setting.WelcomeContent = form.WelcomeContent
 	setting.OfflineContent = form.OfflineContent
+	setting.Name = form.Name
 	databases.Db.Save(setting)
 	connI , exist := websocket.AdminHub.GetConn(admin.GetPrimaryKey())
 	if exist {

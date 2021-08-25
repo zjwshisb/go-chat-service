@@ -16,14 +16,15 @@ const (
 
 	ReplyTypeMessage  = "message"
 	ReplyTypeTransfer = "transfer"
-	ReplyTypeEvent = "event"
+	ReplyTypeEvent    = "event"
 
-	SceneNotAccepted = "not-accepted"
-	SceneAdminOnline = "admin-online"
+	SceneNotAccepted  = "not-accepted"
+	SceneAdminOnline  = "admin-online"
 	SceneAdminOffline = "admin-offline"
 
 	EventBreak = "break"
 )
+
 var ScenesOptions = []*json.Options{
 	{
 		Value: SceneNotAccepted,
@@ -44,51 +45,53 @@ var EventOptions = []*json.Options{
 		Label: "断开当前会话",
 	},
 }
+
 type AutoRuleScene struct {
-	ID uint `json:"-"`
-	Name string
-	RuleId uint
+	ID        uint `json:"-"`
+	Name      string
+	RuleId    uint
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 type AutoRule struct {
 	ID        uint
-	Name      string       `gorm:"size:255" `
-	Match     string       `gorm:"size:32"`
-	MatchType string       `gorm:"size:20"`
-	ReplyType string       `gorm:"size:20" `
-	MessageId uint         `gorm:"index"`
-	Key string `gorm:"key" json:"key"`
-	IsSystem  uint8        `gorm:"is_system"`
-	Sort      uint8        `gorm:"sort"`
-	IsOpen    bool         `gorm:"is_open"`
-	Count     uint         `gorm:"not null;default:0"`
-	Scenes  []*AutoRuleScene `gorm:"foreignKey:RuleId"`
+	Name      string           `gorm:"size:255" `
+	Match     string           `gorm:"size:32"`
+	MatchType string           `gorm:"size:20"`
+	ReplyType string           `gorm:"size:20" `
+	MessageId uint             `gorm:"index"`
+	Key       string           `gorm:"key" json:"key"`
+	IsSystem  uint8            `gorm:"is_system"`
+	Sort      uint8            `gorm:"sort"`
+	IsOpen    bool             `gorm:"is_open"`
+	Count     uint             `gorm:"not null;default:0"`
+	Scenes    []*AutoRuleScene `gorm:"foreignKey:RuleId"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Message   *AutoMessage `json:"message" gorm:"foreignKey:MessageId"`
 }
 
 type AutoRuleJson struct {
-	ID        uint         `json:"id"`
-	Name      string       `json:"name"`
-	Match     string       `json:"match"`
-	MatchType string       `json:"match_type"`
-	ReplyType string       `json:"reply_type"`
-	MessageId uint         `json:"message_id"`
-	Key string `gorm:"key" json:"key"`
-	Sort      uint8        `json:"sort"`
-	IsOpen    bool         `json:"is_open"`
-	Count     uint         `json:"count"`
-	CreatedAt time.Time    `json:"created_at"`
-	UpdatedAt time.Time    `json:"updated_at"`
-	EventLabel string `json:"event_label"`
-	Message   *AutoMessage `json:"message"`
-	Scenes []string `json:"scenes"`
-	ScenesLabel string `json:"scenes_label"`
+	ID          uint         `json:"id"`
+	Name        string       `json:"name"`
+	Match       string       `json:"match"`
+	MatchType   string       `json:"match_type"`
+	ReplyType   string       `json:"reply_type"`
+	MessageId   uint         `json:"message_id"`
+	Key         string       `gorm:"key" json:"key"`
+	Sort        uint8        `json:"sort"`
+	IsOpen      bool         `json:"is_open"`
+	Count       uint         `json:"count"`
+	CreatedAt   time.Time    `json:"created_at"`
+	UpdatedAt   time.Time    `json:"updated_at"`
+	EventLabel  string       `json:"event_label"`
+	Message     *AutoMessage `json:"message"`
+	Scenes      []string     `json:"scenes"`
+	ScenesLabel string       `json:"scenes_label"`
 }
+
 // 是否匹配
-func (rule *AutoRule) IsMatch(str string) bool  {
+func (rule *AutoRule) IsMatch(str string) bool {
 	switch rule.MatchType {
 	case MatchTypeAll:
 		return rule.Match == str
@@ -97,6 +100,7 @@ func (rule *AutoRule) IsMatch(str string) bool  {
 	}
 	return false
 }
+
 // 场景
 func (rule *AutoRule) SceneInclude(str string) bool {
 	for _, s := range rule.Scenes {
@@ -106,6 +110,7 @@ func (rule *AutoRule) SceneInclude(str string) bool {
 	}
 	return false
 }
+
 // 事件名称
 func (rule *AutoRule) GetEventLabel() string {
 	if rule.ReplyType == ReplyTypeEvent {
@@ -118,7 +123,7 @@ func (rule *AutoRule) GetEventLabel() string {
 	return ""
 }
 
-func (rule *AutoRule) ToJson()  *AutoRuleJson  {
+func (rule *AutoRule) ToJson() *AutoRuleJson {
 	scenesSli := make([]string, 0)
 	scenesLabel := ""
 	for _, scene := range rule.Scenes {
@@ -157,7 +162,7 @@ func (rule *AutoRule) GetReplyMessage(uid int64) (message *Message) {
 	if rule.Message != nil {
 		message = &Message{
 			UserId:     uid,
-			AdminId:  0,
+			AdminId:    0,
 			Type:       rule.Message.Type,
 			Content:    rule.Message.Content,
 			ReceivedAT: time.Now().Unix(),

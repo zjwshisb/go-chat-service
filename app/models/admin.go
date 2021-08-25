@@ -10,26 +10,26 @@ import (
 )
 
 type AdminJson struct {
-	Avatar string `json:"avatar"`
-	Username string `json:"username"`
-	Online bool `json:"online"`
-	Id int64 `json:"id"`
-	AcceptedCount int64 `json:"accepted_count"`
+	Avatar        string `json:"avatar"`
+	Username      string `json:"username"`
+	Online        bool   `json:"online"`
+	Id            int64  `json:"id"`
+	AcceptedCount int64  `json:"accepted_count"`
 }
 
 type Admin struct {
-	ID        int64      `json:"id"`
-	CreatedAt *time.Time `json:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at"`
-	Username  string     `gorm:"string;size:255" json:"username"`
-	Password  string     `gorm:"string;size:255" json:"-"`
-	ApiToken string 	`gorm:"string;size:255"  json:"-"`
-	Avatar string 		`gorm:"string;size:512" json:"-"`
-	Setting *AdminChatSetting `json:"message" gorm:"foreignKey:admin_id"`
+	ID        int64
+	CreatedAt *time.Time
+	UpdatedAt *time.Time
+	DeletedAt *time.Time
+	Username  string            `gorm:"string;size:255" `
+	Password  string            `gorm:"string;size:255" `
+	ApiToken  string            `gorm:"string;size:255" `
+	Avatar    string            `gorm:"string;size:512"`
+	Setting   *AdminChatSetting `json:"message" gorm:"foreignKey:admin_id"`
 }
 
-func (user *Admin) AccessTo(uid int64)  bool {
+func (user *Admin) AccessTo(uid int64) bool {
 	return true
 }
 
@@ -42,7 +42,7 @@ func (user *Admin) GetAvatarUrl() string {
 	}
 	return ""
 }
-func (user *Admin) GetUsername() string  {
+func (user *Admin) GetUsername() string {
 	return user.Username
 }
 func (user *Admin) GetChatName() string {
@@ -63,7 +63,7 @@ func (user *Admin) Login() (token string) {
 	databases.Db.Model(user).Update("api_token", token)
 	return
 }
-func (user *Admin) Logout()  {
+func (user *Admin) Logout() {
 	databases.Db.Model(user).Update("api_token", "")
 }
 

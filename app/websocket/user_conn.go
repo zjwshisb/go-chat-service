@@ -152,6 +152,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 						}
 					}
 				} else { // 没有客服对象
+					msg.Save()
 					if chat.GetUserTransferId(c.GetUserId()) == 0 {
 						if chat.IsInManual(c.GetUserId()) {
 							session := chat.GetSession(c.GetUserId(), msg.AdminId)

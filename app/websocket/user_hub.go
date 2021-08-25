@@ -47,7 +47,6 @@ func (userHub *userHub) Run() {
 	userHub.BaseHub.Run()
 }
 // 加入人工列表
-// 如果是在转接中，则不会加入
 func (userHub *userHub) addToManual(uid int64) *models.ChatSession {
 	_ = chat.AddToManual(uid)
 	AdminHub.BroadcastWaitingUser()

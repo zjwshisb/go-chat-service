@@ -42,7 +42,7 @@ func getLogPid()  int {
 	return pid
 }
 
-func logPid(pid int)  {
+func logPid()  {
 	pidName := configs.App.PidFile
 	pidFile, err := os.OpenFile(pidName, os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
@@ -50,7 +50,7 @@ func logPid(pid int)  {
 	}
 	pidFile.Truncate(0)
 	pidFile.Seek(0,0)
-	_, err = pidFile.Write([]byte(strconv.Itoa(pid)))
+	_, err = pidFile.Write([]byte(strconv.Itoa(os.Getpid())))
 	if err != nil {
 		pidFile.Close()
 		log.Fatalln(err)
@@ -59,39 +59,49 @@ func logPid(pid int)  {
 }
 
 func Start()  {
-	websocket.Setup()
-	routers.Setup()
-	quit := make(chan os.Signal, 1)
-	srv := &http.Server{
-		Addr:    configs.Http.Host +":" + configs.Http.Port,
-		Handler: routers.Router,
-	}
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			quit<-syscall.SIGINT
-			log.Fatalln(err)
+	if checkServerRunning() > 0 {
+		log.Fatalln("server is running")
+	} else {
+		websocket.Setup()
+		routers.Setup()
+		quit := make(chan os.Signal, 1)
+		srv := &http.Server{
+			Addr:    configs.Http.Host +":" + configs.Http.Port,
+			Handler: routers.Router,
 		}
-	}()
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-	logPid(os.Getpid())
-	<-quit
-	log.Println("Shutdown Server...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
-	defer func() {
-		cancel()
-	}()
-	if err:= srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server Shutdown:", err)
+		go func() {
+			err := srv.ListenAndServe()
+			if err != nil  {
+				if err != http.ErrServerClosed {
+					quit<-syscall.SIGINT
+					log.Fatalln(err)
+				}
+			}
+		}()
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+		logPid()
+		<-quit
+		log.Println("Shutdown Server...")
+		ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+		defer func() {
+			cancel()
+		}()
+		if err:= srv.Shutdown(ctx); err != nil {
+			log.Fatal("Server Shutdown:", err)
+		}
+		log.Println("Server exited")
 	}
-	log.Println("Server exited")
+}
+func checkServerRunning() int {
+	pid := getLogPid()
+	cmd := exec.Command("ps", "x")
+	output, _ := cmd.Output()
+	return strings.Index(string(output), strconv.Itoa(pid))
 }
 
 func Stop()  {
-	pid := getLogPid()
-	cmd := exec.Command("ps", "aux")
-	output, _ := cmd.Output()
-	index := strings.Index(string(output), strconv.Itoa(pid))
-	if index > 0 {
+	if checkServerRunning() >= 0 {
+		pid := getLogPid()
 		closeCmd := exec.Command("kill", "-2" , strconv.Itoa(pid))
 		result, err := closeCmd.Output()
 		if err != nil {
