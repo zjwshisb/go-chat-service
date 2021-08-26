@@ -37,6 +37,7 @@ type app struct {
 	Env string
 	SystemChatName string // 系统消息客服名称
 	PidFile string  // pid文件
+	PublicPath string
 }
 type file struct {
 	Storage string

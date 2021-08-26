@@ -27,7 +27,7 @@ func Setup() {
 		AllowCredentials: true,
 	}))
 	Router.Static(configs.File.LocalPrefix, configs.File.LocalPath)
-	Router.Static("/public", "./public")
+	Router.Static("/public", configs.App.PublicPath)
 	Router.GET("/", func(c *gin.Context) {
 		c.JSON(200, "hello world")
 	})
