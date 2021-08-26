@@ -24,5 +24,5 @@ func PublicAsset(path string) string {
 
 // 系统头像
 func SystemAvatar() string  {
-	return  PublicAsset("avatar.jpeg")
+	return PublicAsset("avatar.jpeg")
 }

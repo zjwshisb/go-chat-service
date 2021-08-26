@@ -40,7 +40,7 @@ func (user *Admin) GetAvatarUrl() string {
 	if user.Avatar != "" {
 		return file.Disk("local").Url(user.Avatar)
 	}
-	return ""
+	return util.SystemAvatar()
 }
 func (user *Admin) GetUsername() string {
 	return user.Username
