@@ -21,13 +21,14 @@ import (
 	"ws/configs"
 )
 
-func getLogPid()  int {
+func getLogPid() int {
 	file := configs.App.PidFile
 	_, err := os.Stat(file)
-	if err == os.ErrNotExist {
+	fmt.Println(err)
+	if os.IsNotExist(err){
 		return -1
 	}
-	pidFile, err := os.Open(file)
+	pidFile, err := os.OpenFile(file, os.O_RDONLY, 0755)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -98,20 +99,25 @@ func Start()  {
 }
 func checkServerRunning() int {
 	pid := getLogPid()
-	cmd := exec.Command("ps", "x")
-	output, _ := cmd.Output()
-	return strings.Index(string(output), strconv.Itoa(pid))
+	if pid >= 0 {
+		cmd := exec.Command("ps", "x")
+		output, _ := cmd.Output()
+		return strings.Index(string(output), strconv.Itoa(pid))
+	}
+	return -1
 }
 
 func Stop()  {
 	if checkServerRunning() >= 0 {
 		pid := getLogPid()
-		closeCmd := exec.Command("kill", "-2" , strconv.Itoa(pid))
-		result, err := closeCmd.Output()
-		if err != nil {
-			fmt.Println(err)
+		if pid >= 0 {
+			closeCmd := exec.Command("kill", "-2" , strconv.Itoa(pid))
+			result, err := closeCmd.Output()
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Println(string(result))
 		}
-		fmt.Println(string(result))
 	} else {
 		log.Fatalln("server is not running")
 	}
