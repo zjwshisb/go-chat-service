@@ -22,8 +22,12 @@ import (
 )
 
 func getLogPid()  int {
-	pidName := configs.App.PidFile
-	pidFile, err := os.Open(pidName)
+	file := configs.App.PidFile
+	_, err := os.Stat(file)
+	if err == os.ErrNotExist {
+		return -1
+	}
+	pidFile, err := os.Open(file)
 	if err != nil {
 		log.Fatalln(err)
 	}
