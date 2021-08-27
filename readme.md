@@ -18,7 +18,7 @@
     # 创建表 -u(是否创建用户表)
     ./main -m=migrate -u 
     # 插入必备的数据
-    ./main -m=seed
+    ./main -m=seeder
     # 假用户数据 
     ./main -m=fake
     # 启动
