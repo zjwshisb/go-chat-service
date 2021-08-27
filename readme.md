@@ -2,7 +2,7 @@
 基于golang(websocket，http)实现的在线客服系统，已在生产环境中使用  
 适用与不满足微信小程序自带的客服系统或多端需要共用一套客服系统的
 
-[客服前端代码](https://github.com/zjwshisb/go-chat-service) 基于[ant-design-pro](https://github.com/ant-design/ant-design-pro) ，TypeScript;  
+[客服前端代码](https://github.com/zjwshisb/service-frontend) 基于[ant-design-pro](https://github.com/ant-design/ant-design-pro) ，TypeScript;  
 [用户端前端代码](https://github.com/zjwshisb/service-user) 基于[Taro](https://github.com/NervJS/taro) ，已适配h5，小程序
 
 依赖   
