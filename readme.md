@@ -47,6 +47,6 @@
 账号: user(1-20) #user1-user20  
 密码: user(1-20) #user1-user20  
 客服端(pc): [http://119.29.196.153/admin](http://119.29.196.153/admin)  
-客服界面在管理后天右上角客服面板点击进入   
+客服界面在管理后台右上角客服面板点击进入   
 账号: admin(1-20) #admin1-admin20  
 密码: admin(1-20) #admin1-admin20  
