@@ -1,9 +1,9 @@
 # websocket实现的在线客服系统
 基于golang(websocket，http)实现的在线客服系统，已在生产环境中使用  
-适用与不满足微信小程序自带的客服系统或多端需要共用一套客服系统的  
-需要与下面配套前端代码一起适用  
-- [客服前端代码](https://github.com/zjwshisb/service-frontend) 基于[ant-design-pro](https://github.com/ant-design/ant-design-pro) ，TypeScript;  
-- [用户端前端代码](https://github.com/zjwshisb/service-user) 基于[Taro](https://github.com/NervJS/taro) ，已适配h5，小程序
+适用与不满足微信小程序自带的客服系统或多端需要共用一套客服系统的需求  
+需要与下面配套前端代码一起使用   
+- [客服前端代码](https://github.com/zjwshisb/service-frontend)
+- [用户端前端代码](https://github.com/zjwshisb/service-user) 
 
 依赖   
 - mysql
@@ -47,5 +47,6 @@
 账号: user(1-20) #user1-user20  
 密码: user(1-20) #user1-user20  
 客服端(pc): [http://119.29.196.153/admin](http://119.29.196.153/admin)  
+客服界面在管理后天右上角客服面板点击进入   
 账号: admin(1-20) #admin1-admin20  
 密码: admin(1-20) #admin1-admin20  
