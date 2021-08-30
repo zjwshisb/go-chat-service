@@ -61,7 +61,7 @@ func (c *BaseConn) readMsg() {
 		}()
 		select {
 		case <-c.closeSignal:
-			goto END
+			return
 		case msgStr := <-msg:
 			var act = &Action{}
 			err := act.UnMarshal(msgStr)
@@ -72,7 +72,6 @@ func (c *BaseConn) readMsg() {
 			}
 		}
 	}
-END:
 }
 // 投递消息
 func (c *BaseConn) Deliver(act *Action) {
@@ -106,14 +105,13 @@ func (c *BaseConn) sendMsg() {
 				} else {
 					// 发送失败，close
 					c.close()
-					goto END
+					return
 				}
 			} else {
 				log.Log.Error(err)
 			}
 		case <-c.closeSignal:
-			goto END
+			return
 		}
 	}
-END:
 }
