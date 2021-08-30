@@ -11,7 +11,7 @@ import (
 	"ws/app/wechat"
 	"ws/configs"
 )
-
+// admin websocket
 type AdminConn struct {
 	User *models.Admin
 	BaseConn
@@ -26,6 +26,7 @@ func (c *AdminConn) UpdateSetting() {
 func (c *AdminConn) GetUserId() int64 {
 	return c.User.ID
 }
+// 从conn读取消息后的处理
 func (c *AdminConn) onReceiveMessage(act *Action)  {
 	switch act.Action {
 	// 客服发送消息给用户
@@ -95,6 +96,7 @@ func (c *AdminConn) Setup() {
 			}
 		}
 	})
+	// 意外断开
 	c.Register(onClose, func(i ...interface{}) {
 		AdminHub.Logout(c)
 	})

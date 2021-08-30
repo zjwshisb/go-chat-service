@@ -30,7 +30,7 @@
 ### 部署
 详见目录下nginx.conf，chat.service
 
-
+    
 ### 功能
 - 自动回复
 - 转接人工
@@ -41,6 +41,8 @@
 - 客服界面禁止多开(重复登录，多个tab等)
 - 其他详见演示地址
 
+### 流程图
+![流程图](https://zjwshisb.github.io/blog/process.png)
 
 ### 演示地址
 用户端(移动端): [http://119.29.196.153/mobile](http://119.29.196.153/mobile)  

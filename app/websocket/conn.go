@@ -26,8 +26,8 @@ type Conn interface {
 
 type BaseConn struct {
 	conn        *websocket.Conn
-	closeSignal chan interface{}
-	send        chan *Action
+	closeSignal chan interface{} // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
+	send        chan *Action  // 发送的消息chan
 	sync.Once
 	baseEvent
 }
@@ -36,7 +36,7 @@ func (c *BaseConn) run() {
 	go c.sendMsg()
 	c.Call(onEnter)
 }
-// 关闭
+//幂等的close方法 关闭连接，相关清理
 func (c *BaseConn) close() {
 	c.Once.Do(func() {
 		close(c.closeSignal)
@@ -45,12 +45,13 @@ func (c *BaseConn) close() {
 	})
 }
 
-// 读消息
+// 从websocket读消息
 func (c *BaseConn) readMsg() {
 	var msg = make(chan []byte, 50)
 	for {
 		go func() {
 			_, message, err := c.conn.ReadMessage()
+			// 读消息失败说明连接异常，调用close方法
 			if err != nil {
 				c.close()
 			} else {
@@ -78,7 +79,7 @@ func (c *BaseConn) Deliver(act *Action) {
 	c.send <- act
 }
 
-// 发消息
+// 向websocket发消息
 func (c *BaseConn) sendMsg() {
 	for {
 		select {
@@ -103,6 +104,7 @@ func (c *BaseConn) sendMsg() {
 					}
 					go c.Call(onSendSuccess, act)
 				} else {
+					// 发送失败，close
 					c.close()
 					goto END
 				}
