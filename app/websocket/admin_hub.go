@@ -41,7 +41,7 @@ func (hub *adminHub) Run() {
 	})
 	hub.BaseHub.Run()
 }
-
+// 广播待接入用户
 func (hub *adminHub) BroadcastWaitingUser() {
 	manualUid := chat.GetManualUserIds()
 	users := make([]models.User, 0)
@@ -95,7 +95,7 @@ func (hub *adminHub) BroadcastWaitingUser() {
 
 	}
 }
-
+// 向admin推送待转接入的用户
 func (hub *adminHub) BroadcastUserTransfer(adminId int64)   {
 	client, exist := hub.GetConn(adminId)
 	if exist {
@@ -114,7 +114,7 @@ func (hub *adminHub) BroadcastUserTransfer(adminId int64)   {
 		client.Deliver(NewUserTransfer(data))
 	}
 }
-
+// 广播在线admin
 func (hub *adminHub) BroadcastAdmins() {
 	var serviceUsers []*models.Admin
 	databases.Db.Find(&serviceUsers)

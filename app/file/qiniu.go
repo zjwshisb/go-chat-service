@@ -16,7 +16,7 @@ type qiniu struct {
 	BaseUrl string
 }
 
-func newQiniu() *qiniu {
+func NewQiniu() *qiniu {
 	return &qiniu{
 		ak: configs.File.QiniuAk,
 		sk: configs.File.QiniuSK,
@@ -56,6 +56,6 @@ func (qiniu *qiniu) Save(file *multipart.FileHeader, relativePath string) (*File
 	return &File{
 		FullUrl: qiniu.Url(key),
 		Path: key,
-		Storage: configs.File.Storage,
+		Storage: StorageQiniu,
 	}, nil
 }

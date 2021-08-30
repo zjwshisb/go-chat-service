@@ -14,30 +14,36 @@ type BaseHub struct {
 	lock    sync.RWMutex
 	baseEvent
 }
+// 获取当前客户端数量
 func (hub *BaseHub) GetTotal() int  {
 	return len(hub.GetAllConn())
 }
+// 给客户端发送消息
 func (hub *BaseHub) SendAction(a  *Action, clients ...Conn) {
 	for _,c := range clients {
 		c.Deliver(a)
 	}
 }
+// 获取客户端
 func (hub *BaseHub) GetConn(uid int64) (client Conn,ok bool) {
 	hub.lock.RLock()
 	defer hub.lock.RUnlock()
 	client, ok = hub.Clients[uid]
 	return
 }
+// 添加客户端
 func (hub *BaseHub) AddConn(client Conn) {
 	hub.lock.Lock()
 	defer hub.lock.Unlock()
 	hub.Clients[client.GetUserId()] = client
 }
+// 移除客户端
 func (hub *BaseHub) RemoveConn(uid int64) {
 	hub.lock.Lock()
 	defer hub.lock.Unlock()
 	delete(hub.Clients, uid)
 }
+// 获取所有客户端
 func (hub *BaseHub) GetAllConn() (s []Conn){
 	hub.lock.RLock()
 	defer hub.lock.RUnlock()
@@ -47,6 +53,7 @@ func (hub *BaseHub) GetAllConn() (s []Conn){
 	}
 	return r
 }
+// 客户端登出
 func (hub *BaseHub) Logout(client Conn) {
 	existConn, exist := hub.GetConn(client.GetUserId())
 	if exist {
@@ -57,10 +64,11 @@ func (hub *BaseHub) Logout(client Conn) {
 	}
 	hub.Call(UserLogout, client)
 }
+// 客户端登入
 func (hub *BaseHub) Login(client Conn) {
 	old , exist := hub.GetConn(client.GetUserId())
 	timer := time.After(1 * time.Second)
-	if exist {
+	if exist { // 如果是打开多个tab，关闭之前的连接
 		hub.SendAction(NewMoreThanOne(), old)
 	}
 	hub.AddConn(client)
@@ -68,6 +76,7 @@ func (hub *BaseHub) Login(client Conn) {
 	<-timer
 	hub.Call(UserLogin, client)
 }
+// 给所有客户端发送心跳
 func (hub *BaseHub) Ping()  {
 	ticker := time.NewTicker(time.Second * 10)
 	for {
@@ -75,9 +84,7 @@ func (hub *BaseHub) Ping()  {
 		case <-ticker.C:
 			conns := hub.GetAllConn()
 			ping := NewPing()
-			for _, conn := range conns {
-				conn.Deliver(ping)
-			}
+			hub.SendAction(ping, conns...)
 		}
 	}
 }

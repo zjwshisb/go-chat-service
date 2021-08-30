@@ -39,6 +39,7 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 				}
 				session := chat.GetSession(msg.UserId, c.GetUserId())
 				if session == nil {
+					c.Deliver(NewErrorMessage("无效的用户"))
 					return
 				}
 				sessionAddTime := chat.GetUserSessionSecond()
@@ -51,11 +52,12 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 				msg.SessionId = session.Id
 				msg.Save()
 				_ = chat.UpdateUserAdminId(msg.UserId, c.User.GetPrimaryKey(), sessionAddTime)
+				// 服务器回执
 				c.Deliver(NewReceiptAction(msg))
 				userConn, exist := UserHub.GetConn(msg.UserId)
-				if exist { // 在线
+				if exist { // 用户在线
 					userConn.Deliver(NewReceiveAction(msg))
-				} else {
+				} else {  // 用户不在线
 					hadSubscribe := chat.IsSubScribe(msg.UserId)
 					user, exist := repositories.GetUserById(msg.UserId)
 					if hadSubscribe && exist && user.GetMpOpenId() != "" {

@@ -36,7 +36,7 @@ func (c *BaseConn) run() {
 	go c.sendMsg()
 	c.Call(onEnter)
 }
-
+// 关闭
 func (c *BaseConn) close() {
 	c.Once.Do(func() {
 		close(c.closeSignal)
@@ -51,10 +51,10 @@ func (c *BaseConn) readMsg() {
 	for {
 		go func() {
 			_, message, err := c.conn.ReadMessage()
-			log.Log.Info(string(message))
 			if err != nil {
 				c.close()
 			} else {
+				log.Log.Info(string(message))
 				msg <- message
 			}
 		}()
@@ -73,6 +73,7 @@ func (c *BaseConn) readMsg() {
 	}
 END:
 }
+// 投递消息
 func (c *BaseConn) Deliver(act *Action) {
 	c.send <- act
 }

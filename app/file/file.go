@@ -5,6 +5,11 @@ import (
 	"ws/configs"
 )
 
+const (
+	StorageQiniu = "qiniu"
+	StorageLocal = "local"
+)
+
 type File struct {
 	FullUrl string
 	Path string
@@ -18,9 +23,9 @@ type Manager interface {
 
 func Disk(name string) Manager {
 	switch name {
-	case "qiniu":
-		return newQiniu()
-	case "local":
+	case StorageQiniu:
+		return NewQiniu()
+	case StorageLocal:
 		return NewLocal()
 	default:
 		return NewLocal()

@@ -2,7 +2,7 @@ package websocket
 
 import "sync"
 
-type event interface {
+type Event interface {
 	Register(name int, handle Handle)
 	Call(name int, i ...interface{})
 }

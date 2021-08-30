@@ -28,7 +28,7 @@ type Admin struct {
 	Avatar    string            `gorm:"string;size:512"`
 	Setting   *AdminChatSetting `json:"message" gorm:"foreignKey:admin_id"`
 }
-
+// 是否有user的权限
 func (user *Admin) AccessTo(uid int64) bool {
 	return true
 }
@@ -45,6 +45,7 @@ func (user *Admin) GetAvatarUrl() string {
 func (user *Admin) GetUsername() string {
 	return user.Username
 }
+// 客服名称
 func (user *Admin) GetChatName() string {
 	if user.Setting == nil {
 		setting := &AdminChatSetting{}

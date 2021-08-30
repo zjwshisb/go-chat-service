@@ -88,6 +88,6 @@ func (local *local) Save(file *multipart.FileHeader, relativePath string) (*File
 	return &File{
 		Path:     relativeName,
 		FullUrl:  local.Url(relativeName),
-		Storage:  "local",
+		Storage:  StorageLocal,
 	}, nil
 }

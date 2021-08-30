@@ -20,7 +20,7 @@ func Me(c *gin.Context) {
 		"avatar":   admin.GetAvatarUrl(),
 	})
 }
-// 聊天设置
+// 获取聊天设置
 func GetChatSetting(c *gin.Context) {
 	admin := auth.GetAdmin(c)
 	setting := &models.AdminChatSetting{}
@@ -53,6 +53,7 @@ func UpdateChatSetting(c *gin.Context)  {
 	setting.OfflineContent = form.OfflineContent
 	setting.Name = form.Name
 	databases.Db.Save(setting)
+	// 如果当前在线，更新信息
 	connI , exist := websocket.AdminHub.GetConn(admin.GetPrimaryKey())
 	if exist {
 		adminConn, ok := connI.(*websocket.AdminConn)
@@ -74,7 +75,7 @@ func ChatSettingImage(c *gin.Context) {
 		})
 	}
 }
-// 更新头像
+// 更新头像，用本地存储
 func Avatar(c *gin.Context) {
 	f, _ := c.FormFile("file")
 	storage := file.Disk("local")
@@ -85,6 +86,7 @@ func Avatar(c *gin.Context) {
 		admin := auth.GetAdmin(c)
 		admin.Avatar = fileInfo.Path
 		databases.Db.Save(admin)
+		// 如果当前在线，更新信息
 		connI , exist := websocket.AdminHub.GetConn(admin.GetPrimaryKey())
 		if exist {
 			setting := &models.AdminChatSetting{}

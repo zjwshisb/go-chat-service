@@ -65,7 +65,7 @@ func (action *Action) GetMessage() (message *models.Message,err error)  {
 	return
 
 }
-func NewReceiveAction (msg *models.Message) *Action {
+func NewReceiveAction(msg *models.Message) *Action {
 	return &Action{
 		Action: ReceiveMessageAction,
 		Time: time.Now().Unix(),

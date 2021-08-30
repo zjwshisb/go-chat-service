@@ -41,7 +41,7 @@ func RemoveManual(uid int64) error {
 	cmd := databases.Redis.SRem(ctx, manualUserKey, uid)
 	return cmd.Err()
 }
-// 转接人工客服的用户
+// 待接入的用户ids(待人工接待列表)
 func GetManualUserIds() []int64 {
 	ctx := context.Background()
 	cmd := databases.Redis.SMembers(ctx, manualUserKey)
