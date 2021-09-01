@@ -7,7 +7,7 @@ import (
 	"ws/app/databases"
 	"ws/app/models"
 )
-
+// 创建会话
 func CreateSession(uid int64, t int) *models.ChatSession {
 	session := &models.ChatSession{}
 	session.UserId = uid

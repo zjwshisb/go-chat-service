@@ -14,6 +14,7 @@ func Migrate()  {
 	_ = databases.Db.Migrator().CreateTable(&models.AdminChatSetting{})
 	_ = databases.Db.Migrator().CreateTable(&models.ChatTransfer{})
 	_ = databases.Db.Migrator().CreateTable(&models.AutoRule{})
+	_ = databases.Db.Migrator().CreateTable(&models.AutoRuleScene{})
 
 	if command.WithUser {
 		_ = databases.Db.Migrator().CreateTable(&models.Admin{})

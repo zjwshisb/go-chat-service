@@ -86,7 +86,7 @@ func GetAdminUserLastChatTime(uid int64, adminId int64)  int64 {
 // 设置用户客服对象id
 func SetUserAdminId(uid int64,adminId int64, duration int64) error {
 	ctx := context.Background()
-	cmd := databases.Redis.HSet(ctx, user2AdminHashKey,uid, adminId)
+	cmd := databases.Redis.HSet(ctx, user2AdminHashKey, uid, adminId)
 	_ = UpdateUserAdminId(uid, adminId, duration)
 	_ = RemoveManual(uid)
 	return cmd.Err()

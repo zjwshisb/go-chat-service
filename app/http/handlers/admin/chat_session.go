@@ -8,7 +8,7 @@ import (
 	"ws/app/repositories"
 	"ws/app/util"
 )
-
+// 获取会话列表
 func GetChatSession(c *gin.Context)  {
 	sessions := make([]*models.ChatSession, 0 ,0)
 	var total int64
@@ -57,11 +57,12 @@ func GetChatSession(c *gin.Context)  {
 	}
 	util.RespPagination(c, repositories.NewPagination(data, total))
 }
-
+// 会话详情
 func GetChatSessionDetail(c *gin.Context) {
 	sessionId := c.Param("id")
 	session := &models.ChatSession{}
-	databases.Db.Preload("Admin").Preload("User").Find(session ,sessionId)
+	databases.Db.Preload("Admin").Preload("User").
+		Find(session ,sessionId)
 	messages := make([]*models.Message, 0, 0)
 	databases.Db.Preload("User").Preload("Admin").
 		Where("session_id = ?" , sessionId).

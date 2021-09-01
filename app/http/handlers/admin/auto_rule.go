@@ -23,13 +23,16 @@ func GetSelectAutoMessage(c *gin.Context)  {
 	}
 	util.RespSuccess(c, options)
 }
+
+// 可选择场景
 func GetSelectScene(c *gin.Context) {
 	util.RespSuccess(c , models.ScenesOptions)
 }
+// 可选择的事件
 func GetSelectEvent(c *gin.Context)  {
 	util.RespSuccess(c , models.EventOptions)
 }
-
+// 获取系统规则
 func GetSystemRules(c *gin.Context)  {
 	rules := make([]models.AutoRule, 0)
 	databases.Db.Where("is_system", 1).Find(&rules)
@@ -39,7 +42,7 @@ func GetSystemRules(c *gin.Context)  {
 	}
 	util.RespSuccess(c, result)
 }
-
+// 更新系统规则
 func UpdateSystemRules(c *gin.Context) {
 	m := make(map[int]int)
 	err := c.ShouldBind(&m)
@@ -57,6 +60,7 @@ func UpdateSystemRules(c *gin.Context) {
 	}
 	util.RespSuccess(c, m)
 }
+// 获取自定义规则列表
 func GetAutoRules(c *gin.Context)  {
 	wheres := make([]*repositories.Where, 0)
 	name, _ := c.GetQuery("name")
@@ -79,6 +83,7 @@ func GetAutoRules(c *gin.Context)  {
 
 	util.RespPagination(c , pagination)
 }
+// 获取自定义规则
 func ShowAutoRule(c *gin.Context) {
 	id := c.Param("id")
 	rule := models.AutoRule{}
@@ -89,6 +94,7 @@ func ShowAutoRule(c *gin.Context) {
 		util.RespNotFound(c)
 	}
 }
+// 新增自定义规则
 func StoreAutoRule(c *gin.Context)  {
 	form := requests.AutoRuleForm{}
 	err := c.BindJSON(&form)
@@ -123,15 +129,13 @@ func StoreAutoRule(c *gin.Context)  {
 	databases.Db.Create(rule)
 	util.RespSuccess(c, rule.ToJson())
 }
+// 更新自定义规则
 func UpdateAutoRule(c *gin.Context) {
 	rule := models.AutoRule{}
 	result := databases.Db.
 		Where("is_system = ?", 0).
 		Preload("Scenes").
 		Find(&rule,  c.Param("id"))
-	for _, s := range rule.Scenes {
-		databases.Db.Delete(s)
-	}
 	if result.Error == gorm.ErrRecordNotFound {
 		util.RespNotFound(c)
 		return
@@ -141,6 +145,9 @@ func UpdateAutoRule(c *gin.Context) {
 	if err != nil {
 		util.RespValidateFail(c, err.Error())
 		return
+	}
+	for _, s := range rule.Scenes {
+		databases.Db.Delete(s)
 	}
 	if form.ReplyType == models.ReplyTypeTransfer {
 		form.Scenes = []string{
@@ -171,6 +178,7 @@ func UpdateAutoRule(c *gin.Context) {
 	databases.Db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&rule)
 	util.RespSuccess(c, rule.ToJson())
 }
+// 删除自定义规则
 func DeleteAutoRule(c *gin.Context)  {
 	id := c.Param("id")
 	rule := &models.AutoRule{}
