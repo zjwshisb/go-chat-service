@@ -42,7 +42,6 @@ func (c *UserConn) handleTransferToManual() *models.ChatSession {
 			}
 		}
 		return UserHub.addToManual(c.GetUserId())
-
 	}
 	return nil
 }

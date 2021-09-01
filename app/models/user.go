@@ -16,6 +16,7 @@ type UserJson struct {
 	Online       bool           `json:"online"`
 	Messages     []*MessageJson `json:"messages"`
 	Unread       int            `json:"unread"`
+	Avatar string `json:"avatar"`
 }
 
 type WaitingUserJson struct {

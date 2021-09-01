@@ -57,7 +57,7 @@ func GetManualUserIds() []int64 {
 // 获取聊天过的用户ids以及对应的最后聊天时间
 func GetAdminUserIds(adminId int64)  ([]int64, []int64) {
 	ctx := context.Background()
-	cmd := databases.Redis.ZRangeWithScores(ctx, GetAdminUserKey(adminId), 0, -1)
+	cmd := databases.Redis.ZRevRangeWithScores(ctx, GetAdminUserKey(adminId), 0, -1)
 	uids := make([]int64, 0, len(cmd.Val()))
 	times :=  make([]int64, 0, len(cmd.Val()))
 	for _, item := range cmd.Val() {

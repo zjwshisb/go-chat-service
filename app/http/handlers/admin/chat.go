@@ -101,6 +101,12 @@ func ChatUserList(c *gin.Context) {
 		userMap[user.GetPrimaryKey()] = user
 	}
 	for index, id := range ids {
+		limitTime := times[index]
+		disabled := limitTime <= time.Now().Unix()
+		// 聊天列表超过50时，不显示已失效的用户
+		if len(resp) >= 50 && disabled {
+			continue
+		}
 		u := userMap[id]
 		chatUserRes := &models.UserJson{
 			ID:       u.GetPrimaryKey(),
@@ -108,9 +114,8 @@ func ChatUserList(c *gin.Context) {
 			Messages: make([]*models.MessageJson, 0),
 			Unread:   0,
 		}
-		limitTime := times[index]
-		chatUserRes.LastChatTime = chat.GetAdminUserLastChatTime(u.GetPrimaryKey(), admin.GetPrimaryKey() )
-		chatUserRes.Disabled = limitTime <= time.Now().Unix()
+		chatUserRes.LastChatTime = chat.GetAdminUserLastChatTime(u.GetPrimaryKey(), admin.GetPrimaryKey())
+		chatUserRes.Disabled = disabled
 		if _, ok := websocket.UserHub.GetConn(u.GetPrimaryKey()); ok {
 			chatUserRes.Online = true
 
@@ -262,6 +267,7 @@ func AcceptUser(c *gin.Context) {
 		Username:     user.GetUsername(),
 		LastChatTime: 0,
 		Messages:     make([]*models.MessageJson, messageLength, messageLength),
+		Avatar: user.GetAvatarUrl(),
 	}
 	chatUser.Unread = len(unSendMsg)
 	userConn, exist := websocket.UserHub.GetConn(user.GetPrimaryKey())
