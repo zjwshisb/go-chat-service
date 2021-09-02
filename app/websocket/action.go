@@ -54,7 +54,7 @@ func (action *Action) UnMarshal(b []byte) (err error) {
 	err =  json.Unmarshal(b, action)
 	return
 }
-
+// 获取action的message
 func (action *Action) GetMessage() (message *models.Message,err error)  {
 	if action.Action == SendMessageAction {
 		message = &models.Message{}

@@ -60,8 +60,22 @@ func Paginate(c *gin.Context) func(db *gorm.DB) *gorm.DB {
 		return db.Offset(offset).Limit(limit)
 	}
 }
-
-
+func AddLoad(relations []string) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		for _, load := range relations {
+			db = db.Preload(load)
+		}
+		return db
+	}
+}
+func AddOrder(orders []string)  func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		for _, load := range orders {
+			db = db.Order(load)
+		}
+		return db
+	}
+}
 func AddWhere(wheres []*Where) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		for _, where := range wheres {

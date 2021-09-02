@@ -11,7 +11,7 @@ import (
 
 type AdminJson struct {
 	Avatar        string `json:"avatar"`
-	adminname      string `json:"adminname"`
+	Username      string `json:"username"`
 	Online        bool   `json:"online"`
 	Id            int64  `json:"id"`
 	AcceptedCount int64  `json:"accepted_count"`
@@ -22,7 +22,7 @@ type Admin struct {
 	CreatedAt *time.Time
 	UpdatedAt *time.Time
 	DeletedAt *time.Time
-	username  string            `gorm:"string;size:255" `
+	Username  string            `gorm:"string;size:255" `
 	Password  string            `gorm:"string;size:255" `
 	ApiToken  string            `gorm:"string;size:255" `
 	Avatar    string            `gorm:"string;size:512"`
@@ -47,18 +47,23 @@ func (admin *Admin) GetAvatarUrl() string {
 	return util.SystemAvatar()
 }
 func (admin *Admin) GetUsername() string {
-	return admin.username
+	return admin.Username
 }
-// 客服名称
-func (admin *Admin) GetChatName() string {
+func (admin *Admin) GetSetting() *AdminChatSetting {
 	if admin.Setting == nil {
 		setting := &AdminChatSetting{}
 		databases.Db.Model(admin).Association("Setting").Find(setting)
 		admin.Setting = setting
 	}
-	if admin.Setting != nil {
-		if admin.Setting.Name != "" {
-			return admin.Setting.Name
+	return admin.Setting
+}
+
+// 客服名称
+func (admin *Admin) GetChatName() string {
+	setting := admin.GetSetting()
+	if setting != nil {
+		if setting.Name != "" {
+			return setting.Name
 		}
 	}
 	return admin.GetUsername()
@@ -86,4 +91,10 @@ func (admin *Admin) Auth(c *gin.Context) bool {
 func (admin *Admin) FindByName(username string) bool {
 	databases.Db.Where("username= ?", username).First(admin)
 	return admin.ID > 0
+}
+
+func (admin *Admin) RefreshSetting()  {
+	setting := &AdminChatSetting{}
+	_ = databases.Db.Model(admin).Association("Setting").Find(setting)
+	admin.Setting = setting
 }

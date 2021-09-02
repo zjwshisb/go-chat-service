@@ -11,8 +11,11 @@ import (
 	"ws/app/util"
 	"ws/app/websocket"
 )
+type DashboardHandler struct {
 
-func GetUserQueryInfo(c *gin.Context) {
+}
+
+func (handler *DashboardHandler) GetUserQueryInfo(c *gin.Context) {
 	startTime := carbon.Now().StartOfDay().ToTimestamp()
 	endTime := carbon.Now().EndOfDay().ToTimestamp()
 	sessions := make([]models.ChatSession, 0)
@@ -89,7 +92,7 @@ func GetUserQueryInfo(c *gin.Context) {
 	})
 }
 
-func GetOnlineInfo(c *gin.Context)  {
+func (handler *DashboardHandler) GetOnlineInfo(c *gin.Context)  {
 	util.RespSuccess(c, gin.H{
 		"user_count": websocket.UserHub.GetTotal(),
 		"admin_count": websocket.AdminHub.GetTotal(),

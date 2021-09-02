@@ -8,8 +8,13 @@ import (
 	"ws/app/repositories"
 	"ws/app/util"
 )
+
+type ChatSessionHandler struct {
+
+}
+
 // 获取会话列表
-func GetChatSession(c *gin.Context)  {
+func (handler *ChatSessionHandler) Index(c *gin.Context)  {
 	sessions := make([]*models.ChatSession, 0 ,0)
 	var total int64
 	wheres := make([]*repositories.Where, 0)
@@ -58,7 +63,7 @@ func GetChatSession(c *gin.Context)  {
 	util.RespPagination(c, repositories.NewPagination(data, total))
 }
 // 会话详情
-func GetChatSessionDetail(c *gin.Context) {
+func (handler *ChatSessionHandler) Show(c *gin.Context) {
 	sessionId := c.Param("id")
 	session := &models.ChatSession{}
 	databases.Db.Preload("Admin").Preload("User").

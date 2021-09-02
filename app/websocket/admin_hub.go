@@ -47,10 +47,13 @@ func (hub *adminHub) BroadcastWaitingUser() {
 	users := make([]models.User, 0)
 	databases.Db.Where("id in ?", manualUid).
 		Find(&users)
-	messages := repositories.GetUnSendMessage(&repositories.Where{
-		Filed: "user_id in ?",
-		Value: manualUid,
-	} )
+	repo := &repositories.MessageRepo{}
+	messages := repo.GetUnSend([]*repositories.Where{
+		{
+			Filed: "user_id in ?",
+			Value: manualUid,
+		},
+	})
 	waitingUserMap := make(map[int64]*models.WaitingUserJson)
 	for _, user := range users {
 		waitingUserMap[user.GetPrimaryKey()] = &models.WaitingUserJson{

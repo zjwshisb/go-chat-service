@@ -1,31 +1,34 @@
 package repositories
 
 import (
-	"github.com/gin-gonic/gin"
+	"gorm.io/gorm/clause"
 	"ws/app/databases"
 	"ws/app/models"
 )
 
-func UpdateMessages(wheres []*Where, values map[string]interface{}) int64 {
+type MessageRepo struct {
+}
+
+func (repo *MessageRepo) Save(message *models.Message)  {
+	databases.Db.Omit(clause.Associations).Save(message)
+}
+
+func (repo *MessageRepo) Get(wheres []*Where, limit int, loads []string, orders ...string) []*models.Message {
+	messages := make([]*models.Message, 0)
+	query := databases.Db.Order("received_at desc").
+		Limit(limit).
+		Scopes(AddWhere(wheres)).Scopes(AddLoad(loads)).Scopes(AddOrder(orders))
+	query.Find(&messages)
+	return messages
+}
+
+func (repo *MessageRepo) Update(wheres []*Where, values map[string]interface{}) int64 {
 	query := databases.Db.Table("messages").Scopes(AddWhere(wheres))
 	query.Updates(values)
 	return query.RowsAffected
 }
 
-func GetMessages(wheres []*Where, limit int, load []string) []*models.Message  {
-	messages := make([]*models.Message, 0)
-	query := databases.Db.Order("received_at desc").
-		Order("id desc").
-		Limit(limit).
-		Scopes(AddWhere(wheres))
-	for _, relate := range load {
-		query = query.Preload(relate)
-	}
-	query.Find(&messages)
-	return messages
-}
-
-func GetUnSendMessage(wheres ...*Where) []*models.Message {
+func (repo *MessageRepo) GetUnSend(wheres []*Where) []*models.Message {
 	wheres = append(wheres, &Where{
 		Filed: "admin_id = ?",
 		Value: 0,
@@ -33,24 +36,5 @@ func GetUnSendMessage(wheres ...*Where) []*models.Message {
 		Filed: "source = ?",
 		Value: models.SourceUser,
 	})
-	return GetMessages(wheres, -1, []string{})
-}
-func GetAutoRulePagination(c *gin.Context, wheres []*Where) *Pagination {
-	rules := make([]*models.AutoRule, 0)
-	wheres = append(wheres, &Where{
-		Value: 0,
-		Filed: "is_system = ?",
-	})
-	databases.Db.Order("id desc").
-		Scopes(Filter(c, []string{"reply_type"})).
-		Scopes(Paginate(c)).
-		Scopes(AddWhere(wheres)).
-		Preload("Message").
-		Find(&rules)
-	var total int64
-	databases.Db.Model(&models.AutoRule{}).
-		Scopes(Filter(c, []string{"reply_type"})).
-		Scopes(AddWhere(wheres)).
-		Count(&total)
-	return NewPagination(rules, total)
+	return repo.Get(wheres, -1, []string{}, "id desc")
 }

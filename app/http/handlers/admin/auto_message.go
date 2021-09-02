@@ -3,16 +3,16 @@ package admin
 import (
 	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-	"ws/app/databases"
 	"ws/app/file"
 	"ws/app/http/requests"
 	"ws/app/models"
-	"ws/app/repositories"
 	"ws/app/util"
 )
 
-func StoreAutoMessageImage(c *gin.Context) {
+type AutoMessageHandler struct {
+	
+}
+func (handler *AutoMessageHandler) Image(c *gin.Context) {
 	f, _ := c.FormFile("file")
 	ff, err := file.Save(f, "auto_message")
 	if err != nil {
@@ -23,56 +23,53 @@ func StoreAutoMessageImage(c *gin.Context) {
 		})
 	}
 }
-func GetAutoMessages(c *gin.Context)  {
-	messages := make([]*models.AutoMessage, 0)
-	databases.Db.Order("id desc").
-		Scopes(repositories.Filter(c, []string{"type"})).
-		Scopes(repositories.Paginate(c)).
-		Preload("Rules").
-		Find(&messages)
-	var total int64
-	databases.Db.Model(&models.AutoMessage{}).
-		Scopes(repositories.Filter(c, []string{"type"})).
-		Scopes().
-		Count(&total)
-	data := make([]*models.AutoMessageJson, 0, len(messages))
-	for _, msg := range messages {
+func (handler *AutoMessageHandler) Index(c *gin.Context)  {
+	p := autoMessageRepo.Paginate(c)
+	origin := p.Data.([]*models.AutoMessage)
+	data := make([]*models.AutoMessageJson, 0, len(origin))
+	for _, msg := range origin {
 		data = append(data, msg.ToJson())
 	}
-	util.RespPagination(c , repositories.NewPagination(data, total))
+	p.Data = data
+	util.RespPagination(c , p)
 }
 
-func ShowAutoMessage(c *gin.Context) {
+func (handler *AutoMessageHandler) Show(c *gin.Context) {
 	id := c.Param("id")
-	message := models.AutoMessage{}
-	query := databases.Db.Find(&message, id)
-	if query.RowsAffected > 0 {
+	message := autoMessageRepo.First([]Where{
+		{
+			Filed: "id = ?",
+			Value: id,
+		},
+	})
+	if message != nil {
 		util.RespSuccess(c, message)
 	} else {
 		util.RespNotFound(c)
 	}
 }
 
-func StoreAutoMessage(c *gin.Context)  {
+func (handler *AutoMessageHandler) Store(c *gin.Context)  {
 	form := requests.AutoMessageForm{}
 	err := c.ShouldBind(&form)
 	if err != nil {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
-	var  exist int64
-	databases.Db.Table("auto_messages").
-		Where("name = ?" , form.Name).Count(&exist)
-	if exist > 0 {
+	exist := autoMessageRepo.First([]Where{
+		{
+			Filed: "name = ?",
+			Value: form.Name,
+		},
+	})
+	if exist != nil {
 		util.RespValidateFail(c, "已存在同名的消息")
 		return
 	}
-
 	message := &models.AutoMessage{
 		Name: form.Name,
 		Type: form.Type,
 	}
-
 	if message.Type == models.TypeText  || message.Type == models.TypeImage {
 		message.Content = form.Content
 	}
@@ -89,13 +86,17 @@ func StoreAutoMessage(c *gin.Context)  {
 		}
 		message.Content = string(jsonBytes)
 	}
-	databases.Db.Save(message)
+	autoMessageRepo.Save(message)
 	util.RespSuccess(c, message)
 }
-func UpdateAutoMessage(c *gin.Context) {
-	message := &models.AutoMessage{}
-	query := databases.Db.Find(&message, c.Param("id"))
-	if query.Error == gorm.ErrRecordNotFound {
+func (handler *AutoMessageHandler) Update(c *gin.Context) {
+	message := autoMessageRepo.First([]Where{
+		{
+			Filed: "id = ?",
+			Value: c.Param("id"),
+		},
+	})
+	if message == nil {
 		util.RespNotFound(c)
 		return
 	}
@@ -105,12 +106,17 @@ func UpdateAutoMessage(c *gin.Context) {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
-	var  exist int64
-	databases.Db.Table("auto_messages").
-		Where("name = ?" , form.Name).
-		Where("id != ?", c.Param("id")).
-		Count(&exist)
-	if exist > 0 {
+	exist := autoMessageRepo.First([]Where{
+		{
+			Filed: "name = ?",
+			Value: form.Name,
+		},
+		{
+			Filed: "id != ?",
+			Value: c.Param("id"),
+		},
+	})
+	if exist != nil {
 		util.RespValidateFail(c, "已存在同名的其他消息")
 		return
 	}
@@ -130,20 +136,30 @@ func UpdateAutoMessage(c *gin.Context) {
 		}
 		message.Content = string(jsonBytes)
 	}
-	databases.Db.Save(message)
+	autoMessageRepo.Save(message)
 	util.RespSuccess(c, message)
 }
-func DeleteAutoMessage(c *gin.Context) {
-	message := &models.AutoMessage{}
-	databases.Db.Preload("Rules").Find(&message, c.Param("id"))
-	if message.ID <= 0 {
+func (handler *AutoMessageHandler) Delete(c *gin.Context) {
+	message := autoMessageRepo.First([]Where{
+		{
+			Filed: "id = ?",
+			Value: c.Param("id"),
+		},
+	})
+	if message == nil {
 		util.RespNotFound(c)
 		return
 	}
-	if len(message.Rules) > 0 {
+	rules := autoRuleRepo.Get([]Where{
+		{
+			Filed: "message_id = ?",
+			Value: message.ID,
+		},
+	}, -1, []string{})
+	if len(rules) > 0 {
 		util.RespValidateFail(c, "该消息在其他地方有使用，无法删除")
 		return
 	}
-	databases.Db.Delete(message)
+	autoMessageRepo.Delete(message)
 	util.RespSuccess(c, message)
 }

@@ -97,7 +97,7 @@ func (c *BaseConn) sendMsg() {
 						msg, ok := act.Data.(*models.Message)
 						if ok {
 							msg.SendAt = time.Now().Unix()
-							msg.Save()
+							messageRepo.Save(msg)
 						}
 					default:
 					}

@@ -5,7 +5,6 @@ import (
 	"time"
 	"ws/app/auth"
 	"ws/app/chat"
-	"ws/app/databases"
 	"ws/app/models"
 )
 
@@ -18,22 +17,21 @@ type UserConn struct {
 func (c *UserConn) GetUserId() int64 {
 	return c.User.GetPrimaryKey()
 }
+
 // 转接到人工客服列表
 func (c *UserConn) handleTransferToManual() *models.ChatSession {
 	if !chat.IsInManual(c.GetUserId()) {
 		onlineServerCount := len(AdminHub.Clients)
 		if onlineServerCount == 0 { // 如果没有在线客服
-			rule := models.AutoRule{}
-			query := databases.Db.Where("is_system", 1).
-				Where("match", models.MatchServiceAllOffLine).Preload("Message").First(&rule)
-			if query.RowsAffected > 0 {
+			rule := autoRuleRepo.GetAdminAllOffLine()
+			if rule != nil {
 				switch rule.ReplyType {
 				case models.ReplyTypeMessage:
 					msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
 					if msg != nil {
 						msg.Save()
 						rule.Count++
-						databases.Db.Save(&rule)
+						autoRuleRepo.Save(rule)
 						c.Deliver(NewReceiveAction(msg))
 						return nil
 					}
@@ -45,18 +43,11 @@ func (c *UserConn) handleTransferToManual() *models.ChatSession {
 	}
 	return nil
 }
-func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, session *models.ChatSession)  {
-	rules := make([]*models.AutoRule, 0)
+func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, session *models.ChatSession) {
+	rules := autoRuleRepo.GetAllActiveNormal()
 	if session == nil {
 		session = &models.ChatSession{}
 	}
-	databases.Db.
-		Where("is_system", 0).
-		Where("is_open", 1).
-		Order("sort").
-		Preload("Message").
-		Preload("Scenes").
-		Find(&rules)
 LOOP:
 	for _, rule := range rules {
 		if rule.IsMatch(message.Content) && rule.SceneInclude(scene) {
@@ -87,13 +78,13 @@ LOOP:
 					msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
 					if msg != nil {
 						msg.SessionId = session.Id
-						databases.Db.Save(msg)
+						messageRepo.Save(msg)
 						c.Deliver(NewReceiveAction(msg))
 					}
 				}
 			}
 			rule.Count++
-			databases.Db.Save(rule)
+			autoRuleRepo.Save(rule)
 			break LOOP
 		}
 	}
@@ -123,21 +114,25 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 					_ = chat.UpdateUserAdminId(msg.UserId, msg.AdminId, addTime)
 					msg.SessionId = session.Id
 					session.BrokeAt = time.Now().Unix() + addTime
-					databases.Db.Save(session)
-					msg.Save()
+					sessionRepo.Save(session)
+					messageRepo.Save(msg)
 					adminConn, exist := AdminHub.GetConn(msg.AdminId)
 					// 客服在线
 					if exist {
 						c.triggerMessageEvent(models.SceneAdminOnline, msg, session)
 						adminConn.Deliver(NewReceiveAction(msg))
 					} else { // 客服不在线
-						admin := &models.Admin{}
-						databases.Db.Where("id = ?" , msg.AdminId).Preload("Setting").Find(admin)
+						admin := adminRepo.First([]Where{
+							{
+								Filed: "id = ?",
+								Value: msg.AdminId,
+							},
+						})
 						c.triggerMessageEvent(models.SceneAdminOffline, msg, session)
-						if admin.Setting != nil {
-							setting := admin.Setting
+						setting := admin.GetSetting()
+						if setting != nil {
 							// 发送离线消息
-							if admin.Setting.OfflineContent != "" {
+							if setting.OfflineContent != "" {
 								offlineMsg := setting.GetOfflineMsg(c.GetUserId(), session.Id)
 								offlineMsg.Admin = admin
 								c.Deliver(NewReceiveAction(offlineMsg))
@@ -146,28 +141,28 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 							lastOnline := setting.LastOnline
 							duration := chat.GetOfflineDuration()
 							if (lastOnline.Unix() + duration) < time.Now().Unix() {
-								_ = chat.RemoveUserAdminId(msg.UserId, msg.AdminId )
+								_ = chat.RemoveUserAdminId(msg.UserId, msg.AdminId)
 							}
 						}
 					}
 				} else { // 没有客服对象
-					msg.Save()
+					messageRepo.Save(msg)
 					if chat.GetUserTransferId(c.GetUserId()) == 0 {
 						if chat.IsInManual(c.GetUserId()) {
 							session := chat.GetSession(c.GetUserId(), msg.AdminId)
 							if session != nil {
 								msg.SessionId = session.Id
 							}
-							msg.Save()
+							messageRepo.Save(msg)
 							AdminHub.BroadcastWaitingUser()
 						} else {
 							isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
-							if exist  && isAutoTransfer.GetValue() == "1"{ // 自动转人工
+							if exist && isAutoTransfer.GetValue() == "1" { // 自动转人工
 								session := c.handleTransferToManual()
 								if session != nil {
 									msg.SessionId = session.Id
 								}
-								msg.Save()
+								messageRepo.Save(msg)
 							} else {
 								c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
 							}
@@ -176,27 +171,19 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 				}
 			}
 		}
-		break
 	}
 }
 func (c *UserConn) Setup() {
 	c.Register(onEnter, func(i ...interface{}) {
 		if chat.GetUserLastAdminId(c.GetUserId()) == 0 {
-			rule := models.AutoRule{}
-			query := databases.Db.
-				Where("is_system", 1).
-				Where("match", models.MatchEnter).
-				Preload("Message").
-				First(&rule)
-			if query.RowsAffected > 0 {
-				if rule.Message != nil {
-					msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
-					if msg != nil {
-						databases.Db.Save(msg)
-						rule.Count++
-						databases.Db.Save(&rule)
-						c.Deliver(NewReceiveAction(msg))
-					}
+			rule := autoRuleRepo.GetEnter()
+			if rule != nil {
+				msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
+				if msg != nil {
+					messageRepo.Save(msg)
+					rule.Count++
+					autoRuleRepo.Save(rule)
+					c.Deliver(NewReceiveAction(msg))
 				}
 			}
 		}

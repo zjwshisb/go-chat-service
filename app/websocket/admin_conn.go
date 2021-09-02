@@ -5,7 +5,7 @@ import (
 	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
 	"time"
 	"ws/app/chat"
-	"ws/app/databases"
+	"ws/app/log"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/wechat"
@@ -15,12 +15,6 @@ import (
 type AdminConn struct {
 	User *models.Admin
 	BaseConn
-}
-
-func (c *AdminConn) UpdateSetting() {
-	setting := &models.AdminChatSetting{}
-	databases.Db.Model(c.User).Association("Setting").Find(setting)
-	c.User.Setting = setting
 }
 
 func (c *AdminConn) GetUserId() int64 {
@@ -45,13 +39,13 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 				}
 				sessionAddTime := chat.GetUserSessionSecond()
 				session.BrokeAt = time.Now().Unix() + sessionAddTime
-				databases.Db.Save(session)
+				sessionRepo.Save(session)
 				msg.AdminId = c.GetUserId()
 				msg.Source = models.SourceAdmin
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Admin = c.User
 				msg.SessionId = session.Id
-				msg.Save()
+				messageRepo.Save(msg)
 				_ = chat.UpdateUserAdminId(msg.UserId, c.User.GetPrimaryKey(), sessionAddTime)
 				// 服务器回执
 				c.Deliver(NewReceiptAction(msg))
@@ -62,7 +56,7 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 					hadSubscribe := chat.IsSubScribe(msg.UserId)
 					user, exist := repositories.GetUserById(msg.UserId)
 					if hadSubscribe && exist && user.GetMpOpenId() != "" {
-						_ = wechat.GetMp().GetSubscribe().Send(&subscribe.Message{
+						err := wechat.GetMp().GetSubscribe().Send(&subscribe.Message{
 							ToUser:           user.GetMpOpenId(),
 							TemplateID:       configs.Wechat.SubscribeTemplateIdOne,
 							Page:             configs.Wechat.ChatPath,
@@ -76,7 +70,11 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 								},
 							},
 						})
-						chat.DelSubScribe(msg.UserId)
+						if err != nil {
+							log.Log.Error(err.Error())
+						} else {
+							chat.DelSubScribe(msg.UserId)
+						}
 					}
 				}
 			}

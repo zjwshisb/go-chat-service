@@ -18,7 +18,7 @@ func Seeder()  {
 		{
 			Name: "当转接到人工客服而没有客服在线时(如不设置则继续转接到人工客服)",
 			MatchType: models.MatchTypeAll,
-			Match: models.MatchServiceAllOffLine,
+			Match: models.MatchAdminAllOffLine,
 			ReplyType: models.ReplyTypeMessage,
 			IsSystem: 1,
 		},

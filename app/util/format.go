@@ -18,7 +18,6 @@ func RespSuccess(c *gin.Context, data interface{}) {
 }
 func RespPagination(c *gin.Context, p interface{}) {
 	c.JSON(http.StatusOK, p)
-
 }
 func RespValidateFail(c *gin.Context, msg interface{}) {
 	c.JSON(http.StatusUnprocessableEntity, gin.H{

@@ -6,8 +6,11 @@ import (
 	"ws/app/util"
 )
 
+type SettingHandler struct {
+}
 
-func UpdateSetting(c *gin.Context) {
+
+func (handler *SettingHandler) Update(c *gin.Context) {
 	var form = struct {
 		Value string `json:"value" form:"value" binding:"required"`
 	}{}
@@ -30,7 +33,7 @@ func UpdateSetting(c *gin.Context) {
 	util.RespSuccess(c, gin.H{})
 }
 
-func GetSettings(c *gin.Context) {
+func (handler *SettingHandler) Index(c *gin.Context) {
 	var resp = make([]*chat.FieldJson, 0,len(chat.Settings) )
 	for _, s := range chat.Settings{
 		resp = append(resp, s.ToJson())

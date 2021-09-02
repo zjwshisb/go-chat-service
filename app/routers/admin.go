@@ -12,75 +12,92 @@ import (
 	"ws/app/websocket"
 )
 
+var (
+	adminHandler = &http.AdminsHandler{}
+	userHandler = &http.UserHandler{}
+	chatHandler = &http.ChatHandler{}
+	settingHandler = &http.SettingHandler{}
+	autoMessageHandler = &http.AutoMessageHandler{}
+	autoRuleHandler = &http.AutoRuleHandler{}
+	systemRuleHandler = &http.SystemRuleHandler{}
+	chatSessionHandler = &http.ChatSessionHandler{}
+	dashboardHandler = &http.DashboardHandler{}
+	transferHandler = &http.TransferHandler{}
+)
+
 func registerAdmin() {
 	g := Router.Group("/backend")
 	g.POST("/login", http.Login)
 	authGroup := g.Group("/")
 	authGroup.Use(middleware.Authenticate)
-	authGroup.GET("/me", http.Me)
-	authGroup.POST("/me/avatar", http.Avatar)
-	authGroup.GET("/me/settings" , http.GetChatSetting)
-	authGroup.PUT("/me/settings" , http.UpdateChatSetting)
-	authGroup.POST("/me/settings/image", http.ChatSettingImage)
-	authGroup.DELETE("/ws/chat-user/:id", http.RemoveUser)
-	authGroup.POST("/ws/chat-user", http.AcceptUser)
-	authGroup.GET("/ws/chat-users", http.ChatUserList)
-	authGroup.POST("/ws/read-all", http.ReadAll)
-	authGroup.POST("/ws/image", http.Image)
-	authGroup.GET("/ws/messages", http.GetHistoryMessage)
-	authGroup.GET("/ws/user/:id", http.GetUserInfo)
-	authGroup.GET("/ws/sessions/:uid", http.GetHistorySession)
-	authGroup.POST("/ws/transfer/:id/cancel", http.ChatCancelTransfer)
-	authGroup.POST("/ws/transfer", http.Transfer)
-	authGroup.GET("/ws/transfer/:id/messages", http.TransferMessages)
+
+	authGroup.GET("/admins", adminHandler.Index)
+	authGroup.GET("/admins/:id", adminHandler.Show)
 
 
-	authGroup.GET("/settings", http.GetSettings)
-	authGroup.PUT("/settings/:name", http.UpdateSetting)
+	authGroup.GET("/me", userHandler.Info)
+	authGroup.POST("/me/avatar", userHandler.Avatar)
+	authGroup.GET("/me/settings" , userHandler.Setting)
+	authGroup.PUT("/me/settings" , userHandler.UpdateSetting)
+	authGroup.POST("/me/settings/image", userHandler.SettingImage)
 
-	authGroup.GET("/auto-messages", http.GetAutoMessages)
-	authGroup.POST("/auto-messages", http.StoreAutoMessage)
-	authGroup.PUT("/auto-messages/:id", http.UpdateAutoMessage)
-	authGroup.DELETE("/auto-messages/:id", http.DeleteAutoMessage)
-	authGroup.GET("/auto-messages/:id", http.ShowAutoMessage)
-	authGroup.POST("/auto-messages/image", http.StoreAutoMessageImage)
-
-	authGroup.GET("/system-auto-rules", http.GetSystemRules)
-	authGroup.PUT("/system-auto-rules", http.UpdateSystemRules)
-
-	authGroup.GET("/options/messages", http.GetSelectAutoMessage)
-	authGroup.GET("/options/scenes", http.GetSelectScene)
-	authGroup.GET("/options/events", http.GetSelectEvent)
-
-	authGroup.POST("/auto-rules", http.StoreAutoRule)
-	authGroup.PUT("/auto-rules/:id", http.UpdateAutoRule)
-	authGroup.GET("/auto-rules", http.GetAutoRules)
-	authGroup.GET("/auto-rules/:id", http.ShowAutoRule)
-	authGroup.DELETE("/auto-rules/:id", http.DeleteAutoRule)
+	authGroup.DELETE("/ws/chat-user/:id", chatHandler.RemoveUser)
+	authGroup.POST("/ws/chat-user", chatHandler.AcceptUser)
+	authGroup.GET("/ws/chat-users", chatHandler.ChatUserList)
+	authGroup.POST("/ws/read-all", chatHandler.ReadAll)
+	authGroup.POST("/ws/image", chatHandler.Image)
+	authGroup.GET("/ws/messages", chatHandler.GetHistoryMessage)
+	authGroup.GET("/ws/user/:id", chatHandler.GetUserInfo)
+	authGroup.GET("/ws/sessions/:uid", chatHandler.GetHistorySession)
+	authGroup.POST("/ws/transfer/:id/cancel", chatHandler.ChatCancelTransfer)
+	authGroup.POST("/ws/transfer", chatHandler.Transfer)
+	authGroup.GET("/ws/transfer/:id/messages", chatHandler.TransferMessages)
 
 
+	authGroup.GET("/settings", settingHandler.Index)
+	authGroup.PUT("/settings/:name", settingHandler.Update)
 
-	authGroup.GET("/chat-sessions", http.GetChatSession)
-	authGroup.GET("/chat-sessions/:id", http.GetChatSessionDetail)
+	authGroup.GET("/auto-messages", autoMessageHandler.Index)
+	authGroup.POST("/auto-messages", autoMessageHandler.Store)
+	authGroup.PUT("/auto-messages/:id", autoMessageHandler.Update)
+	authGroup.DELETE("/auto-messages/:id", autoMessageHandler.Delete)
+	authGroup.GET("/auto-messages/:id", autoMessageHandler.Show)
+	authGroup.POST("/auto-messages/image", autoMessageHandler.Image)
 
-	authGroup.GET("/dashboard/query-info", http.GetUserQueryInfo)
-	authGroup.GET("/dashboard/online-info", http.GetOnlineInfo)
+	authGroup.GET("/system-auto-rules", systemRuleHandler.Index)
+	authGroup.PUT("/system-auto-rules", systemRuleHandler.Update)
 
-	authGroup.GET("/transfers", http.GetTransfer)
-	authGroup.POST("/transfers/:id/cancel", http.CancelTransfer)
+	authGroup.GET("/options/messages", autoRuleHandler.MessageOptions)
+	authGroup.GET("/options/scenes", autoRuleHandler.SceneOptions)
+	authGroup.GET("/options/events", autoRuleHandler.EventOptions)
+
+	authGroup.POST("/auto-rules", autoRuleHandler.Store)
+	authGroup.PUT("/auto-rules/:id", autoRuleHandler.Update)
+	authGroup.GET("/auto-rules", autoRuleHandler.Index)
+	authGroup.GET("/auto-rules/:id", autoRuleHandler.Show)
+	authGroup.DELETE("/auto-rules/:id", autoRuleHandler.Delete)
+
+	authGroup.GET("/chat-sessions", chatSessionHandler.Index)
+	authGroup.GET("/chat-sessions/:id", chatSessionHandler.Show)
+
+	authGroup.GET("/dashboard/query-info", dashboardHandler.GetUserQueryInfo)
+	authGroup.GET("/dashboard/online-info", dashboardHandler.GetOnlineInfo)
+
+	authGroup.GET("/transfers", transferHandler.Index)
+	authGroup.POST("/transfers/:id/cancel", transferHandler.Cancel)
 
 	authGroup.GET("/ws", func(c *gin.Context) {
-		serviceUser := auth.GetAdmin(c)
+		admin := auth.GetAdmin(c)
 		setting := &models.AdminChatSetting{}
-		databases.Db.Model(serviceUser).Association("Setting").Find(setting)
-		serviceUser.Setting = setting
+		databases.Db.Model(admin).Association("Setting").Find(setting)
+		admin.Setting = setting
 		conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			log.Log.Error(err)
 			util.RespError(c , err.Error())
 			return
 		}
-		client := websocket.NewAdminConn(serviceUser, conn)
+		client := websocket.NewAdminConn(admin, conn)
 		client.Setup()
 		websocket.AdminHub.Login(client)
 	})

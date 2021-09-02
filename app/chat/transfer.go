@@ -8,7 +8,9 @@ import (
 	"time"
 	"ws/app/databases"
 	"ws/app/models"
+	"ws/app/repositories"
 )
+
 
 const (
 	// 转接待接入的用户 sets
@@ -16,13 +18,24 @@ const (
 )
 
 func CancelTransfer(transfer *models.ChatTransfer) error {
-	databases.Db.Where("admin_id = ?" , 0).
-		Where("user_id = ?" , transfer.UserId).Where("type = ?", models.ChatSessionTypeTransfer).
-		Delete(&models.ChatSession{})
+	chatSessionRepo.Delete([]*repositories.Where{
+		{
+			Filed: "admin_id = ?",
+			Value: 0,
+		},
+		{
+			Filed: "type = ? ",
+			Value: models.ChatSessionTypeTransfer,
+		},
+		{
+			Filed: "user_id = ?",
+			Value: transfer.UserId,
+		},
+	})
 	transfer.IsCanceled = true
 	t := time.Now()
 	transfer.CanceledAt = &t
-	databases.Db.Save(transfer)
+	_ = transferRepo.Save(transfer)
 	_ = RemoveTransfer(transfer.UserId)
 	return nil
 }
@@ -42,7 +55,7 @@ func Transfer(fromId int64, toId int64, uid int64, remark  string) error {
 		Remark:      remark,
 		CreatedAt:   &now,
 	}
-	databases.Db.Save(transfer)
+	transferRepo.Save(transfer)
 	_ = RemoveUserAdminId(uid, fromId)
 	_ = AddToTransfer(uid, toId)
 	CreateSession(uid, models.ChatSessionTypeTransfer)

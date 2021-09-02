@@ -77,6 +77,8 @@ func (hub *BaseHub) Login(client Conn) {
 	hub.Call(UserLogin, client)
 }
 // 给所有客户端发送心跳
+// 客户端因意外断开链接，服务器没有关闭事件，无法得知连接已关闭
+// 通过心跳发送""字符串，如果发送失败，则调用conn的close方法回收
 func (hub *BaseHub) Ping()  {
 	ticker := time.NewTicker(time.Second * 10)
 	for {

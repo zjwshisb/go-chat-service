@@ -40,7 +40,7 @@ func GetHistoryMessage(c *gin.Context) {
 		}
 	}
 
-	messages := repositories.GetMessages(wheres, size, []string{"Admin","User"})
+	messages := (&repositories.MessageRepo{}).Get(wheres, size, []string{"Admin","User"})
 	messagesResources := make([]*models.MessageJson, 0, len(messages))
 	for _, m := range messages {
 		messagesResources = append(messagesResources, m.ToJson())

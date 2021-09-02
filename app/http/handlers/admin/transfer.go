@@ -2,8 +2,6 @@ package admin
 
 import (
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-	"time"
 	"ws/app/chat"
 	"ws/app/databases"
 	"ws/app/models"
@@ -12,11 +10,20 @@ import (
 	"ws/app/websocket"
 )
 
-func CancelTransfer(c *gin.Context)  {
+type TransferHandler struct {
+
+}
+
+
+func (handler *TransferHandler) Cancel(c *gin.Context)  {
 	id := c.Param("id")
-	transfer := &models.ChatTransfer{}
-	query := databases.Db.Find(transfer, id)
-	if query.Error == gorm.ErrRecordNotFound {
+	transfer := transferRepo.First([]*repositories.Where{
+		{
+			Filed: "id = ?",
+			Value: id,
+		},
+	})
+	if transfer == nil {
 		util.RespNotFound(c)
 		return
 	}
@@ -28,9 +35,6 @@ func CancelTransfer(c *gin.Context)  {
 		util.RespValidateFail(c, "transfer is accepted")
 		return
 	}
-	t := time.Now()
-	transfer.CanceledAt = &t
-	transfer.IsCanceled = true
 	_ = chat.CancelTransfer(transfer)
 	_ , exist := websocket.AdminHub.GetConn(transfer.ToAdminId)
 	if exist {
@@ -39,7 +43,7 @@ func CancelTransfer(c *gin.Context)  {
 	util.RespSuccess(c , gin.H{})
 }
 
-func GetTransfer(c *gin.Context)  {
+func (handler *TransferHandler) Index(c *gin.Context)  {
 	transfers := make([]*models.ChatTransfer, 0)
 	databases.Db.Order("id desc").
 		Scopes(repositories.Paginate(c)).

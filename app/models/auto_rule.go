@@ -3,6 +3,7 @@ package models
 import (
 	"strings"
 	"time"
+	"ws/app/databases"
 	"ws/app/json"
 	"ws/app/util"
 )
@@ -12,7 +13,7 @@ const (
 	MatchTypePart = "part"
 
 	MatchEnter             = "enter"
-	MatchServiceAllOffLine = "u-offline"
+	MatchAdminAllOffLine = "u-offline"
 
 	ReplyTypeMessage  = "message"
 	ReplyTypeTransfer = "transfer"
@@ -126,6 +127,10 @@ func (rule *AutoRule) GetEventLabel() string {
 func (rule *AutoRule) ToJson() *AutoRuleJson {
 	scenesSli := make([]string, 0)
 	scenesLabel := ""
+	scenes := rule.Scenes
+	if scenes == nil {
+		databases.Db.Model(rule).Association("Scenes").Find(&scenes)
+	}
 	for _, scene := range rule.Scenes {
 		scenesSli = append(scenesSli, scene.Name)
 		for _, s := range ScenesOptions {
@@ -159,7 +164,13 @@ func (rule *AutoRule) ToJson() *AutoRuleJson {
 }
 
 func (rule *AutoRule) GetReplyMessage(uid int64) (message *Message) {
-	if rule.Message != nil {
+	 autoMessage := &AutoMessage{}
+	if rule.Message == nil {
+		databases.Db.Model(rule).Association("Message").Find(autoMessage)
+	} else {
+		autoMessage = rule.Message
+	}
+	if autoMessage.ID > 0{
 		message = &Message{
 			UserId:     uid,
 			AdminId:    0,

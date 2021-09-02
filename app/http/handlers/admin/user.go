@@ -12,7 +12,11 @@ import (
 	"ws/app/websocket"
 )
 
-func Me(c *gin.Context) {
+type UserHandler struct {
+
+}
+
+func (User *UserHandler) Info(c *gin.Context)  {
 	admin := auth.GetAdmin(c)
 	util.RespSuccess(c, gin.H{
 		"username": admin.GetUsername(),
@@ -20,8 +24,7 @@ func Me(c *gin.Context) {
 		"avatar":   admin.GetAvatarUrl(),
 	})
 }
-// 获取聊天设置
-func GetChatSetting(c *gin.Context) {
+func (User *UserHandler) Setting(c *gin.Context) {
 	admin := auth.GetAdmin(c)
 	setting := &models.AdminChatSetting{}
 	databases.Db.Model(admin).Association("Setting").Find(setting)
@@ -36,8 +39,7 @@ func GetChatSetting(c *gin.Context) {
 	}
 	util.RespSuccess(c, setting)
 }
-// 更新聊天设置
-func UpdateChatSetting(c *gin.Context)  {
+func (User *UserHandler) UpdateSetting(c *gin.Context) {
 	admin := auth.GetAdmin(c)
 	form  := requests.AdminChatSettingForm{}
 	err := c.ShouldBind(&form)
@@ -58,13 +60,13 @@ func UpdateChatSetting(c *gin.Context)  {
 	if exist {
 		adminConn, ok := connI.(*websocket.AdminConn)
 		if ok {
-			adminConn.UpdateSetting()
+			adminConn.User.RefreshSetting()
 		}
 	}
 	util.RespSuccess(c, gin.H{})
 }
-// 聊天设置图片
-func ChatSettingImage(c *gin.Context) {
+
+func (User *UserHandler) SettingImage(c *gin.Context) {
 	f, _ := c.FormFile("file")
 	ff, err := file.Save(f, "chat-settings")
 	if err != nil {
@@ -75,8 +77,8 @@ func ChatSettingImage(c *gin.Context) {
 		})
 	}
 }
-// 更新头像，用本地存储
-func Avatar(c *gin.Context) {
+
+func (User *UserHandler) Avatar(c *gin.Context) {
 	f, _ := c.FormFile("file")
 	storage := file.Disk("local")
 	fileInfo, err := storage.Save(f, "avatar")
@@ -100,3 +102,4 @@ func Avatar(c *gin.Context) {
 		util.RespSuccess(c, gin.H{})
 	}
 }
+
