@@ -24,13 +24,12 @@ func (handler *AutoMessageHandler) Image(c *gin.Context) {
 	}
 }
 func (handler *AutoMessageHandler) Index(c *gin.Context)  {
-	p := autoMessageRepo.Paginate(c)
-	origin := p.Data.([]*models.AutoMessage)
-	data := make([]*models.AutoMessageJson, 0, len(origin))
-	for _, msg := range origin {
-		data = append(data, msg.ToJson())
-	}
-	p.Data = data
+	wheres := requests.GetFilterWheres(c, []string{"type"})
+	p := autoMessageRepo.Paginate(c, wheres, []string{"Rules"}, "id desc")
+	_ = p.DataFormat(func(i interface{}) interface{} {
+		item := i.(*models.AutoMessage)
+		return item.ToJson()
+	})
 	util.RespPagination(c , p)
 }
 
@@ -43,7 +42,7 @@ func (handler *AutoMessageHandler) Show(c *gin.Context) {
 		},
 	})
 	if message != nil {
-		util.RespSuccess(c, message)
+		util.RespSuccess(c, message.ToJson())
 	} else {
 		util.RespNotFound(c)
 	}

@@ -3,7 +3,7 @@ package admin
 import (
 	"github.com/gin-gonic/gin"
 	"ws/app/chat"
-	"ws/app/databases"
+	"ws/app/http/requests"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/util"
@@ -11,7 +11,6 @@ import (
 )
 
 type TransferHandler struct {
-
 }
 
 
@@ -44,19 +43,11 @@ func (handler *TransferHandler) Cancel(c *gin.Context)  {
 }
 
 func (handler *TransferHandler) Index(c *gin.Context)  {
-	transfers := make([]*models.ChatTransfer, 0)
-	databases.Db.Order("id desc").
-		Scopes(repositories.Paginate(c)).
-		Preload("User").Preload("FromAdmin").Preload("ToAdmin").
-		Find(&transfers)
-	var total int64
-	databases.Db.Model(&models.AutoMessage{}).
-		Scopes(repositories.Filter(c, []string{"type"})).
-		Scopes().
-		Count(&total)
-	data := make([]*models.ChatTransferJson, 0, len(transfers))
-	for _, msg := range transfers {
-		data = append(data, msg.ToJson())
-	}
-	util.RespPagination(c , repositories.NewPagination(data, total))
+	wheres := requests.GetFilterWheres(c, []string{})
+	p := transferRepo.Paginate(c, wheres, []string{"User","ToAdmin","FromAdmin"}, "id desc")
+	_ = p.DataFormat(func(i interface{}) interface{} {
+		item := i.(models.ChatTransfer)
+		return item.ToJson()
+	})
+	util.RespPagination(c , p)
 }

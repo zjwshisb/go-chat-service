@@ -3,11 +3,9 @@ package routers
 import (
 	"github.com/gin-gonic/gin"
 	"ws/app/auth"
-	"ws/app/databases"
 	http "ws/app/http/handlers/admin"
 	middleware "ws/app/http/middleware/admin"
 	"ws/app/log"
-	"ws/app/models"
 	"ws/app/util"
 	"ws/app/websocket"
 )
@@ -88,9 +86,7 @@ func registerAdmin() {
 
 	authGroup.GET("/ws", func(c *gin.Context) {
 		admin := auth.GetAdmin(c)
-		setting := &models.AdminChatSetting{}
-		databases.Db.Model(admin).Association("Setting").Find(setting)
-		admin.Setting = setting
+		admin.GetSetting()
 		conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			log.Log.Error(err)

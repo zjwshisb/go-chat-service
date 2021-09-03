@@ -7,11 +7,6 @@ import (
 	"strconv"
 )
 
-type Pagination struct {
-	Data interface{} `json:"data"`
-	Total int64 `json:"total"`
-	Success bool `json:"success"`
-}
 
 
 type Where struct {
@@ -19,13 +14,6 @@ type Where struct {
 	Value interface{}
 }
 
-func NewPagination(data interface{}, total int64) *Pagination {
-	return &Pagination{
-		Data: data,
-		Total: total,
-		Success: true,
-	}
-}
 func Filter(c *gin.Context, fields []string) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		for _, field := range fields {

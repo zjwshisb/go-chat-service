@@ -1,8 +1,8 @@
 package admin
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
-	"ws/app/databases"
 	"ws/app/http/requests"
 	"ws/app/json"
 	"ws/app/models"
@@ -36,7 +36,7 @@ func (handle *AutoRuleHandler) EventOptions(c *gin.Context)  {
 }
 // 获取自定义规则列表
 func (handle *AutoRuleHandler) Index(c *gin.Context)  {
-	wheres := make([]Where, 0)
+	wheres := requests.GetFilterWheres(c, []string{"reply_type"})
 	name, _ := c.GetQuery("name")
 	if name != "" {
 		wheres = append(wheres, &repositories.Where{
@@ -46,18 +46,20 @@ func (handle *AutoRuleHandler) Index(c *gin.Context)  {
 	}
 	scene, _ := c.GetQuery("scenes")
 	if scene != "" {
-		ids := make([]string, 0)
-		databases.Db.Model(&models.AutoRuleScene{}).Where("name = ?" , scene).Pluck("rule_id", &ids)
 		wheres = append(wheres, &repositories.Where{
 			Filed: "id in ?",
-			Value: ids,
+			Value: autoRuleRepo.GetWithScenesRuleIds(scene),
 		})
 	}
 	wheres = append(wheres, &repositories.Where{
 		Filed: "is_system = ?",
 		Value: 0,
 	})
-	p := autoRuleRepo.Paginate(c, wheres...)
+	p := autoRuleRepo.Paginate(c, wheres, []string{"Message", "Scenes"}, "id desc")
+	_ = p.DataFormat(func(i interface{}) interface{} {
+		item := i.(*models.AutoRule)
+		return item.ToJson()
+	})
 	util.RespPagination(c , p)
 }
 // 获取自定义规则
@@ -78,7 +80,7 @@ func (handle *AutoRuleHandler) Show(c *gin.Context) {
 // 新增自定义规则
 func (handle *AutoRuleHandler) Store (c *gin.Context)  {
 	form := requests.AutoRuleForm{}
-	err := c.BindJSON(&form)
+	err := c.ShouldBind(&form)
 	if err != nil {
 		util.RespValidateFail(c, err.Error())
 		return
@@ -107,6 +109,7 @@ func (handle *AutoRuleHandler) Store (c *gin.Context)  {
 	if rule.ReplyType == models.ReplyTypeMessage  || rule.ReplyType == models.ReplyTypeEvent {
 		rule.MessageId = form.MessageId
 	}
+	fmt.Println(rule.Scenes)
 	autoRuleRepo.Save(rule)
 	util.RespSuccess(c, rule.ToJson())
 }

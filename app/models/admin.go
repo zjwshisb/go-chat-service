@@ -53,6 +53,15 @@ func (admin *Admin) GetSetting() *AdminChatSetting {
 	if admin.Setting == nil {
 		setting := &AdminChatSetting{}
 		databases.Db.Model(admin).Association("Setting").Find(setting)
+		if setting.Id == 0 {
+			setting = &AdminChatSetting{
+				AdminId:        admin.GetPrimaryKey(),
+				Name: admin.GetUsername(),
+				CreatedAt:      time.Time{},
+				UpdatedAt:      time.Time{},
+			}
+			databases.Db.Save(setting)
+		}
 		admin.Setting = setting
 	}
 	return admin.Setting
@@ -92,7 +101,6 @@ func (admin *Admin) FindByName(username string) bool {
 	databases.Db.Where("username= ?", username).First(admin)
 	return admin.ID > 0
 }
-
 func (admin *Admin) RefreshSetting()  {
 	setting := &AdminChatSetting{}
 	_ = databases.Db.Model(admin).Association("Setting").Find(setting)

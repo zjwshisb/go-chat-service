@@ -6,7 +6,6 @@ import (
 	"time"
 	"ws/app/auth"
 	"ws/app/chat"
-	"ws/app/databases"
 	"ws/app/file"
 	"ws/app/models"
 	"ws/app/repositories"
@@ -15,9 +14,7 @@ import (
 )
 
 type ChatHandler struct {
-
 }
-
 
 // 查看历史对话
 func (handle *ChatHandler) GetHistorySession(c *gin.Context) {
@@ -207,10 +204,20 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			util.RespValidateFail(c, "transfer error ")
 			return
 		}
-		transfer := &models.ChatTransfer{}
-		databases.Db.Where("to_admin_id = ?", admin.GetPrimaryKey()).
-			Where("user_id = ?", user.GetPrimaryKey()).
-			Where("is_accepted = ?" ,0).Find(transfer)
+		transfer := transferRepo.First([]Where{
+			{
+				Filed: "to_admin_id = ?",
+				Value: admin.GetPrimaryKey(),
+			},
+			{
+				Filed: "user_id = ?",
+				Value: user.GetPrimaryKey(),
+			},
+			{
+				Filed: "is_accepted = ?",
+				Value: 0,
+			},
+		})
 		if transfer.Id == 0 {
 			util.RespValidateFail(c, "transfer error ")
 			return
@@ -218,7 +225,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		now := time.Now()
 		transfer.AcceptedAt = &now
 		transfer.IsAccepted = true
-		databases.Db.Save(transfer)
+		transferRepo.Save(transfer)
 		_ = chat.RemoveTransfer(user.GetPrimaryKey())
 		websocket.AdminHub.BroadcastUserTransfer(admin.GetPrimaryKey())
 	}
@@ -460,8 +467,12 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		util.RespNotFound(c)
 		return
 	}
-	toAdmin := &models.Admin{}
-	databases.Db.Find(toAdmin, form.ToId)
+	toAdmin := adminRepo.First([]Where{
+		{
+			Filed: "id = ?",
+			Value: form.ToId,
+		},
+	})
 	if toAdmin.ID == 0 {
 		util.RespValidateFail(c , "admin_not_exist")
 		return

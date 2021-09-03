@@ -31,8 +31,6 @@ func (handler *DashboardHandler) GetUserQueryInfo(c *gin.Context) {
 		Where("queried_at >= ?", startTime).
 		Where("queried_at <= ?", endTime).
 		Count(&total)
-
-
 	var messageCount int64
 	databases.Db.Model(&models.Message{}).
 		Where("received_at >= ?", startTime).

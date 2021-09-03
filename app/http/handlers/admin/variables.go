@@ -10,4 +10,5 @@ var (
 	chatSessionRepo = &repositories.ChatSessionRepo{}
 	autoMessageRepo = &repositories.AutoMessageRepo{}
 	autoRuleRepo = &repositories.AutoRuleRepo{}
+	adminRepo = &repositories.AdminRepo{}
 )

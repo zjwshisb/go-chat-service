@@ -21,7 +21,7 @@ func autoMessageTypeValidator(fl validator.FieldLevel) bool {
 		fl.Field().String() == models.TypeImage {
 		if fl.Field().String() == models.TypeNavigate {
 			parent := fl.Parent()
-			form, _ := parent.Interface().(*AutoMessageForm)
+			form, _ := parent.Interface().(AutoMessageForm)
 			if form.Url == "" || form.Title == "" {
 				return false
 			}
@@ -32,7 +32,10 @@ func autoMessageTypeValidator(fl validator.FieldLevel) bool {
 }
 func autoRuleValidator(fl validator.FieldLevel) bool {
 	parent := fl.Parent()
-	form, _ := parent.Interface().(*AutoRuleForm)
+	form, ok := parent.Interface().(AutoRuleForm)
+	if !ok {
+		return false
+	}
 	if len(form.Scenes) > len(models.ScenesOptions) {
 		return false
 	}

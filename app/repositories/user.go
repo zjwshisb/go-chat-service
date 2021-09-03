@@ -7,6 +7,19 @@ import (
 	"ws/app/models"
 )
 
+type UserRepo struct {
+	
+}
+
+func (session *UserRepo) Get(wheres []*Where, limit int, load []string, orders ...string) []*models.User {
+	users := make([]*models.User, 0)
+	databases.Db.
+		Limit(limit).
+		Scopes(AddOrder(orders)).
+		Scopes(AddWhere(wheres)).Scopes(AddLoad(load)).
+		Find(&users)
+	return users
+}
 
 func GetUserById(id int64) (auth.User,  bool) {
 	var user models.User

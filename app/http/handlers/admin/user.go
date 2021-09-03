@@ -2,12 +2,9 @@ package admin
 
 import (
 	"github.com/gin-gonic/gin"
-	"time"
 	"ws/app/auth"
-	"ws/app/databases"
 	"ws/app/file"
 	"ws/app/http/requests"
-	"ws/app/models"
 	"ws/app/util"
 	"ws/app/websocket"
 )
@@ -26,18 +23,7 @@ func (User *UserHandler) Info(c *gin.Context)  {
 }
 func (User *UserHandler) Setting(c *gin.Context) {
 	admin := auth.GetAdmin(c)
-	setting := &models.AdminChatSetting{}
-	databases.Db.Model(admin).Association("Setting").Find(setting)
-	if setting.Id == 0 {
-		setting = &models.AdminChatSetting{
-			AdminId:        admin.GetPrimaryKey(),
-			Name: admin.GetUsername(),
-			CreatedAt:      time.Time{},
-			UpdatedAt:      time.Time{},
-		}
-		databases.Db.Save(setting)
-	}
-	util.RespSuccess(c, setting)
+	util.RespSuccess(c, admin.GetSetting())
 }
 func (User *UserHandler) UpdateSetting(c *gin.Context) {
 	admin := auth.GetAdmin(c)
@@ -47,14 +33,13 @@ func (User *UserHandler) UpdateSetting(c *gin.Context) {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
-	setting := &models.AdminChatSetting{}
-	databases.Db.Model(admin).Association("Setting").Find(setting)
+	setting := admin.GetSetting()
 	setting.Background = form.Background
 	setting.IsAutoAccept = form.IsAutoAccept
 	setting.WelcomeContent = form.WelcomeContent
 	setting.OfflineContent = form.OfflineContent
 	setting.Name = form.Name
-	databases.Db.Save(setting)
+	adminRepo.SaveSetting(setting)
 	// 如果当前在线，更新信息
 	connI , exist := websocket.AdminHub.GetConn(admin.GetPrimaryKey())
 	if exist {
@@ -87,13 +72,11 @@ func (User *UserHandler) Avatar(c *gin.Context) {
 	} else {
 		admin := auth.GetAdmin(c)
 		admin.Avatar = fileInfo.Path
-		databases.Db.Save(admin)
+		adminRepo.Save(admin)
 		// 如果当前在线，更新信息
 		connI , exist := websocket.AdminHub.GetConn(admin.GetPrimaryKey())
 		if exist {
-			setting := &models.AdminChatSetting{}
-			databases.Db.Model(admin).Association("Setting").Find(setting)
-			admin.Setting = setting
+			admin.GetSetting()
 			adminConn, ok := connI.(*websocket.AdminConn)
 			if ok {
 				adminConn.User = admin

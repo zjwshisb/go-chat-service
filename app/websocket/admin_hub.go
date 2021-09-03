@@ -4,7 +4,6 @@ import (
 	"sort"
 	"time"
 	"ws/app/chat"
-	"ws/app/databases"
 	"ws/app/models"
 	"ws/app/repositories"
 )
@@ -29,12 +28,9 @@ func (hub *adminHub) Run() {
 			ii := i[0]
 			if client, ok := ii.(*AdminConn); ok {
 				admin := client.User
-				adminSetting := &models.AdminChatSetting{}
-				databases.Db.Model(admin).Association("Setting").Find(adminSetting)
-				if adminSetting.Id > 0 {
-					adminSetting.LastOnline  = time.Now()
-					databases.Db.Save(adminSetting)
-				}
+				adminSetting := admin.GetSetting()
+				adminSetting.LastOnline  = time.Now()
+				adminRepo.SaveSetting(adminSetting)
 			}
 		}
 		hub.BroadcastAdmins()
@@ -44,11 +40,13 @@ func (hub *adminHub) Run() {
 // 广播待接入用户
 func (hub *adminHub) BroadcastWaitingUser() {
 	manualUid := chat.GetManualUserIds()
-	users := make([]models.User, 0)
-	databases.Db.Where("id in ?", manualUid).
-		Find(&users)
-	repo := &repositories.MessageRepo{}
-	messages := repo.GetUnSend([]*repositories.Where{
+	users := userRepo.Get([]Where{
+		{
+			Filed: "id in ?",
+			Value: manualUid,
+		},
+	}, -1, []string{} )
+	messages := messageRepo.GetUnSend([]*repositories.Where{
 		{
 			Filed: "user_id in ?",
 			Value: manualUid,
@@ -102,14 +100,20 @@ func (hub *adminHub) BroadcastWaitingUser() {
 func (hub *adminHub) BroadcastUserTransfer(adminId int64)   {
 	client, exist := hub.GetConn(adminId)
 	if exist {
-		transfers := make([]*models.ChatTransfer, 0)
-		databases.Db.Where("to_admin_id = ?", adminId).
-			Where("is_accepted = ?", 0).
-			Where("is_canceled = ?", 0).
-			Order("id desc").
-			Preload("FromAdmin").
-			Preload("User").
-			Find(&transfers)
+		transfers := transferRepo.Get([]Where{
+			{
+				Filed: "to_admin_id = ?",
+				Value: adminId,
+			},
+			{
+				Filed: "is_accepted = ?",
+				Value: 0,
+			},
+			{
+				Filed: "is_canceled",
+				Value: 0,
+			},
+		}, -1, []string{"FromAdmin", "User"}, "id desc")
 		data := make([]*models.ChatTransferJson, 0, len(transfers))
 		for _, transfer := range transfers {
 			data = append(data, transfer.ToJson())
@@ -120,17 +124,17 @@ func (hub *adminHub) BroadcastUserTransfer(adminId int64)   {
 // 广播在线admin
 func (hub *adminHub) BroadcastAdmins() {
 	var serviceUsers []*models.Admin
-	databases.Db.Find(&serviceUsers)
+	admins := adminRepo.Get([]Where{}, -1, []string{})
 	conns := hub.GetAllConn()
 	data := make([]models.AdminJson, 0, len(serviceUsers))
-	for _, serviceUser := range serviceUsers {
-		_, online := hub.GetConn(serviceUser.ID)
+	for _, admin := range admins {
+		_, online := hub.GetConn(admin.GetPrimaryKey())
 		if online {
 			data = append(data, models.AdminJson{
-				Avatar:           serviceUser.GetAvatarUrl(),
-				Username:         serviceUser.Username,
+				Avatar:           admin.GetAvatarUrl(),
+				Username:         admin.Username,
 				Online:           online,
-				Id:               serviceUser.GetPrimaryKey(),
+				Id:               admin.GetPrimaryKey(),
 			})
 		}
 	}

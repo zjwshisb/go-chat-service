@@ -9,4 +9,6 @@ var (
 	sessionRepo = &repositories.ChatSessionRepo{}
 	autoRuleRepo = &repositories.AutoRuleRepo{}
 	adminRepo = &repositories.AdminRepo{}
+	userRepo = &repositories.UserRepo{}
+	transferRepo = &repositories.TransferRepo{}
 )

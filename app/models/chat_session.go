@@ -1,5 +1,7 @@
 package models
 
+import "ws/app/databases"
+
 const ChatSessionTypeNormal = 0
 const ChatSessionTypeTransfer = 1
 
@@ -27,12 +29,18 @@ func (chatSession *ChatSession) getTypeLabel() string {
 }
 func (chatSession *ChatSession) ToJson() *ChatSessionJson {
 	var userName, adminName string
-	if chatSession.Admin != nil {
-		adminName = chatSession.Admin.Username
+	if chatSession.Admin == nil {
+		admin := &Admin{}
+		databases.Db.Model(chatSession).Association("Admin").Find(admin)
+		chatSession.Admin = admin
 	}
-	if chatSession.User != nil {
-		userName = chatSession.User.Username
+	adminName = chatSession.Admin.Username
+	if chatSession.User == nil {
+		user := &User{}
+		databases.Db.Model(chatSession).Association("User").Find(user)
+		chatSession.User = user
 	}
+	userName = chatSession.User.Username
 	return &ChatSessionJson{
 		Id:         chatSession.Id,
 		UserId:     chatSession.UserId,

@@ -9,7 +9,6 @@ import (
 type SettingHandler struct {
 }
 
-
 func (handler *SettingHandler) Update(c *gin.Context) {
 	var form = struct {
 		Value string `json:"value" form:"value" binding:"required"`

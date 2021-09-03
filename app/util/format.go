@@ -23,7 +23,6 @@ func RespValidateFail(c *gin.Context, msg interface{}) {
 	c.JSON(http.StatusUnprocessableEntity, gin.H{
 		"message": msg,
 	})
-	c.Abort()
 }
 func RespFail(c *gin.Context, msg interface{} , code int) {
 	c.JSON(http.StatusOK, gin.H{

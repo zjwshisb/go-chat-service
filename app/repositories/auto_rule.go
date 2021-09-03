@@ -17,6 +17,12 @@ func (repo *AutoRuleRepo) Update(wheres []*Where, values map[string]interface{})
 }
 func (repo *AutoRuleRepo) Save(model *models.AutoRule)  {
 	databases.Db.Omit(clause.Associations).Save(model)
+	for _ ,scene := range model.Scenes {
+		databases.Db.Save(&models.AutoRuleScene{
+			Name:      scene.Name,
+			RuleId:    model.ID,
+		})
+	}
 }
 func (repo *AutoRuleRepo) Delete(rule *models.AutoRule) int64 {
 	result := databases.Db.Delete(rule)
@@ -36,18 +42,21 @@ func (repo *AutoRuleRepo) Get(wheres []*Where, limit int, loads []string, orders
 	query.Find(&rules)
 	return rules
 }
-
-func (repo *AutoRuleRepo) Paginate(c *gin.Context, wheres ...*Where) *Pagination {
+func (repo *AutoRuleRepo) GetWithScenesRuleIds(scene string) []string {
+	ids := make([]string, 0)
+	databases.Db.Model(&models.AutoRuleScene{}).Where("name = ?" , scene).Pluck("rule_id", &ids)
+	return ids
+}
+func (repo *AutoRuleRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order ...string) *Pagination {
 	rules := make([]*models.AutoRule, 0)
-	databases.Db.Order("id desc").
-		Scopes(Filter(c, []string{"reply_type"})).
+	databases.Db.
 		Scopes(Paginate(c)).
 		Scopes(AddWhere(wheres)).
-		Preload("Message").
+		Scopes(AddLoad(load)).
+		Scopes(AddOrder(order)).
 		Find(&rules)
 	var total int64
 	databases.Db.Model(&models.AutoRule{}).
-		Scopes(Filter(c, []string{"reply_type"})).
 		Scopes(AddWhere(wheres)).
 		Count(&total)
 	return NewPagination(rules, total)
