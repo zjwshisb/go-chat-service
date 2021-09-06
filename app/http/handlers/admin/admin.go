@@ -8,6 +8,7 @@ type AdminsHandler struct {
 func (handle *AdminsHandler) Index(c *gin.Context){
 
 }
+
 func (handle *AdminsHandler) Show(c *gin.Context){
 
 }

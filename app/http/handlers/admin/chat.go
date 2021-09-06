@@ -234,10 +234,6 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
 		},
-		{
-			Filed: "source = ?",
-			Value: models.SourceUser,
-		},
 	})
 	sessionDuration := chat.GetServiceSessionSecond()
 	session.AcceptedAt = time.Now().Unix()
@@ -257,13 +253,12 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			Value: models.SourceUser,
 		},
 		{
-			Filed: "admin_id = ?",
-			Value: 0,
+			Filed: "session_id = ?",
+			Value: session.Id,
 		},
 	}, map[string]interface{}{
 		"admin_id": admin.ID,
-		"send_at":    now,
-		"session_id": session.Id,
+		"send_at":  now,
 	})
 	messages := messageRepo.Get([]*repositories.Where{
 		{

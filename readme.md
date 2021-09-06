@@ -1,11 +1,11 @@
-# websocket实现的在线客服系统
-基于golang(websocket，http)实现的在线客服系统，已在生产环境中使用  
-适用与不满足微信小程序自带的客服系统或多端需要共用一套客服系统的需求  
-需要与下面配套前端代码一起使用   
-- [客服前端代码](https://github.com/zjwshisb/service-frontend)
-- [用户端前端代码](https://github.com/zjwshisb/service-user) 
+# gochat客服系统
 
-依赖   
+### 介绍
+基于golang，ant-design-pro，Taro实现的在线客服系统。包含用户端(适配了微信小程序，H5，少量修改即可集成到现有项目中)，客服端(pc)，简单易用，已在生产环境中使用。
+- [客服前端代码仓库](https://github.com/zjwshisb/service-frontend)
+- [用户端前端代码仓库](https://github.com/zjwshisb/service-user) 
+
+依赖
 - mysql
 - redis
 
@@ -28,7 +28,8 @@
 ```
 
 ### 部署
-详见目录下nginx.conf，chat.service
+nginx部署可参考目录下nginx.conf   
+systemctl管理见chat.service
 
     
 ### 功能

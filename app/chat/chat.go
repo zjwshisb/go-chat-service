@@ -10,7 +10,6 @@ import (
 	"ws/app/databases"
 )
 
-
 const (
 	// 用户 => 客服 hashes
 	user2AdminHashKey = "user-to-admin"
@@ -21,7 +20,6 @@ const (
 	// 待人工接入的用户 sets
 	manualUserKey = "user:manual"
 )
-
 
 // 添加用户到人工客服列表
 func AddToManual(uid int64) error  {
@@ -69,6 +67,14 @@ func GetAdminUserIds(adminId int64)  ([]int64, []int64) {
 		times = append(times, score)
 	}
 	return uids, times
+}
+func GetAdminUserActiveCount(adminId int64) int {
+	ctx := context.Background()
+	cmd := databases.Redis.ZRangeByScore(ctx, GetAdminUserKey(adminId), &redis.ZRangeBy{
+		Min:    strconv.FormatInt(time.Now().Unix(), 10),
+		Max:    "+inf",
+	})
+	return len(cmd.Val())
 }
 // 设置客服用户最后聊天时间
 func SetAdminUserLastChatTime(uid int64,adminId int64) error {

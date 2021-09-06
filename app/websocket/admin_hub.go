@@ -135,6 +135,7 @@ func (hub *adminHub) BroadcastAdmins() {
 				Username:         admin.Username,
 				Online:           online,
 				Id:               admin.GetPrimaryKey(),
+				AcceptedCount: chat.GetAdminUserActiveCount(admin.GetPrimaryKey()),
 			})
 		}
 	}

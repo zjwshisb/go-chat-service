@@ -14,7 +14,7 @@ type AdminJson struct {
 	Username      string `json:"username"`
 	Online        bool   `json:"online"`
 	Id            int64  `json:"id"`
-	AcceptedCount int64  `json:"accepted_count"`
+	AcceptedCount int  `json:"accepted_count"`
 }
 
 type Admin struct {
