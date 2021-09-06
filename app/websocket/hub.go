@@ -24,6 +24,11 @@ func (hub *BaseHub) SendAction(a  *Action, clients ...Conn) {
 		c.Deliver(a)
 	}
 }
+// 是否存在
+func (hub *BaseHub) ConnExist(uid int64) bool {
+	_, exist := hub.GetConn(uid)
+	return exist
+}
 // 获取客户端
 func (hub *BaseHub) GetConn(uid int64) (client Conn,ok bool) {
 	hub.lock.RLock()

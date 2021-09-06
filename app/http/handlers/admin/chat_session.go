@@ -48,7 +48,7 @@ func (handler *ChatSessionHandler) Index(c *gin.Context)  {
 	}
 	p := chatSessionRepo.Paginate(c , wheres, []string{"Admin","User"},"id desc")
 	_ = p.DataFormat(func(i interface{}) interface{} {
-		item := i.(models.ChatSession)
+		item := i.(*models.ChatSession)
 		return item.ToJson()
 	})
 	util.RespPagination(c, p)

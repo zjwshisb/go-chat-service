@@ -66,7 +66,6 @@ func (admin *Admin) GetSetting() *AdminChatSetting {
 	}
 	return admin.Setting
 }
-
 // 客服名称
 func (admin *Admin) GetChatName() string {
 	setting := admin.GetSetting()
@@ -101,6 +100,7 @@ func (admin *Admin) FindByName(username string) bool {
 	databases.Db.Where("username= ?", username).First(admin)
 	return admin.ID > 0
 }
+
 func (admin *Admin) RefreshSetting()  {
 	setting := &AdminChatSetting{}
 	_ = databases.Db.Model(admin).Association("Setting").Find(setting)
