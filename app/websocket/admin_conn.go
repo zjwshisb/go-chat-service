@@ -7,7 +7,6 @@ import (
 	"ws/app/chat"
 	"ws/app/log"
 	"ws/app/models"
-	"ws/app/repositories"
 	"ws/app/wechat"
 	"ws/configs"
 )
@@ -54,8 +53,13 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 					userConn.Deliver(NewReceiveAction(msg))
 				} else {  // 用户不在线
 					hadSubscribe := chat.IsSubScribe(msg.UserId)
-					user, exist := repositories.GetUserById(msg.UserId)
-					if hadSubscribe && exist && user.GetMpOpenId() != "" {
+					user := userRepo.First([]Where{
+						{
+							Filed: "id = ?",
+							Value: msg.UserId,
+						},
+					})
+					if hadSubscribe && user != nil && user.GetMpOpenId() != "" {
 						err := wechat.GetMp().GetSubscribe().Send(&subscribe.Message{
 							ToUser:           user.GetMpOpenId(),
 							TemplateID:       configs.Wechat.SubscribeTemplateIdOne,

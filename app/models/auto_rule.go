@@ -167,10 +167,9 @@ func (rule *AutoRule) GetReplyMessage(uid int64) (message *Message) {
 	 autoMessage := &AutoMessage{}
 	if rule.Message == nil {
 		databases.Db.Model(rule).Association("Message").Find(autoMessage)
-	} else {
-		autoMessage = rule.Message
+		rule.Message = autoMessage
 	}
-	if autoMessage.ID > 0{
+	if rule.Message.ID > 0{
 		message = &Message{
 			UserId:     uid,
 			AdminId:    0,

@@ -29,14 +29,13 @@ type Admin struct {
 	Setting   *AdminChatSetting `json:"message" gorm:"foreignKey:admin_id"`
 	IsSuper bool `gorm:"is_super"`
 }
-// 是否有admin的权限
-func (admin *Admin) AccessTo(uid int64) bool {
+// 是否有user的权限
+func (admin *Admin) AccessTo(User *User) bool {
 	return true
 }
 func (admin *Admin)  GetIsSuper() bool {
 	return admin.IsSuper
 }
-
 func (admin *Admin) GetPrimaryKey() int64 {
 	return admin.ID
 }

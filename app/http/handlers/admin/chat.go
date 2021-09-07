@@ -2,6 +2,7 @@ package admin
 
 import (
 	"github.com/gin-gonic/gin"
+	"sort"
 	"strconv"
 	"time"
 	"ws/app/auth"
@@ -99,7 +100,12 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 	admin := auth.GetAdmin(c)
 	ids, times := chat.GetAdminUserIds(admin.GetPrimaryKey())
-	users := repositories.GetUserByIds(ids)
+	users := userRepo.Get([]Where{
+		{
+			Filed: "id in ?",
+			Value: ids,
+		},
+	}, -1, []string{})
 	resp := make([]*models.UserJson, 0, len(users))
 	userMap := make(map[int64]auth.User)
 	for _, user := range users {
@@ -126,7 +132,6 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 		chatUserRes.Disabled = disabled
 		if _, ok := websocket.UserHub.GetConn(u.GetPrimaryKey()); ok {
 			chatUserRes.Online = true
-
 		}
 		resp = append(resp, chatUserRes)
 	}
@@ -158,6 +163,9 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 			u.Online = true
 		}
 	}
+	sort.Slice(resp, func(i, j int) bool {
+		return resp[i].LastChatTime > resp[j].LastChatTime
+	})
 	util.RespSuccess(c, resp)
 }
 
@@ -174,13 +182,18 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	user, exist := repositories.GetUserById(form.Uid)
-	if !exist {
-		util.RespValidateFail(c, "invalid params")
+	user := userRepo.First([]Where{
+		{
+			Filed: "id = ?",
+			Value: form.Uid,
+		},
+	})
+	if user == nil {
+		util.RespNotFound(c)
 		return
 	}
 	admin := auth.GetAdmin(c)
-	if !admin.AccessTo(user.GetPrimaryKey()) {
+	if !admin.AccessTo(user) {
 		util.RespNotFound(c)
 		return
 	}
@@ -370,13 +383,18 @@ func (handle *ChatHandler) GetUserInfo(c *gin.Context)  {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
-	user, exist := repositories.GetUserById(uid)
-	if !exist {
+	user := userRepo.First([]Where{
+		{
+			Filed: "id = ?",
+			Value: uid,
+		},
+	})
+	if user == nil {
 		util.RespNotFound(c)
 		return
 	}
 	admin := auth.GetAdmin(c)
-	if !admin.AccessTo(user.GetPrimaryKey()) {
+	if !admin.AccessTo(user) {
 		util.RespNotFound(c)
 		return
 	}
@@ -457,8 +475,18 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		util.RespValidateFail(c , err.Error())
 		return
 	}
+	user := userRepo.First([]Where{
+		{
+			Filed: "id = ?",
+			Value: form.UserId,
+		},
+	})
+	if user == nil {
+		util.RespNotFound(c)
+		return
+	}
 	admin := auth.GetAdmin(c)
-	if !admin.AccessTo(form.UserId) {
+	if !admin.AccessTo(user) {
 		util.RespNotFound(c)
 		return
 	}

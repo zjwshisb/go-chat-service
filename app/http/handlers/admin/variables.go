@@ -11,4 +11,5 @@ var (
 	autoMessageRepo = &repositories.AutoMessageRepo{}
 	autoRuleRepo = &repositories.AutoRuleRepo{}
 	adminRepo = &repositories.AdminRepo{}
+	userRepo = &repositories.UserRepo{}
 )

@@ -52,6 +52,10 @@ func (hub *adminHub) BroadcastWaitingUser() {
 			Value: manualUid,
 		},
 	})
+	userMap := make(map[int64]*models.User)
+	for _, u := range users {
+		userMap[u.GetPrimaryKey()] = u
+	}
 	waitingUserMap := make(map[int64]*models.WaitingUserJson)
 	for _, user := range users {
 		waitingUserMap[user.GetPrimaryKey()] = &models.WaitingUserJson{
@@ -87,7 +91,8 @@ func (hub *adminHub) BroadcastWaitingUser() {
 		if ok {
 			adminUserSlice := make([]*models.WaitingUserJson, 0)
 			for _, userJson := range waitingUserSlice {
-				if adminConn.User.AccessTo(userJson.Id) {
+				u := userMap[userJson.Id]
+				if adminConn.User.AccessTo(u) {
 					adminUserSlice = append(adminUserSlice, userJson)
 				}
 			}
