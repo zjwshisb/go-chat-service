@@ -1,10 +1,8 @@
 package admin
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-module/carbon"
-	"reflect"
 	"time"
 	"ws/app/http/requests"
 	"ws/app/models"
@@ -56,7 +54,6 @@ var sessionFilter = map[string]interface{}{
 					Value: 0,
 				},
 			}
-			fmt.Println(reflect.TypeOf(wheres).Kind().String())
 			return wheres
 		}
 		return nil
