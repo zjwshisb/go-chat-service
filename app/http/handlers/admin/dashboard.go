@@ -46,6 +46,7 @@ func (handler *DashboardHandler) GetUserQueryInfo(c *gin.Context) {
 		Order("queried_at desc").
 		Where("queried_at >= ?", startTime).
 		Where("queried_at <= ?", endTime).
+		Where("accepted_at > ?", 0).
 		FindInBatches(&sessions,
 			100,
 			func(tx *gorm.DB, batch int) error {

@@ -16,8 +16,10 @@ type AdminsHandler struct {
 }
 
 func (handle *AdminsHandler) Index(c *gin.Context){
-	where := requests.GetFilterWheres(c, []string{"username"})
-	p := adminRepo.Paginate(c, where, []string{})
+	where := requests.GetFilterWhere(c, map[string]interface{}{
+		"username": "=",
+	})
+	p := adminRepo.Paginate(c, where, []string{}, "id desc")
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		admin := i.(*models.Admin)
 		return &models.AdminJson{

@@ -21,6 +21,6 @@ func init()  {
 		Command != "fake" &&
 		Command != "migrate" &&
 		Command != "seeder" {
-		log.Fatal("use ws start|stop|migrate|fake|seeder -c=config.ini -user ")
+		log.Fatal("use ws start|stop|migrate|fake|seeder -c=config.ini -u")
 	}
 }

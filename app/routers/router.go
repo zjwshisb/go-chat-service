@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"strings"
 	"ws/configs"
 )
 
@@ -19,6 +20,9 @@ var (
 )
 
 func Setup() {
+	if strings.ToLower(configs.App.Env) == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	Router = gin.New()
 	Router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},

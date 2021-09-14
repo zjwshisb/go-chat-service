@@ -6,9 +6,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 	"log"
-	mylog "ws/app/log"
 	"ws/configs"
 )
 
@@ -27,9 +25,6 @@ func init() {
 	db, err := gorm.Open(mysql.Open(dns),
 		&gorm.Config{
 			DisableForeignKeyConstraintWhenMigrating: true,
-			Logger: logger.New(mylog.Log, logger.Config{
-				LogLevel: logger.Error,
-			}),
 		})
 	if err != nil {
 		log.Fatal(err)

@@ -175,17 +175,27 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 // 一种是转接的接入，转接的接入要判断转接的对象是否当前admin
 func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	form := &struct {
-		Uid int64
+		Sid int64 `json:"sid"`
 	}{}
 	err := c.Bind(form)
 	if err != nil {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
+	session := chatSessionRepo.First([]Where{
+		{
+			Filed: "id = ?",
+			Value: form.Sid,
+		},
+	})
+	if session == nil || session.CanceledAt > 0 || session.AdminId > 0 {
+		util.RespNotFound(c)
+		return
+	}
 	user := userRepo.First([]Where{
 		{
 			Filed: "id = ?",
-			Value: form.Uid,
+			Value: session.UserId,
 		},
 	})
 	if user == nil {
@@ -201,12 +211,6 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		util.RespFail(c, "user had been accepted", 10001)
 		return
 	}
-	session := chat.GetSession(user.GetPrimaryKey(), 0)
-	if session == nil {
-		util.RespValidateFail(c , "chat session error")
-		return
-	}
-
 	if session.Type == models.ChatSessionTypeTransfer {
 		transferAdminId := chat.GetUserTransferId(user.GetPrimaryKey())
 		if transferAdminId == 0 {
@@ -246,6 +250,10 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		{
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
+		},
+		{
+			Filed: "session_id = ?",
+			Value: session.Id,
 		},
 	})
 	sessionDuration := chat.GetServiceSessionSecond()

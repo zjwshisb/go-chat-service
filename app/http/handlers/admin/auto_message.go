@@ -10,8 +10,8 @@ import (
 )
 
 type AutoMessageHandler struct {
-	
 }
+
 func (handler *AutoMessageHandler) Image(c *gin.Context) {
 	f, _ := c.FormFile("file")
 	ff, err := file.Save(f, "auto_message")
@@ -24,7 +24,9 @@ func (handler *AutoMessageHandler) Image(c *gin.Context) {
 	}
 }
 func (handler *AutoMessageHandler) Index(c *gin.Context)  {
-	wheres := requests.GetFilterWheres(c, []string{"type"})
+	wheres := requests.GetFilterWhere(c, map[string]interface{}{
+		"type" : "=",
+	})
 	p := autoMessageRepo.Paginate(c, wheres, []string{"Rules"}, "id desc")
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.AutoMessage)

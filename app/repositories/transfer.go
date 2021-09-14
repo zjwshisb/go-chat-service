@@ -36,8 +36,8 @@ func (repo *TransferRepo) First(where []*Where, orders ...string) *models.ChatTr
 func (repo *TransferRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order ...string) *Pagination {
 	transfer := make([]*models.ChatTransfer, 0)
 	databases.Db.Scopes(AddWhere(wheres)).
-		Scopes(AddOrder(load)).
-		Scopes(AddLoad(order)).
+		Scopes(AddOrder(order)).
+		Scopes(AddLoad(load)).
 		Scopes(Paginate(c)).
 		Find(&transfer)
 	var total int64

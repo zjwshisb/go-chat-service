@@ -10,11 +10,13 @@ type ChatSession struct {
 	UserId     int64  `gorm:"index"`
 	QueriedAt  int64
 	AcceptedAt int64
+	CanceledAt   int64
 	BrokeAt    int64
 	AdminId    int64  `gorm:"index"`
 	Admin      *Admin `gorm:"foreignKey:admin_id"`
 	Type       int    `gorm:"default:0"`
 	User       *User  `gorm:"foreignKey:user_id"`
+	Messages []*Message `gorm:"foreignKey:session_id"`
 }
 
 func (chatSession *ChatSession) getTypeLabel() string {
@@ -26,6 +28,15 @@ func (chatSession *ChatSession) getTypeLabel() string {
 	default:
 		return ""
 	}
+}
+func (chatSession *ChatSession) getStatus() string  {
+	if chatSession.CanceledAt > 0 {
+		return "cancel"
+	}
+	if chatSession.AcceptedAt > 0 {
+		return "accept"
+	}
+	return "wait"
 }
 func (chatSession *ChatSession) ToJson() *ChatSessionJson {
 	var userName, adminName string
@@ -47,8 +58,10 @@ func (chatSession *ChatSession) ToJson() *ChatSessionJson {
 		QueriedAt:  chatSession.QueriedAt * 1000,
 		AcceptedAt: chatSession.AcceptedAt * 1000,
 		BrokeAt:    chatSession.BrokeAt * 1000,
+		CanceledAt: chatSession.CanceledAt * 1000,
 		AdminId:    chatSession.AdminId,
 		TypeLabel:  chatSession.getTypeLabel(),
+		Status: chatSession.getStatus(),
 		UserName:   userName,
 		AdminName:  adminName,
 	}
@@ -60,8 +73,22 @@ type ChatSessionJson struct {
 	QueriedAt  int64  `json:"queried_at"`
 	AcceptedAt int64  `json:"accepted_at"`
 	BrokeAt    int64  `json:"broke_at"`
-	AdminId    int64  `json:"Admin_id"`
+	CanceledAt int64 `json:"canceled_at"`
+	AdminId    int64  `json:"admin_id"`
 	UserName   string `json:"user_name"`
 	AdminName  string `json:"admin_name"`
 	TypeLabel  string `json:"type_label"`
+	Status string `json:"status"`
+}
+
+type WaitingChatSessionJson struct {
+	Username     string `json:"username"`
+	Avatar       string `json:"avatar"`
+	UserId           int64  `json:"id"`
+	LastMessage  string `json:"last_message"`
+	LastTime     int64  `json:"last_time"`
+	LastType     string `json:"last_type"`
+	MessageCount int    `json:"message_count"`
+	Description  string `json:"description"`
+	SessionId   uint64 `json:"session_id"`
 }

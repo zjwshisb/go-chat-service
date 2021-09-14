@@ -36,21 +36,22 @@ func (handle *AutoRuleHandler) EventOptions(c *gin.Context)  {
 }
 // 获取自定义规则列表
 func (handle *AutoRuleHandler) Index(c *gin.Context)  {
-	wheres := requests.GetFilterWheres(c, []string{"reply_type"})
-	name, _ := c.GetQuery("name")
-	if name != "" {
-		wheres = append(wheres, &repositories.Where{
-			Filed: "name like ?",
-			Value: "%" + name + "%",
-		})
+	filter := map[string]interface{}{
+		"reply_type": "=",
+		"name" : func(val string) Where {
+			return &repositories.Where{
+				Filed: "name like ?",
+				Value: "%" + val + "%",
+			}
+		},
+		"scenes": func(val string) Where {
+			return &repositories.Where{
+				Filed: "id in ?",
+				Value: autoRuleRepo.GetWithScenesRuleIds(val),
+			}
+		},
 	}
-	scene, _ := c.GetQuery("scenes")
-	if scene != "" {
-		wheres = append(wheres, &repositories.Where{
-			Filed: "id in ?",
-			Value: autoRuleRepo.GetWithScenesRuleIds(scene),
-		})
-	}
+	wheres := requests.GetFilterWhere(c, filter)
 	wheres = append(wheres, &repositories.Where{
 		Filed: "is_system = ?",
 		Value: 0,

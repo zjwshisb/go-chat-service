@@ -86,7 +86,7 @@ type AutoRuleJson struct {
 	CreatedAt   time.Time    `json:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at"`
 	EventLabel  string       `json:"event_label"`
-	Message     *AutoMessage `json:"message"`
+	Message     *AutoMessageJson `json:"message"`
 	Scenes      []string     `json:"scenes"`
 	ScenesLabel string       `json:"scenes_label"`
 }
@@ -143,6 +143,10 @@ func (rule *AutoRule) ToJson() *AutoRuleJson {
 			}
 		}
 	}
+	var messageJson *AutoMessageJson
+	if rule.Message != nil {
+		messageJson = rule.Message.ToJson()
+	}
 	return &AutoRuleJson{
 		ID:          rule.ID,
 		Name:        rule.Name,
@@ -156,7 +160,7 @@ func (rule *AutoRule) ToJson() *AutoRuleJson {
 		Count:       rule.Count,
 		CreatedAt:   rule.CreatedAt,
 		UpdatedAt:   rule.UpdatedAt,
-		Message:     rule.Message,
+		Message:     messageJson,
 		EventLabel:  rule.GetEventLabel(),
 		Scenes:      scenesSli,
 		ScenesLabel: scenesLabel,
@@ -164,8 +168,8 @@ func (rule *AutoRule) ToJson() *AutoRuleJson {
 }
 
 func (rule *AutoRule) GetReplyMessage(uid int64) (message *Message) {
-	 autoMessage := &AutoMessage{}
 	if rule.Message == nil {
+		autoMessage := &AutoMessage{}
 		databases.Db.Model(rule).Association("Message").Find(autoMessage)
 		rule.Message = autoMessage
 	}

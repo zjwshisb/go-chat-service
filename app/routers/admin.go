@@ -77,6 +77,7 @@ func registerAdmin() {
 
 	authGroup.GET("/chat-sessions", chatSessionHandler.Index)
 	authGroup.GET("/chat-sessions/:id", chatSessionHandler.Show)
+	authGroup.POST("/chat-sessions/:id/cancel", chatSessionHandler.Cancel)
 
 	authGroup.GET("/dashboard/query-info", dashboardHandler.GetUserQueryInfo)
 	authGroup.GET("/dashboard/online-info", dashboardHandler.GetOnlineInfo)

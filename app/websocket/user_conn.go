@@ -48,7 +48,6 @@ func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, se
 	if session == nil {
 		session = &models.ChatSession{}
 	}
-LOOP:
 	for _, rule := range rules {
 		if rule.IsMatch(message.Content) && rule.SceneInclude(scene) {
 			switch rule.ReplyType {
@@ -85,7 +84,7 @@ LOOP:
 			}
 			rule.Count++
 			autoRuleRepo.Save(rule)
-			break LOOP
+			return
 		}
 	}
 }
@@ -146,14 +145,12 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 						}
 					}
 				} else { // 没有客服对象
-					messageRepo.Save(msg)
+					session := chat.GetSession(c.GetUserId(), 0)
 					if chat.GetUserTransferId(c.GetUserId()) == 0 {
 						if chat.IsInManual(c.GetUserId()) {
-							session := chat.GetSession(c.GetUserId(), msg.AdminId)
 							if session != nil {
 								msg.SessionId = session.Id
 							}
-							messageRepo.Save(msg)
 							AdminHub.BroadcastWaitingUser()
 						} else {
 							isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
@@ -162,12 +159,12 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 								if session != nil {
 									msg.SessionId = session.Id
 								}
-								messageRepo.Save(msg)
 							} else {
 								c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
 							}
 						}
 					}
+					messageRepo.Save(msg)
 				}
 			}
 		}

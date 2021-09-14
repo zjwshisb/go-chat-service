@@ -1,7 +1,6 @@
 package app
 
 import (
-	"gorm.io/gorm"
 	"ws/app/databases"
 	"ws/app/models"
 )
@@ -24,10 +23,10 @@ func Seeder()  {
 		},
 	}
 	for _, rule := range rules {
-		query := databases.Db.
-			Where("`match`=?" , rule.Match).
-			First(&models.AutoRule{})
-		if query.Error == gorm.ErrRecordNotFound {
+		var exist int64
+		databases.Db.
+			Where("`match`=?" , rule.Match).Count(&exist)
+		if exist == 0 {
 			databases.Db.Save(&rule)
 		}
 	}

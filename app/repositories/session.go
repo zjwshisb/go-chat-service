@@ -10,7 +10,6 @@ import (
 type ChatSessionRepo struct {
 
 }
-
 func (session *ChatSessionRepo) Save(model *models.ChatSession) int64 {
 	result := databases.Db.Omit(clause.Associations).Save(model)
 	return result.RowsAffected
@@ -28,27 +27,27 @@ func (session *ChatSessionRepo) First(where []*Where, orders ...string) *models.
 	return model
 }
 func (session *ChatSessionRepo) Get(wheres []*Where, limit int, load []string, orders ...string) []*models.ChatSession {
-	messages := make([]*models.ChatSession, 0)
+	sessions := make([]*models.ChatSession, 0)
 	databases.Db.
 		Limit(limit).
 		Scopes(AddOrder(orders)).
 		Scopes(AddWhere(wheres)).
 		Scopes(AddLoad(load)).
-		Find(&messages)
-	return messages
+		Find(&sessions)
+	return sessions
 }
 func (session *ChatSessionRepo) Paginate(c *gin.Context, wheres []*Where, load []string, orders ...string) *Pagination {
-	rules := make([]*models.ChatSession, 0)
+	sessions := make([]*models.ChatSession, 0)
 	databases.Db.Order("id desc").
 		Scopes(Paginate(c)).
 		Scopes(AddLoad(load)).
 		Scopes(AddOrder(orders)).
 		Scopes(AddWhere(wheres)).
-		Find(&rules)
+		Find(&sessions)
 	var total int64
-	databases.Db.Model(&models.AutoRule{}).
+	databases.Db.Model(&models.ChatSession{}).
 		Scopes(AddWhere(wheres)).
 		Count(&total)
-	return NewPagination(rules, total)
+	return NewPagination(sessions, total)
 }
 

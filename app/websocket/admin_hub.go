@@ -5,7 +5,6 @@ import (
 	"time"
 	"ws/app/chat"
 	"ws/app/models"
-	"ws/app/repositories"
 )
 
 type adminHub struct {
@@ -39,66 +38,52 @@ func (hub *adminHub) Run() {
 }
 // 广播待接入用户
 func (hub *adminHub) BroadcastWaitingUser() {
-	manualUid := chat.GetManualUserIds()
-	users := userRepo.Get([]Where{
+	sessions := sessionRepo.Get([]Where{
 		{
-			Filed: "id in ?",
-			Value: manualUid,
+			Filed: "admin_id = ?",
+			Value: 0,
 		},
-	}, -1, []string{} )
-	messages := messageRepo.GetUnSend([]*repositories.Where{
 		{
-			Filed: "user_id in ?",
-			Value: manualUid,
+			Filed: "canceled_at = ?",
+			Value: 0,
 		},
-	})
+	}, -1, []string{"User", "Messages"})
 	userMap := make(map[int64]*models.User)
-	for _, u := range users {
-		userMap[u.GetPrimaryKey()] = u
-	}
-	waitingUserMap := make(map[int64]*models.WaitingUserJson)
-	for _, user := range users {
-		waitingUserMap[user.GetPrimaryKey()] = &models.WaitingUserJson{
-			Username:     user.GetUsername(),
-			Avatar:       user.GetAvatarUrl(),
-			Id:           user.GetPrimaryKey(),
-			MessageCount: 0,
+	waitingUser :=  make([]*models.WaitingChatSessionJson, 0, len(sessions))
+	for _, session := range sessions {
+		userMap[session.UserId] = session.User
+		lastMessage := &models.Message{}
+		if len(session.Messages) > 0 {
+			lastMessage = session.Messages[len(session.Messages) - 1]
+		}
+		waitingUser = append(waitingUser, &models.WaitingChatSessionJson{
+			Username:     session.User.GetUsername(),
+			Avatar:       session.User.GetAvatarUrl(),
+			UserId:           session.User.GetPrimaryKey(),
+			MessageCount: len(session.Messages),
 			Description:  "",
-		}
+			LastTime: lastMessage.ReceivedAT,
+			LastMessage: lastMessage.Content,
+			LastType: lastMessage.Type,
+			SessionId: session.Id,
+		})
 	}
-	for _, message := range messages {
-		if wU, exist := waitingUserMap[message.UserId]; exist {
-			if wU.LastTime == 0 {
-				wU.LastTime = message.ReceivedAT
-				wU.LastMessage = message.Content
-				wU.MessageCount += 1
-				wU.LastType = message.Type
-			} else {
-				wU.MessageCount += 1
-			}
-		}
-	}
-	waitingUserSlice := make([]*models.WaitingUserJson, 0, len(waitingUserMap))
-	for _, user := range waitingUserMap {
-		waitingUserSlice = append(waitingUserSlice, user)
-	}
-	sort.Slice(waitingUserSlice, func(i, j int) bool {
-		return waitingUserSlice[i].LastTime > waitingUserSlice[j].LastTime
+	sort.Slice(waitingUser, func(i, j int) bool {
+		return waitingUser[i].LastTime > waitingUser[j].LastTime
 	})
 	conns := hub.GetAllConn()
 	for _, adminConnI := range conns {
 		adminConn, ok := adminConnI.(*AdminConn)
 		if ok {
-			adminUserSlice := make([]*models.WaitingUserJson, 0)
-			for _, userJson := range waitingUserSlice {
-				u := userMap[userJson.Id]
+			adminUserSlice := make([]*models.WaitingChatSessionJson, 0)
+			for _, userJson := range waitingUser {
+				u := userMap[userJson.UserId]
 				if adminConn.User.AccessTo(u) {
 					adminUserSlice = append(adminUserSlice, userJson)
 				}
 			}
 			adminConn.Deliver(NewWaitingUsers(adminUserSlice))
 		}
-
 	}
 }
 // 向admin推送待转接入的用户

@@ -28,7 +28,11 @@ func GetSession(uid int64, adminId int64) *models.ChatSession {
 			Filed: "admin_id = ?",
 			Value: adminId,
 		},
-	})
+		{
+			Filed: "canceled_at = ?",
+			Value: 0,
+		},
+	}, "id desc")
 	return session
 }
 

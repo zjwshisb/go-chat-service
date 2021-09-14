@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"fmt"
 	"ws/app/chat"
 	"ws/app/models"
 )
@@ -51,6 +52,7 @@ func (userHub *userHub) addToManual(uid int64) *models.ChatSession {
 	_ = chat.AddToManual(uid)
 	AdminHub.BroadcastWaitingUser()
 	session := chat.GetSession(uid, 0)
+	fmt.Println("test")
 	if session == nil {
 		session = chat.CreateSession(uid, models.ChatSessionTypeNormal)
 	}
