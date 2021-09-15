@@ -259,7 +259,6 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	sessionDuration := chat.GetServiceSessionSecond()
 	session.AcceptedAt = time.Now().Unix()
 	session.AdminId = admin.GetPrimaryKey()
-	session.BrokeAt = time.Now().Unix() + sessionDuration
 	chatSessionRepo.Save(session)
 	_ = chat.SetUserAdminId(user.GetPrimaryKey(), admin.GetPrimaryKey(), sessionDuration)
 	now := time.Now().Unix()
@@ -307,18 +306,20 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	userConn, exist := websocket.UserHub.GetConn(user.GetPrimaryKey())
 	chatUser.Online = exist
 	chatUser.LastChatTime = time.Now().Unix()
+	noticeMessage := &models.Message{
+		UserId:     user.GetPrimaryKey(),
+		AdminId:    admin.GetPrimaryKey(),
+		Type:       models.TypeNotice,
+		Content:    admin.GetChatName() + "为您服务",
+		ReceivedAT: time.Now().Unix(),
+		Source:     models.SourceSystem,
+		SessionId:  session.Id,
+		ReqId:      util.CreateReqId(),
+	}
 	if exist {
-		noticeMessage := &models.Message{
-			UserId:     user.GetPrimaryKey(),
-			AdminId:    admin.GetPrimaryKey(),
-			Type:       models.TypeNotice,
-			Content:    admin.GetChatName() + "为您服务",
-			ReceivedAT: time.Now().Unix(),
-			Source:     models.SourceSystem,
-			SessionId:  session.Id,
-			ReqId:      util.CreateReqId(),
-		}
 		userConn.Deliver(websocket.NewReceiveAction(noticeMessage))
+	} else {
+		messageRepo.Save(noticeMessage)
 	}
 	for index, m := range messages {
 		rm := m.ToJson()
@@ -331,12 +332,8 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 // 移除用户
 func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 	uidStr := c.Param("id")
-	uid, err := strconv.ParseInt(uidStr, 10, 64)
 	admin := auth.GetAdmin(c)
-	if err == nil {
-		_ = chat.RemoveUserAdminId(uid, admin.GetPrimaryKey())
-	}
-	record := chatSessionRepo.First([]Where{
+	session := chatSessionRepo.First([]Where{
 		{
 			Filed: "user_id = ?",
 			Value: uidStr,
@@ -346,9 +343,26 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 			Value: admin.GetPrimaryKey(),
 		},
 	}, "id desc")
-	if record != nil {
-		record.BrokeAt = time.Now().Unix()
-		chatSessionRepo.Save(record)
+	if session != nil {
+		if session.BrokeAt == 0 {
+			noticeMessage := &models.Message{
+				UserId:     session.UserId,
+				AdminId:    admin.GetPrimaryKey(),
+				Type:       models.TypeNotice,
+				Content:    "服务已断开",
+				ReceivedAT: time.Now().Unix(),
+				Source:     models.SourceSystem,
+				SessionId:  session.Id,
+				ReqId:      util.CreateReqId(),
+			}
+			userConn, exist := websocket.UserHub.GetConn(session.UserId)
+			if exist {
+				userConn.Deliver(websocket.NewReceiveAction(noticeMessage))
+			} else {
+				messageRepo.Save(noticeMessage)
+			}
+		}
+		chat.CloseSession(session, true, false)
 	}
 	util.RespSuccess(c, nil)
 }

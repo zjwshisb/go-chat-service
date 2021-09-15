@@ -56,7 +56,7 @@ func Transfer(fromId int64, toId int64, uid int64, remark  string) error {
 		CreatedAt:   &now,
 	}
 	transferRepo.Save(transfer)
-	_ = RemoveUserAdminId(uid, fromId)
+	CloseSession(session, true, true)
 	_ = AddToTransfer(uid, toId)
 	CreateSession(uid, models.ChatSessionTypeTransfer)
 	return nil

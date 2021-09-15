@@ -80,14 +80,17 @@ type ChatSessionJson struct {
 	TypeLabel  string `json:"type_label"`
 	Status string `json:"status"`
 }
-
+type SimpleMessage struct {
+	Type string `json:"type"`
+	Time int64 `json:"time"`
+	Content string `json:"content"`
+}
 type WaitingChatSessionJson struct {
 	Username     string `json:"username"`
 	Avatar       string `json:"avatar"`
 	UserId           int64  `json:"id"`
-	LastMessage  string `json:"last_message"`
-	LastTime     int64  `json:"last_time"`
-	LastType     string `json:"last_type"`
+	LastTime int64 `json:"last_time"`
+	Messages []*SimpleMessage `json:"messages"`
 	MessageCount int    `json:"message_count"`
 	Description  string `json:"description"`
 	SessionId   uint64 `json:"session_id"`

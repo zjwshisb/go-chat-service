@@ -52,6 +52,14 @@ func (hub *adminHub) BroadcastWaitingUser() {
 	waitingUser :=  make([]*models.WaitingChatSessionJson, 0, len(sessions))
 	for _, session := range sessions {
 		userMap[session.UserId] = session.User
+		msgs := make([]*models.SimpleMessage, 0, len(session.Messages))
+		for _, m := range session.Messages {
+			msgs = append(msgs, &models.SimpleMessage{
+				Type:    m.Type,
+				Time:    m.ReceivedAT,
+				Content: m.Content,
+			})
+		}
 		lastMessage := &models.Message{}
 		if len(session.Messages) > 0 {
 			lastMessage = session.Messages[len(session.Messages) - 1]
@@ -62,9 +70,8 @@ func (hub *adminHub) BroadcastWaitingUser() {
 			UserId:           session.User.GetPrimaryKey(),
 			MessageCount: len(session.Messages),
 			Description:  "",
+			Messages: msgs,
 			LastTime: lastMessage.ReceivedAT,
-			LastMessage: lastMessage.Content,
-			LastType: lastMessage.Type,
 			SessionId: session.Id,
 		})
 	}

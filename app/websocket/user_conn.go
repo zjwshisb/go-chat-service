@@ -58,6 +58,7 @@ func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, se
 					message.SessionId = session.Id
 					message.Save()
 				}
+				AdminHub.BroadcastWaitingUser()
 			// 回复消息
 			case models.ReplyTypeMessage:
 				msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
@@ -112,8 +113,6 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 					addTime := chat.GetServiceSessionSecond()
 					_ = chat.UpdateUserAdminId(msg.UserId, msg.AdminId, addTime)
 					msg.SessionId = session.Id
-					session.BrokeAt = time.Now().Unix() + addTime
-					sessionRepo.Save(session)
 					messageRepo.Save(msg)
 					adminConn, exist := AdminHub.GetConn(msg.AdminId)
 					// 客服在线
@@ -140,17 +139,18 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 							lastOnline := setting.LastOnline
 							duration := chat.GetOfflineDuration()
 							if (lastOnline.Unix() + duration) < time.Now().Unix() {
-								_ = chat.RemoveUserAdminId(msg.UserId, msg.AdminId)
+								chat.CloseSession(session, false, true)
 							}
 						}
 					}
 				} else { // 没有客服对象
-					session := chat.GetSession(c.GetUserId(), 0)
 					if chat.GetUserTransferId(c.GetUserId()) == 0 {
 						if chat.IsInManual(c.GetUserId()) {
+							session := chat.GetSession(c.GetUserId(), 0)
 							if session != nil {
 								msg.SessionId = session.Id
 							}
+							messageRepo.Save(msg)
 							AdminHub.BroadcastWaitingUser()
 						} else {
 							isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
@@ -158,13 +158,15 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 								session := c.handleTransferToManual()
 								if session != nil {
 									msg.SessionId = session.Id
+									messageRepo.Save(msg)
 								}
+								AdminHub.BroadcastWaitingUser()
 							} else {
 								c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
 							}
 						}
 					}
-					messageRepo.Save(msg)
+
 				}
 			}
 		}

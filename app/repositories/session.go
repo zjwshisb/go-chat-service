@@ -20,8 +20,8 @@ func (session *ChatSessionRepo) Delete(where []*Where) int64  {
 }
 func (session *ChatSessionRepo) First(where []*Where, orders ...string) *models.ChatSession  {
 	model := &models.ChatSession{}
-	result := databases.Db.Scopes(AddWhere(where)).Scopes(AddOrder(orders)).First(model)
-	if result.Error != nil {
+	result := databases.Db.Scopes(AddWhere(where)).Scopes(AddOrder(orders)).Find(model)
+	if result.RowsAffected == 0 {
 		return nil
 	}
 	return model

@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-module/carbon"
 	"time"
+	"ws/app/chat"
 	"ws/app/http/requests"
 	"ws/app/models"
 	"ws/app/repositories"
@@ -107,6 +108,7 @@ func (handler *ChatSessionHandler) Cancel(c *gin.Context)  {
 	}
 	session.CanceledAt = time.Now().Unix()
 	chatSessionRepo.Save(session)
+	_ = chat.RemoveManual(session.UserId)
 	websocket.AdminHub.BroadcastWaitingUser()
 	util.RespSuccess(c, gin.H{})
 }

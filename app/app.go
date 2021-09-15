@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"ws/app/cron"
 	_ "ws/app/databases"
 	_ "ws/app/http/requests"
 	_ "ws/app/log"
@@ -74,6 +75,9 @@ func Start()  {
 			Addr:    configs.Http.Host +":" + configs.Http.Port,
 			Handler: routers.Router,
 		}
+		go func() {
+			cron.Run()
+		}()
 		go func() {
 			err := srv.ListenAndServe()
 			if err != nil  {

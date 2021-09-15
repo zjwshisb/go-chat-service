@@ -52,7 +52,7 @@ func GetManualUserIds() []int64 {
 	}
 	return uid
 }
-// 获取聊天过的用户ids以及对应的最后聊天时间
+// 获取聊天过的用户ids以及对应的有效时间
 func GetAdminUserIds(adminId int64)  ([]int64, []int64) {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRevRangeWithScores(ctx, GetAdminUserKey(adminId), 0, -1)

@@ -30,6 +30,7 @@ func autoMessageTypeValidator(fl validator.FieldLevel) bool {
 	}
 	return false
 }
+
 func autoRuleValidator(fl validator.FieldLevel) bool {
 	parent := fl.Parent()
 	form, ok := parent.Interface().(AutoRuleForm)

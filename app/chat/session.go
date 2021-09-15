@@ -7,6 +7,17 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 )
+// 关闭会话
+func CloseSession(session *models.ChatSession, isRemoveUser bool, updateTime bool) {
+	session.BrokeAt = time.Now().Unix()
+	chatSessionRepo.Save(session)
+	if isRemoveUser {
+		_ = RemoveUserAdminId(session.UserId, session.AdminId)
+	}
+	if updateTime {
+		_ = UpdateUserAdminId(session.UserId, session.AdminId, 0)
+	}
+}
 // 创建会话
 func CreateSession(uid int64, t int) *models.ChatSession {
 	session := &models.ChatSession{}
@@ -27,6 +38,10 @@ func GetSession(uid int64, adminId int64) *models.ChatSession {
 		{
 			Filed: "admin_id = ?",
 			Value: adminId,
+		},
+		{
+			Filed: "broke_at = ? ",
+			Value: 0,
 		},
 		{
 			Filed: "canceled_at = ?",

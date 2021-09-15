@@ -37,8 +37,6 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 					return
 				}
 				sessionAddTime := chat.GetUserSessionSecond()
-				session.BrokeAt = time.Now().Unix() + sessionAddTime
-				sessionRepo.Save(session)
 				msg.AdminId = c.GetUserId()
 				msg.Source = models.SourceAdmin
 				msg.ReceivedAT = time.Now().Unix()
