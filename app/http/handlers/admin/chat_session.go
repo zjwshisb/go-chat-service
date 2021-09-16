@@ -131,7 +131,7 @@ func (handler *ChatSessionHandler) Show(c *gin.Context) {
 			Filed: "source in ?",
 			Value: []int{models.SourceAdmin, models.SourceUser},
 		},
-	}, -1, []string{"User", "Admin"})
+	}, -1, []string{"User", "Admin"}, "id desc")
 	data := make([]*models.MessageJson, 0, 0)
 	for _, msg:= range messages {
 		data = append(data, msg.ToJson())

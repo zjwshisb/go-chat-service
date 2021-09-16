@@ -75,6 +75,19 @@ func (admin *Admin) GetChatName() string {
 	}
 	return admin.GetUsername()
 }
+// 断开消息
+func (admin *Admin) GetBreakMessage(uid int64, sessionId uint64) *Message {
+	return &Message{
+		UserId:     uid,
+		AdminId:    admin.GetPrimaryKey(),
+		Type:       TypeNotice,
+		Content:    admin.GetChatName() + "已断开服务",
+		ReceivedAT: time.Now().Unix(),
+		Source:     SourceSystem,
+		SessionId:  sessionId,
+		ReqId:      util.CreateReqId(),
+	}
+}
 func (admin *Admin) Login() (token string) {
 	token = util.RandomStr(32)
 	databases.Db.Model(admin).Update("api_token", token)

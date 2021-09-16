@@ -3,9 +3,7 @@ package cron
 import (
 	"time"
 	"ws/app/chat"
-	"ws/app/models"
 	"ws/app/repositories"
-	"ws/app/util"
 	"ws/app/websocket"
 )
 
@@ -34,16 +32,7 @@ func closeSessions()  {
 				}, "id desc")
 				if session != nil {
 					chat.CloseSession(session, false, false)
-					noticeMessage := &models.Message{
-						UserId:     session.UserId,
-						AdminId:    admin.GetPrimaryKey(),
-						Type:       models.TypeNotice,
-						Content:    "服务已断开",
-						ReceivedAT: time.Now().Unix(),
-						Source:     models.SourceSystem,
-						SessionId:  session.Id,
-						ReqId:      util.CreateReqId(),
-					}
+					noticeMessage := admin.GetBreakMessage(uid, session.Id)
 					userConn, exist := websocket.UserHub.GetConn(uid)
 					if exist {
 						userConn.Deliver(websocket.NewReceiveAction(noticeMessage))

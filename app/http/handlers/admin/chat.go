@@ -293,7 +293,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			Filed: "source in ?",
 			Value: []int{models.SourceAdmin, models.SourceUser},
 		},
-	}, 20, []string{"User", "Admin"})
+	}, 20, []string{"User", "Admin"}, "id desc")
 	messageLength := len(messages)
 	chatUser := &models.UserJson{
 		ID:           user.GetPrimaryKey(),
@@ -306,16 +306,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	userConn, exist := websocket.UserHub.GetConn(user.GetPrimaryKey())
 	chatUser.Online = exist
 	chatUser.LastChatTime = time.Now().Unix()
-	noticeMessage := &models.Message{
-		UserId:     user.GetPrimaryKey(),
-		AdminId:    admin.GetPrimaryKey(),
-		Type:       models.TypeNotice,
-		Content:    admin.GetChatName() + "为您服务",
-		ReceivedAT: time.Now().Unix(),
-		Source:     models.SourceSystem,
-		SessionId:  session.Id,
-		ReqId:      util.CreateReqId(),
-	}
+	noticeMessage := admin.GetBreakMessage(user.GetPrimaryKey(), session.Id)
 	if exist {
 		userConn.Deliver(websocket.NewReceiveAction(noticeMessage))
 	} else {
@@ -349,7 +340,7 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 				UserId:     session.UserId,
 				AdminId:    admin.GetPrimaryKey(),
 				Type:       models.TypeNotice,
-				Content:    "服务已断开",
+				Content:    admin.GetChatName() + "已断开服务",
 				ReceivedAT: time.Now().Unix(),
 				Source:     models.SourceSystem,
 				SessionId:  session.Id,
@@ -448,7 +439,7 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 			Filed: "session_id = ?",
 			Value: transfer.SessionId,
 		},
-	}, -1 , []string{"Admin", "User"})
+	}, -1 , []string{"Admin", "User"}, "id desc")
 	res := make([]*models.MessageJson, 0, len(messages))
 	for _, m := range messages {
 		res = append(res, m.ToJson())

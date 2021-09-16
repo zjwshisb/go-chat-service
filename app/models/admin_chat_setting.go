@@ -2,7 +2,6 @@ package models
 
 import (
 	"time"
-	"ws/app/databases"
 	"ws/app/util"
 )
 
@@ -20,8 +19,6 @@ type AdminChatSetting struct {
 }
 
 func (setting *AdminChatSetting) GetOfflineMsg(uid int64, sessionId uint64) *Message  {
-	admin := &Admin{}
-	databases.Db.Where("id = ?", setting.AdminId).Find(admin)
 	offlineMsg := &Message{
 		UserId:     uid,
 		AdminId:    setting.AdminId,

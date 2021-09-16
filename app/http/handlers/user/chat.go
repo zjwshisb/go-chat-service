@@ -31,7 +31,7 @@ func GetHistoryMessage(c *gin.Context) {
 			})
 		}
 	}
-	var size = 100
+	var size = 30
 	sizeStr, exist := c.GetQuery("size")
 	if exist {
 		sizeInt, err := strconv.Atoi(sizeStr)
@@ -39,7 +39,7 @@ func GetHistoryMessage(c *gin.Context) {
 			size = sizeInt
 		}
 	}
-	messages := messageRepo.Get(wheres, size, []string{"Admin","User"})
+	messages := messageRepo.Get(wheres, size, []string{"Admin","User"}, "id desc")
 	messagesResources := make([]*models.MessageJson, 0, len(messages))
 	for _, m := range messages {
 		messagesResources = append(messagesResources, m.ToJson())

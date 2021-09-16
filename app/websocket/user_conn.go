@@ -140,6 +140,8 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 							duration := chat.GetOfflineDuration()
 							if (lastOnline.Unix() + duration) < time.Now().Unix() {
 								chat.CloseSession(session, false, true)
+								noticeMessage := admin.GetBreakMessage(c.GetUserId(), session.Id)
+								c.Deliver(NewReceiveAction(noticeMessage))
 							}
 						}
 					}

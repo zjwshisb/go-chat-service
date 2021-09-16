@@ -15,7 +15,7 @@ func (repo *MessageRepo) Save(message *models.Message)  {
 
 func (repo *MessageRepo) Get(wheres []*Where, limit int, loads []string, orders ...string) []*models.Message {
 	messages := make([]*models.Message, 0)
-	query := databases.Db.Order("received_at desc").
+	query := databases.Db.
 		Limit(limit).
 		Scopes(AddWhere(wheres)).Scopes(AddLoad(loads)).Scopes(AddOrder(orders))
 	query.Find(&messages)

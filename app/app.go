@@ -76,9 +76,6 @@ func Start()  {
 			Handler: routers.Router,
 		}
 		go func() {
-			cron.Run()
-		}()
-		go func() {
 			err := srv.ListenAndServe()
 			if err != nil  {
 				if err != http.ErrServerClosed {
@@ -86,6 +83,9 @@ func Start()  {
 					log.Fatalln(err)
 				}
 			}
+		}()
+		go func() {
+			cron.Run()
 		}()
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 		logPid()
