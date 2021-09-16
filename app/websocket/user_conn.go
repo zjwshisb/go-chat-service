@@ -160,8 +160,8 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 								session := c.handleTransferToManual()
 								if session != nil {
 									msg.SessionId = session.Id
-									messageRepo.Save(msg)
 								}
+								messageRepo.Save(msg)
 								AdminHub.BroadcastWaitingUser()
 							} else {
 								c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
