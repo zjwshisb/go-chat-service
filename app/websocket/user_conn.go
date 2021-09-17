@@ -56,7 +56,7 @@ func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, se
 				session := c.handleTransferToManual()
 				if session != nil {
 					message.SessionId = session.Id
-					message.Save()
+					messageRepo.Save(message)
 				}
 				AdminHub.BroadcastWaitingUser()
 			// 回复消息
@@ -64,7 +64,7 @@ func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, se
 				msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
 				if msg != nil {
 					msg.SessionId = session.Id
-					msg.Save()
+					messageRepo.Save(msg)
 					c.Deliver(NewReceiveAction(msg))
 				}
 			//触发事件
@@ -164,6 +164,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 								messageRepo.Save(msg)
 								AdminHub.BroadcastWaitingUser()
 							} else {
+								messageRepo.Save(msg)
 								c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
 							}
 						}

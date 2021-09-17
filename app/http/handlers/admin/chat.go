@@ -306,7 +306,16 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	userConn, exist := websocket.UserHub.GetConn(user.GetPrimaryKey())
 	chatUser.Online = exist
 	chatUser.LastChatTime = time.Now().Unix()
-	noticeMessage := admin.GetBreakMessage(user.GetPrimaryKey(), session.Id)
+	noticeMessage := &models.Message{
+		UserId:     user.GetPrimaryKey(),
+		AdminId:    admin.GetPrimaryKey(),
+		Type:       models.TypeNotice,
+		Content:    admin.GetChatName() + "为您服务",
+		ReceivedAT: time.Now().Unix(),
+		Source:     models.SourceSystem,
+		SessionId:  session.Id,
+		ReqId:      util.CreateReqId(),
+	}
 	if exist {
 		userConn.Deliver(websocket.NewReceiveAction(noticeMessage))
 	} else {
