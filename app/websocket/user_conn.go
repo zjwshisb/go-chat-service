@@ -29,9 +29,8 @@ func (c *UserConn) handleTransferToManual() *models.ChatSession {
 				case models.ReplyTypeMessage:
 					msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
 					if msg != nil {
-						msg.Save()
-						rule.Count++
-						autoRuleRepo.Save(rule)
+						messageRepo.Save(msg)
+						rule.AddCount()
 						c.Deliver(NewReceiveAction(msg))
 						return nil
 					}
