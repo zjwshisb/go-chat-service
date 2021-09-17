@@ -127,9 +127,10 @@ func (rule *AutoRule) GetEventLabel() string {
 func (rule *AutoRule) ToJson() *AutoRuleJson {
 	scenesSli := make([]string, 0)
 	scenesLabel := ""
-	scenes := rule.Scenes
-	if scenes == nil {
+	if rule.Scenes == nil {
+		scenes := make([]*AutoRuleScene, 0, 0)
 		databases.Db.Model(rule).Association("Scenes").Find(&scenes)
+		rule.Scenes = scenes
 	}
 	for _, scene := range rule.Scenes {
 		scenesSli = append(scenesSli, scene.Name)
