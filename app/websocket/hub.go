@@ -52,7 +52,7 @@ func (hub *BaseHub) RemoveConn(uid int64) {
 func (hub *BaseHub) GetAllConn() (s []Conn){
 	hub.lock.RLock()
 	defer hub.lock.RUnlock()
-	r := make([]Conn, 0)
+	r := make([]Conn, 0, len(hub.Clients))
 	for _, c := range hub.Clients {
 		r = append(r, c)
 	}

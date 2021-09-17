@@ -18,76 +18,6 @@ func (c *UserConn) GetUserId() int64 {
 	return c.User.GetPrimaryKey()
 }
 
-// 转接到人工客服列表
-func (c *UserConn) handleTransferToManual() *models.ChatSession {
-	if !chat.IsInManual(c.GetUserId()) {
-		onlineServerCount := len(AdminHub.Clients)
-		if onlineServerCount == 0 { // 如果没有在线客服
-			rule := autoRuleRepo.GetAdminAllOffLine()
-			if rule != nil {
-				switch rule.ReplyType {
-				case models.ReplyTypeMessage:
-					msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
-					if msg != nil {
-						messageRepo.Save(msg)
-						rule.AddCount()
-						c.Deliver(NewReceiveAction(msg))
-						return nil
-					}
-				default:
-				}
-			}
-		}
-		return UserHub.addToManual(c.GetUserId())
-	}
-	return nil
-}
-func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, session *models.ChatSession) {
-	rules := autoRuleRepo.GetAllActiveNormal()
-	if session == nil {
-		session = &models.ChatSession{}
-	}
-	for _, rule := range rules {
-		if rule.IsMatch(message.Content) && rule.SceneInclude(scene) {
-			switch rule.ReplyType {
-			// 转接人工客服
-			case models.ReplyTypeTransfer:
-				session := c.handleTransferToManual()
-				if session != nil {
-					message.SessionId = session.Id
-					messageRepo.Save(message)
-				}
-				AdminHub.BroadcastWaitingUser()
-			// 回复消息
-			case models.ReplyTypeMessage:
-				msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
-				if msg != nil {
-					msg.SessionId = session.Id
-					messageRepo.Save(msg)
-					c.Deliver(NewReceiveAction(msg))
-				}
-			//触发事件
-			case models.ReplyTypeEvent:
-				switch rule.Key {
-				case "break":
-					adminId := chat.GetUserLastAdminId(c.GetUserId())
-					if adminId > 0 {
-						_ = chat.RemoveUserAdminId(c.GetUserId(), adminId)
-					}
-					msg := rule.GetReplyMessage(c.User.GetPrimaryKey())
-					if msg != nil {
-						msg.SessionId = session.Id
-						messageRepo.Save(msg)
-						c.Deliver(NewReceiveAction(msg))
-					}
-				}
-			}
-			rule.AddCount()
-			return
-		}
-	}
-}
-
 func (c *UserConn) onReceiveMessage(act *Action) {
 	switch act.Action {
 	case SendMessageAction:
@@ -115,7 +45,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 					adminConn, exist := AdminHub.GetConn(msg.AdminId)
 					// 客服在线
 					if exist {
-						c.triggerMessageEvent(models.SceneAdminOnline, msg, session)
+						UserHub.triggerMessageEvent(models.SceneAdminOnline, msg, session)
 						adminConn.Deliver(NewReceiveAction(msg))
 					} else { // 客服不在线
 						admin := adminRepo.First([]Where{
@@ -124,7 +54,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 								Value: msg.AdminId,
 							},
 						})
-						c.triggerMessageEvent(models.SceneAdminOffline, msg, session)
+						UserHub.triggerMessageEvent(models.SceneAdminOffline, msg, session)
 						setting := admin.GetSetting()
 						if setting != nil {
 							// 发送离线消息
@@ -155,7 +85,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 						} else {
 							isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
 							if exist && isAutoTransfer.GetValue() == "1" { // 自动转人工
-								session := c.handleTransferToManual()
+								session := UserHub.addToManual(c.GetUserId())
 								if session != nil {
 									msg.SessionId = session.Id
 								}
@@ -163,7 +93,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 								AdminHub.BroadcastWaitingUser()
 							} else {
 								messageRepo.Save(msg)
-								c.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
+								UserHub.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
 							}
 						}
 					}
@@ -205,6 +135,7 @@ func (c *UserConn) Setup() {
 	c.Register(onSendSuccess, func(i ...interface{}) {
 	})
 }
+
 func NewUserConn(user auth.User, conn *websocket.Conn) *UserConn {
 	return &UserConn{
 		User: user,
