@@ -1,6 +1,7 @@
 package models
 
 import (
+	"gorm.io/gorm"
 	"strings"
 	"time"
 	"ws/app/databases"
@@ -91,6 +92,9 @@ type AutoRuleJson struct {
 	ScenesLabel string       `json:"scenes_label"`
 }
 
+func (rule *AutoRule) AddCount() {
+	databases.Db.Model(rule).Update("count", gorm.Expr("count + 1"))
+}
 // 是否匹配
 func (rule *AutoRule) IsMatch(str string) bool {
 	switch rule.MatchType {

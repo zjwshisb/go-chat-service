@@ -83,8 +83,7 @@ func (c *UserConn) triggerMessageEvent(scene string, message *models.Message, se
 					}
 				}
 			}
-			rule.Count++
-			autoRuleRepo.Save(rule)
+			rule.AddCount()
 			return
 		}
 	}
