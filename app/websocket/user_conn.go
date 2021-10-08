@@ -105,7 +105,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 
 func (c *UserConn) Setup() {
 	c.Register(onEnter, func(i ...interface{}) {
-		if chat.GetUserLastAdminId(c.GetUserId()) == 0 {
+		if chat.GetUserLastAdminId(c.GetUserId()) == 0 && !chat.IsInManual(c.GetUserId()) {
 			rule := autoRuleRepo.GetEnter()
 			if rule != nil {
 				msg := rule.GetReplyMessage(c.User.GetPrimaryKey())

@@ -9,7 +9,6 @@ type userHub struct {
 	BaseHub
 }
 
-
 func (userHub *userHub) Run() {
 	userHub.Register(UserLogin, func(i ...interface{}) {
 		length := len(i)
