@@ -62,12 +62,13 @@ func GetAdminUserIds(adminId int64)  ([]int64, []int64) {
 		id, err := strconv.ParseInt(item.Member.(string), 10, 64)
 		if err == nil {
 			uids = append(uids, id)
+			score := int64(item.Score)
+			times = append(times, score)
 		}
-		score := int64(item.Score)
-		times = append(times, score)
 	}
 	return uids, times
 }
+// 有效用户数
 func GetAdminUserActiveCount(adminId int64) int {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRangeByScore(ctx, GetAdminUserKey(adminId), &redis.ZRangeBy{
@@ -76,7 +77,7 @@ func GetAdminUserActiveCount(adminId int64) int {
 	})
 	return len(cmd.Val())
 }
-// 设置客服用户最后聊天时间
+// 设置更新客服用户最后聊天时间
 func SetAdminUserLastChatTime(uid int64,adminId int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.HSet(ctx, fmt.Sprintf(adminUserLastChatKey, adminId), uid, time.Now().Unix())
@@ -114,7 +115,7 @@ func RemoveUserAdminId(uid int64, adminId int64) error {
 	return cmd.Err()
 }
 
-// 获取用户最后一个会话客服id
+// 获取用户客服id
 func GetUserLastAdminId(uid int64) int64 {
 	ctx := context.Background()
 	key := strconv.FormatInt(uid, 10)

@@ -81,7 +81,6 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 				}
 			}
 		}
-		break
 	}
 }
 

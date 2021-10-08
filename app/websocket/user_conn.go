@@ -97,7 +97,6 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 							}
 						}
 					}
-
 				}
 			}
 		}

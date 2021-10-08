@@ -25,7 +25,6 @@ import (
 func getLogPid() int {
 	file := configs.App.PidFile
 	_, err := os.Stat(file)
-	fmt.Println(err)
 	if os.IsNotExist(err){
 		return -1
 	}
