@@ -12,16 +12,20 @@ const (
 	UserSubscribeKey = "user:%d:subscribe:%s"
 )
 
-// 标记 用户微信订阅消息 已订阅
-func SetSubscribe(uid int64) error {
+var SubScribeService = &subscribeService{}
+
+
+type subscribeService struct {
+}
+
+func (subscribeService *subscribeService) Set(uid int64) error {
 	ctx := context.Background()
 	templateId := configs.Wechat.SubscribeTemplateIdOne
 	key := fmt.Sprintf(UserSubscribeKey, uid, templateId)
 	cmd := databases.Redis.Set(ctx, key, 1, 0)
 	return cmd.Err()
 }
-// 查询 用户微信订阅消息
-func IsSubScribe(uid int64) bool  {
+func (subscribeService *subscribeService) IsSet(uid int64) bool {
 	ctx := context.Background()
 	templateId := configs.Wechat.SubscribeTemplateIdOne
 	key := fmt.Sprintf(UserSubscribeKey, uid, templateId)
@@ -31,8 +35,8 @@ func IsSubScribe(uid int64) bool  {
 	}
 	return true
 }
-// 删除 用户微信订阅消息 标记
-func DelSubScribe(uid int64) bool {
+
+func (subscribeService *subscribeService) Remove(uid int64)  bool {
 	ctx := context.Background()
 	templateId := configs.Wechat.SubscribeTemplateIdOne
 	key := fmt.Sprintf(UserSubscribeKey, uid, templateId)

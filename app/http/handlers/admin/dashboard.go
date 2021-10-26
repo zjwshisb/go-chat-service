@@ -95,6 +95,6 @@ func (handler *DashboardHandler) GetOnlineInfo(c *gin.Context)  {
 	util.RespSuccess(c, gin.H{
 		"user_count": websocket.UserHub.GetTotal(),
 		"admin_count": websocket.AdminHub.GetTotal(),
-		"waiting_user_count": len(chat.GetManualUserIds()),
+		"waiting_user_count": len(chat.ManualService.GetAll()),
 	})
 }

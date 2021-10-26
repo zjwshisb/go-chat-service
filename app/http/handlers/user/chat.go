@@ -50,7 +50,7 @@ func GetHistoryMessage(c *gin.Context) {
 func GetTemplateId(c *gin.Context) {
 	user := auth.GetUser(c)
 	id := ""
-	if !chat.IsSubScribe(user.GetPrimaryKey()) {
+	if !chat.SubScribeService.IsSet(user.GetPrimaryKey()) {
 		id = configs.Wechat.SubscribeTemplateIdOne
 	}
 	util.RespSuccess(c , gin.H{
@@ -60,7 +60,7 @@ func GetTemplateId(c *gin.Context) {
 // 标记已订阅微信订阅消息
 func Subscribe(c *gin.Context) {
 	user := auth.GetUser(c)
-	_ = chat.SetSubscribe(user.GetPrimaryKey())
+	_ = chat.SubScribeService.Set(user.GetPrimaryKey())
 	util.RespSuccess(c, gin.H{})
 }
 

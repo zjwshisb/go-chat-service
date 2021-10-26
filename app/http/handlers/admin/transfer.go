@@ -34,7 +34,7 @@ func (handler *TransferHandler) Cancel(c *gin.Context)  {
 		util.RespValidateFail(c, "transfer is accepted")
 		return
 	}
-	_ = chat.CancelTransfer(transfer)
+	_ = chat.TransferService.Cancel(transfer)
 	_ , exist := websocket.AdminHub.GetConn(transfer.ToAdminId)
 	if exist {
 		websocket.AdminHub.BroadcastUserTransfer(transfer.ToAdminId)

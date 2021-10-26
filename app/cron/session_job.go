@@ -10,7 +10,7 @@ import (
 func closeSessions()  {
 	admins := adminRepo.Get([]*repositories.Where{},-1, []string{})
 	for _, admin := range admins {
-		uids, limits := chat.GetAdminUserIds(admin.GetPrimaryKey())
+		uids, limits := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
 		length := len(uids)
 		for i := 0; i <= length-1; i++ {
 			uid := uids[i]
@@ -31,7 +31,7 @@ func closeSessions()  {
 					},
 				}, "id desc")
 				if session != nil {
-					chat.CloseSession(session, false, false)
+					chat.SessionService.Close(session, false, false)
 					noticeMessage := admin.GetBreakMessage(uid, session.Id)
 					userConn, exist := websocket.UserHub.GetConn(uid)
 					if exist {

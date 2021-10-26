@@ -28,18 +28,18 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 				msg.UserId = c.GetUserId()
 				msg.ReceivedAT = time.Now().Unix()
 				msg.User = c.User.(*models.User)
-				msg.AdminId = chat.GetUserLastAdminId(c.GetUserId())
+				msg.AdminId = chat.UserService.GetValidAdmin(c.GetUserId())
 				// 发送回执
 				c.Deliver(NewReceiptAction(msg))
 				// 有对应的客服对象
 				if msg.AdminId > 0 {
 					// 更新会话有效期
-					session := chat.GetSession(c.GetUserId(), msg.AdminId)
+					session := chat.SessionService.Get(c.GetUserId(), msg.AdminId)
 					if session == nil {
 						return
 					}
 					addTime := chat.GetServiceSessionSecond()
-					_ = chat.UpdateUserAdminId(msg.UserId, msg.AdminId, addTime)
+					_ = chat.AdminService.UpdateUser(msg.AdminId,msg.UserId, addTime)
 					msg.SessionId = session.Id
 					messageRepo.Save(msg)
 					adminConn, exist := AdminHub.GetConn(msg.AdminId)
@@ -67,16 +67,16 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 							lastOnline := setting.LastOnline
 							duration := chat.GetOfflineDuration()
 							if (lastOnline.Unix() + duration) < time.Now().Unix() {
-								chat.CloseSession(session, false, true)
+								chat.SessionService.Close(session, false, true)
 								noticeMessage := admin.GetBreakMessage(c.GetUserId(), session.Id)
 								c.Deliver(NewReceiveAction(noticeMessage))
 							}
 						}
 					}
 				} else { // 没有客服对象
-					if chat.GetUserTransferId(c.GetUserId()) == 0 {
-						if chat.IsInManual(c.GetUserId()) {
-							session := chat.GetSession(c.GetUserId(), 0)
+					if chat.TransferService.GetUserTransferId(c.GetUserId()) == 0 {
+						if chat.ManualService.IsIn(c.GetUserId()) {
+							session := chat.SessionService.Get(c.GetUserId(), 0)
 							if session != nil {
 								msg.SessionId = session.Id
 							}
@@ -105,7 +105,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 
 func (c *UserConn) Setup() {
 	c.Register(onEnter, func(i ...interface{}) {
-		if chat.GetUserLastAdminId(c.GetUserId()) == 0 && !chat.IsInManual(c.GetUserId()) {
+		if chat.UserService.GetValidAdmin(c.GetUserId()) == 0 && !chat.ManualService.IsIn(c.GetUserId()) {
 			rule := autoRuleRepo.GetEnter()
 			if rule != nil {
 				msg := rule.GetReplyMessage(c.User.GetPrimaryKey())

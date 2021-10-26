@@ -7,29 +7,31 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 )
+var SessionService = &sessionService{}
+type sessionService struct {
+
+}
 // 关闭会话
-func CloseSession(session *models.ChatSession, isRemoveUser bool, updateTime bool) {
+func (sessionService *sessionService) Close(session *models.ChatSession, isRemoveUser bool, updateTime bool) {
 	session.BrokeAt = time.Now().Unix()
 	chatSessionRepo.Save(session)
 	if isRemoveUser {
-		_ = RemoveUserAdminId(session.UserId, session.AdminId)
+		_ = AdminService.RemoveUser(session.AdminId, session.UserId)
 	}
 	if updateTime {
-		_ = UpdateUserAdminId(session.UserId, session.AdminId, 0)
+		_ = AdminService.UpdateLimitTime(session.UserId, session.AdminId, 0)
 	}
 }
-// 创建会话
-func CreateSession(uid int64, t int) *models.ChatSession {
+func (sessionService *sessionService) Create(uid int64, ty int) *models.ChatSession  {
 	session := &models.ChatSession{}
 	session.UserId = uid
 	session.QueriedAt = time.Now().Unix()
 	session.AdminId = 0
-	session.Type = t
+	session.Type = ty
 	_ = chatSessionRepo.Save(session)
 	return session
 }
-// 获取会话
-func GetSession(uid int64, adminId int64) *models.ChatSession {
+func (sessionService *sessionService) Get(uid int64, adminId int64) *models.ChatSession {
 	session := chatSessionRepo.First([]*repositories.Where{
 		{
 			Filed: "user_id = ?",

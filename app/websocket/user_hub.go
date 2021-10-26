@@ -17,7 +17,7 @@ func (userHub *userHub) Run() {
 			conn, ok := ai.(Conn)
 			if ok {
 				uid := conn.GetUserId()
-				sid := chat.GetUserLastAdminId(uid)
+				sid := chat.UserService.GetValidAdmin(uid)
 				if sid > 0 {
 					adminConn, exist := AdminHub.GetConn(sid)
 					if exist {
@@ -34,7 +34,7 @@ func (userHub *userHub) Run() {
 			conn, ok := ai.(Conn)
 			if ok {
 				uid := conn.GetUserId()
-				sid := chat.GetUserLastAdminId(uid)
+				sid := chat.UserService.GetValidAdmin(uid)
 				if sid > 0 {
 					adminConn, exist := AdminHub.GetConn(sid)
 					if exist {
@@ -48,7 +48,7 @@ func (userHub *userHub) Run() {
 }
 // 加入人工列表
 func (userHub *userHub) addToManual(uid int64) *models.ChatSession {
-	if !chat.IsInManual(uid) {
+	if !chat.ManualService.IsIn(uid) {
 		onlineServerCount := len(AdminHub.Clients)
 		if onlineServerCount == 0 { // 如果没有在线客服
 			rule := autoRuleRepo.GetAdminAllOffLine()
@@ -69,11 +69,11 @@ func (userHub *userHub) addToManual(uid int64) *models.ChatSession {
 				}
 			}
 		}
-		_ = chat.AddToManual(uid)
+		_ = chat.ManualService.Add(uid)
 		AdminHub.BroadcastWaitingUser()
-		session := chat.GetSession(uid, 0)
+		session := chat.SessionService.Get(uid, 0)
 		if session == nil {
-			session = chat.CreateSession(uid, models.ChatSessionTypeNormal)
+			session = chat.SessionService.Create(uid, models.ChatSessionTypeNormal)
 		}
 		return session
 	}
@@ -113,9 +113,9 @@ func (userHub *userHub) triggerMessageEvent(scene string, message *models.Messag
 			case models.ReplyTypeEvent:
 				switch rule.Key {
 				case "break":
-					adminId := chat.GetUserLastAdminId(message.UserId)
+					adminId := chat.UserService.GetValidAdmin(message.UserId)
 					if adminId > 0 {
-						_ = chat.RemoveUserAdminId(message.UserId, adminId)
+						_ = chat.AdminService.RemoveUser(adminId, message.UserId)
 					}
 					msg := rule.GetReplyMessage(message.UserId)
 					if msg != nil {

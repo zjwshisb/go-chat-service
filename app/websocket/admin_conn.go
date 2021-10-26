@@ -27,11 +27,11 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 		msg, err := act.GetMessage()
 		if err == nil {
 			if msg.UserId > 0 && len(msg.Content) != 0 {
-				if !chat.CheckUserIdLegal(msg.UserId, c.User.GetPrimaryKey()) {
+				if !chat.AdminService.IsUserValid(c.User.GetPrimaryKey(), msg.UserId) {
 					c.Deliver(NewErrorMessage("该用户已失效，无法发送消息"))
 					return
 				}
-				session := chat.GetSession(msg.UserId, c.GetUserId())
+				session := chat.SessionService.Get(msg.UserId, c.GetUserId())
 				if session == nil {
 					c.Deliver(NewErrorMessage("无效的用户"))
 					return
@@ -43,14 +43,14 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 				msg.Admin = c.User
 				msg.SessionId = session.Id
 				messageRepo.Save(msg)
-				_ = chat.UpdateUserAdminId(msg.UserId, c.User.GetPrimaryKey(), sessionAddTime)
+				_ = chat.AdminService.UpdateUser(msg.UserId, c.User.GetPrimaryKey(), sessionAddTime)
 				// 服务器回执
 				c.Deliver(NewReceiptAction(msg))
 				userConn, exist := UserHub.GetConn(msg.UserId)
 				if exist { // 用户在线
 					userConn.Deliver(NewReceiveAction(msg))
 				} else {  // 用户不在线
-					hadSubscribe := chat.IsSubScribe(msg.UserId)
+					hadSubscribe := chat.SubScribeService.IsSet(msg.UserId)
 					user := userRepo.First([]Where{
 						{
 							Filed: "id = ?",
@@ -75,7 +75,7 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 						if err != nil {
 							log.Log.Error(err.Error())
 						} else {
-							chat.DelSubScribe(msg.UserId)
+							chat.SubScribeService.Remove(msg.UserId)
 						}
 					}
 				}

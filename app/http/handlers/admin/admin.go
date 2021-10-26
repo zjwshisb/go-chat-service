@@ -27,7 +27,7 @@ func (handle *AdminsHandler) Index(c *gin.Context){
 			Username:      admin.Username,
 			Online:        websocket.AdminHub.ConnExist(admin.GetPrimaryKey()),
 			Id:            admin.ID,
-			AcceptedCount: chat.GetAdminUserActiveCount(admin.GetPrimaryKey()),
+			AcceptedCount: chat.AdminService.GetActiveCount(admin.GetPrimaryKey()),
 		}
 	})
 	util.RespPagination(c, p)
@@ -90,7 +90,7 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 			Username:      admin.GetUsername(),
 			Online:        websocket.AdminHub.ConnExist(admin.GetPrimaryKey()),
 			Id:            admin.GetPrimaryKey(),
-			AcceptedCount: chat.GetAdminUserActiveCount(admin.GetPrimaryKey()),
+			AcceptedCount: chat.AdminService.GetActiveCount(admin.GetPrimaryKey()),
 		},
 	})
 }

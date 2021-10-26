@@ -53,7 +53,7 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 		return
 	}
 	admin := auth.GetAdmin(c)
-	chatIds, _ := chat.GetAdminUserIds(admin.GetPrimaryKey())
+	chatIds, _ := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
 	userExist := false
 	for _, chatId := range  chatIds {
 		if chatId == uid {
@@ -99,7 +99,7 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 // 聊天用户列表
 func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 	admin := auth.GetAdmin(c)
-	ids, times := chat.GetAdminUserIds(admin.GetPrimaryKey())
+	ids, times := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
 	users := userRepo.Get([]Where{
 		{
 			Filed: "id in ?",
@@ -117,7 +117,7 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 		// 聊天列表超过50时，不显示已失效的用户
 		if len(resp) >= 50 && disabled {
 			go func() {
-				_ = chat.RemoveUserAdminId(id, admin.GetPrimaryKey())
+				_ = chat.AdminService.RemoveUser(admin.GetPrimaryKey(), id)
 			}()
 			continue
 		}
@@ -128,7 +128,7 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 			Messages: make([]*models.MessageJson, 0),
 			Unread:   0,
 		}
-		chatUserRes.LastChatTime = chat.GetAdminUserLastChatTime(u.GetPrimaryKey(), admin.GetPrimaryKey())
+		chatUserRes.LastChatTime = chat.AdminService.GetLastChatTime(admin.GetPrimaryKey(), u.GetPrimaryKey())
 		chatUserRes.Disabled = disabled
 		if _, ok := websocket.UserHub.GetConn(u.GetPrimaryKey()); ok {
 			chatUserRes.Online = true
@@ -207,12 +207,12 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		util.RespNotFound(c)
 		return
 	}
-	if chat.GetUserLastAdminId(user.GetPrimaryKey()) != 0 {
+	if chat.UserService.GetValidAdmin(user.GetPrimaryKey()) != 0 {
 		util.RespFail(c, "user had been accepted", 10001)
 		return
 	}
 	if session.Type == models.ChatSessionTypeTransfer {
-		transferAdminId := chat.GetUserTransferId(user.GetPrimaryKey())
+		transferAdminId := chat.TransferService.GetUserTransferId(user.GetPrimaryKey())
 		if transferAdminId == 0 {
 			util.RespValidateFail(c, "transfer error ")
 			return
@@ -243,7 +243,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		transfer.AcceptedAt = &now
 		transfer.IsAccepted = true
 		transferRepo.Save(transfer)
-		_ = chat.RemoveTransfer(user.GetPrimaryKey())
+		_ = chat.TransferService.RemoveUser(user.GetPrimaryKey())
 		websocket.AdminHub.BroadcastUserTransfer(admin.GetPrimaryKey())
 	}
 	unSendMsg := messageRepo.GetUnSend([]Where{
@@ -260,7 +260,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	session.AcceptedAt = time.Now().Unix()
 	session.AdminId = admin.GetPrimaryKey()
 	chatSessionRepo.Save(session)
-	_ = chat.SetUserAdminId(user.GetPrimaryKey(), admin.GetPrimaryKey(), sessionDuration)
+	_ = chat.AdminService.AddUser(admin.GetPrimaryKey(),user.GetPrimaryKey(), sessionDuration)
 	now := time.Now().Unix()
 	// 更新未发送的消息
 	messageRepo.Update([]*repositories.Where{
@@ -362,7 +362,7 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 				messageRepo.Save(noticeMessage)
 			}
 		}
-		chat.CloseSession(session, true, false)
+		chat.SessionService.Close(session, true, false)
 	}
 	util.RespSuccess(c, nil)
 }
@@ -481,7 +481,7 @@ func (handle *ChatHandler) ChatCancelTransfer(c *gin.Context) {
 		util.RespValidateFail(c, "transfer is accepted")
 		return
 	}
-	_ = chat.CancelTransfer(transfer)
+	_ = chat.TransferService.Cancel(transfer)
 	websocket.AdminHub.BroadcastUserTransfer(admin.GetPrimaryKey())
 	util.RespSuccess(c , gin.H{})
 }
@@ -522,7 +522,7 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		util.RespValidateFail(c , "admin_not_exist")
 		return
 	}
-	err = chat.Transfer(admin.GetPrimaryKey(), form.ToId, form.UserId, form.Remark)
+	err = chat.TransferService.Create(admin.GetPrimaryKey(), form.ToId, form.UserId, form.Remark)
 	if err != nil {
 		util.RespValidateFail(c , err.Error())
 		return
