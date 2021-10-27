@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"time"
+	"ws/app/json"
+)
 
 type ChatTransfer struct {
 	Id          int64
@@ -20,8 +23,8 @@ type ChatTransfer struct {
 	ToAdmin     *Admin       `gorm:"foreignKey:to_admin_id"`
 }
 
-func (transfer *ChatTransfer) ToJson() *ChatTransferJson {
-	json := &ChatTransferJson{
+func (transfer *ChatTransfer) ToJson() *json.ChatTransfer {
+	json := &json.ChatTransfer{
 		Id:         transfer.Id,
 		SessionId:  transfer.SessionId,
 		UserId:     transfer.UserId,
@@ -43,15 +46,4 @@ func (transfer *ChatTransfer) ToJson() *ChatTransferJson {
 	return json
 }
 
-type ChatTransferJson struct {
-	Id            int64      `json:"id"`
-	SessionId     uint64     `json:"session_id"`
-	UserId        int64      `json:"user_id"`
-	Remark        string     `json:"remark"`
-	FromAdminName string     `json:"from_admin_name"`
-	ToAdminName   string     `json:"to_admin_name"`
-	Username      string     `json:"username"`
-	CreatedAt     *time.Time `json:"created_at"`
-	AcceptedAt    *time.Time `json:"accepted_at"`
-	CanceledAt    *time.Time `json:"canceled_at"`
-}
+

@@ -38,7 +38,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 					if session == nil {
 						return
 					}
-					addTime := chat.GetServiceSessionSecond()
+					addTime := chat.SettingService.GetServiceSessionSecond()
 					_ = chat.AdminService.UpdateUser(msg.AdminId,msg.UserId, addTime)
 					msg.SessionId = session.Id
 					messageRepo.Save(msg)
@@ -65,7 +65,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 							}
 							// 判断是否自动断开
 							lastOnline := setting.LastOnline
-							duration := chat.GetOfflineDuration()
+							duration := chat.SettingService.GetOfflineDuration()
 							if (lastOnline.Unix() + duration) < time.Now().Unix() {
 								chat.SessionService.Close(session, false, true)
 								noticeMessage := admin.GetBreakMessage(c.GetUserId(), session.Id)
@@ -83,8 +83,7 @@ func (c *UserConn) onReceiveMessage(act *Action) {
 							messageRepo.Save(msg)
 							AdminHub.BroadcastWaitingUser()
 						} else {
-							isAutoTransfer, exist := chat.Settings[chat.IsAutoTransfer]
-							if exist && isAutoTransfer.GetValue() == "1" { // 自动转人工
+							if chat.SettingService.GetIsAutoTransferManual() { // 自动转人工
 								session := UserHub.addToManual(c.GetUserId())
 								if session != nil {
 									msg.SessionId = session.Id

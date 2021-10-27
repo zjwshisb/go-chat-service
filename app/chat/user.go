@@ -15,9 +15,10 @@ var UserService = &userService{}
 
 
 type userService struct {
-
 }
 
+
+// 设置客服
 func (userService *userService) SetAdmin(uid int64, adminId int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.HSet(ctx, user2AdminHashKey, uid, adminId)

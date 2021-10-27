@@ -198,7 +198,7 @@ func (handler *SystemRuleHandler) Index(c *gin.Context)  {
 			Value: 1,
 		},
 	}, -1, []string{})
-	result := make([]*models.AutoRuleJson, len(rules), len(rules))
+	result := make([]*json.AutoRule, len(rules), len(rules))
 	for i, rule := range rules {
 		result[i] = rule.ToJson()
 	}

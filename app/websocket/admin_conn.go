@@ -36,14 +36,14 @@ func (c *AdminConn) onReceiveMessage(act *Action)  {
 					c.Deliver(NewErrorMessage("无效的用户"))
 					return
 				}
-				sessionAddTime := chat.GetUserSessionSecond()
+				sessionAddTime := chat.SettingService.GetUserSessionSecond()
 				msg.AdminId = c.GetUserId()
 				msg.Source = models.SourceAdmin
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Admin = c.User
 				msg.SessionId = session.Id
 				messageRepo.Save(msg)
-				_ = chat.AdminService.UpdateUser(msg.UserId, c.User.GetPrimaryKey(), sessionAddTime)
+				_ = chat.AdminService.UpdateUser(msg.AdminId, msg.UserId, sessionAddTime)
 				// 服务器回执
 				c.Deliver(NewReceiptAction(msg))
 				userConn, exist := UserHub.GetConn(msg.UserId)

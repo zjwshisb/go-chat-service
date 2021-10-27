@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"log"
+	"strconv"
 	"ws/app/databases"
+	"ws/app/json"
 )
 
 const (
@@ -17,31 +20,35 @@ const (
 
 const Key = "chat:%s:setting"
 
-type FieldJson struct {
-	Name string `json:"name"`
-	Title string `json:"title"`
-	Value string `json:"value"`
-	Options map[string]string `json:"options"`
+var SettingService = &settingService{
+	Values: map[string]*SettingField{},
 }
 
-type Field struct {
+type settingService struct {
+	Values map[string]*SettingField
+}
+
+
+
+
+type SettingField struct {
 	Name string
 	Title string
 	val string
 	Options map[string]string
 	defVal string
-	Validator func(val string, field *Field) error
+	Validator func(val string, field *SettingField) error
 }
 
-func (field *Field) ToJson() *FieldJson  {
-	return &FieldJson{
+func (field *SettingField) ToJson() *json.SettingField  {
+	return &json.SettingField{
 		Name:    field.Name,
 		Title:   field.Title,
 		Value:   field.GetValue(),
 		Options: field.Options,
 	}
 }
-func (field *Field) GetValue() string  {
+func (field *SettingField) GetValue() string  {
 	if field.val == "" {
 		ctx := context.Background()
 		cmd := databases.Redis.Get(ctx, fmt.Sprintf(Key, field.Name))
@@ -54,7 +61,7 @@ func (field *Field) GetValue() string  {
 	return field.val
 }
 
-func (field *Field) SetValue(val string) error {
+func (field *SettingField) SetValue(val string) error {
 	for v := range field.Options {
 		if v == val {
 			field.val = val
@@ -66,11 +73,48 @@ func (field *Field) SetValue(val string) error {
 	return errors.New("validated failed")
 }
 
-var Settings map[string]*Field
+
+// 离线时超过多久就自动断开会话
+func (settingService *settingService) GetOfflineDuration() int64 {
+	setting := settingService.Values[MinuteToBreak]
+	minuteStr := setting.GetValue()
+	minute, err := strconv.ParseInt(minuteStr, 10,64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return minute * 60
+}
+// 客服给用户发消息后的会话有效期, 既用户在这时间内可以回复客服
+func (settingService *settingService) GetUserSessionSecond() int64 {
+	setting := settingService.Values[UserSessionDuration]
+	dayFloat, err := strconv.ParseFloat(setting.GetValue(), 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	second := int64(dayFloat* 24 * 60 * 60)
+	return second
+}
+// 用户给客服发消息后的会话有效期, 既客服在这时间内可以回复用户
+func (settingService *settingService) GetServiceSessionSecond() int64 {
+	setting := settingService.Values[AdminSessionDuration]
+	dayFloat, err := strconv.ParseFloat(setting.GetValue(), 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	second := int64(dayFloat * 24 * 60 * 60)
+	return second
+}
+
+func (settingService *settingService) GetIsAutoTransferManual() bool {
+	field, exist := settingService.Values[IsAutoTransfer]
+	if !exist {
+		return true
+	}
+	return field.GetValue() == "1"
+}
 
 func init() {
-	Settings = make(map[string]*Field)
-	Settings[IsAutoTransfer] = &Field{
+	SettingService.Values[IsAutoTransfer] = &SettingField{
 		Name: IsAutoTransfer,
 		Title: "是否自动转接人工客服",
 		Options: map[string]string{
@@ -79,7 +123,7 @@ func init() {
 		},
 		defVal: "1",
 	}
-	Settings[AdminSessionDuration] = &Field{
+	SettingService.Values[AdminSessionDuration] = &SettingField{
 		Name: AdminSessionDuration,
 		Title: "当用户给客服发消息时，客服多久没回复就断开会话",
 		Options: map[string]string{
@@ -93,7 +137,7 @@ func init() {
 		},
 		defVal: "1",
 	}
-	Settings[UserSessionDuration] = &Field{
+	SettingService.Values[UserSessionDuration] = &SettingField{
 		Name: UserSessionDuration,
 		Title: "当客服给用户发消息时，用户多久没回复就断开会话",
 		Options: map[string]string{
@@ -107,7 +151,7 @@ func init() {
 		},
 		defVal: "0.0208",
 	}
-	Settings[MinuteToBreak] = &Field{
+	SettingService.Values[MinuteToBreak] = &SettingField{
 		Name:      MinuteToBreak,
 		Title:     "客服离线多少分钟(用户发送消息时)自动断开会话",
 		Options:   map[string]string{

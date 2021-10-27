@@ -1,6 +1,9 @@
 package models
 
-import "ws/app/databases"
+import (
+	"ws/app/databases"
+	"ws/app/json"
+)
 
 const ChatSessionTypeNormal = 0
 const ChatSessionTypeTransfer = 1
@@ -38,7 +41,7 @@ func (chatSession *ChatSession) getStatus() string  {
 	}
 	return "wait"
 }
-func (chatSession *ChatSession) ToJson() *ChatSessionJson {
+func (chatSession *ChatSession) ToJson() *json.ChatSession {
 	var userName, adminName string
 	if chatSession.Admin == nil {
 		admin := &Admin{}
@@ -52,7 +55,7 @@ func (chatSession *ChatSession) ToJson() *ChatSessionJson {
 		chatSession.User = user
 	}
 	userName = chatSession.User.Username
-	return &ChatSessionJson{
+	return &json.ChatSession{
 		Id:         chatSession.Id,
 		UserId:     chatSession.UserId,
 		QueriedAt:  chatSession.QueriedAt * 1000,
@@ -67,31 +70,3 @@ func (chatSession *ChatSession) ToJson() *ChatSessionJson {
 	}
 }
 
-type ChatSessionJson struct {
-	Id         uint64 `json:"id"`
-	UserId     int64  `json:"-"`
-	QueriedAt  int64  `json:"queried_at"`
-	AcceptedAt int64  `json:"accepted_at"`
-	BrokeAt    int64  `json:"broke_at"`
-	CanceledAt int64 `json:"canceled_at"`
-	AdminId    int64  `json:"admin_id"`
-	UserName   string `json:"user_name"`
-	AdminName  string `json:"admin_name"`
-	TypeLabel  string `json:"type_label"`
-	Status string `json:"status"`
-}
-type SimpleMessage struct {
-	Type string `json:"type"`
-	Time int64 `json:"time"`
-	Content string `json:"content"`
-}
-type WaitingChatSessionJson struct {
-	Username     string `json:"username"`
-	Avatar       string `json:"avatar"`
-	UserId           int64  `json:"id"`
-	LastTime int64 `json:"last_time"`
-	Messages []*SimpleMessage `json:"messages"`
-	MessageCount int    `json:"message_count"`
-	Description  string `json:"description"`
-	SessionId   uint64 `json:"session_id"`
-}

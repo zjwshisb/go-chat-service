@@ -22,7 +22,7 @@ func (handle *AdminsHandler) Index(c *gin.Context){
 	p := adminRepo.Paginate(c, where, []string{}, "id desc")
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		admin := i.(*models.Admin)
-		return &models.AdminJson{
+		return &json.Admin{
 			Avatar:        admin.GetAvatarUrl(),
 			Username:      admin.Username,
 			Online:        websocket.AdminHub.ConnExist(admin.GetPrimaryKey()),
@@ -85,7 +85,7 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 
 	util.RespSuccess(c, gin.H{
 		"chart": value,
-		"admin": models.AdminJson{
+		"admin": json.Admin{
 			Avatar:        admin.GetAvatarUrl(),
 			Username:      admin.GetUsername(),
 			Online:        websocket.AdminHub.ConnExist(admin.GetPrimaryKey()),

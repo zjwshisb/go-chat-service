@@ -12,6 +12,8 @@ import (
 const (
 	// 客服 => {value: userId, source: limitTime}[] sorted sets
 	adminChatUserKey = "admin:%d:chat-user"
+	// 客服 => {uid: lastTime} hashes
+	adminUserLastChatKey = "admin:%d:chat-user:last-time"
 )
 var (
 	AdminService = &adminService{}

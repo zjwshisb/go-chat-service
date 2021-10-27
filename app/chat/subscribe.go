@@ -14,7 +14,6 @@ const (
 
 var SubScribeService = &subscribeService{}
 
-
 type subscribeService struct {
 }
 

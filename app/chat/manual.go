@@ -5,12 +5,13 @@ import (
 	"strconv"
 	"ws/app/databases"
 )
-
+const (
+	manualUserKey = "user:manual"
+)
 var (
 	ManualService = &manualService{}
 )
 type manualService struct {
-
 }
 func (manual *manualService) Add(uid int64) error  {
 	ctx := context.Background()

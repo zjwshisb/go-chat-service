@@ -8,6 +8,7 @@ import (
 	"ws/app/auth"
 	"ws/app/chat"
 	"ws/app/file"
+	"ws/app/json"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/util"
@@ -30,7 +31,7 @@ func (handle *ChatHandler) GetHistorySession(c *gin.Context) {
 			Value: 0,
 		},
 	}, -1, []string{"Admin","User"}, "id desc")
-	resp := make([]*models.ChatSessionJson, len(sessions))
+	resp := make([]*json.ChatSession, len(sessions))
 	for i, session := range sessions {
 		resp[i] = session.ToJson()
 	}
@@ -256,7 +257,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			Value: session.Id,
 		},
 	})
-	sessionDuration := chat.GetServiceSessionSecond()
+	sessionDuration := chat.SettingService.GetServiceSessionSecond()
 	session.AcceptedAt = time.Now().Unix()
 	session.AdminId = admin.GetPrimaryKey()
 	chatSessionRepo.Save(session)

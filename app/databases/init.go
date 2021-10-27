@@ -36,9 +36,10 @@ func init() {
 	sqlDB.SetMaxIdleConns(20)
 	Db = db
 
+
 	Redis = redis.NewClient(&redis.Options{
 		Addr:     configs.Redis.Addr,
-		Password: configs.Redis.Auth, // no password set
+		Password: configs.Redis.Auth,
 		DB:       configs.Redis.Db,
 	})
 	cmd := Redis.Ping(context.Background())

@@ -73,24 +73,7 @@ type AutoRule struct {
 	Message   *AutoMessage `json:"message" gorm:"foreignKey:MessageId"`
 }
 
-type AutoRuleJson struct {
-	ID          uint         `json:"id"`
-	Name        string       `json:"name"`
-	Match       string       `json:"match"`
-	MatchType   string       `json:"match_type"`
-	ReplyType   string       `json:"reply_type"`
-	MessageId   uint         `json:"message_id"`
-	Key         string       `gorm:"key" json:"key"`
-	Sort        uint8        `json:"sort"`
-	IsOpen      bool         `json:"is_open"`
-	Count       uint         `json:"count"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
-	EventLabel  string       `json:"event_label"`
-	Message     *AutoMessageJson `json:"message"`
-	Scenes      []string     `json:"scenes"`
-	ScenesLabel string       `json:"scenes_label"`
-}
+
 
 func (rule *AutoRule) AddCount() {
 	databases.Db.Model(rule).Update("count", gorm.Expr("count + 1"))
@@ -128,7 +111,7 @@ func (rule *AutoRule) GetEventLabel() string {
 	return ""
 }
 
-func (rule *AutoRule) ToJson() *AutoRuleJson {
+func (rule *AutoRule) ToJson() *json.AutoRule {
 	scenesSli := make([]string, 0)
 	scenesLabel := ""
 	if rule.Scenes == nil {
@@ -148,11 +131,11 @@ func (rule *AutoRule) ToJson() *AutoRuleJson {
 			}
 		}
 	}
-	var messageJson *AutoMessageJson
+	var messageJson *json.AutoMessage
 	if rule.Message != nil {
 		messageJson = rule.Message.ToJson()
 	}
-	return &AutoRuleJson{
+	return &json.AutoRule{
 		ID:          rule.ID,
 		Name:        rule.Name,
 		Match:       rule.Match,

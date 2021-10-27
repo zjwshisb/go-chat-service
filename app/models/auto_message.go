@@ -1,16 +1,11 @@
 package models
 
-import "time"
+import (
+	"time"
+	"ws/app/json"
+)
 
-type AutoMessageJson struct {
-	ID         uint      `json:"id"`
-	Name       string    `json:"name"`
-	Type       string    `json:"type"`
-	Content    string    `json:"content"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
-	RulesCount int       `json:"rules_count"`
-}
+
 
 type AutoMessage struct {
 	ID        uint   `gorm:"column:id;primaryKey"`
@@ -22,12 +17,12 @@ type AutoMessage struct {
 	Rules     []*AutoRule `gorm:"foreignKey:message_id"`
 }
 
-func (message *AutoMessage) ToJson() *AutoMessageJson {
+func (message *AutoMessage) ToJson() *json.AutoMessage {
 	count := 0
 	if message.Rules != nil {
 		count = len(message.Rules)
 	}
-	return &AutoMessageJson{
+	return &json.AutoMessage{
 		ID:         message.ID,
 		Name:       message.Name,
 		Type:       message.Type,
