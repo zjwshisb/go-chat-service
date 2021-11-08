@@ -64,7 +64,7 @@ func logPid()  {
 }
 
 func Start()  {
-	if checkServerRunning() > 0 {
+	if isRunning() {
 		log.Fatalln("server is running")
 	} else {
 		websocket.Setup()
@@ -100,18 +100,18 @@ func Start()  {
 		log.Println("Server exited")
 	}
 }
-func checkServerRunning() int {
+func isRunning() bool {
 	pid := getLogPid()
 	if pid >= 0 {
 		cmd := exec.Command("ps", "x")
 		output, _ := cmd.Output()
-		return strings.Index(string(output), strconv.Itoa(pid))
+		return strings.Index(string(output), strconv.Itoa(pid)) >= 0
 	}
-	return -1
+	return false
 }
 
 func Stop()  {
-	if checkServerRunning() >= 0 {
+	if isRunning() {
 		pid := getLogPid()
 		if pid >= 0 {
 			closeCmd := exec.Command("kill", "-2" , strconv.Itoa(pid))

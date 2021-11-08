@@ -26,7 +26,7 @@ type Admin struct {
 func (admin *Admin) AccessTo(User *User) bool {
 	return true
 }
-func (admin *Admin)  GetIsSuper() bool {
+func (admin *Admin) GetIsSuper() bool {
 	return admin.IsSuper
 }
 func (admin *Admin) GetPrimaryKey() int64 {

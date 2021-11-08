@@ -79,8 +79,8 @@ func (hub *adminHub) BroadcastWaitingUser() {
 	sort.Slice(waitingUser, func(i, j int) bool {
 		return waitingUser[i].LastTime > waitingUser[j].LastTime
 	})
-	conns := hub.GetAllConn()
-	for _, adminConnI := range conns {
+	adminConns := hub.GetAllConn()
+	for _, adminConnI := range adminConns {
 		adminConn, ok := adminConnI.(*AdminConn)
 		if ok {
 			adminUserSlice := make([]*json.WaitingChatSession, 0)
