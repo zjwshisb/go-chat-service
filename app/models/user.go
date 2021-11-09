@@ -8,16 +8,6 @@ import (
 	"ws/app/util"
 )
 
-type UserJson struct {
-	ID           int64          `json:"id"`
-	Username     string         `json:"username"`
-	LastChatTime int64          `json:"last_chat_time"`
-	Disabled     bool           `json:"disabled"`
-	Online       bool           `json:"online"`
-	Messages     []*MessageJson `json:"messages"`
-	Unread       int            `json:"unread"`
-	Avatar string `json:"avatar"`
-}
 
 
 

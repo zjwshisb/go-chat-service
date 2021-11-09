@@ -2,7 +2,7 @@ package models
 
 import (
 	"ws/app/databases"
-	"ws/app/json"
+	"ws/app/resource"
 )
 
 const ChatSessionTypeNormal = 0
@@ -41,7 +41,7 @@ func (chatSession *ChatSession) getStatus() string  {
 	}
 	return "wait"
 }
-func (chatSession *ChatSession) ToJson() *json.ChatSession {
+func (chatSession *ChatSession) ToJson() *resource.ChatSession {
 	var userName, adminName string
 	if chatSession.Admin == nil {
 		admin := &Admin{}
@@ -55,7 +55,7 @@ func (chatSession *ChatSession) ToJson() *json.ChatSession {
 		chatSession.User = user
 	}
 	userName = chatSession.User.Username
-	return &json.ChatSession{
+	return &resource.ChatSession{
 		Id:         chatSession.Id,
 		UserId:     chatSession.UserId,
 		QueriedAt:  chatSession.QueriedAt * 1000,

@@ -9,7 +9,6 @@ import (
 	"ws/app/util"
 )
 
-
 type Admin struct {
 	ID        int64
 	CreatedAt *time.Time
@@ -102,8 +101,11 @@ func (admin *Admin) Auth(c *gin.Context) bool {
 	return true
 }
 func (admin *Admin) FindByName(username string) bool {
-	databases.Db.Where("username= ?", username).First(admin)
-	return admin.ID > 0
+	query := databases.Db.Where("username= ?", username).First(admin)
+	if query.Error == gorm.ErrRecordNotFound {
+		return false
+	}
+	return true
 }
 
 func (admin *Admin) RefreshSetting()  {

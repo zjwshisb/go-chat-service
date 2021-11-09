@@ -3,7 +3,7 @@ package admin
 import (
 	"github.com/gin-gonic/gin"
 	"ws/app/chat"
-	"ws/app/json"
+	"ws/app/resource"
 	"ws/app/util"
 )
 
@@ -34,7 +34,7 @@ func (handler *SettingHandler) Update(c *gin.Context) {
 }
 
 func (handler *SettingHandler) Index(c *gin.Context) {
-	var resp = make([]*json.SettingField, 0,len(chat.SettingService.Values) )
+	var resp = make([]*resource.SettingField, 0,len(chat.SettingService.Values) )
 	for _, s := range chat.SettingService.Values{
 		resp = append(resp, s.ToJson())
 	}

@@ -2,7 +2,7 @@ package models
 
 import (
 	"time"
-	"ws/app/json"
+	"ws/app/resource"
 )
 
 type ChatTransfer struct {
@@ -23,8 +23,8 @@ type ChatTransfer struct {
 	ToAdmin     *Admin       `gorm:"foreignKey:to_admin_id"`
 }
 
-func (transfer *ChatTransfer) ToJson() *json.ChatTransfer {
-	json := &json.ChatTransfer{
+func (transfer *ChatTransfer) ToJson() *resource.ChatTransfer {
+	json := &resource.ChatTransfer{
 		Id:         transfer.Id,
 		SessionId:  transfer.SessionId,
 		UserId:     transfer.UserId,

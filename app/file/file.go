@@ -10,6 +10,13 @@ const (
 	StorageLocal = "local"
 )
 
+var diskQiniu  *qiniu
+var diskLocal *local
+
+func init()  {
+	diskLocal = NewLocal()
+	diskQiniu = NewQiniu()
+}
 type File struct {
 	FullUrl string
 	Path string
@@ -24,11 +31,11 @@ type Manager interface {
 func Disk(name string) Manager {
 	switch name {
 	case StorageQiniu:
-		return NewQiniu()
+		return diskQiniu
 	case StorageLocal:
-		return NewLocal()
+		return diskLocal
 	default:
-		return NewLocal()
+		return diskLocal
 	}
 }
 func Save(file *multipart.FileHeader, path string) (*File, error) {

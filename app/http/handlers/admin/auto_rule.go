@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"ws/app/http/requests"
-	"ws/app/json"
 	"ws/app/models"
 	"ws/app/repositories"
+	"ws/app/resource"
 	"ws/app/util"
 )
 
@@ -16,9 +16,9 @@ type AutoRuleHandler struct {
 
 func (handle *AutoRuleHandler) MessageOptions(c *gin.Context)  {
 	messages := autoMessageRepo.Get([]Where{}, -1, []string{})
-	options := make([]json.Options, 0, len(messages))
+	options := make([]resource.Options, 0, len(messages))
 	for _, message := range messages {
-		options = append(options, json.Options{
+		options = append(options, resource.Options{
 			Value: message.ID,
 			Label: message.Name + "-" + message.TypeLabel(),
 		})
@@ -198,7 +198,7 @@ func (handler *SystemRuleHandler) Index(c *gin.Context)  {
 			Value: 1,
 		},
 	}, -1, []string{})
-	result := make([]*json.AutoRule, len(rules), len(rules))
+	result := make([]*resource.AutoRule, len(rules), len(rules))
 	for i, rule := range rules {
 		result[i] = rule.ToJson()
 	}

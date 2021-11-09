@@ -4,8 +4,8 @@ import (
 	"sort"
 	"time"
 	"ws/app/chat"
-	"ws/app/json"
 	"ws/app/models"
+	"ws/app/resource"
 )
 
 type adminHub struct {
@@ -50,12 +50,12 @@ func (hub *adminHub) BroadcastWaitingUser() {
 		},
 	}, -1, []string{"User", "Messages"})
 	userMap := make(map[int64]*models.User)
-	waitingUser :=  make([]*json.WaitingChatSession, 0, len(sessions))
+	waitingUser :=  make([]*resource.WaitingChatSession, 0, len(sessions))
 	for _, session := range sessions {
 		userMap[session.UserId] = session.User
-		msgs := make([]*json.SimpleMessage, 0, len(session.Messages))
+		msgs := make([]*resource.SimpleMessage, 0, len(session.Messages))
 		for _, m := range session.Messages {
-			msgs = append(msgs, &json.SimpleMessage{
+			msgs = append(msgs, &resource.SimpleMessage{
 				Type:    m.Type,
 				Time:    m.ReceivedAT,
 				Content: m.Content,
@@ -65,7 +65,7 @@ func (hub *adminHub) BroadcastWaitingUser() {
 		if len(session.Messages) > 0 {
 			lastMessage = session.Messages[len(session.Messages) - 1]
 		}
-		waitingUser = append(waitingUser, &json.WaitingChatSession{
+		waitingUser = append(waitingUser, &resource.WaitingChatSession{
 			Username:     session.User.GetUsername(),
 			Avatar:       session.User.GetAvatarUrl(),
 			UserId:           session.User.GetPrimaryKey(),
@@ -83,7 +83,7 @@ func (hub *adminHub) BroadcastWaitingUser() {
 	for _, adminConnI := range adminConns {
 		adminConn, ok := adminConnI.(*AdminConn)
 		if ok {
-			adminUserSlice := make([]*json.WaitingChatSession, 0)
+			adminUserSlice := make([]*resource.WaitingChatSession, 0)
 			for _, userJson := range waitingUser {
 				u := userMap[userJson.UserId]
 				if adminConn.User.AccessTo(u) {
@@ -112,7 +112,7 @@ func (hub *adminHub) BroadcastUserTransfer(adminId int64)   {
 				Value: 0,
 			},
 		}, -1, []string{"FromAdmin", "User"}, "id desc")
-		data := make([]*json.ChatTransfer, 0, len(transfers))
+		data := make([]*resource.ChatTransfer, 0, len(transfers))
 		for _, transfer := range transfers {
 			data = append(data, transfer.ToJson())
 		}
@@ -124,11 +124,11 @@ func (hub *adminHub) BroadcastAdmins() {
 	var serviceUsers []*models.Admin
 	admins := adminRepo.Get([]Where{}, -1, []string{})
 	conns := hub.GetAllConn()
-	data := make([]json.Admin, 0, len(serviceUsers))
+	data := make([]resource.Admin, 0, len(serviceUsers))
 	for _, admin := range admins {
 		_, online := hub.GetConn(admin.GetPrimaryKey())
 		if online {
-			data = append(data, json.Admin{
+			data = append(data, resource.Admin{
 				Avatar:           admin.GetAvatarUrl(),
 				Username:         admin.Username,
 				Online:           online,
@@ -137,5 +137,5 @@ func (hub *adminHub) BroadcastAdmins() {
 			})
 		}
 	}
-	hub.SendAction(NewServiceUserAction(data), conns...)
+	hub.SendAction(NewAdminsAction(data), conns...)
 }

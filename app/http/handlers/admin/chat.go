@@ -8,9 +8,9 @@ import (
 	"ws/app/auth"
 	"ws/app/chat"
 	"ws/app/file"
-	"ws/app/json"
 	"ws/app/models"
 	"ws/app/repositories"
+	"ws/app/resource"
 	"ws/app/util"
 	"ws/app/websocket"
 )
@@ -31,7 +31,7 @@ func (handle *ChatHandler) GetHistorySession(c *gin.Context) {
 			Value: 0,
 		},
 	}, -1, []string{"Admin","User"}, "id desc")
-	resp := make([]*json.ChatSession, len(sessions))
+	resp := make([]*resource.ChatSession, len(sessions))
 	for i, session := range sessions {
 		resp[i] = session.ToJson()
 	}
@@ -90,7 +90,7 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 		}
 	}
 	messages := messageRepo.Get(wheres, 20, []string{"User", "Admin"}, "id desc")
-	res := make([]*models.MessageJson, 0)
+	res := make([]*resource.Message, 0)
 	for _, m := range messages {
 		res = append(res, m.ToJson())
 	}
@@ -107,7 +107,7 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 			Value: ids,
 		},
 	}, -1, []string{})
-	resp := make([]*models.UserJson, 0, len(users))
+	resp := make([]*resource.User, 0, len(users))
 	userMap := make(map[int64]auth.User)
 	for _, user := range users {
 		userMap[user.GetPrimaryKey()] = user
@@ -123,10 +123,10 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 			continue
 		}
 		u := userMap[id]
-		chatUserRes := &models.UserJson{
+		chatUserRes := &resource.User{
 			ID:       u.GetPrimaryKey(),
 			Username: u.GetUsername(),
-			Messages: make([]*models.MessageJson, 0),
+			Messages: make([]*resource.Message, 0),
 			Unread:   0,
 		}
 		chatUserRes.LastChatTime = chat.AdminService.GetLastChatTime(admin.GetPrimaryKey(), u.GetPrimaryKey())
@@ -296,11 +296,11 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		},
 	}, 20, []string{"User", "Admin"}, "id desc")
 	messageLength := len(messages)
-	chatUser := &models.UserJson{
+	chatUser := &resource.User{
 		ID:           user.GetPrimaryKey(),
 		Username:     user.GetUsername(),
 		LastChatTime: 0,
-		Messages:     make([]*models.MessageJson, messageLength, messageLength),
+		Messages:     make([]*resource.Message, messageLength, messageLength),
 		Avatar: user.GetAvatarUrl(),
 	}
 	chatUser.Unread = len(unSendMsg)
@@ -450,7 +450,7 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 			Value: transfer.SessionId,
 		},
 	}, -1 , []string{"Admin", "User"}, "id desc")
-	res := make([]*models.MessageJson, 0, len(messages))
+	res := make([]*resource.Message, 0, len(messages))
 	for _, m := range messages {
 		res = append(res, m.ToJson())
 	}

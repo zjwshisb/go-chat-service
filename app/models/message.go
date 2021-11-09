@@ -3,6 +3,7 @@ package models
 import (
 	"gorm.io/gorm/clause"
 	"ws/app/databases"
+	"ws/app/resource"
 	"ws/app/util"
 	"ws/configs"
 )
@@ -64,8 +65,8 @@ func (message *Message) GetAvatar() (avatar string) {
 	return
 }
 
-func (message *Message) ToJson() *MessageJson {
-	return &MessageJson{
+func (message *Message) ToJson() *resource.Message {
+	return &resource.Message{
 		Id:         message.Id,
 		UserId:     message.UserId,
 		AdminId:    message.AdminId,
@@ -81,17 +82,3 @@ func (message *Message) ToJson() *MessageJson {
 	}
 }
 
-type MessageJson struct {
-	Id         uint64 `json:"id"`
-	UserId     int64  `json:"user_id"`
-	AdminId    int64  `json:"admin_id"`
-	AdminName  string `json:"admin_name"`
-	Type       string `json:"type"`
-	Content    string `json:"content"`
-	ReceivedAT int64  `json:"received_at"`
-	Source     int8   `json:"source"`
-	ReqId      int64  `json:"req_id"`
-	IsSuccess  bool   `json:"is_success"`
-	IsRead     bool   `json:"is_read"`
-	Avatar     string `json:"avatar"`
-}

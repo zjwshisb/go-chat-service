@@ -2,7 +2,7 @@ package models
 
 import (
 	"time"
-	"ws/app/json"
+	"ws/app/resource"
 )
 
 
@@ -17,12 +17,12 @@ type AutoMessage struct {
 	Rules     []*AutoRule `gorm:"foreignKey:message_id"`
 }
 
-func (message *AutoMessage) ToJson() *json.AutoMessage {
+func (message *AutoMessage) ToJson() *resource.AutoMessage {
 	count := 0
 	if message.Rules != nil {
 		count = len(message.Rules)
 	}
-	return &json.AutoMessage{
+	return &resource.AutoMessage{
 		ID:         message.ID,
 		Name:       message.Name,
 		Type:       message.Type,

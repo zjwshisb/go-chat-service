@@ -8,6 +8,7 @@ import (
 	"ws/app/http/requests"
 	"ws/app/models"
 	"ws/app/repositories"
+	"ws/app/resource"
 	"ws/app/util"
 	"ws/app/websocket"
 )
@@ -132,7 +133,7 @@ func (handler *ChatSessionHandler) Show(c *gin.Context) {
 			Value: []int{models.SourceAdmin, models.SourceUser},
 		},
 	}, -1, []string{"User", "Admin"}, "id desc")
-	data := make([]*models.MessageJson, 0, 0)
+	data := make([]*resource.Message, 0, 0)
 	for _, msg:= range messages {
 		data = append(data, msg.ToJson())
 	}

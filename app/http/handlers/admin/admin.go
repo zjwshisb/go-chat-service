@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"ws/app/chat"
 	"ws/app/http/requests"
-	"ws/app/json"
+	"ws/app/resource"
 	"ws/app/models"
 	"ws/app/util"
 	"ws/app/websocket"
@@ -22,7 +22,7 @@ func (handle *AdminsHandler) Index(c *gin.Context){
 	p := adminRepo.Paginate(c, where, []string{}, "id desc")
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		admin := i.(*models.Admin)
-		return &json.Admin{
+		return &resource.Admin{
 			Avatar:        admin.GetAvatarUrl(),
 			Username:      admin.Username,
 			Online:        websocket.AdminHub.ConnExist(admin.GetPrimaryKey()),
@@ -68,10 +68,10 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 		},
 	}, -1,  []string{}, "id")
 	
-	value := make([]*json.Line, lastDate.DayOfMonth())
+	value := make([]*resource.Line, lastDate.DayOfMonth())
 
 	for day, _ := range value {
-		value[day] = &json.Line{
+		value[day] = &resource.Line{
 			Category: "每日接待数",
 			Value:    0,
 			Label:    strconv.Itoa(day + 1) + "号",
@@ -85,7 +85,7 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 
 	util.RespSuccess(c, gin.H{
 		"chart": value,
-		"admin": json.Admin{
+		"admin": resource.Admin{
 			Avatar:        admin.GetAvatarUrl(),
 			Username:      admin.GetUsername(),
 			Online:        websocket.AdminHub.ConnExist(admin.GetPrimaryKey()),

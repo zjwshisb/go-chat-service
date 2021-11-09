@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 	"ws/app/databases"
-	"ws/app/json"
+	"ws/app/resource"
 	"ws/app/util"
 )
 
@@ -27,7 +27,7 @@ const (
 	EventBreak = "break"
 )
 
-var ScenesOptions = []*json.Options{
+var ScenesOptions = []*resource.Options{
 	{
 		Value: SceneNotAccepted,
 		Label: "用户未被客服接入",
@@ -41,7 +41,7 @@ var ScenesOptions = []*json.Options{
 		Label: "用户已接入且客服离线",
 	},
 }
-var EventOptions = []*json.Options{
+var EventOptions = []*resource.Options{
 	{
 		Value: EventBreak,
 		Label: "断开当前会话",
@@ -111,7 +111,7 @@ func (rule *AutoRule) GetEventLabel() string {
 	return ""
 }
 
-func (rule *AutoRule) ToJson() *json.AutoRule {
+func (rule *AutoRule) ToJson() *resource.AutoRule {
 	scenesSli := make([]string, 0)
 	scenesLabel := ""
 	if rule.Scenes == nil {
@@ -131,11 +131,11 @@ func (rule *AutoRule) ToJson() *json.AutoRule {
 			}
 		}
 	}
-	var messageJson *json.AutoMessage
+	var messageJson *resource.AutoMessage
 	if rule.Message != nil {
 		messageJson = rule.Message.ToJson()
 	}
-	return &json.AutoRule{
+	return &resource.AutoRule{
 		ID:          rule.ID,
 		Name:        rule.Name,
 		Match:       rule.Match,

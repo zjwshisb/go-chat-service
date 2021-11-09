@@ -6,8 +6,8 @@ import (
 	"ws/app/auth"
 	"ws/app/chat"
 	"ws/app/file"
-	"ws/app/models"
 	"ws/app/repositories"
+	"ws/app/resource"
 	"ws/app/util"
 	"ws/configs"
 )
@@ -40,7 +40,7 @@ func GetHistoryMessage(c *gin.Context) {
 		}
 	}
 	messages := messageRepo.Get(wheres, size, []string{"Admin","User"}, "id desc")
-	messagesResources := make([]*models.MessageJson, 0, len(messages))
+	messagesResources := make([]*resource.Message, 0, len(messages))
 	for _, m := range messages {
 		messagesResources = append(messagesResources, m.ToJson())
 	}

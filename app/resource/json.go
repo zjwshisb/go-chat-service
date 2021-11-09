@@ -1,4 +1,4 @@
-package json
+package resource
 
 import "time"
 
@@ -71,6 +71,20 @@ type SimpleMessage struct {
 	Content string `json:"content"`
 }
 
+type Message struct {
+	Id         uint64 `json:"id"`
+	UserId     int64  `json:"user_id"`
+	AdminId    int64  `json:"admin_id"`
+	AdminName  string `json:"admin_name"`
+	Type       string `json:"type"`
+	Content    string `json:"content"`
+	ReceivedAT int64  `json:"received_at"`
+	Source     int8   `json:"source"`
+	ReqId      int64  `json:"req_id"`
+	IsSuccess  bool   `json:"is_success"`
+	IsRead     bool   `json:"is_read"`
+	Avatar     string `json:"avatar"`
+}
 
 
 type WaitingChatSession struct {
@@ -102,4 +116,16 @@ type SettingField struct {
 	Title string `json:"title"`
 	Value string `json:"value"`
 	Options map[string]string `json:"options"`
+}
+
+
+type User struct {
+	ID           int64          `json:"id"`
+	Username     string         `json:"username"`
+	LastChatTime int64          `json:"last_chat_time"`
+	Disabled     bool           `json:"disabled"`
+	Online       bool           `json:"online"`
+	Messages     []*Message `json:"messages"`
+	Unread       int            `json:"unread"`
+	Avatar string `json:"avatar"`
 }

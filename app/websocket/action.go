@@ -6,6 +6,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"time"
 	"ws/app/models"
+	"ws/app/resource"
 )
 
 const (
@@ -60,7 +61,7 @@ func (action *Action) GetMessage() (message *models.Message,err error)  {
 		message = &models.Message{}
 		err = mapstructure.Decode(action.Data, message)
 	} else {
-		err = errors.New("无效的action")
+		err = errors.New("invalid action")
 	}
 	return
 
@@ -83,11 +84,11 @@ func NewReceiptAction(msg *models.Message) (act *Action) {
 	}
 	return
 }
-func NewServiceUserAction(i interface{}) *Action {
+func NewAdminsAction(admins []resource.Admin) *Action {
 	return &Action{
 		Action: AdminsAction,
 		Time: time.Now().Unix(),
-		Data: i,
+		Data: admins,
 	}
 }
 func NewUserOnline(uid int64) *Action {

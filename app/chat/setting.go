@@ -8,7 +8,7 @@ import (
 	"log"
 	"strconv"
 	"ws/app/databases"
-	"ws/app/json"
+	"ws/app/resource"
 )
 
 const (
@@ -40,8 +40,8 @@ type SettingField struct {
 	Validator func(val string, field *SettingField) error
 }
 
-func (field *SettingField) ToJson() *json.SettingField  {
-	return &json.SettingField{
+func (field *SettingField) ToJson() *resource.SettingField  {
+	return &resource.SettingField{
 		Name:    field.Name,
 		Title:   field.Title,
 		Value:   field.GetValue(),
