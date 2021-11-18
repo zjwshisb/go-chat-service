@@ -18,6 +18,7 @@ func registerFrontend()  {
 		auth.POST("/subscribe", http.Subscribe)
 		auth.GET("/ws/messages", http.GetHistoryMessage)
 		auth.POST("/ws/image", http.Image)
+		auth.POST("/ws/req-id", http.GetReqId)
 		auth.GET("/ws", func(c *gin.Context) {
 			conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 			if err != nil {

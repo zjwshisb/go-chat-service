@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"ws/app/databases"
 )
+
 const (
 	manualUserKey = "user:manual"
 )

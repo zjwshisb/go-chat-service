@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"ws/app/databases"
 )
@@ -23,6 +24,13 @@ func (userService *userService) SetAdmin(uid int64, adminId int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.HSet(ctx, user2AdminHashKey, uid, adminId)
 	return cmd.Err()
+}
+
+func (userService *userService) GetReqId(uid int64) int64 {
+	key := fmt.Sprintf("user:%d:req-id", uid)
+	ctx := context.Background()
+	cmd := databases.Redis.Incr(ctx, key)
+	return cmd.Val()
 }
 
 // 移除当前客服

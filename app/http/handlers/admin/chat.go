@@ -2,7 +2,6 @@ package admin
 
 import (
 	"github.com/gin-gonic/gin"
-	"sort"
 	"strconv"
 	"time"
 	"ws/app/auth"
@@ -96,7 +95,13 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 	}
 	util.RespSuccess(c, res)
 }
-
+// 获取reqId
+func (handle *ChatHandler) GetReqId(c *gin.Context)  {
+	admin := auth.GetAdmin(c)
+	util.RespSuccess(c, gin.H{
+		"reqId" : chat.AdminService.GetReqId(admin.ID),
+	})
+}
 // 聊天用户列表
 func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 	admin := auth.GetAdmin(c)
@@ -164,9 +169,6 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 			u.Online = true
 		}
 	}
-	sort.Slice(resp, func(i, j int) bool {
-		return resp[i].LastChatTime > resp[j].LastChatTime
-	})
 	util.RespSuccess(c, resp)
 }
 
@@ -543,3 +545,4 @@ func (handle *ChatHandler) Image(c *gin.Context) {
 		})
 	}
 }
+

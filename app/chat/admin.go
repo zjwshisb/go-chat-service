@@ -22,6 +22,13 @@ var (
 type adminService struct {
 }
 
+func (adminService *adminService) GetReqId(adminId int64) int64 {
+	key := fmt.Sprintf("admin:%d:req-id", adminId)
+	ctx := context.Background()
+	cmd := databases.Redis.Incr(ctx, key)
+	return cmd.Val()
+}
+
 func (adminService *adminService) getUserCacheKey(adminId int64) string  {
 	return fmt.Sprintf(adminChatUserKey, adminId)
 }
