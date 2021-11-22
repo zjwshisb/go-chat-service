@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 	"log"
