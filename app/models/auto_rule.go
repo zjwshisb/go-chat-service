@@ -170,7 +170,7 @@ func (rule *AutoRule) GetReplyMessage(uid int64) (message *Message) {
 			ReceivedAT: time.Now().Unix(),
 			SendAt:     0,
 			Source:     SourceSystem,
-			ReqId:      util.CreateReqId(),
+			ReqId:      util.GetSystemReqId(),
 			IsRead:     true,
 		}
 	}

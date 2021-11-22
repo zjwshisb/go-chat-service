@@ -27,8 +27,7 @@ func registerFrontend()  {
 			ui, _ := c.Get("frontend")
 			userModel := ui.(*models.User)
 			client := hub.NewUserConn(userModel, conn)
-			client.Setup()
-			hub.UserHub.Login(client)
+			hub.UserManager.Register(client)
 		})
 	}
 }

@@ -27,7 +27,7 @@ func (setting *AdminChatSetting) GetOfflineMsg(uid int64, sessionId uint64) *Mes
 		ReceivedAT: time.Now().Unix(),
 		Source:     SourceAdmin,
 		SessionId:  sessionId,
-		ReqId:      util.CreateReqId(),
+		ReqId:      util.GetSystemReqId(),
 		IsRead:     false,
 	}
 	return offlineMsg

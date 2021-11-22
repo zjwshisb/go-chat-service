@@ -5,6 +5,7 @@ import (
 	"ws/app/auth"
 	"ws/app/file"
 	"ws/app/http/requests"
+	"ws/app/models"
 	"ws/app/util"
 	"ws/app/websocket"
 )
@@ -41,12 +42,10 @@ func (User *UserHandler) UpdateSetting(c *gin.Context) {
 	setting.Name = form.Name
 	adminRepo.SaveSetting(setting)
 	// 如果当前在线，更新信息
-	connI , exist := websocket.AdminHub.GetConn(admin.GetPrimaryKey())
+	connI , exist := websocket.AdminManager.GetConn(admin.GetPrimaryKey())
 	if exist {
-		adminConn, ok := connI.(*websocket.AdminConn)
-		if ok {
-			adminConn.User.RefreshSetting()
-		}
+		admin := connI.GetUser().(*models.Admin)
+		admin.RefreshSetting()
 	}
 	util.RespSuccess(c, gin.H{})
 }
@@ -74,13 +73,10 @@ func (User *UserHandler) Avatar(c *gin.Context) {
 		admin.Avatar = fileInfo.Path
 		adminRepo.Save(admin)
 		// 如果当前在线，更新信息
-		connI , exist := websocket.AdminHub.GetConn(admin.GetPrimaryKey())
+		conn , exist := websocket.AdminManager.GetConn(admin.GetPrimaryKey())
 		if exist {
-			admin.GetSetting()
-			adminConn, ok := connI.(*websocket.AdminConn)
-			if ok {
-				adminConn.User = admin
-			}
+			u := conn.GetUser().(*models.Admin)
+			u.RefreshSetting()
 		}
 		util.RespSuccess(c, gin.H{})
 	}

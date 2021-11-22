@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"ws/app/databases"
 	"ws/app/models"
@@ -12,7 +13,14 @@ type MessageRepo struct {
 func (repo *MessageRepo) Save(message *models.Message)  {
 	databases.Db.Omit(clause.Associations).Save(message)
 }
-
+func (repo *MessageRepo) First(id interface{}) *models.Message {
+	message := &models.Message{}
+	query := databases.Db.Find(message, id)
+	if query.Error == gorm.ErrRecordNotFound {
+		return nil
+	}
+	return message
+}
 func (repo *MessageRepo) Get(wheres []*Where, limit int, loads []string, orders ...string) []*models.Message {
 	messages := make([]*models.Message, 0)
 	query := databases.Db.

@@ -28,7 +28,7 @@ type Message struct {
 	SendAt     int64  `gorm:"send_at"`
 	Source     int8   `gorm:"source"`
 	SessionId  uint64 `gorm:"session_id"`
-	ReqId      int64  `gorm:"index" mapstructure:"req_id"`
+	ReqId      string  `gorm:"index" mapstructure:"req_id"`
 	IsRead     bool   `gorm:"bool"`
 	Admin      *Admin `gorm:"foreignKey:admin_id"`
 	User       *User  `gorm:"foreignKey:user_id"`
@@ -37,13 +37,16 @@ type Message struct {
 func (message *Message) Save() {
 	databases.Db.Omit(clause.Associations).Save(message)
 }
-
 func (message *Message) GetAdminName() string {
 	switch message.Source {
 	case SourceAdmin:
-		if message.Admin != nil {
-			return message.Admin.GetChatName()
+		admin := &Admin{}
+		if message.Admin == nil {
+			_ = databases.Db.Model(message).Association("Admin").Find(admin)
+		} else {
+			admin = message.Admin
 		}
+		return admin.GetChatName()
 	case SourceSystem:
 		return configs.App.SystemChatName
 	}
@@ -52,13 +55,21 @@ func (message *Message) GetAdminName() string {
 func (message *Message) GetAvatar() (avatar string) {
 	switch message.Source {
 	case SourceUser:
-		if message.User != nil {
-			avatar = message.User.GetAvatarUrl()
+		user := &User{}
+		if message.User == nil {
+			_ = databases.Db.Model(message).Association("User").Find(user)
+		} else {
+			user = message.User
 		}
+		avatar = user.GetAvatarUrl()
 	case SourceAdmin:
-		if message.Admin != nil {
-			avatar = message.Admin.GetAvatarUrl()
+		admin := &Admin{}
+		if message.Admin == nil {
+			_ = databases.Db.Model(message).Association("Admin").Find(admin)
+		} else {
+			admin = message.Admin
 		}
+		avatar = admin.GetAvatarUrl()
 	case SourceSystem:
 		avatar = util.SystemAvatar()
 	}

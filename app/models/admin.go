@@ -1,8 +1,11 @@
 package models
 
 import (
+	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"strconv"
 	"time"
 	"ws/app/databases"
 	"ws/app/file"
@@ -57,6 +60,7 @@ func (admin *Admin) GetSetting() *AdminChatSetting {
 	}
 	return admin.Setting
 }
+
 // 客服名称
 func (admin *Admin) GetChatName() string {
 	setting := admin.GetSetting()
@@ -77,9 +81,16 @@ func (admin *Admin) GetBreakMessage(uid int64, sessionId uint64) *Message {
 		ReceivedAT: time.Now().Unix(),
 		Source:     SourceSystem,
 		SessionId:  sessionId,
-		ReqId:      util.CreateReqId(),
+		ReqId:      admin.GetReqId(),
 	}
 }
+func (admin *Admin) GetReqId() string {
+	key := fmt.Sprintf("admin:%d:req-id", admin.ID)
+	ctx := context.Background()
+	cmd := databases.Redis.Incr(ctx, key)
+	return "a" + strconv.FormatInt(cmd.Val(), 10)
+}
+
 func (admin *Admin) Login() (token string) {
 	token = util.RandomStr(32)
 	databases.Db.Model(admin).Update("api_token", token)

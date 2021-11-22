@@ -1,9 +1,11 @@
 package configs
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 	"log"
+	"net"
 	"os"
 	"ws/command"
 )
@@ -38,6 +40,7 @@ type app struct {
 	SystemChatName string // 系统消息客服名称
 	PidFile string  // pid文件
 	PublicPath string
+	Name string
 }
 type file struct {
 	Storage string
@@ -64,19 +67,46 @@ func init() {
 		log.Fatal(err)
 	}
 	cfg, err := ini.Load(command.ConfigFile)
+	if cfg != nil {
+		_ = cfg.Section("Mysql").MapTo(Mysql)
+		_ = cfg.Section("Http").MapTo(Http)
+		_ = cfg.Section("Redis").MapTo(Redis)
+		_ = cfg.Section("App").MapTo(App)
+		ips, err := getLocalIP()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		App.Name = ips[0] + ":" + Http.Port
+		err = cfg.Section("File").MapTo(File)
 
-	err = cfg.Section("Mysql").MapTo(Mysql)
-
-	err = cfg.Section("Http").MapTo(Http)
-
-	err = cfg.Section("Redis").MapTo(Redis)
-
-	err = cfg.Section("App").MapTo(App)
-
-	err = cfg.Section("File").MapTo(File)
-
-	err = cfg.Section("Wechat").MapTo(Wechat)
-	if err != nil {
-		log.Fatal(err)
+		err = cfg.Section("Wechat").MapTo(Wechat)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
+
+}
+
+func getLocalIP() (ips []string, err error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return
+	}
+	for _, i := range ifaces {
+		addrs, errRet := i.Addrs()
+		if errRet != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+				if ip.IsGlobalUnicast() {
+					ips = append(ips, ip.String())
+				}
+			}
+		}
+	}
+	return
 }

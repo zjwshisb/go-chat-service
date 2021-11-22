@@ -47,9 +47,9 @@ func GetHistoryMessage(c *gin.Context) {
 	util.RespSuccess(c, messagesResources)
 }
 func GetReqId(c *gin.Context)  {
-	user := auth.GetUser(c)
+	u := auth.GetUser(c)
 	util.RespSuccess(c ,gin.H{
-		"reqId": chat.UserService.GetReqId(user.GetPrimaryKey()),
+		"reqId": u.GetReqId(),
 	})
 }
 // 获取微信订阅消息ID，只有当前没有订阅的时候才会返回

@@ -80,7 +80,7 @@ type Message struct {
 	Content    string `json:"content"`
 	ReceivedAT int64  `json:"received_at"`
 	Source     int8   `json:"source"`
-	ReqId      int64  `json:"req_id"`
+	ReqId      string  `json:"req_id"`
 	IsSuccess  bool   `json:"is_success"`
 	IsRead     bool   `json:"is_read"`
 	Avatar     string `json:"avatar"`

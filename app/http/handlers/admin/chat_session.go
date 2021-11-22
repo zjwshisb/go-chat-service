@@ -110,7 +110,7 @@ func (handler *ChatSessionHandler) Cancel(c *gin.Context)  {
 	session.CanceledAt = time.Now().Unix()
 	chatSessionRepo.Save(session)
 	_ = chat.ManualService.Remove(session.UserId)
-	websocket.AdminHub.BroadcastWaitingUser()
+	websocket.AdminManager.BroadcastWaitingUser()
 	util.RespSuccess(c, gin.H{})
 }
 

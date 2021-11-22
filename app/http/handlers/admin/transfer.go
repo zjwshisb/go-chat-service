@@ -35,9 +35,9 @@ func (handler *TransferHandler) Cancel(c *gin.Context)  {
 		return
 	}
 	_ = chat.TransferService.Cancel(transfer)
-	_ , exist := websocket.AdminHub.GetConn(transfer.ToAdminId)
+	_ , exist := websocket.AdminManager.GetConn(transfer.ToAdminId)
 	if exist {
-		websocket.AdminHub.BroadcastUserTransfer(transfer.ToAdminId)
+		websocket.AdminManager.BroadcastUserTransfer(transfer.ToAdminId)
 	}
 	util.RespSuccess(c , gin.H{})
 }

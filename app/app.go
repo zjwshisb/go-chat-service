@@ -18,7 +18,6 @@ import (
 	_ "ws/app/http/requests"
 	_ "ws/app/log"
 	"ws/app/routers"
-	"ws/app/websocket"
 	"ws/configs"
 )
 
@@ -67,7 +66,6 @@ func Start()  {
 	if isRunning() {
 		log.Fatalln("server is running")
 	} else {
-		websocket.Setup()
 		routers.Setup()
 		quit := make(chan os.Signal, 1)
 		srv := &http.Server{

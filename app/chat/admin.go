@@ -22,12 +22,7 @@ var (
 type adminService struct {
 }
 
-func (adminService *adminService) GetReqId(adminId int64) int64 {
-	key := fmt.Sprintf("admin:%d:req-id", adminId)
-	ctx := context.Background()
-	cmd := databases.Redis.Incr(ctx, key)
-	return cmd.Val()
-}
+
 
 func (adminService *adminService) getUserCacheKey(adminId int64) string  {
 	return fmt.Sprintf(adminChatUserKey, adminId)
@@ -47,7 +42,7 @@ func (adminService *adminService) UpdateUser(adminId int64, uid int64, duration 
 	if err != nil {
 		return err
 	}
-	err = adminService.UpdateLastChatTime(uid, adminId)
+	err = adminService.UpdateLastChatTime(adminId, uid)
 	return err
 }
 
@@ -61,7 +56,8 @@ func (adminService *adminService) RemoveUser(adminId int64, uid int64) error  {
 
 // 检查用户对于客服是否合法
 func (adminService *adminService) IsUserValid(adminId int64, uid int64) bool {
-	return adminService.GetLimitTime(adminId, uid) > time.Now().Unix()
+	b := adminService.GetLimitTime(adminId, uid) > time.Now().Unix()
+	return b
 }
 
 //
@@ -99,9 +95,9 @@ func (adminService *adminService) GetActiveCount(adminId int64) int  {
 	})
 	return len(cmd.Val())
 }
-
+// 更新有效期
 func (adminService *adminService) UpdateLimitTime(adminId int64, uid int64, duration int64) error {
-	if adminService.IsUserExist(adminId, uid)  {
+	if !adminService.IsUserExist(adminId, uid)  {
 		return errors.New("user not valid")
 	}
 	ctx := context.Background()
@@ -109,7 +105,7 @@ func (adminService *adminService) UpdateLimitTime(adminId int64, uid int64, dura
 	cmd1 := databases.Redis.ZAdd(ctx, AdminService.getUserCacheKey(adminId),  m)
 	return cmd1.Err()
 }
-
+// 获取有效期
 func (adminService *adminService) GetLimitTime(adminId int64, uid int64) int64 {
 	ctx := context.Background()
 	cmd := databases.Redis.ZScore(ctx, adminService.getUserCacheKey(adminId), strconv.FormatInt(uid , 10))
@@ -119,7 +115,7 @@ func (adminService *adminService) GetLimitTime(adminId int64, uid int64) int64 {
 	score := cmd.Val()
 	return int64(score)
 }
-
+// 获取所有user
 func (adminService *adminService) GetUsersWithLimitTime(adminId int64) ([]int64, []int64)  {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRevRangeWithScores(ctx, adminService.getUserCacheKey(adminId), 0, -1)

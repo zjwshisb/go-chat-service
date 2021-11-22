@@ -38,6 +38,7 @@ func Disk(name string) Manager {
 		return diskLocal
 	}
 }
+
 func Save(file *multipart.FileHeader, path string) (*File, error) {
 	storage := configs.File.Storage
 	disk := Disk(storage)

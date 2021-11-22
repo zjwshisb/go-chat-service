@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"ws/app/http/requests"
 	"ws/app/models"
@@ -110,7 +109,6 @@ func (handle *AutoRuleHandler) Store (c *gin.Context)  {
 	if rule.ReplyType == models.ReplyTypeMessage  || rule.ReplyType == models.ReplyTypeEvent {
 		rule.MessageId = form.MessageId
 	}
-	fmt.Println(rule.Scenes)
 	autoRuleRepo.Save(rule)
 	util.RespSuccess(c, rule.ToJson())
 }

@@ -10,6 +10,7 @@ import (
 	"ws/app/websocket"
 )
 
+
 var (
 	adminHandler = &http.AdminsHandler{}
 	userHandler = &http.UserHandler{}
@@ -24,6 +25,7 @@ var (
 )
 
 func registerAdmin() {
+
 	g := Router.Group("/backend")
 	g.POST("/login", http.Login)
 	authGroup := g.Group("/")
@@ -96,7 +98,6 @@ func registerAdmin() {
 			return
 		}
 		client := websocket.NewAdminConn(admin, conn)
-		client.Setup()
-		websocket.AdminHub.Login(client)
+		websocket.AdminManager.Register(client)
 	})
 }

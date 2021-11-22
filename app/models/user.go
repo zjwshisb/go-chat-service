@@ -1,8 +1,11 @@
 package models
 
 import (
+	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"strconv"
 	"time"
 	"ws/app/databases"
 	"ws/app/util"
@@ -19,6 +22,14 @@ type User struct {
 	Password  string `gorm:"string;size:255" json:"-"`
 	ApiToken  string `gogm:"string;size:255"  json:"-"`
 	OpenId    string `gorm:"string;size:255"`
+}
+
+
+func (user *User) GetReqId() string {
+	key := fmt.Sprintf("user:%d:req-id", user.ID)
+	ctx := context.Background()
+	cmd := databases.Redis.Incr(ctx, key)
+	return "u" + strconv.FormatInt(cmd.Val(), 10)
 }
 
 func (user *User) GetUsername() string {

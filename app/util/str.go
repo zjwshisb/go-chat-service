@@ -1,8 +1,11 @@
 package util
 
 import (
+	"context"
 	"math/rand"
+	"strconv"
 	"time"
+	"ws/app/databases"
 )
 
 func RandomStr(length int) string {
@@ -15,10 +18,9 @@ func RandomStr(length int) string {
 	}
 	return string(result)
 }
-
-func CreateReqId() int64 {
-	rand.Seed(time.Now().UnixNano())
-	var min int64 = 10000000000
-	var max int64 = 99999999999
-	return min + rand.Int63n(max - min)
+func GetSystemReqId() string {
+	key := "system:req-id"
+	ctx := context.Background()
+	cmd := databases.Redis.Incr(ctx, key)
+	return "a" + strconv.FormatInt(cmd.Val(), 10)
 }

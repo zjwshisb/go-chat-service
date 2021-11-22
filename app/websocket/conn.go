@@ -4,6 +4,7 @@ import (
 	"github.com/gorilla/websocket"
 	"sync"
 	"time"
+	"ws/app/auth"
 	"ws/app/log"
 	"ws/app/models"
 )
@@ -20,33 +21,48 @@ const (
 )
 
 type Conn interface {
-	AnonymousConn
-	Authentic
+	readMsg()
+	sendMsg()
+	close()
+	run()
+	Deliver(action *Action)
+	GetUserId() int64
+	GetUser() auth.PrimaryUser
 }
 
-type BaseConn struct {
+type Client struct {
 	conn        *websocket.Conn
 	closeSignal chan interface{} // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
 	send        chan *Action  // 发送的消息chan
 	sync.Once
-	baseEvent
+	manager ConnManager
+	User auth.PrimaryUser
 }
-func (c *BaseConn) run() {
+
+func (c *Client) GetUser() auth.PrimaryUser  {
+	return c.User
+}
+
+func (c *Client) GetUserId() int64 {
+	return c.User.GetPrimaryKey()
+}
+
+func (c *Client) run() {
 	go c.readMsg()
 	go c.sendMsg()
-	c.Call(onEnter)
 }
+
 //幂等的close方法 关闭连接，相关清理
-func (c *BaseConn) close() {
+func (c *Client) close() {
 	c.Once.Do(func() {
 		close(c.closeSignal)
 		_ = c.conn.Close()
-		c.Call(onClose)
+		c.manager.Unregister(c)
 	})
 }
 
 // 从websocket读消息
-func (c *BaseConn) readMsg() {
+func (c *Client) readMsg() {
 	var msg = make(chan []byte, 50)
 	for {
 		go func() {
@@ -66,7 +82,10 @@ func (c *BaseConn) readMsg() {
 			var act = &Action{}
 			err := act.UnMarshal(msgStr)
 			if err == nil {
-				c.Call(onReceiveMessage, act)
+				c.manager.ReceiveMessage(&ConnMessage{
+					Action: act,
+					Conn: c,
+				})
 			} else {
 				log.Log.Error(err)
 			}
@@ -74,12 +93,12 @@ func (c *BaseConn) readMsg() {
 	}
 }
 // 投递消息
-func (c *BaseConn) Deliver(act *Action) {
+func (c *Client) Deliver(act *Action) {
 	c.send <- act
 }
 
 // 向websocket发消息
-func (c *BaseConn) sendMsg() {
+func (c *Client) sendMsg() {
 	for {
 		select {
 		case act := <-c.send:
@@ -101,7 +120,6 @@ func (c *BaseConn) sendMsg() {
 						}
 					default:
 					}
-					go c.Call(onSendSuccess, act)
 				} else {
 					// 发送失败，close
 					c.close()
@@ -113,5 +131,26 @@ func (c *BaseConn) sendMsg() {
 		case <-c.closeSignal:
 			return
 		}
+	}
+}
+
+
+func NewUserConn(user auth.User, conn *websocket.Conn) Conn {
+	return &Client{
+		conn:        conn,
+		closeSignal: make(chan interface{}),
+		send:        make(chan *Action, 100),
+		manager: UserManager,
+		User: user,
+	}
+}
+
+func NewAdminConn(user *models.Admin, conn *websocket.Conn) Conn {
+	return &Client{
+		conn:        conn,
+		closeSignal: make(chan interface{}),
+		send:        make(chan *Action, 100),
+		manager: AdminManager,
+		User: user,
 	}
 }
