@@ -6,7 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
-	"ws/command"
+	"ws/args"
 )
 
 type wechat struct {
@@ -37,7 +37,6 @@ type app struct {
 	Url string
 	Env string
 	SystemChatName string // 系统消息客服名称
-	PidFile string  // pid文件
 	PublicPath string
 	Name string
 }
@@ -61,11 +60,15 @@ var (
 
 
 func init() {
-	_, err := os.Stat(command.ConfigFile)
+
+	_, err := os.Stat(args.ConfigFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg, err := ini.Load(command.ConfigFile)
+	cfg, err := ini.Load(args.ConfigFile)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if cfg != nil {
 		_ = cfg.Section("Mysql").MapTo(Mysql)
 		_ = cfg.Section("Http").MapTo(Http)
@@ -77,7 +80,6 @@ func init() {
 		}
 		App.Name = ips[0] + ":" + Http.Port
 		err = cfg.Section("File").MapTo(File)
-
 		err = cfg.Section("Wechat").MapTo(Wechat)
 		if err != nil {
 			log.Fatal(err)

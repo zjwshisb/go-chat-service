@@ -1,22 +1,25 @@
 package main
 
 import (
+	"os"
+	"os/exec"
 	"ws/app"
-	"ws/command"
+	"ws/args"
 )
-
-
+func daemonize(args ...string)  {
+	var arg []string
+	if len(args) > 1 {
+		arg = args[1:]
+	}
+	cmd := exec.Command(args[0], arg...)
+	cmd.Env = os.Environ()
+	cmd.Start()
+}
 func main() {
-	switch command.Command {
-	case "start":
+	if !args.Daemonized {
 		app.Start()
-	case "stop":
-		app.Stop()
-	case "migrate":
-		app.Migrate()
-	case "fake":
-		app.Fake()
-	case "seeder":
-		app.Seeder()
+	} else {
+		args := os.Args
+		daemonize(args...)
 	}
 }

@@ -3,7 +3,6 @@ package app
 import (
 	"ws/app/databases"
 	"ws/app/models"
-	"ws/command"
 )
 
 func Migrate()  {
@@ -15,9 +14,6 @@ func Migrate()  {
 	_ = databases.Db.Migrator().CreateTable(&models.ChatTransfer{})
 	_ = databases.Db.Migrator().CreateTable(&models.AutoRule{})
 	_ = databases.Db.Migrator().CreateTable(&models.AutoRuleScene{})
-
-	if command.WithUser {
-		_ = databases.Db.Migrator().CreateTable(&models.Admin{})
-		_ = databases.Db.Migrator().CreateTable(&models.User{})
-	}
+	_ = databases.Db.Migrator().CreateTable(&models.Admin{})
+	_ = databases.Db.Migrator().CreateTable(&models.User{})
 }

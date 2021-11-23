@@ -60,7 +60,7 @@ func (transferService *transferService) Create(fromId int64, toId int64, uid int
 		CreatedAt:   &now,
 	}
 	transferRepo.Save(transfer)
-	SessionService.Close(session, true, true)
+	SessionService.Close(session.Id, true, true)
 	_ = transferService.AddUser(uid, toId)
 	SessionService.Create(uid, models.ChatSessionTypeTransfer)
 	return nil

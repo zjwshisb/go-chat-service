@@ -63,18 +63,50 @@ func (userManager *userManager) handleRemoteMessage()  {
 					client, exist := userManager.GetConn(msg.UserId)
 					if exist {
 						client.Deliver(NewReceiveAction(msg))
+					} else {
+						userManager.handleOffline(msg)
 					}
 				}
 			}
 		}()
 	}
 }
-
+// 处理离线逻辑
+func (userManager *userManager) handleOffline(msg *models.Message) {
+	hadSubscribe := chat.SubScribeService.IsSet(msg.UserId)
+	user := userRepo.First([]Where{
+		{
+			Filed: "id = ?",
+			Value: msg.UserId,
+		},
+	})
+	if hadSubscribe && user != nil && user.GetMpOpenId() != "" {
+		err := wechat.GetMp().GetSubscribe().Send(&subscribe.Message{
+			ToUser:           user.GetMpOpenId(),
+			TemplateID:       configs.Wechat.SubscribeTemplateIdOne,
+			Page:             configs.Wechat.ChatPath,
+			MiniprogramState: "",
+			Data: map[string]*subscribe.DataItem{
+				"thing1": {
+					Value: "请点击卡片查看",
+				},
+				"thing2": {
+					Value: "客服给你回复了一条消息",
+				},
+			},
+		})
+		if err != nil {
+			log.Log.Error(err.Error())
+		} else {
+			chat.SubScribeService.Remove(msg.UserId)
+		}
+	}
+}
 // 投递消息
 // 查询user是否在本机上，是则直接投递
 // 查询user当前channel，如果存在则投递到该channel上
 // 最后则说明user不在线，处理相关逻辑
-func (userManager *userManager) deliveryMessage(msg *models.Message, from *Client, session *models.ChatSession) {
+func (userManager *userManager) DeliveryMessage(msg *models.Message, from Conn) {
 	userConn, exist := UserManager.GetConn(msg.UserId)
 	if exist {
 		userConn.Deliver(NewReceiveAction(msg))
@@ -86,34 +118,7 @@ func (userManager *userManager) deliveryMessage(msg *models.Message, from *Clien
 				Types: "message",
 			})
 		} else {
-			hadSubscribe := chat.SubScribeService.IsSet(msg.UserId)
-			user := userRepo.First([]Where{
-				{
-					Filed: "id = ?",
-					Value: msg.UserId,
-				},
-			})
-			if hadSubscribe && user != nil && user.GetMpOpenId() != "" {
-				err := wechat.GetMp().GetSubscribe().Send(&subscribe.Message{
-					ToUser:           user.GetMpOpenId(),
-					TemplateID:       configs.Wechat.SubscribeTemplateIdOne,
-					Page:             configs.Wechat.ChatPath,
-					MiniprogramState: "",
-					Data: map[string]*subscribe.DataItem{
-						"thing1": {
-							Value: "请点击卡片查看",
-						},
-						"thing2": {
-							Value: "客服给你回复了一条消息",
-						},
-					},
-				})
-				if err != nil {
-					log.Log.Error(err.Error())
-				} else {
-					chat.SubScribeService.Remove(msg.UserId)
-				}
-			}
+			userManager.handleOffline(msg)
 		}
 	}
 }
@@ -162,7 +167,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 					_ = chat.AdminService.UpdateUser(msg.AdminId, msg.UserId, addTime)
 					msg.SessionId = session.Id
 					messageRepo.Save(msg)
-					AdminManager.deliveryMessage(msg, conn, session)
+					AdminManager.DeliveryMessage(msg, conn)
 				} else { // 没有客服对象
 					if chat.TransferService.GetUserTransferId(conn.GetUserId()) == 0 {
 						if chat.ManualService.IsIn(conn.GetUserId()) {
@@ -182,7 +187,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 								AdminManager.BroadcastWaitingUser()
 							} else {
 								messageRepo.Save(msg)
-								userManager.triggerMessageEvent(models.SceneNotAccepted, msg, nil)
+								userManager.triggerMessageEvent(models.SceneNotAccepted, msg)
 							}
 						}
 					}
@@ -217,7 +222,7 @@ func (userManager *userManager) addToManual(uid int64) *models.ChatSession {
 			}
 		}
 		_ = chat.ManualService.Add(uid)
-		AdminManager.BroadcastWaitingUser()
+		AdminManager.publishWaitingUser()
 		session := chat.SessionService.Get(uid, 0)
 		if session == nil {
 			session = chat.SessionService.Create(uid, models.ChatSessionTypeNormal)
@@ -229,11 +234,8 @@ func (userManager *userManager) addToManual(uid int64) *models.ChatSession {
 }
 
 // 触发事件
-func (userManager *userManager) triggerMessageEvent(scene string, message *models.Message, session *models.ChatSession) {
+func (userManager *userManager) triggerMessageEvent(scene string, message *models.Message) {
 	rules := autoRuleRepo.GetAllActiveNormal()
-	if session == nil {
-		session = &models.ChatSession{}
-	}
 	for _, rule := range rules {
 		if rule.IsMatch(message.Content) && rule.SceneInclude(scene) {
 			switch rule.ReplyType {
@@ -249,7 +251,7 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 			case models.ReplyTypeMessage:
 				msg := rule.GetReplyMessage(message.UserId)
 				if msg != nil {
-					msg.SessionId = session.Id
+					msg.SessionId = message.SessionId
 					messageRepo.Save(msg)
 					conn, exist := userManager.GetConn(msg.UserId)
 					if exist {
@@ -266,7 +268,7 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 					}
 					msg := rule.GetReplyMessage(message.UserId)
 					if msg != nil {
-						msg.SessionId = session.Id
+						msg.SessionId = message.SessionId
 						messageRepo.Save(msg)
 						conn, exist := userManager.GetConn(msg.UserId)
 						if exist {

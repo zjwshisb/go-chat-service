@@ -4,22 +4,45 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"strconv"
 	"sync"
 	"time"
 	"ws/app/databases"
 	"ws/app/models"
 )
-
-type ConnManager interface {
-	SendAction(act *Action, conn ...Conn)
+// conn管理相关方法
+type ConnContainer interface {
 	AddConn(connect Conn)
-	RemoveConn(key int64)
 	GetConn(key int64) (Conn, bool)
 	GetAllConn() []Conn
+	GetTotal() int
+	ConnExist(uid int64) bool
 	Register(connect Conn)
 	Unregister(connect Conn)
-	Ping()
+	RemoveConn(key int64)
+}
+// channel相关方法
+// 当读发消息的conn不在同一台机器时
+// 通过订阅/发布进行消息通信
+type ChannelManager interface {
+	GetSubscribeChannel() string
+	publish(channel string, payload *payload) error
+	getUserChannelKey(uid int64) string
+	setUserChannel(uid int64)
+	removeUserChannel(uid int64)
+	getUserChannel(uid int64) string
+	getAllChannel() []string
+	registerChannel()
+	unRegisterChannel()
+}
+
+type ConnManager interface {
+	ConnContainer
+	ChannelManager
 	Run()
+	Destroy()
+	Ping()
+	SendAction(act *Action, conn ...Conn)
 	ReceiveMessage(cm *ConnMessage)
 }
 
@@ -27,7 +50,8 @@ type MessageHandle interface {
 	handleReceiveMessage()
 	handleMessage(cm *ConnMessage)
 	handleRemoteMessage()
-	deliveryMessage(msg *models.Message, from Conn, session *models.ChatSession)
+	handleOffline(msg *models.Message)
+	DeliveryMessage(msg *models.Message, from Conn)
 }
 
 type ManagerHook = func(conn Conn)
@@ -39,9 +63,9 @@ type ConnMessage struct {
 
 type manager struct {
 	Clients map[int64]Conn
-	lock    sync.RWMutex
+	lock    sync.RWMutex // clients的读写锁
 	Channel string // 当前manager channel
-	ConnMessages chan *ConnMessage // 接受client消息的chan
+	ConnMessages chan *ConnMessage // 接受从conn所读取消息的chan
 	onRegister ManagerHook //客户端连接成功hook
 	onUnRegister ManagerHook //客户端连接断开hook
 	userChannelCacheKey string // 客户端channel cache key
@@ -60,13 +84,14 @@ func (m *manager) getUserChannelKey(uid int64) string {
 	return fmt.Sprintf(m.userChannelCacheKey, uid)
 }
 
-// 设置用户channel
+// 设置用户所在channel
+// 默认有效期24小时，用于程序意外退出后的清理
 func (m *manager) setUserChannel(uid int64)  {
 	ctx := context.Background()
 	key := m.getUserChannelKey(uid)
-	databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), 0)
+	databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), time.Hour * 24)
 }
-// 移除用户channel
+// 移除用户所在channel
 func (m *manager) removeUserChannel(uid int64)  {
 	ctx := context.Background()
 	databases.Redis.Del(ctx, m.getUserChannelKey(uid))
@@ -144,7 +169,6 @@ func (m *manager) Unregister(client Conn) {
 		if existConn == client {
 			m.removeUserChannel(client.GetUserId())
 			m.RemoveConn(client.GetUserId())
-			client.close()
 			if m.onUnRegister != nil {
 				m.onUnRegister(client)
 			}
@@ -183,27 +207,57 @@ func (m *manager) Ping()  {
 	}
 }
 // 获取同类型的所有channel
+// 同事清理掉意外退出的机器的channel
 func (m *manager) getAllChannel() []string  {
 	ctx := context.Background()
-	cmd := databases.Redis.SMembers(ctx, m.groupCacheKey)
+	now := time.Now().Unix()
+	fz := now -  (60 * 60 * 1 + 10)
+	cmd := databases.Redis.ZRangeByScore(ctx, m.groupCacheKey, &redis.ZRangeBy{
+		Min:   strconv.FormatInt(fz, 10),
+		Max:    "+inf",
+		Offset: 0,
+		Count:  0,
+	})
+	// 清理失效的channel
+	databases.Redis.ZRemRangeByScore(ctx , m.groupCacheKey, "-inf", strconv.FormatInt(fz, 10))
 	return cmd.Val()
 }
 // 注册频道
+// 心跳更新最后时间，用于程序意外退出后的清理
 func (m *manager) registerChannel()  {
-	ctx := context.Background()
-	databases.Redis.SAdd(ctx, m.groupCacheKey, m.Channel)
+	fn := func() {
+		ctx := context.Background()
+		databases.Redis.ZAdd(ctx, m.groupCacheKey, &redis.Z{
+			Score:  float64(time.Now().Unix()),
+			Member: m.Channel,
+		})
+	}
+	fn()
+	go func() {
+		tinker := time.NewTicker(time.Minute)
+		for {
+			<-tinker.C
+			fn()
+		}
+	}()
+
 }
 // 移除频道
 func (m *manager) unRegisterChannel()  {
 	ctx := context.Background()
-	databases.Redis.SRem(ctx, m.groupCacheKey, m.Channel)
+	databases.Redis.ZRem(ctx, m.groupCacheKey, m.Channel)
 }
 
 func (m *manager) Run() {
 	go m.Ping()
-	m.registerChannel()
-
+	go m.registerChannel()
 }
-func (m *manager) destroy()  {
+
+// 释放相关资源
+func (m *manager) Destroy()  {
 	m.unRegisterChannel()
+	conns := m.GetAllConn()
+	for _, conn := range conns {
+		m.removeUserChannel(conn.GetUserId())
+	}
 }

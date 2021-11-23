@@ -306,8 +306,6 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		Avatar: user.GetAvatarUrl(),
 	}
 	chatUser.Unread = len(unSendMsg)
-	userConn, exist := websocket.UserManager.GetConn(user.GetPrimaryKey())
-	chatUser.Online = exist
 	chatUser.LastChatTime = time.Now().Unix()
 	noticeMessage := &models.Message{
 		UserId:     user.GetPrimaryKey(),
@@ -319,11 +317,8 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		SessionId:  session.Id,
 		ReqId:      util.GetSystemReqId(),
 	}
-	if exist {
-		userConn.Deliver(websocket.NewReceiveAction(noticeMessage))
-	} else {
-		messageRepo.Save(noticeMessage)
-	}
+	messageRepo.Save(noticeMessage)
+	websocket.UserManager.DeliveryMessage(noticeMessage, nil)
 	for index, m := range messages {
 		rm := m.ToJson()
 		chatUser.Messages[index] = rm
@@ -365,7 +360,7 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 				messageRepo.Save(noticeMessage)
 			}
 		}
-		chat.SessionService.Close(session, true, false)
+		chat.SessionService.Close(session.Id, true, false)
 	}
 	util.RespSuccess(c, nil)
 }

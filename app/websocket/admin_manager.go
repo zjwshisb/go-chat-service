@@ -40,53 +40,55 @@ func (m *adminManager) handleReceiveMessage() {
 		go m.handleMessage(payload)
 	}
 }
-
+// 处理离线下消息
+func (m *adminManager) handleOffline(msg *models.Message)  {
+	admin := adminRepo.First([]Where{
+		{
+			Filed: "id = ?",
+			Value: msg.AdminId,
+		},
+	})
+	UserManager.triggerMessageEvent(models.SceneAdminOffline, msg)
+	setting := admin.GetSetting()
+	if setting != nil {
+		// 发送离线消息
+		if setting.OfflineContent != "" {
+			offlineMsg := setting.GetOfflineMsg(msg.UserId, msg.SessionId)
+			offlineMsg.Admin = admin
+			messageRepo.Save(offlineMsg)
+			UserManager.DeliveryMessage(offlineMsg, nil)
+		}
+		// 判断是否自动断开
+		lastOnline := setting.LastOnline
+		duration := chat.SettingService.GetOfflineDuration()
+		if (lastOnline.Unix() + duration) < time.Now().Unix() {
+			chat.SessionService.Close(msg.SessionId, false, true)
+			noticeMessage := admin.GetBreakMessage(msg.UserId, msg.SessionId) // 断开提醒
+			noticeMessage.Save()
+			UserManager.DeliveryMessage(noticeMessage, nil)
+		}
+	}
+}
 // 投递消息
 // 查询admin是否在本机上，是则直接投递
 // 查询admin当前channel，如果存在则投递到该channel上
-// 最后则说明admin不在线，处理相关逻辑
-func (m *adminManager) deliveryMessage(msg *models.Message, from Conn, session *models.ChatSession)  {
+// 最后则说明admin不在线，处理离线逻辑
+func (m *adminManager) DeliveryMessage(msg *models.Message, from Conn)  {
 	adminConn, exist := m.GetConn(msg.AdminId)
-	if exist {
-		UserManager.triggerMessageEvent(models.SceneAdminOnline, msg, session)
+	if exist { // admin在线且在当前服务上
+		UserManager.triggerMessageEvent(models.SceneAdminOnline, msg)
 		adminConn.Deliver(NewReceiveAction(msg))
 	} else {
-		adminChannel := m.getUserChannel(msg.AdminId)
+		adminChannel := m.getUserChannel(msg.AdminId) // 获取用户所在channel
 		if adminChannel != "" {
-			_ = m.publish(adminChannel, &payload{
-				Types: "message",
-				Data:  msg.Id,
-			})
+			_ = m.publish(adminChannel, newMessagePayload(msg.Id))
 		} else {
-			admin := adminRepo.First([]Where{
-				{
-					Filed: "id = ?",
-					Value: msg.AdminId,
-				},
-			})
-			UserManager.triggerMessageEvent(models.SceneAdminOffline, msg, session)
-			setting := admin.GetSetting()
-			if setting != nil {
-				// 发送离线消息
-				if setting.OfflineContent != "" {
-					offlineMsg := setting.GetOfflineMsg(from.GetUserId(), session.Id)
-					offlineMsg.Admin = admin
-					from.Deliver(NewReceiveAction(offlineMsg))
-				}
-				// 判断是否自动断开
-				lastOnline := setting.LastOnline
-				duration := chat.SettingService.GetOfflineDuration()
-				if (lastOnline.Unix() + duration) < time.Now().Unix() {
-					chat.SessionService.Close(session, false, true)
-					noticeMessage := admin.GetBreakMessage(from.GetUserId(), session.Id)
-					from.Deliver(NewReceiveAction(noticeMessage))
-				}
-			}
+			m.handleOffline(msg)
 		}
 	}
 }
 
-// 处理远程消息
+// 订阅本服务的channel， 处理消息
 func (m *adminManager) handleRemoteMessage()  {
 	ctx := context.Background()
 	sub := databases.Redis.Subscribe(ctx, m.GetSubscribeChannel())
@@ -95,17 +97,20 @@ func (m *adminManager) handleRemoteMessage()  {
 		go func() {
 			payload := &payload{}
 			err = json.Unmarshal([]byte(msg.Payload), payload)
-
 			switch payload.Types {
-			case "admin":
+			case TypeWaitingUser:
+				m.BroadcastWaitingUser()
+			case TypeAdmin:
 				m.BroadcastAdmins()
-			case "message":
+			case TypeMessage:
 				mid := payload.Data
 				msg := messageRepo.First(mid)
 				if msg != nil {
 					client, exist := m.GetConn(msg.AdminId)
 					if exist {
 						client.Deliver(NewReceiveAction(msg))
+					} else {
+						m.handleOffline(msg)
 					}
 				}
 			}
@@ -143,7 +148,7 @@ func (m *adminManager) handleMessage(payload *ConnMessage)  {
 				_ = chat.AdminService.UpdateUser(msg.AdminId, msg.UserId, sessionAddTime)
 				// 服务器回执d
 				conn.Deliver(NewReceiptAction(msg))
-				UserManager.deliveryMessage(msg, conn, session)
+				UserManager.DeliveryMessage(msg, conn)
 			}
 		}
 	}
@@ -161,24 +166,30 @@ func (m *adminManager) registerHook(conn Conn)  {
 }
 
 func (m *adminManager) unregisterHook(conn Conn)  {
+	u := conn.GetUser()
+	admin , ok := u.(*models.Admin)
+	if ok {
+		setting := admin.GetSetting()
+		setting.LastOnline = time.Now()
+		adminRepo.SaveSetting(setting)
+	}
 	m.BroadcastAdmins()
 }
 
-func (m *adminManager) publishWaitingUserSign() {
+func (m *adminManager) publishWaitingUser() {
 	channels := m.getAllChannel()
 	for _, channel := range channels {
 		_ = m.publish(channel, &payload{
-			Types: "waiting-user",
-			Data:  nil,
+			Types: TypeWaitingUser,
 		})
 	}
 }
+
 func (m *adminManager) publishAdmins()  {
 	channels := m.getAllChannel()
 	for _, channel := range channels {
 		_ = m.publish(channel, &payload{
-			Types: "admin",
-			Data:  nil,
+			Types: TypeAdmin,
 		})
 	}
 }

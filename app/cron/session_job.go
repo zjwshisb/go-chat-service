@@ -31,7 +31,7 @@ func closeSessions()  {
 					},
 				}, "id desc")
 				if session != nil {
-					chat.SessionService.Close(session, false, false)
+					chat.SessionService.Close(session.Id, false, false)
 					noticeMessage := admin.GetBreakMessage(uid, session.Id)
 					userConn, exist := websocket.UserManager.GetConn(uid)
 					if exist {

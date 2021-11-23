@@ -10,15 +10,24 @@ type sessionService struct {
 
 }
 // 关闭会话
-func (sessionService *sessionService) Close(session *models.ChatSession, isRemoveUser bool, updateTime bool) {
-	session.BrokeAt = time.Now().Unix()
-	chatSessionRepo.Save(session)
-	if isRemoveUser {
-		_ = AdminService.RemoveUser(session.AdminId, session.UserId)
+func (sessionService *sessionService) Close(sessionId uint64, isRemoveUser bool, updateTime bool) {
+	session := chatSessionRepo.First([]*repositories.Where{
+		{
+			Filed: "id = ?",
+			Value: sessionId,
+		},
+	})
+	if session != nil {
+		session.BrokeAt = time.Now().Unix()
+		chatSessionRepo.Save(session)
+		if isRemoveUser {
+			_ = AdminService.RemoveUser(session.AdminId, session.UserId)
+		}
+		if updateTime {
+			_ = AdminService.UpdateLimitTime(session.AdminId, session.UserId, 0)
+		}
 	}
-	if updateTime {
-		_ = AdminService.UpdateLimitTime(session.UserId, session.AdminId, 0)
-	}
+
 }
 func (sessionService *sessionService) Create(uid int64, ty int) *models.ChatSession  {
 	session := &models.ChatSession{}
