@@ -15,13 +15,15 @@ const (
 	UserOnLineAction = "user-online"
 	UserOffLineAction = "user-offline"
 	WaitingUserAction = "waiting-users"
-	AdminsAction = "admins"
+	WaitingUserCount = "waiting-user-count"
+ 	AdminsAction = "admins"
 	SendMessageAction = "send-message"
 	ReceiveMessageAction = "receive-message"
 	OtherLogin = "other-login"
 	MoreThanOne = "more-than-one"
 	UserTransfer = "user-transfer"
 	ErrorMessage = "error-message"
+
 )
 
 type Action struct {
@@ -132,6 +134,13 @@ func NewWaitingUsers(i interface{}) *Action {
 		Action: WaitingUserAction,
 		Time: time.Now().Unix(),
 		Data: i,
+	}
+}
+func NewWaitingUserCount(count int64) *Action {
+	return &Action{
+		Data:   count,
+		Time:   time.Now().Unix(),
+		Action: WaitingUserCount,
 	}
 }
 func NewUserTransfer(i interface{}) *Action {

@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
 	"sync"
 	"time"
 	"ws/app/auth"
@@ -28,6 +29,7 @@ type Conn interface {
 	Deliver(action *Action)
 	GetUserId() int64
 	GetUser() auth.PrimaryUser
+	GetUid() string
 }
 
 type Client struct {
@@ -37,6 +39,12 @@ type Client struct {
 	sync.Once
 	manager ConnManager
 	User auth.PrimaryUser
+	uid string
+
+}
+
+func (c *Client) GetUid() string  {
+	return c.uid
 }
 
 func (c *Client) GetUser() auth.PrimaryUser  {
@@ -142,6 +150,7 @@ func NewUserConn(user auth.User, conn *websocket.Conn) Conn {
 		send:        make(chan *Action, 100),
 		manager: UserManager,
 		User: user,
+		uid: uuid.NewV4().String(),
 	}
 }
 
@@ -152,5 +161,6 @@ func NewAdminConn(user *models.Admin, conn *websocket.Conn) Conn {
 		send:        make(chan *Action, 100),
 		manager: AdminManager,
 		User: user,
+		uid: uuid.NewV4().String(),
 	}
 }

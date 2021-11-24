@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -42,7 +43,6 @@ func Start()  {
 	}()
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	<-quit
-	log.Println("Shutdown Server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
 	defer func() {
 		cancel()
@@ -50,7 +50,6 @@ func Start()  {
 	if err:= srv.Shutdown(ctx); err != nil {
 		log.Fatal("Server Shutdown:", err)
 	}
-	log.Println("Server exited")
 }
 
 

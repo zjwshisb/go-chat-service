@@ -9,6 +9,8 @@ import (
 	"time"
 	"ws/app/databases"
 	"ws/app/models"
+	"ws/app/mq"
+	"ws/configs"
 )
 // conn管理相关方法
 type ConnContainer interface {
@@ -22,11 +24,11 @@ type ConnContainer interface {
 	RemoveConn(key int64)
 }
 // channel相关方法
-// 当读发消息的conn不在同一台机器时
+// 集群模式下当读发消息的conn不在同一台机器时
 // 通过订阅/发布进行消息通信
 type ChannelManager interface {
 	GetSubscribeChannel() string
-	publish(channel string, payload *payload) error
+	publish(channel string, payload *mq.Payload) error
 	getUserChannelKey(uid int64) string
 	setUserChannel(uid int64)
 	removeUserChannel(uid int64)
@@ -34,6 +36,7 @@ type ChannelManager interface {
 	getAllChannel() []string
 	registerChannel()
 	unRegisterChannel()
+	isCluster() bool
 }
 
 type ConnManager interface {
@@ -51,7 +54,7 @@ type MessageHandle interface {
 	handleMessage(cm *ConnMessage)
 	handleRemoteMessage()
 	handleOffline(msg *models.Message)
-	DeliveryMessage(msg *models.Message, from Conn)
+	DeliveryMessage(msg *models.Message)
 }
 
 type ManagerHook = func(conn Conn)
@@ -72,11 +75,13 @@ type manager struct {
 	groupCacheKey string // manager群组cache key
 }
 
+func (m *manager) isCluster() bool {
+	return configs.App.Cluster
+}
 // 发布消息
-func (m *manager) publish(channel string, payload *payload) error {
-	ctx := context.Background()
-	cmd := databases.Redis.Publish(ctx, channel, payload)
-	return cmd.Err()
+func (m *manager) publish(channel string, payload *mq.Payload) error {
+	err := mq.Mq().Publish(channel, payload)
+	return err
 }
 
 // 获取用户channel cache key
@@ -87,15 +92,20 @@ func (m *manager) getUserChannelKey(uid int64) string {
 // 设置用户所在channel
 // 默认有效期24小时，用于程序意外退出后的清理
 func (m *manager) setUserChannel(uid int64)  {
-	ctx := context.Background()
-	key := m.getUserChannelKey(uid)
-	databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), time.Hour * 24)
+	if m.isCluster() {
+		ctx := context.Background()
+		key := m.getUserChannelKey(uid)
+		databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), time.Hour * 24)
+	}
 }
 // 移除用户所在channel
 func (m *manager) removeUserChannel(uid int64)  {
-	ctx := context.Background()
-	databases.Redis.Del(ctx, m.getUserChannelKey(uid))
+	if m.isCluster() {
+		ctx := context.Background()
+		databases.Redis.Del(ctx, m.getUserChannelKey(uid))
+	}
 }
+
 // 获取用户channel
 func (m *manager) getUserChannel(uid int64) string {
 	ctx := context.Background()
@@ -176,12 +186,23 @@ func (m *manager) Unregister(client Conn) {
 	}
 }
 // 客户端注册
-// 如果是打开多个tab，关闭之前的连接
+// 如果是重复打开页面，关闭之前连接
+// 集群模式下，如果不在本机则投递一个消息
 func (m *manager) Register(client Conn) {
 	old , exist := m.GetConn(client.GetUserId())
 	timer := time.After(1 * time.Second)
 	if exist {
 		m.SendAction(NewMoreThanOne(), old)
+	} else {
+		if m.isCluster() {
+			oldChannel := m.getUserChannel(client.GetUserId())
+			if oldChannel != "" {
+				m.publish(oldChannel, &mq.Payload{
+					Types: mq.TypeAdminLogin,
+					Data: client.GetUserId(),
+				})
+			}
+		}
 	}
 	m.AddConn(client)
 	m.setUserChannel(client.GetUserId())
@@ -194,7 +215,7 @@ func (m *manager) Register(client Conn) {
 
 // 给所有客户端发送心跳
 // 客户端因意外断开链接，服务器没有关闭事件，无法得知连接已关闭
-// 通过心跳发送""字符串，如果发送失败，则调用conn的close方法回收
+// 通过心跳发送""字符串，如果发送失败，则调用conn的close方法执行清理
 func (m *manager) Ping()  {
 	ticker := time.NewTicker(time.Second * 10)
 	for {
@@ -222,6 +243,7 @@ func (m *manager) getAllChannel() []string  {
 	databases.Redis.ZRemRangeByScore(ctx , m.groupCacheKey, "-inf", strconv.FormatInt(fz, 10))
 	return cmd.Val()
 }
+// 集群模式下
 // 注册频道
 // 心跳更新最后时间，用于程序意外退出后的清理
 func (m *manager) registerChannel()  {
@@ -244,20 +266,26 @@ func (m *manager) registerChannel()  {
 }
 // 移除频道
 func (m *manager) unRegisterChannel()  {
-	ctx := context.Background()
-	databases.Redis.ZRem(ctx, m.groupCacheKey, m.Channel)
+	if m.isCluster() {
+		ctx := context.Background()
+		databases.Redis.ZRem(ctx, m.groupCacheKey, m.Channel)
+	}
 }
 
 func (m *manager) Run() {
 	go m.Ping()
-	go m.registerChannel()
+	if m.isCluster() {
+		go m.registerChannel()
+	}
 }
 
 // 释放相关资源
 func (m *manager) Destroy()  {
-	m.unRegisterChannel()
-	conns := m.GetAllConn()
-	for _, conn := range conns {
-		m.removeUserChannel(conn.GetUserId())
+	if m.isCluster() {
+		m.unRegisterChannel()
+		conns := m.GetAllConn()
+		for _, conn := range conns {
+			m.removeUserChannel(conn.GetUserId())
+		}
 	}
 }

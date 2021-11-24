@@ -25,7 +25,6 @@ func (userService *userService) SetAdmin(uid int64, adminId int64) error {
 	return cmd.Err()
 }
 
-
 // 移除当前客服
 func (userService *userService) RemoveAdmin(uid int64) error  {
 	ctx := context.Background()

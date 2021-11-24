@@ -16,7 +16,7 @@ var SubScribeService = &subscribeService{}
 
 type subscribeService struct {
 }
-
+// 设置微信订阅消息id
 func (subscribeService *subscribeService) Set(uid int64) error {
 	ctx := context.Background()
 	templateId := configs.Wechat.SubscribeTemplateIdOne
@@ -24,6 +24,7 @@ func (subscribeService *subscribeService) Set(uid int64) error {
 	cmd := databases.Redis.Set(ctx, key, 1, 0)
 	return cmd.Err()
 }
+// 是否设置微信订阅消息id
 func (subscribeService *subscribeService) IsSet(uid int64) bool {
 	ctx := context.Background()
 	templateId := configs.Wechat.SubscribeTemplateIdOne
@@ -34,7 +35,7 @@ func (subscribeService *subscribeService) IsSet(uid int64) bool {
 	}
 	return true
 }
-
+// 移除微信订阅消息id
 func (subscribeService *subscribeService) Remove(uid int64)  bool {
 	ctx := context.Background()
 	templateId := configs.Wechat.SubscribeTemplateIdOne

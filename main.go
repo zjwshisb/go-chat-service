@@ -1,25 +1,16 @@
 package main
 
 import (
-	"os"
-	"os/exec"
+	"net/http"
+	_ "net/http/pprof"
 	"ws/app"
-	"ws/args"
 )
-func daemonize(args ...string)  {
-	var arg []string
-	if len(args) > 1 {
-		arg = args[1:]
-	}
-	cmd := exec.Command(args[0], arg...)
-	cmd.Env = os.Environ()
-	cmd.Start()
-}
+
 func main() {
-	if !args.Daemonized {
-		app.Start()
-	} else {
-		args := os.Args
-		daemonize(args...)
-	}
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+	go http.ListenAndServe(":10000", nil)
+	app.Start()
+
 }

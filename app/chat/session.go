@@ -27,8 +27,8 @@ func (sessionService *sessionService) Close(sessionId uint64, isRemoveUser bool,
 			_ = AdminService.UpdateLimitTime(session.AdminId, session.UserId, 0)
 		}
 	}
-
 }
+// 创建会话
 func (sessionService *sessionService) Create(uid int64, ty int) *models.ChatSession  {
 	session := &models.ChatSession{}
 	session.UserId = uid
@@ -38,6 +38,7 @@ func (sessionService *sessionService) Create(uid int64, ty int) *models.ChatSess
 	_ = chatSessionRepo.Save(session)
 	return session
 }
+// 获取会话
 func (sessionService *sessionService) Get(uid int64, adminId int64) *models.ChatSession {
 	session := chatSessionRepo.First([]*repositories.Where{
 		{

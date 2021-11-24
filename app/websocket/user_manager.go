@@ -1,14 +1,12 @@
 package websocket
 
 import (
-	"context"
-	"encoding/json"
 	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
 	"time"
 	"ws/app/chat"
-	"ws/app/databases"
 	"ws/app/log"
 	"ws/app/models"
+	"ws/app/mq"
 	"ws/app/wechat"
 	"ws/configs"
 )
@@ -36,9 +34,30 @@ func init() {
 func (userManager *userManager) Run() {
 	userManager.manager.Run()
 	go userManager.handleReceiveMessage()
-	go userManager.handleRemoteMessage()
+	if userManager.isCluster() {
+		go userManager.handleRemoteMessage()
+	}
 }
-
+// 投递消息
+// 查询user是否在本机上，是则直接投递
+// 查询user当前channel，如果存在则投递到该channel上
+// 最后则说明user不在线，处理相关逻辑
+func (userManager *userManager) DeliveryMessage(msg *models.Message) {
+	userConn, exist := UserManager.GetConn(msg.UserId)
+	if exist {
+		userConn.Deliver(NewReceiveAction(msg))
+	} else if userManager.isCluster() {
+		userChannel := userManager.getUserChannel(msg.UserId)
+		if userChannel != "" {
+			_ = userManager.publish(userChannel, &mq.Payload{
+				Data: msg.Id,
+				Types: "message",
+			})
+		}
+	} else {
+		userManager.handleOffline(msg)
+	}
+}
 // 从管道接受消息并处理
 func (userManager *userManager) handleReceiveMessage() {
 	for {
@@ -48,23 +67,22 @@ func (userManager *userManager) handleReceiveMessage() {
 }
 // 处理远程消息
 func (userManager *userManager) handleRemoteMessage()  {
-	ctx := context.Background()
-	sub := databases.Redis.Subscribe(ctx, userManager.GetSubscribeChannel())
+	sub := mq.Mq().Subscribe(userManager.GetSubscribeChannel())
 	for {
-		msg, err := sub.ReceiveMessage(ctx)
+		message, err := sub.ReceiveMessage()
 		go func() {
-			payload := &payload{}
-			err = json.Unmarshal([]byte(msg.Payload), payload)
-			switch payload.Types {
-			case "message":
-				mid := payload.Data
-				msg := messageRepo.First(mid)
-				if msg != nil {
-					client, exist := userManager.GetConn(msg.UserId)
-					if exist {
-						client.Deliver(NewReceiveAction(msg))
-					} else {
-						userManager.handleOffline(msg)
+			if err == nil {
+				switch message.Types {
+				case "message":
+					mid := message.Data
+					msg := messageRepo.First(mid)
+					if msg != nil {
+						client, exist := userManager.GetConn(msg.UserId)
+						if exist {
+							client.Deliver(NewReceiveAction(msg))
+						} else {
+							userManager.handleOffline(msg)
+						}
 					}
 				}
 			}
@@ -102,44 +120,6 @@ func (userManager *userManager) handleOffline(msg *models.Message) {
 		}
 	}
 }
-// 投递消息
-// 查询user是否在本机上，是则直接投递
-// 查询user当前channel，如果存在则投递到该channel上
-// 最后则说明user不在线，处理相关逻辑
-func (userManager *userManager) DeliveryMessage(msg *models.Message, from Conn) {
-	userConn, exist := UserManager.GetConn(msg.UserId)
-	if exist {
-		userConn.Deliver(NewReceiveAction(msg))
-	} else {
-		userChannel := userManager.getUserChannel(msg.UserId)
-		if userChannel != "" {
-			_ = userManager.publish(userChannel, &payload{
-				Data: msg.Id,
-				Types: "message",
-			})
-		} else {
-			userManager.handleOffline(msg)
-		}
-	}
-}
-
-
-// 链接建立后的额外操作
-func (userManager *userManager) registerHook(conn Conn) {
-	if chat.UserService.GetValidAdmin(conn.GetUserId()) == 0 && !chat.ManualService.IsIn(conn.GetUserId()) {
-		rule := autoRuleRepo.GetEnter()
-		if rule != nil {
-			msg := rule.GetReplyMessage(conn.GetUserId())
-			if msg != nil {
-				messageRepo.Save(msg)
-				rule.Count++
-				autoRuleRepo.Save(rule)
-				conn.Deliver(NewReceiveAction(msg))
-			}
-		}
-	}
-}
-
 // 处理消息
 func (userManager *userManager) handleMessage(payload *ConnMessage) {
 	act := payload.Action
@@ -167,7 +147,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 					_ = chat.AdminService.UpdateUser(msg.AdminId, msg.UserId, addTime)
 					msg.SessionId = session.Id
 					messageRepo.Save(msg)
-					AdminManager.DeliveryMessage(msg, conn)
+					AdminManager.DeliveryMessage(msg)
 				} else { // 没有客服对象
 					if chat.TransferService.GetUserTransferId(conn.GetUserId()) == 0 {
 						if chat.ManualService.IsIn(conn.GetUserId()) {
@@ -197,6 +177,38 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 	}
 
 }
+
+func (userManager *userManager) publishWaitingCount()  {
+	if userManager.isCluster() {
+
+	} else {
+		
+	}
+}
+func (userManager *userManager) BroadcastWaitingCount()  {
+	count := chat.ManualService.GetTotalCount()
+	action := NewWaitingUserCount(count)
+	conns := userManager.GetAllConn()
+	userManager.SendAction(action, conns...)
+}
+
+// 链接建立后的额外操作
+func (userManager *userManager) registerHook(conn Conn) {
+	if chat.UserService.GetValidAdmin(conn.GetUserId()) == 0 && !chat.ManualService.IsIn(conn.GetUserId()) {
+		rule := autoRuleRepo.GetEnter()
+		if rule != nil {
+			msg := rule.GetReplyMessage(conn.GetUserId())
+			if msg != nil {
+				messageRepo.Save(msg)
+				rule.Count++
+				autoRuleRepo.Save(rule)
+				conn.Deliver(NewReceiveAction(msg))
+			}
+		}
+	}
+}
+
+
 
 // 加入人工列表
 func (userManager *userManager) addToManual(uid int64) *models.ChatSession {

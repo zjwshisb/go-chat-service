@@ -1,12 +1,12 @@
 package configs
 
 import (
+	"flag"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 	"log"
 	"net"
 	"os"
-	"ws/args"
 )
 
 type wechat struct {
@@ -39,6 +39,8 @@ type app struct {
 	SystemChatName string // 系统消息客服名称
 	PublicPath string
 	Name string
+	Mq string
+	Cluster bool
 }
 type file struct {
 	Storage string
@@ -49,6 +51,13 @@ type file struct {
 	QiniuUrl string
 	QiniuBucket string
 }
+type rabbitMq struct {
+	User string
+	Password string
+	Host string
+	Port string
+}
+
 var (
 	Mysql = &mysql{}
 	Http  = &http{}
@@ -56,16 +65,20 @@ var (
 	App = &app{}
 	File = &file{}
 	Wechat = &wechat{}
+	RabbitMq = &rabbitMq{}
 )
-
 
 func init() {
 
-	_, err := os.Stat(args.ConfigFile)
+	var ConfigFile string
+	flag.StringVar(&ConfigFile, "c", "config.ini", "config file")
+	flag.Parse()
+
+	_, err := os.Stat(ConfigFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg, err := ini.Load(args.ConfigFile)
+	cfg, err := ini.Load(ConfigFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -74,6 +87,7 @@ func init() {
 		_ = cfg.Section("Http").MapTo(Http)
 		_ = cfg.Section("Redis").MapTo(Redis)
 		_ = cfg.Section("App").MapTo(App)
+		_ = cfg.Section("RabbitMq").MapTo(RabbitMq)
 		ips, err := getLocalIP()
 		if err != nil {
 			log.Fatalln(err)
@@ -85,7 +99,6 @@ func init() {
 			log.Fatal(err)
 		}
 	}
-
 }
 
 func getLocalIP() (ips []string, err error) {

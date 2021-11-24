@@ -1,13 +1,14 @@
 # gochat客服系统
 
 ### 介绍
-基于golang，ant-design-pro，Taro实现的在线客服系统。包含用户端(适配了微信小程序，H5，少量修改即可集成到现有项目中)，客服端(pc)，简单易用，已在生产环境中使用。
+基于golang，ant-design-pro，Taro实现的在线客服系统，可集群部署。集群部署下通过发布/订阅进行消息通信
 - [客服前端代码仓库](https://github.com/zjwshisb/service-frontend)
 - [用户端前端代码仓库](https://github.com/zjwshisb/service-user) 
 
 依赖
 - mysql
 - redis
+- rabbitmq(可选)
 
 ### 开始
 ```shell script

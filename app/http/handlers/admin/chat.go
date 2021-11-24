@@ -318,7 +318,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		ReqId:      util.GetSystemReqId(),
 	}
 	messageRepo.Save(noticeMessage)
-	websocket.UserManager.DeliveryMessage(noticeMessage, nil)
+	websocket.UserManager.DeliveryMessage(noticeMessage)
 	for index, m := range messages {
 		rm := m.ToJson()
 		chatUser.Messages[index] = rm
