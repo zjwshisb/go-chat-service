@@ -22,5 +22,5 @@ func GetSystemReqId() string {
 	key := "system:req-id"
 	ctx := context.Background()
 	cmd := databases.Redis.Incr(ctx, key)
-	return "a" + strconv.FormatInt(cmd.Val(), 10)
+	return "s" + strconv.FormatInt(cmd.Val(), 10)
 }

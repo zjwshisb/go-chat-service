@@ -9,7 +9,6 @@ import (
 	"ws/app/databases"
 	"ws/app/models"
 	"ws/app/util"
-	"ws/app/websocket"
 )
 
 type DashboardHandler struct {
@@ -94,8 +93,8 @@ func (handler *DashboardHandler) GetUserQueryInfo(c *gin.Context) {
 
 func (handler *DashboardHandler) GetOnlineInfo(c *gin.Context)  {
 	util.RespSuccess(c, gin.H{
-		"user_count": websocket.UserManager.GetTotal(),
-		"admin_count": websocket.AdminManager.GetTotal(),
+		//"user_count": websocket.UserManager.GetTotal(),
+		//"admin_count": websocket.AdminManager.GetTotal(),
 		"waiting_user_count": len(chat.ManualService.GetAll()),
 	})
 }

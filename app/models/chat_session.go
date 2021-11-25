@@ -22,6 +22,14 @@ type ChatSession struct {
 	Messages []*Message `gorm:"foreignKey:session_id"`
 }
 
+func (chatSession *ChatSession) GetUser() *User  {
+	if chatSession.User == nil {
+		user := &User{}
+		_ = databases.Db.Model(chatSession).Association("User").Find(user)
+		chatSession.User = user
+	}
+	return chatSession.User
+}
 func (chatSession *ChatSession) getTypeLabel() string {
 	switch chatSession.Type {
 	case ChatSessionTypeTransfer:

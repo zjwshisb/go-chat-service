@@ -2,15 +2,15 @@ package auth
 
 import "github.com/gin-gonic/gin"
 
-type PrimaryUser interface {
-	GetPrimaryKey() int64
+type FrontendUser interface {
+	GetMpOpenId() string
 }
 
 type User interface {
-	PrimaryUser
+	GetPrimaryKey() int64
 	GetUsername() string
 	GetAvatarUrl() string
-	GetMpOpenId() string
 	Auth(c *gin.Context) bool
+	GetGroupId() int64
 	GetReqId() string
 }

@@ -46,8 +46,14 @@ func (manual *manualService) GetTotalCount() int64 {
 	cmd := databases.Redis.ZCard(ctx, manualUserKey)
 	return cmd.Val()
 }
+// 获取指定时间的数量
+func (manual *manualService) GetCountByTime(min string, max string)  int64 {
+	ctx := context.Background()
+	cmd := databases.Redis.ZCount(ctx,manualUserKey, min, max)
+	return cmd.Val()
+}
 // 通过加入时间获取
-func (manual *manualService) getByTime(min string, max string) []string {
+func (manual *manualService) GetByTime(min string, max string) []string {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRangeByScore(ctx, manualUserKey, &redis.ZRangeBy{
 		Min:    min,
@@ -58,7 +64,7 @@ func (manual *manualService) getByTime(min string, max string) []string {
 	return cmd.Val()
 }
 // 获取加入时间
-func (manual *manualService) getTime(uid int64) float64 {
+func (manual *manualService) GetTime(uid int64) float64 {
 	ctx := context.Background()
 	cmd := databases.Redis.ZScore(ctx, manualUserKey, strconv.FormatInt(uid, 10))
 	return cmd.Val()

@@ -2,8 +2,8 @@ package mq
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/go-redis/redis/v8"
+	"github.com/tidwall/gjson"
 	"ws/app/databases"
 )
 
@@ -18,11 +18,10 @@ type RedisSubscribe struct {
 func (s *RedisSubscribe) Close()  {
 }
 
-func (s *RedisSubscribe) ReceiveMessage() (*Payload, error) {
+func (s *RedisSubscribe) ReceiveMessage() gjson.Result  {
 	message := <-s.channel
-	payload := &Payload{}
-	err := json.Unmarshal([]byte(message.Payload), payload)
-	return payload, err
+	result := gjson.Parse(message.Payload)
+	return result
 }
 
 type RedisMq struct {

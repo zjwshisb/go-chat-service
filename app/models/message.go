@@ -2,6 +2,7 @@ package models
 
 import (
 	"gorm.io/gorm/clause"
+	"time"
 	"ws/app/databases"
 	"ws/app/resource"
 	"ws/app/util"
@@ -37,16 +38,27 @@ type Message struct {
 func (message *Message) Save() {
 	databases.Db.Omit(clause.Associations).Save(message)
 }
+
+func (message *Message) GetUser() *User  {
+	if message.User == nil {
+		user := &User{}
+		_ = databases.Db.Model(message).Association("User").Find(user)
+		message.User = user
+	}
+	return message.User
+}
+func (message *Message) GetAdmin() *Admin  {
+	if message.Admin == nil {
+		admin := &Admin{}
+		_ = databases.Db.Model(message).Association("Admin").Find(admin)
+		message.Admin = admin
+	}
+	return message.Admin
+}
 func (message *Message) GetAdminName() string {
 	switch message.Source {
 	case SourceAdmin:
-		admin := &Admin{}
-		if message.Admin == nil {
-			_ = databases.Db.Model(message).Association("Admin").Find(admin)
-		} else {
-			admin = message.Admin
-		}
-		return admin.GetChatName()
+		return message.GetAdmin().GetChatName()
 	case SourceSystem:
 		return configs.App.SystemChatName
 	}
@@ -63,19 +75,12 @@ func (message *Message) GetAvatar() (avatar string) {
 		}
 		avatar = user.GetAvatarUrl()
 	case SourceAdmin:
-		admin := &Admin{}
-		if message.Admin == nil {
-			_ = databases.Db.Model(message).Association("Admin").Find(admin)
-		} else {
-			admin = message.Admin
-		}
-		avatar = admin.GetAvatarUrl()
+		avatar = message.GetAdmin().GetAvatarUrl()
 	case SourceSystem:
 		avatar = util.SystemAvatar()
 	}
 	return
 }
-
 func (message *Message) ToJson() *resource.Message {
 	return &resource.Message{
 		Id:         message.Id,
@@ -92,4 +97,15 @@ func (message *Message) ToJson() *resource.Message {
 		Avatar:     message.GetAvatar(),
 	}
 }
-
+func NewNoticeMessage(session *ChatSession, content string) *Message {
+	return &Message{
+		UserId:     session.UserId,
+		AdminId:    session.AdminId,
+		Type:       TypeNotice,
+		Content:    content,
+		ReceivedAT: time.Now().Unix(),
+		Source:     SourceSystem,
+		SessionId:  session.Id,
+		ReqId:      util.GetSystemReqId(),
+	}
+}

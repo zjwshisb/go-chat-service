@@ -2,7 +2,9 @@ package websocket
 
 import (
 	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
+	"strconv"
 	"time"
+	"ws/app/auth"
 	"ws/app/chat"
 	"ws/app/log"
 	"ws/app/models"
@@ -20,7 +22,7 @@ var UserManager *userManager
 func init() {
 	UserManager = &userManager{
 		manager{
-			Clients:      make(map[int64]Conn),
+			groupCount: 10,
 			Channel:      configs.App.Name + "-user",
 			ConnMessages: make(chan *ConnMessage, 100),
 			userChannelCacheKey: "user:%d:channel",
@@ -43,7 +45,7 @@ func (userManager *userManager) Run() {
 // 查询user当前channel，如果存在则投递到该channel上
 // 最后则说明user不在线，处理相关逻辑
 func (userManager *userManager) DeliveryMessage(msg *models.Message) {
-	userConn, exist := UserManager.GetConn(msg.UserId)
+	userConn, exist := UserManager.GetConn(msg.GetUser())
 	if exist {
 		userConn.Deliver(NewReceiveAction(msg))
 	} else if userManager.isCluster() {
@@ -69,21 +71,24 @@ func (userManager *userManager) handleReceiveMessage() {
 func (userManager *userManager) handleRemoteMessage()  {
 	sub := mq.Mq().Subscribe(userManager.GetSubscribeChannel())
 	for {
-		message, err := sub.ReceiveMessage()
+		message := sub.ReceiveMessage()
 		go func() {
-			if err == nil {
-				switch message.Types {
-				case "message":
-					mid := message.Data
-					msg := messageRepo.First(mid)
-					if msg != nil {
-						client, exist := userManager.GetConn(msg.UserId)
-						if exist {
-							client.Deliver(NewReceiveAction(msg))
-						} else {
-							userManager.handleOffline(msg)
-						}
+			switch message.Get("Types").String() {
+			case mq.TypeMessage:
+				mid := message.Get("Data").Int()
+				msg := messageRepo.First(mid)
+				if msg != nil {
+					client, exist := userManager.GetConn(msg.GetUser())
+					if exist {
+						client.Deliver(NewReceiveAction(msg))
+					} else {
+						userManager.handleOffline(msg)
 					}
+				}
+			case mq.TypeWaitingUserCount:
+				gid := message.Get("Data").Int()
+				if gid > 0 {
+					userManager.BroadcastWaitingCount(gid)
 				}
 			}
 		}()
@@ -135,6 +140,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 				msg.User = conn.GetUser().(*models.User)
 				msg.AdminId = chat.UserService.GetValidAdmin(conn.GetUserId())
 				// 发送回执
+				messageRepo.Save(msg)
 				conn.Deliver(NewReceiptAction(msg))
 				// 有对应的客服对象
 				if msg.AdminId > 0 {
@@ -156,15 +162,15 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 								msg.SessionId = session.Id
 							}
 							messageRepo.Save(msg)
-							AdminManager.BroadcastWaitingUser()
+							AdminManager.BroadcastWaitingUser(msg.GetUser().GetGroupId())
 						} else {
 							if chat.SettingService.GetIsAutoTransferManual() { // 自动转人工
-								session := UserManager.addToManual(conn.GetUserId())
+								session := UserManager.addToManual(conn.GetUser())
 								if session != nil {
 									msg.SessionId = session.Id
 								}
 								messageRepo.Save(msg)
-								AdminManager.BroadcastWaitingUser()
+								AdminManager.BroadcastWaitingUser(msg.GetUser().GetGroupId())
 							} else {
 								messageRepo.Save(msg)
 								userManager.triggerMessageEvent(models.SceneNotAccepted, msg)
@@ -175,26 +181,44 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 			}
 		}
 	}
-
 }
-
-func (userManager *userManager) publishWaitingCount()  {
+// 广播等待人数
+func (userManager *userManager) PublishWaitingCount(groupId int64)  {
 	if userManager.isCluster() {
-
+		channels := userManager.getAllChannel()
+		for _, channel := range channels {
+			_ = userManager.publish(channel, &mq.Payload{
+				Types: mq.TypeWaitingUserCount,
+				Data: groupId,
+			})
+		}
 	} else {
-		
+		userManager.BroadcastWaitingCount(groupId)
 	}
 }
-func (userManager *userManager) BroadcastWaitingCount()  {
-	count := chat.ManualService.GetTotalCount()
-	action := NewWaitingUserCount(count)
-	conns := userManager.GetAllConn()
-	userManager.SendAction(action, conns...)
+// 推送前面等待人数
+func (userManager *userManager) DeliveryWaitingCount(conn Conn)  {
+	uid := conn.GetUserId()
+	uTime := chat.ManualService.GetTime(uid)
+	count := chat.ManualService.GetCountByTime("-inf",
+		strconv.FormatFloat(uTime, 'f', 0, 64))
+	conn.Deliver(NewWaitingUserCount(count - 1))
+}
+// 广播前面等待人数
+func (userManager *userManager) BroadcastWaitingCount(gid int64)  {
+	conns := userManager.GetAllConn(gid)
+	for _, conn := range conns {
+		userManager.DeliveryWaitingCount(conn)
+	}
 }
 
 // 链接建立后的额外操作
+// 如果已经在待接入人工列表中，则推送当前队列位置
+// 如果不在待接入人工列表中且没有设置客服，则推送欢迎语
 func (userManager *userManager) registerHook(conn Conn) {
-	if chat.UserService.GetValidAdmin(conn.GetUserId()) == 0 && !chat.ManualService.IsIn(conn.GetUserId()) {
+	if chat.ManualService.IsIn(conn.GetUserId()) {
+		userManager.DeliveryWaitingCount(conn)
+	} else if chat.UserService.GetValidAdmin(conn.GetUserId()) == 0 {
 		rule := autoRuleRepo.GetEnter()
 		if rule != nil {
 			msg := rule.GetReplyMessage(conn.GetUserId())
@@ -211,34 +235,38 @@ func (userManager *userManager) registerHook(conn Conn) {
 
 
 // 加入人工列表
-func (userManager *userManager) addToManual(uid int64) *models.ChatSession {
-	if !chat.ManualService.IsIn(uid) {
-		onlineServerCount := len(AdminManager.Clients)
-		if onlineServerCount == 0 { // 如果没有在线客服
-			rule := autoRuleRepo.GetAdminAllOffLine()
-			if rule != nil {
-				switch rule.ReplyType {
-				case models.ReplyTypeMessage:
-					msg := rule.GetReplyMessage(uid)
-					if msg != nil {
-						messageRepo.Save(msg)
-						rule.AddCount()
-						conn, exist := userManager.GetConn(uid)
-						if exist {
-							conn.Deliver(NewReceiveAction(msg))
-						}
-						return nil
-					}
-				default:
-				}
-			}
-		}
-		_ = chat.ManualService.Add(uid)
-		AdminManager.publishWaitingUser()
-		session := chat.SessionService.Get(uid, 0)
+func (userManager *userManager) addToManual(user auth.User) *models.ChatSession {
+	if !chat.ManualService.IsIn(user.GetPrimaryKey()) {
+		//onlineServerCount := len(AdminManager.Clients)
+		//if onlineServerCount == 0 { // 如果没有在线客服
+		//	rule := autoRuleRepo.GetAdminAllOffLine()
+		//	if rule != nil {
+		//		switch rule.ReplyType {
+		//		case models.ReplyTypeMessage:
+		//			msg := rule.GetReplyMessage(uid)
+		//			if msg != nil {
+		//				messageRepo.Save(msg)
+		//				rule.AddCount()
+		//				conn, exist := userManager.GetConn(uid)
+		//				if exist {
+		//					conn.Deliver(NewReceiveAction(msg))
+		//				}
+		//				return nil
+		//			}
+		//		default:
+		//		}
+		//	}
+		//}
+		_ = chat.ManualService.Add(user.GetPrimaryKey())
+		session := chat.SessionService.Get(user.GetPrimaryKey(), 0)
 		if session == nil {
-			session = chat.SessionService.Create(uid, models.ChatSessionTypeNormal)
+			session = chat.SessionService.Create(user.GetPrimaryKey(), models.ChatSessionTypeNormal)
 		}
+		message := models.NewNoticeMessage(session, "正在为你转接人工客服")
+		messageRepo.Save(message)
+		userManager.DeliveryMessage(message)
+		AdminManager.PublishWaitingUser(user.GetGroupId())
+		userManager.PublishWaitingCount(user.GetGroupId())
 		return session
 	}
 	return nil
@@ -253,19 +281,19 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 			switch rule.ReplyType {
 			// 转接人工客服
 			case models.ReplyTypeTransfer:
-				session := userManager.addToManual(message.UserId)
+				session := userManager.addToManual(message.GetUser())
 				if session != nil {
 					message.SessionId = session.Id
 					messageRepo.Save(message)
 				}
-				AdminManager.BroadcastWaitingUser()
+				AdminManager.BroadcastWaitingUser(message.GetUser().GetGroupId())
 			// 回复消息
 			case models.ReplyTypeMessage:
 				msg := rule.GetReplyMessage(message.UserId)
 				if msg != nil {
 					msg.SessionId = message.SessionId
 					messageRepo.Save(msg)
-					conn, exist := userManager.GetConn(msg.UserId)
+					conn, exist := userManager.GetConn(msg.GetUser())
 					if exist {
 						conn.Deliver(NewReceiveAction(msg))
 					}
@@ -282,7 +310,7 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 					if msg != nil {
 						msg.SessionId = message.SessionId
 						messageRepo.Save(msg)
-						conn, exist := userManager.GetConn(msg.UserId)
+						conn, exist := userManager.GetConn(msg.GetUser())
 						if exist {
 							conn.Deliver(NewReceiveAction(msg))
 						}

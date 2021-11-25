@@ -6,7 +6,6 @@ import (
 )
 
 
-
 type AutoMessage struct {
 	ID        uint   `gorm:"column:id;primaryKey"`
 	Name      string `gorm:"size:255"`

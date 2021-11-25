@@ -7,7 +7,6 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/util"
-	"ws/app/websocket"
 )
 
 type TransferHandler struct {
@@ -35,10 +34,11 @@ func (handler *TransferHandler) Cancel(c *gin.Context)  {
 		return
 	}
 	_ = chat.TransferService.Cancel(transfer)
-	_ , exist := websocket.AdminManager.GetConn(transfer.ToAdminId)
-	if exist {
-		websocket.AdminManager.BroadcastUserTransfer(transfer.ToAdminId)
-	}
+	// todo
+	//_ , exist := websocket.AdminManager.GetConn(transfer.)
+	//if exist {
+	//	websocket.AdminManager.BroadcastUserTransfer(transfer.ToAdminId)
+	//}
 	util.RespSuccess(c , gin.H{})
 }
 

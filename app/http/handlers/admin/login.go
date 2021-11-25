@@ -27,7 +27,7 @@ func Login(c *gin.Context) {
 			util.RespSuccess(c, gin.H{
 				"token": user.Login(),
 			})
-			old, exist := websocket.AdminManager.GetConn(user.ID)
+			old, exist := websocket.AdminManager.GetConn(user)
 			if exist {
 				old.Deliver(websocket.NewOtherLogin())
 			}

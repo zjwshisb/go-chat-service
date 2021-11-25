@@ -2,6 +2,7 @@ package mq
 
 import (
 	"encoding/json"
+	"github.com/tidwall/gjson"
 	"strings"
 	"ws/configs"
 )
@@ -10,6 +11,9 @@ const TypeMessage = "message"
 const TypeWaitingUser = "waiting-user"
 const TypeAdmin = "admin"
 const TypeAdminLogin = "admin-login"
+const TypeTransfer = "admin-transfer"
+
+const TypeWaitingUserCount = "waiting-user-count"
 
 type MessageQueue interface {
 	// 发布
@@ -20,7 +24,7 @@ type MessageQueue interface {
 
 type SubScribeChannel interface {
 	// 接收消息
-	ReceiveMessage() (*Payload, error)
+	ReceiveMessage() gjson.Result
 	Close()
 }
 

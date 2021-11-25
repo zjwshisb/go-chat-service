@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
+	"ws/app/auth"
 	"ws/app/databases"
 	"ws/app/models"
 	"ws/app/mq"
@@ -14,14 +15,14 @@ import (
 )
 // conn管理相关方法
 type ConnContainer interface {
-	AddConn(connect Conn)
-	GetConn(key int64) (Conn, bool)
-	GetAllConn() []Conn
-	GetTotal() int
-	ConnExist(uid int64) bool
+	AddConn(conn Conn)
+	GetConn(user auth.User) (Conn, bool)
+	GetAllConn(gid int64) []Conn
+	GetTotal(gid int64) int
+	ConnExist(user auth.User) bool
 	Register(connect Conn)
 	Unregister(connect Conn)
-	RemoveConn(key int64)
+	RemoveConn(user auth.User)
 }
 // channel相关方法
 // 集群模式下当读发消息的conn不在同一台机器时
@@ -63,9 +64,40 @@ type ConnMessage struct {
 	Conn *Client
 	Action *Action
 }
+type Shard struct {
+	m map[int64]Conn
+	mutex sync.RWMutex
+}
+func (s *Shard) GetAll() []Conn  {
+	s.mutex.RLock()
+	defer  s.mutex.RUnlock()
+	conns := make([]Conn, 0,len(s.m))
+	for _, conn := range s.m {
+		conns = append(conns, conn)
+	}
+	return conns
+}
+func (s *Shard) Get(uid int64)  (conn Conn, exist bool) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	conn, exist = s.m[uid]
+	return
+}
+func (s *Shard) Set(conn Conn)  {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.m[conn.GetUserId()] = conn
+	fmt.Println(s.m)
+}
+func (s *Shard) Remove(uid int64)  {
+	s.mutex.Lock()
+	defer  s.mutex.Unlock()
+	delete(s.m, uid)
+}
 
 type manager struct {
-	Clients map[int64]Conn
+	groupCount int64 // 分组数量，根据用户量调整
+	groups []*Shard //
 	lock    sync.RWMutex // clients的读写锁
 	Channel string // 当前manager channel
 	ConnMessages chan *ConnMessage // 接受从conn所读取消息的chan
@@ -73,6 +105,15 @@ type manager struct {
 	onUnRegister ManagerHook //客户端连接断开hook
 	userChannelCacheKey string // 客户端channel cache key
 	groupCacheKey string // manager群组cache key
+}
+
+// 根据group id获取所在group index
+func (m *manager) spread(gid int64) int64 {
+	return gid % m.groupCount
+}
+func (m *manager) getSpread(gid int64) *Shard  {
+	index := m.spread(gid)
+	return m.groups[index]
 }
 
 func (m *manager) isCluster() bool {
@@ -126,61 +167,54 @@ func (m *manager) ReceiveMessage(cm *ConnMessage)  {
 }
 
 // 获取当前客户端数量
-func (m *manager) GetTotal() int  {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	return len(m.GetAllConn())
+func (m *manager) GetTotal(gid int64) int  {
+	s := m.getSpread(gid)
+	return len(s.m)
 }
 
 // 给客户端发送消息
 func (m *manager) SendAction(a  *Action, clients ...Conn) {
 	for _,c := range clients {
+		fmt.Println(c)
 		c.Deliver(a)
 	}
 }
 // 客户端是否存在
-func (m *manager) ConnExist(uid int64) bool {
-	_, exist := m.GetConn(uid)
+func (m *manager) ConnExist(user auth.User) bool {
+	_, exist := m.GetConn(user)
 	return exist
 }
 // 获取客户端
-func (m *manager) GetConn(uid int64) (client Conn,ok bool) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	client, ok = m.Clients[uid]
+func (m *manager) GetConn(user auth.User) (client Conn,ok bool) {
+	s := m.getSpread(user.GetGroupId())
+	client, ok = s.Get(user.GetPrimaryKey())
 	return
 }
 // 添加客户端
-func (m *manager) AddConn(client Conn) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	m.Clients[client.GetUserId()] = client
+func (m *manager) AddConn(conn Conn) {
+	s := m.getSpread(conn.GetGroupId())
+	s.Set(conn)
 }
 // 移除客户端
-func (m *manager) RemoveConn(uid int64) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	delete(m.Clients, uid)
+func (m *manager) RemoveConn(user auth.User) {
+	s := m.getSpread(user.GetGroupId())
+	s.Remove(user.GetPrimaryKey())
 }
 // 获取所有客户端
-func (m *manager) GetAllConn() (s []Conn){
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	r := make([]Conn, 0, len(m.Clients))
-	for _, c := range m.Clients {
-		r = append(r, c)
-	}
-	return r
+func (m *manager) GetAllConn(groupId int64) (conns []Conn){
+	s := m.getSpread(groupId)
+	return s.GetAll()
 }
 // 客户端注销
-func (m *manager) Unregister(client Conn) {
-	existConn, exist := m.GetConn(client.GetUserId())
+func (m *manager) Unregister(conn Conn) {
+	s := m.getSpread(conn.GetGroupId())
+	existConn, exist := s.Get(conn.GetUserId())
 	if exist {
-		if existConn == client {
-			m.removeUserChannel(client.GetUserId())
-			m.RemoveConn(client.GetUserId())
+		if existConn == conn {
+			m.removeUserChannel(conn.GetUserId())
+			m.RemoveConn(conn.GetUser())
 			if m.onUnRegister != nil {
-				m.onUnRegister(client)
+				m.onUnRegister(conn)
 			}
 		}
 	}
@@ -188,28 +222,29 @@ func (m *manager) Unregister(client Conn) {
 // 客户端注册
 // 如果是重复打开页面，关闭之前连接
 // 集群模式下，如果不在本机则投递一个消息
-func (m *manager) Register(client Conn) {
-	old , exist := m.GetConn(client.GetUserId())
+func (m *manager) Register(conn Conn) {
+	s := m.getSpread(conn.GetGroupId())
+	old , exist := s.Get(conn.GetUserId())
 	timer := time.After(1 * time.Second)
 	if exist {
 		m.SendAction(NewMoreThanOne(), old)
 	} else {
 		if m.isCluster() {
-			oldChannel := m.getUserChannel(client.GetUserId())
+			oldChannel := m.getUserChannel(conn.GetUserId())
 			if oldChannel != "" {
-				m.publish(oldChannel, &mq.Payload{
+				_ = m.publish(oldChannel, &mq.Payload{
 					Types: mq.TypeAdminLogin,
-					Data: client.GetUserId(),
+					Data: conn.GetUserId(),
 				})
 			}
 		}
 	}
-	m.AddConn(client)
-	m.setUserChannel(client.GetUserId())
-	client.run()
+	m.AddConn(conn)
+	m.setUserChannel(conn.GetUserId())
+	conn.run()
 	<-timer
 	if m.onRegister != nil {
-		m.onRegister(client)
+		m.onRegister(conn)
 	}
 }
 
@@ -221,9 +256,11 @@ func (m *manager) Ping()  {
 	for {
 		select {
 		case <-ticker.C:
-			conns := m.GetAllConn()
 			ping := NewPing()
-			m.SendAction(ping, conns...)
+			for _, s := range m.groups {
+				conns := s.GetAll()
+				m.SendAction(ping, conns...)
+			}
 		}
 	}
 }
@@ -273,6 +310,14 @@ func (m *manager) unRegisterChannel()  {
 }
 
 func (m *manager) Run() {
+	m.groups = make([]*Shard, m.groupCount, m.groupCount)
+	var i int64
+	for i= 0; i< m.groupCount; i++ {
+		m.groups[i] = &Shard{
+			m:     make(map[int64]Conn),
+			mutex: sync.RWMutex{},
+		}
+	}
 	go m.Ping()
 	if m.isCluster() {
 		go m.registerChannel()
@@ -283,9 +328,11 @@ func (m *manager) Run() {
 func (m *manager) Destroy()  {
 	if m.isCluster() {
 		m.unRegisterChannel()
-		conns := m.GetAllConn()
-		for _, conn := range conns {
-			m.removeUserChannel(conn.GetUserId())
+		for _, s:= range m.groups {
+			conns := s.GetAll()
+			for _, conn := range conns {
+				m.removeUserChannel(conn.GetUserId())
+			}
 		}
 	}
 }

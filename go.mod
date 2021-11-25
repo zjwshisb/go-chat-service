@@ -21,6 +21,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/silenceper/wechat/v2 v2.0.6
 	github.com/sirupsen/logrus v1.8.1
+	github.com/tidwall/gjson v1.11.0
 	github.com/ugorji/go v1.2.3 // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb // indirect

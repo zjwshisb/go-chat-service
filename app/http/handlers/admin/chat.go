@@ -136,7 +136,7 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 		}
 		chatUserRes.LastChatTime = chat.AdminService.GetLastChatTime(admin.GetPrimaryKey(), u.GetPrimaryKey())
 		chatUserRes.Disabled = disabled
-		if _, ok := websocket.UserManager.GetConn(u.GetPrimaryKey()); ok {
+		if _, ok := websocket.UserManager.GetConn(u); ok {
 			chatUserRes.Online = true
 		}
 		resp = append(resp, chatUserRes)
@@ -165,9 +165,10 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 				u.Messages = append(u.Messages, rm)
 			}
 		}
-		if _, ok := websocket.UserManager.GetConn(u.ID); ok {
-			u.Online = true
-		}
+		// todo
+		//if _, ok := websocket.UserManager.GetConn(u); ok {
+		//	u.Online = true
+		//}
 	}
 	util.RespSuccess(c, resp)
 }
@@ -247,7 +248,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		transfer.IsAccepted = true
 		transferRepo.Save(transfer)
 		_ = chat.TransferService.RemoveUser(user.GetPrimaryKey())
-		websocket.AdminManager.BroadcastUserTransfer(admin.GetPrimaryKey())
+		websocket.AdminManager.BroadcastUserTransfer(admin)
 	}
 	unSendMsg := messageRepo.GetUnSend([]Where{
 		{
@@ -307,23 +308,15 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	}
 	chatUser.Unread = len(unSendMsg)
 	chatUser.LastChatTime = time.Now().Unix()
-	noticeMessage := &models.Message{
-		UserId:     user.GetPrimaryKey(),
-		AdminId:    admin.GetPrimaryKey(),
-		Type:       models.TypeNotice,
-		Content:    admin.GetChatName() + "为您服务",
-		ReceivedAT: time.Now().Unix(),
-		Source:     models.SourceSystem,
-		SessionId:  session.Id,
-		ReqId:      util.GetSystemReqId(),
-	}
+	noticeMessage := models.NewNoticeMessage(session, admin.GetChatName() + "为您服务")
 	messageRepo.Save(noticeMessage)
 	websocket.UserManager.DeliveryMessage(noticeMessage)
 	for index, m := range messages {
 		rm := m.ToJson()
 		chatUser.Messages[index] = rm
 	}
-	go websocket.AdminManager.BroadcastWaitingUser()
+	go websocket.AdminManager.PublishWaitingUser(user.GetGroupId())
+	go websocket.UserManager.PublishWaitingCount(user.GetGroupId())
 	util.RespSuccess(c, chatUser)
 }
 
@@ -343,22 +336,9 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 	}, "id desc")
 	if session != nil {
 		if session.BrokeAt == 0 {
-			noticeMessage := &models.Message{
-				UserId:     session.UserId,
-				AdminId:    admin.GetPrimaryKey(),
-				Type:       models.TypeNotice,
-				Content:    admin.GetChatName() + "已断开服务",
-				ReceivedAT: time.Now().Unix(),
-				Source:     models.SourceSystem,
-				SessionId:  session.Id,
-				ReqId:      util.GetSystemReqId(),
-			}
-			userConn, exist := websocket.UserManager.GetConn(session.UserId)
-			if exist {
-				userConn.Deliver(websocket.NewReceiveAction(noticeMessage))
-			} else {
-				messageRepo.Save(noticeMessage)
-			}
+			noticeMessage := models.NewNoticeMessage(session, admin.GetChatName() + "已断开服务")
+			messageRepo.Save(noticeMessage)
+			websocket.UserManager.DeliveryMessage(noticeMessage)
 		}
 		chat.SessionService.Close(session.Id, true, false)
 	}
@@ -480,7 +460,7 @@ func (handle *ChatHandler) ChatCancelTransfer(c *gin.Context) {
 		return
 	}
 	_ = chat.TransferService.Cancel(transfer)
-	websocket.AdminManager.BroadcastUserTransfer(admin.GetPrimaryKey())
+	websocket.AdminManager.BroadcastUserTransfer(admin)
 	util.RespSuccess(c , gin.H{})
 }
 // 转接
@@ -525,7 +505,7 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		util.RespValidateFail(c , err.Error())
 		return
 	}
-	go websocket.AdminManager.BroadcastUserTransfer(form.ToId)
+	go websocket.AdminManager.PublishTransfer(toAdmin)
 	util.RespSuccess(c, gin.H{})
 }
 // 聊天图片

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"time"
+	"ws/app/auth"
 	"ws/app/chat"
 	"ws/app/models"
 	"ws/app/mq"
@@ -20,7 +21,7 @@ type adminManager struct {
 func init()  {
 	AdminManager = &adminManager{
 		manager: manager{
-			Clients: make(map[int64]Conn),
+			groupCount: 10,
 			Channel: configs.App.Name + "-admin",
 			ConnMessages: make(chan *ConnMessage, 100),
 			userChannelCacheKey: "admin:%d:channel",
@@ -44,7 +45,7 @@ func (m *adminManager) Run()  {
 // 查询admin当前channel，如果存在则投递到该channel上
 // 最后则说明admin不在线，处理离线逻辑
 func (m *adminManager) DeliveryMessage(msg *models.Message)  {
-	adminConn, exist := m.GetConn(msg.AdminId)
+	adminConn, exist := m.GetConn(msg.GetAdmin())
 	if exist { // admin在线且在当前服务上
 		UserManager.triggerMessageEvent(models.SceneAdminOnline, msg)
 		adminConn.Deliver(NewReceiveAction(msg))
@@ -64,15 +65,15 @@ func (m *adminManager) handleReceiveMessage() {
 		go m.handleMessage(payload)
 	}
 }
-// 处理离线下消息
+// 处理离线消息
 func (m *adminManager) handleOffline(msg *models.Message)  {
+	UserManager.triggerMessageEvent(models.SceneAdminOffline, msg)
 	admin := adminRepo.First([]Where{
 		{
 			Filed: "id = ?",
 			Value: msg.AdminId,
 		},
 	})
-	UserManager.triggerMessageEvent(models.SceneAdminOffline, msg)
 	setting := admin.GetSetting()
 	if setting != nil {
 		// 发送离线消息
@@ -100,37 +101,41 @@ func (m *adminManager) handleRemoteMessage()  {
 	subscribe := mq.Mq().Subscribe(m.GetSubscribeChannel())
 	defer subscribe.Close()
 	for {
-		message, err := subscribe.ReceiveMessage()
-		if err == nil {
-			go func() {
-				switch message.Types {
-				case mq.TypeWaitingUser:
-					m.BroadcastWaitingUser()
-				case mq.TypeAdmin:
-					m.BroadcastAdmins()
-				case mq.TypeAdminLogin:
-					uidStr := message.Data
-					uid, ok := uidStr.(int64)
-					if ok {
-						conn, exit := m.GetConn(uid)
-						if exit {
-							conn.Deliver(NewOtherLogin())
-						}
-					}
-				case mq.TypeMessage:
-					mid := message.Data
-					msg := messageRepo.First(mid)
-					if msg != nil {
-						client, exist := m.GetConn(msg.AdminId)
-						if exist {
-							client.Deliver(NewReceiveAction(msg))
-						} else {
-							m.handleOffline(msg)
-						}
+		message := subscribe.ReceiveMessage()
+		go func() {
+			switch message.Get("Types").String() {
+			case mq.TypeWaitingUser:
+				gid := message.Get("data").Int()
+				if gid> 0 {
+					m.BroadcastWaitingUser(gid)
+				}
+			case mq.TypeAdmin:
+				m.BroadcastAdmins()
+			case mq.TypeAdminLogin:
+			case mq.TypeTransfer:
+				adminIdI := message.Get("data").Int()
+				admin := adminRepo.First([]Where{
+					{
+						Filed: "id = ?",
+						Value: adminIdI,
+					},
+				})
+				if admin != nil {
+					m.BroadcastUserTransfer(admin)
+				}
+			case mq.TypeMessage:
+				mid := message.Get("data").Int()
+				msg := messageRepo.First(mid)
+				if msg != nil {
+					client, exist := m.GetConn(msg.GetAdmin())
+					if exist {
+						client.Deliver(NewReceiveAction(msg))
+					} else {
+						m.handleOffline(msg)
 					}
 				}
-			}()
-		}
+			}
+		}()
 	}
 }
 
@@ -174,8 +179,9 @@ func (m *adminManager) handleMessage(payload *ConnMessage)  {
 
 
 func (m *adminManager) registerHook(conn Conn)  {
-	m.BroadcastUserTransfer(conn.GetUserId())
+	m.BroadcastUserTransfer(conn.GetUser())
 	m.publishAdmins()
+	m.BroadcastWaitingUser(conn.GetGroupId())
 }
 
 func (m *adminManager) unregisterHook(conn Conn)  {
@@ -189,16 +195,30 @@ func (m *adminManager) unregisterHook(conn Conn)  {
 	m.BroadcastAdmins()
 }
 // 推送待接入用户
-func (m *adminManager) publishWaitingUser() {
+func (m *adminManager) PublishWaitingUser(groupId int64) {
 	if m.isCluster() {
 		channels := m.getAllChannel()
 		for _, channel := range channels {
 			_ = m.publish(channel, &mq.Payload{
 				Types: mq.TypeWaitingUser,
+				Data: groupId,
 			})
 		}
 	} else {
-		m.BroadcastWaitingUser()
+		m.BroadcastWaitingUser(groupId)
+	}
+}
+func (m *adminManager) PublishTransfer(admin auth.User)  {
+	if m.isCluster() {
+		channel := m.getUserChannel(admin.GetPrimaryKey())
+		if channel != "" {
+			_ = m.publish(channel, &mq.Payload{
+				Types: mq.TypeTransfer,
+				Data: admin.GetPrimaryKey(),
+			})
+		}
+	} else {
+		m.BroadcastUserTransfer(admin)
 	}
 }
 // 推送在线admin
@@ -219,17 +239,8 @@ func (m *adminManager) publishLogin() {
 
 }
 // 广播待接入用户
-func (m *adminManager) BroadcastWaitingUser() {
-	sessions := sessionRepo.Get([]Where{
-		{
-			Filed: "admin_id = ?",
-			Value: 0,
-		},
-		{
-			Filed: "canceled_at = ?",
-			Value: 0,
-		},
-	}, -1, []string{"User", "Messages"})
+func (m *adminManager) BroadcastWaitingUser(groupId int64) {
+	sessions :=  sessionRepo.GetWaitHandles()
 	userMap := make(map[int64]*models.User)
 	waitingUser :=  make([]*resource.WaitingChatSession, 0, len(sessions))
 	for _, session := range sessions {
@@ -256,7 +267,7 @@ func (m *adminManager) BroadcastWaitingUser() {
 	sort.Slice(waitingUser, func(i, j int) bool {
 		return waitingUser[i].LastTime < waitingUser[j].LastTime
 	})
-	adminConns := m.GetAllConn()
+	adminConns := m.GetAllConn(groupId)
 	for _, conn := range adminConns {
 		adminUserSlice := make([]*resource.WaitingChatSession, 0)
 		for _, userJson := range waitingUser {
@@ -271,13 +282,13 @@ func (m *adminManager) BroadcastWaitingUser() {
 }
 
 // 向admin推送待转接入的用户
-func (m *adminManager) BroadcastUserTransfer(adminId int64)   {
-	client, exist := m.GetConn(adminId)
+func (m *adminManager) BroadcastUserTransfer(admin auth.User)   {
+	client, exist := m.GetConn(admin)
 	if exist {
 		transfers := transferRepo.Get([]Where{
 			{
 				Filed: "to_admin_id = ?",
-				Value: adminId,
+				Value: admin.GetPrimaryKey(),
 			},
 			{
 				Filed: "is_accepted = ?",
@@ -297,21 +308,21 @@ func (m *adminManager) BroadcastUserTransfer(adminId int64)   {
 }
 // 广播在线admin
 func (m *adminManager) BroadcastAdmins() {
-	var serviceUsers []*models.Admin
-	admins := adminRepo.Get([]Where{}, -1, []string{})
-	conns := m.GetAllConn()
-	data := make([]resource.Admin, 0, len(serviceUsers))
-	for _, admin := range admins {
-		_, online := m.GetConn(admin.GetPrimaryKey())
-		if online {
-			data = append(data, resource.Admin{
-				Avatar:           admin.GetAvatarUrl(),
-				Username:         admin.Username,
-				Online:           online,
-				Id:               admin.GetPrimaryKey(),
-				AcceptedCount: chat.AdminService.GetActiveCount(admin.GetPrimaryKey()),
-			})
-		}
-	}
-	m.SendAction(NewAdminsAction(data), conns...)
+	//var serviceUsers []*models.Admin
+	//admins := adminRepo.Get([]Where{}, -1, []string{})
+	//conns := m.GetAllConn()
+	//data := make([]resource.Admin, 0, len(serviceUsers))
+	//for _, admin := range admins {
+	//	_, online := m.GetConn(admin.GetPrimaryKey())
+	//	if online {
+	//		data = append(data, resource.Admin{
+	//			Avatar:           admin.GetAvatarUrl(),
+	//			Username:         admin.Username,
+	//			Online:           online,
+	//			Id:               admin.GetPrimaryKey(),
+	//			AcceptedCount: chat.AdminService.GetActiveCount(admin.GetPrimaryKey()),
+	//		})
+	//	}
+	//}
+	//m.SendAction(NewAdminsAction(data), conns...)
 }

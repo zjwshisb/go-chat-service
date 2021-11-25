@@ -12,8 +12,6 @@ import (
 )
 
 
-
-
 type User struct {
 	ID        int64
 	CreatedAt *time.Time
@@ -24,6 +22,10 @@ type User struct {
 	OpenId    string `gorm:"string;size:255"`
 }
 
+
+func (user *User) GetGroupId() int64  {
+	return 1
+}
 
 func (user *User) GetReqId() string {
 	key := fmt.Sprintf("user:%d:req-id", user.ID)

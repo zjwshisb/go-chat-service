@@ -28,8 +28,9 @@ type Conn interface {
 	run()
 	Deliver(action *Action)
 	GetUserId() int64
-	GetUser() auth.PrimaryUser
+	GetUser() auth.User
 	GetUid() string
+	GetGroupId() int64
 }
 
 type Client struct {
@@ -38,16 +39,19 @@ type Client struct {
 	send        chan *Action  // 发送的消息chan
 	sync.Once
 	manager ConnManager
-	User auth.PrimaryUser
+	User auth.User
 	uid string
 
 }
 
+func (c *Client) GetGroupId() int64 {
+	return c.User.GetGroupId()
+}
 func (c *Client) GetUid() string  {
 	return c.uid
 }
 
-func (c *Client) GetUser() auth.PrimaryUser  {
+func (c *Client) GetUser() auth.User  {
 	return c.User
 }
 

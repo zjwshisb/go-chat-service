@@ -24,6 +24,10 @@ type Admin struct {
 	Setting   *AdminChatSetting `json:"message" gorm:"foreignKey:admin_id"`
 	IsSuper bool `gorm:"is_super"`
 }
+// todo
+func (admin *Admin) GetGroupId() int64  {
+	return 1
+}
 // 是否有user的权限
 func (admin *Admin) AccessTo(User *User) bool {
 	return true
@@ -43,6 +47,7 @@ func (admin *Admin) GetAvatarUrl() string {
 func (admin *Admin) GetUsername() string {
 	return admin.Username
 }
+
 func (admin *Admin) GetSetting() *AdminChatSetting {
 	if admin.Setting == nil {
 		setting := &AdminChatSetting{}

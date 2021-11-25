@@ -1,9 +1,9 @@
 package mq
 
 import (
-	"encoding/json"
 	"fmt"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/tidwall/gjson"
 	"log"
 	"ws/configs"
 )
@@ -105,9 +105,8 @@ func (subscribe *RabbitSubscribe) Close()  {
 	_ = subscribe.ch.Close()
 }
 
-func (subscribe *RabbitSubscribe) ReceiveMessage() (*Payload, error)  {
+func (subscribe *RabbitSubscribe) ReceiveMessage() gjson.Result  {
 	msg := <-subscribe.channel
-	payload := &Payload{}
-	err := json.Unmarshal(msg.Body, payload)
-	return payload ,err
+	result :=  gjson.Parse(string(msg.Body))
+	return result
 }

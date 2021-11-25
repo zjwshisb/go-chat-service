@@ -8,8 +8,8 @@ import (
 )
 
 type ChatSessionRepo struct {
-
 }
+
 func (session *ChatSessionRepo) Save(model *models.ChatSession) int64 {
 	result := databases.Db.Omit(clause.Associations).Save(model)
 	return result.RowsAffected
@@ -25,6 +25,26 @@ func (session *ChatSessionRepo) First(where []*Where, orders ...string) *models.
 		return nil
 	}
 	return model
+}
+
+func (session *ChatSessionRepo) GetWaitHandles() []*models.ChatSession  {
+	sessions := make([]*models.ChatSession, 0)
+	databases.Db.
+		Limit(-1).
+		Scopes(AddWhere([]*Where{
+		{
+			Filed: "admin_id = ?",
+			Value: 0,
+		},
+		{
+			Filed: "canceled_at = ?",
+			Value: 0,
+		},
+	})).
+		Preload("Messages", "source = ?" , models.SourceUser).
+		Preload("User").
+		Find(&sessions)
+	return sessions
 }
 func (session *ChatSessionRepo) Get(wheres []*Where, limit int, load []string, orders ...string) []*models.ChatSession {
 	sessions := make([]*models.ChatSession, 0)

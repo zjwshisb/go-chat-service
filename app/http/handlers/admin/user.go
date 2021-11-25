@@ -42,7 +42,7 @@ func (User *UserHandler) UpdateSetting(c *gin.Context) {
 	setting.Name = form.Name
 	adminRepo.SaveSetting(setting)
 	// 如果当前在线，更新信息
-	connI , exist := websocket.AdminManager.GetConn(admin.GetPrimaryKey())
+	connI , exist := websocket.AdminManager.GetConn(admin)
 	if exist {
 		admin := connI.GetUser().(*models.Admin)
 		admin.RefreshSetting()
@@ -73,7 +73,7 @@ func (User *UserHandler) Avatar(c *gin.Context) {
 		admin.Avatar = fileInfo.Path
 		adminRepo.Save(admin)
 		// 如果当前在线，更新信息
-		conn , exist := websocket.AdminManager.GetConn(admin.GetPrimaryKey())
+		conn , exist := websocket.AdminManager.GetConn(admin)
 		if exist {
 			u := conn.GetUser().(*models.Admin)
 			u.RefreshSetting()
