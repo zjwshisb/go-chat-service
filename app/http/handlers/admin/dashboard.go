@@ -5,10 +5,12 @@ import (
 	"github.com/golang-module/carbon"
 	"gorm.io/gorm"
 	"sort"
+	"ws/app/auth"
 	"ws/app/chat"
 	"ws/app/databases"
 	"ws/app/models"
 	"ws/app/util"
+	"ws/app/websocket"
 )
 
 type DashboardHandler struct {
@@ -92,9 +94,10 @@ func (handler *DashboardHandler) GetUserQueryInfo(c *gin.Context) {
 }
 
 func (handler *DashboardHandler) GetOnlineInfo(c *gin.Context)  {
+	admin := auth.GetAdmin(c)
 	util.RespSuccess(c, gin.H{
-		//"user_count": websocket.UserManager.GetTotal(),
-		//"admin_count": websocket.AdminManager.GetTotal(),
-		"waiting_user_count": len(chat.ManualService.GetAll()),
+		"user_count": websocket.UserManager.GetTotal(admin.GetGroupId()),
+		"admin_count": websocket.AdminManager.GetTotal(admin.GetGroupId()),
+		"waiting_user_count": len(chat.ManualService.GetAll(admin.GetGroupId())),
 	})
 }

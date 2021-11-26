@@ -7,6 +7,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"strconv"
 	"time"
+	"ws/app/auth"
 	"ws/app/databases"
 )
 const (
@@ -26,12 +27,12 @@ func (adminService *adminService) getUserCacheKey(adminId int64) string  {
 	return fmt.Sprintf(adminChatUserKey, adminId)
 }
 // 接入user
-func (adminService *adminService) AddUser(adminId int64, uid int64, duration int64) error  {
+func (adminService *adminService) AddUser(admin auth.User, user auth.User, duration int64) error  {
 	ctx := context.Background()
-	_ = UserService.SetAdmin(uid, adminId)
-	m := &redis.Z{Member: uid, Score: float64(time.Now().Unix() + duration)}
-	_ = databases.Redis.ZAdd(ctx, AdminService.getUserCacheKey(adminId),  m)
-	err := ManualService.Remove(uid)
+	_ = UserService.SetAdmin(user.GetPrimaryKey(), admin.GetPrimaryKey())
+	m := &redis.Z{Member: user.GetPrimaryKey(), Score: float64(time.Now().Unix() + duration)}
+	_ = databases.Redis.ZAdd(ctx, AdminService.getUserCacheKey(admin.GetPrimaryKey()),  m)
+	err := ManualService.Remove(user.GetPrimaryKey(), user.GetGroupId())
 	return err
 }
 // 更新user

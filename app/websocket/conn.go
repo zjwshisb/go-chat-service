@@ -1,25 +1,18 @@
 package websocket
 
 import (
+	"context"
+	"fmt"
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
-	uuid "github.com/satori/go.uuid"
 	"sync"
 	"time"
 	"ws/app/auth"
+	"ws/app/databases"
 	"ws/app/log"
 	"ws/app/models"
 )
 
-const (
-	// conn向客户端发送消息成功事件
-	onSendSuccess  = iota
-	// 客服端连接成功事件
-	onEnter
-	// conn读取客服端消息事件
-	onReceiveMessage
-	// 关闭
-	onClose
-)
 
 type Conn interface {
 	readMsg()
@@ -31,6 +24,7 @@ type Conn interface {
 	GetUser() auth.User
 	GetUid() string
 	GetGroupId() int64
+	ping()
 }
 
 type Client struct {
@@ -41,12 +35,34 @@ type Client struct {
 	manager ConnManager
 	User auth.User
 	uid string
-
+	groupKeepAliveKey string // SortSet key
 }
-
+// 根据groupId 分组
+// 通过redis SortSet保存最后在线时间
+// 定时更新最后在线时间
+// 集群模式下通过获取分数大于当前时间-60s即为在线数量
+func (c *Client) ping()  {
+	ticker := time.NewTicker(time.Minute)
+	key := fmt.Sprintf(c.groupKeepAliveKey, c.GetGroupId())
+	fn := func() {
+		ctx := context.Background()
+		databases.Redis.ZAdd(ctx, key, &redis.Z{
+			Score:  float64(time.Now().Unix()),
+			Member: c.GetUserId(),
+		})
+	}
+	fn()
+	for {
+		<-ticker.C
+		fn()
+	}
+}
+// 分组Id
 func (c *Client) GetGroupId() int64 {
 	return c.User.GetGroupId()
 }
+
+// 每个连接的unique id
 func (c *Client) GetUid() string  {
 	return c.uid
 }
@@ -62,6 +78,9 @@ func (c *Client) GetUserId() int64 {
 func (c *Client) run() {
 	go c.readMsg()
 	go c.sendMsg()
+	if c.manager.isCluster() {
+		go c.ping()
+	}
 }
 
 //幂等的close方法 关闭连接，相关清理
@@ -147,24 +166,5 @@ func (c *Client) sendMsg() {
 }
 
 
-func NewUserConn(user auth.User, conn *websocket.Conn) Conn {
-	return &Client{
-		conn:        conn,
-		closeSignal: make(chan interface{}),
-		send:        make(chan *Action, 100),
-		manager: UserManager,
-		User: user,
-		uid: uuid.NewV4().String(),
-	}
-}
 
-func NewAdminConn(user *models.Admin, conn *websocket.Conn) Conn {
-	return &Client{
-		conn:        conn,
-		closeSignal: make(chan interface{}),
-		send:        make(chan *Action, 100),
-		manager: AdminManager,
-		User: user,
-		uid: uuid.NewV4().String(),
-	}
-}
+

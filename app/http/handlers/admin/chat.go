@@ -264,7 +264,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	session.AcceptedAt = time.Now().Unix()
 	session.AdminId = admin.GetPrimaryKey()
 	chatSessionRepo.Save(session)
-	_ = chat.AdminService.AddUser(admin.GetPrimaryKey(),user.GetPrimaryKey(), sessionDuration)
+	_ = chat.AdminService.AddUser(admin, user, sessionDuration)
 	now := time.Now().Unix()
 	// 更新未发送的消息
 	messageRepo.Update([]*repositories.Where{
@@ -310,7 +310,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	chatUser.LastChatTime = time.Now().Unix()
 	noticeMessage := models.NewNoticeMessage(session, admin.GetChatName() + "为您服务")
 	messageRepo.Save(noticeMessage)
-	websocket.UserManager.DeliveryMessage(noticeMessage)
+	websocket.UserManager.DeliveryMessage(noticeMessage, false)
 	for index, m := range messages {
 		rm := m.ToJson()
 		chatUser.Messages[index] = rm
@@ -338,7 +338,7 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 		if session.BrokeAt == 0 {
 			noticeMessage := models.NewNoticeMessage(session, admin.GetChatName() + "已断开服务")
 			messageRepo.Save(noticeMessage)
-			websocket.UserManager.DeliveryMessage(noticeMessage)
+			websocket.UserManager.DeliveryMessage(noticeMessage, false)
 		}
 		chat.SessionService.Close(session.Id, true, false)
 	}

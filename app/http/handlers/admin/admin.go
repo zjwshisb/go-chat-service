@@ -9,6 +9,7 @@ import (
 	"ws/app/models"
 	"ws/app/resource"
 	"ws/app/util"
+	"ws/app/websocket"
 )
 
 type AdminsHandler struct {
@@ -24,7 +25,7 @@ func (handle *AdminsHandler) Index(c *gin.Context){
 		return &resource.Admin{
 			Avatar:        admin.GetAvatarUrl(),
 			Username:      admin.Username,
-			//Online:        websocket.UserManager.ConnExist(admin.GetPrimaryKey()),
+			Online:        websocket.AdminManager.ConnExist(admin),
 			Id:            admin.ID,
 			AcceptedCount: chat.AdminService.GetActiveCount(admin.GetPrimaryKey()),
 		}
@@ -87,7 +88,7 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 		"admin": resource.Admin{
 			Avatar:        admin.GetAvatarUrl(),
 			Username:      admin.GetUsername(),
-			//Online:        websocket.AdminManager.ConnExist(admin.GetPrimaryKey()),
+			Online:        websocket.AdminManager.ConnExist(admin),
 			Id:            admin.GetPrimaryKey(),
 			AcceptedCount: chat.AdminService.GetActiveCount(admin.GetPrimaryKey()),
 		},

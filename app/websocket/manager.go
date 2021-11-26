@@ -18,11 +18,13 @@ type ConnContainer interface {
 	AddConn(conn Conn)
 	GetConn(user auth.User) (Conn, bool)
 	GetAllConn(gid int64) []Conn
-	GetTotal(gid int64) int
+	GetTotal(gid int64) int64
 	ConnExist(user auth.User) bool
 	Register(connect Conn)
 	Unregister(connect Conn)
 	RemoveConn(user auth.User)
+	IsOnline(user auth.User) bool
+	GetOnlineUserIds(gid int64) []int64
 }
 // channel相关方法
 // 集群模式下当读发消息的conn不在同一台机器时
@@ -55,7 +57,7 @@ type MessageHandle interface {
 	handleMessage(cm *ConnMessage)
 	handleRemoteMessage()
 	handleOffline(msg *models.Message)
-	DeliveryMessage(msg *models.Message)
+	DeliveryMessage(msg *models.Message, remote bool)
 }
 
 type ManagerHook = func(conn Conn)
@@ -77,6 +79,11 @@ func (s *Shard) GetAll() []Conn  {
 	}
 	return conns
 }
+func (s *Shard) GetTotalCount() int64  {
+	s.mutex.RUnlock()
+	defer s.mutex.RUnlock()
+	return int64(len(s.m))
+}
 func (s *Shard) Get(uid int64)  (conn Conn, exist bool) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -87,7 +94,6 @@ func (s *Shard) Set(conn Conn)  {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.m[conn.GetUserId()] = conn
-	fmt.Println(s.m)
 }
 func (s *Shard) Remove(uid int64)  {
 	s.mutex.Lock()
@@ -96,24 +102,20 @@ func (s *Shard) Remove(uid int64)  {
 }
 
 type manager struct {
-	groupCount int64 // 分组数量，根据用户量调整
+	groupCount int64 // 分组数量
 	groups []*Shard //
-	lock    sync.RWMutex // clients的读写锁
 	Channel string // 当前manager channel
 	ConnMessages chan *ConnMessage // 接受从conn所读取消息的chan
 	onRegister ManagerHook //客户端连接成功hook
 	onUnRegister ManagerHook //客户端连接断开hook
-	userChannelCacheKey string // 客户端channel cache key
-	groupCacheKey string // manager群组cache key
+	userChannelCacheKey string // 客户端所在机器的channel cache key
+	groupCacheKey string // 保存所在同类型manager群组SortSet keepalive key
+	connGroupKeepAliveKey string // 对应conn的keepalive key
 }
 
-// 根据group id获取所在group index
-func (m *manager) spread(gid int64) int64 {
-	return gid % m.groupCount
-}
+
 func (m *manager) getSpread(gid int64) *Shard  {
-	index := m.spread(gid)
-	return m.groups[index]
+	return m.groups[gid]
 }
 
 func (m *manager) isCluster() bool {
@@ -165,18 +167,66 @@ func (m *manager) GetSubscribeChannel() string {
 func (m *manager) ReceiveMessage(cm *ConnMessage)  {
 	m.ConnMessages <- cm
 }
-
-// 获取当前客户端数量
-func (m *manager) GetTotal(gid int64) int  {
+// 获取groupId对应的在线userIds
+func (m *manager) GetOnlineUserIds(gid int64) []int64 {
+	if m.isCluster() {
+		key := fmt.Sprintf(m.connGroupKeepAliveKey, gid)
+		source := time.Now().Unix() - 60
+		ctx := context.Background()
+		cmd := databases.Redis.ZRangeByScore(ctx, key, &redis.ZRangeBy{
+			Min:    strconv.FormatInt(source, 10),
+			Max:    "+inf",
+			Offset: 0,
+			Count:  0,
+		})
+		idsStr := cmd.Val()
+		ids := make([]int64, 0, len(idsStr))
+		for _, s := range idsStr {
+			id, ok  := strconv.ParseInt(s, 10, 64)
+			if ok == nil {
+				ids = append(ids, id)
+			}
+		}
+		return ids
+	} else {
+		s := m.getSpread(gid)
+		allConn := s.GetAll()
+		ids := make([]int64, 0, len(allConn))
+		for _, c := range allConn {
+			ids = append(ids, c.GetUserId())
+		}
+		return ids
+	}
+}
+// 获取groupId对应在线客户端数量
+func (m *manager) GetTotal(gid int64) int64  {
+	if m.isCluster() {
+		key := fmt.Sprintf(m.connGroupKeepAliveKey, gid)
+		source := time.Now().Unix() - 60
+		ctx := context.Background()
+		cmd := databases.Redis.ZCount(ctx, key, strconv.FormatInt(source, 10), "+inf")
+		return cmd.Val()
+	}
 	s := m.getSpread(gid)
-	return len(s.m)
+	return s.GetTotalCount()
 }
 
 // 给客户端发送消息
 func (m *manager) SendAction(a  *Action, clients ...Conn) {
 	for _,c := range clients {
-		fmt.Println(c)
 		c.Deliver(a)
+	}
+}
+func (m *manager) IsOnline(user auth.User) bool  {
+	if m.isCluster() {
+		ctx := context.Background()
+		key := fmt.Sprintf(m.connGroupKeepAliveKey, user.GetGroupId())
+		limtTime := time.Now().Unix() - 60
+		cmd := databases.Redis.ZScore(ctx, key, strconv.FormatInt(user.GetPrimaryKey(), 10))
+		source := cmd.Val()
+		return source > float64(limtTime)
+	}else {
+		return m.ConnExist(user)
 	}
 }
 // 客户端是否存在

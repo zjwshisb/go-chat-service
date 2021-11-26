@@ -33,7 +33,7 @@ func closeSessions()  {
 				if session != nil {
 					chat.SessionService.Close(session.Id, false, false)
 					noticeMessage := admin.GetBreakMessage(uid, session.Id)
-					websocket.UserManager.DeliveryMessage(noticeMessage)
+					websocket.UserManager.DeliveryMessage(noticeMessage, false)
 					messageRepo.Save(noticeMessage)
 				}
 			}

@@ -46,7 +46,7 @@ func (handler *TransferHandler) Index(c *gin.Context)  {
 	wheres := requests.GetFilterWhere(c, map[string]interface{}{})
 	p := transferRepo.Paginate(c, wheres, []string{"User","ToAdmin","FromAdmin"}, "id desc")
 	_ = p.DataFormat(func(i interface{}) interface{} {
-		item := i.(models.ChatTransfer)
+		item := i.(*models.ChatTransfer)
 		return item.ToJson()
 	})
 	util.RespPagination(c , p)

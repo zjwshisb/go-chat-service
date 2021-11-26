@@ -1,6 +1,8 @@
 package websocket
 
 import (
+	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
 	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
 	"strconv"
 	"time"
@@ -12,6 +14,23 @@ import (
 	"ws/app/wechat"
 	"ws/configs"
 )
+const (
+	UserConnChannelKey = "user:%d:channel"
+	UserManageGroupKey = "user:channel:group"
+	UserGroupKeepAliveKey = "user:group:%d:alive"
+)
+
+func NewUserConn(user auth.User, conn *websocket.Conn) Conn {
+	return &Client{
+		conn:              conn,
+		closeSignal:       make(chan interface{}),
+		send:              make(chan *Action, 100),
+		manager:           UserManager,
+		User:              user,
+		uid:               uuid.NewV4().String(),
+		groupKeepAliveKey: UserGroupKeepAliveKey,
+	}
+}
 
 type userManager struct {
 	manager
@@ -25,8 +44,9 @@ func init() {
 			groupCount: 10,
 			Channel:      configs.App.Name + "-user",
 			ConnMessages: make(chan *ConnMessage, 100),
-			userChannelCacheKey: "user:%d:channel",
-			groupCacheKey: "user:channel:group",
+			userChannelCacheKey: UserConnChannelKey,
+			groupCacheKey: UserManageGroupKey,
+			connGroupKeepAliveKey: UserGroupKeepAliveKey,
 		},
 	}
 	UserManager.onRegister = UserManager.registerHook
@@ -44,11 +64,12 @@ func (userManager *userManager) Run() {
 // 查询user是否在本机上，是则直接投递
 // 查询user当前channel，如果存在则投递到该channel上
 // 最后则说明user不在线，处理相关逻辑
-func (userManager *userManager) DeliveryMessage(msg *models.Message) {
+// remote 是否从消息队列读取的消息
+func (userManager *userManager) DeliveryMessage(msg *models.Message, remote bool) {
 	userConn, exist := UserManager.GetConn(msg.GetUser())
 	if exist {
 		userConn.Deliver(NewReceiveAction(msg))
-	} else if userManager.isCluster() {
+	} else if !remote && userManager.isCluster()  {
 		userChannel := userManager.getUserChannel(msg.UserId)
 		if userChannel != "" {
 			_ = userManager.publish(userChannel, &mq.Payload{
@@ -60,7 +81,7 @@ func (userManager *userManager) DeliveryMessage(msg *models.Message) {
 		userManager.handleOffline(msg)
 	}
 }
-// 从管道接受消息并处理
+// 从conn接受消息并处理
 func (userManager *userManager) handleReceiveMessage() {
 	for {
 		payload := <- userManager.ConnMessages
@@ -78,12 +99,7 @@ func (userManager *userManager) handleRemoteMessage()  {
 				mid := message.Get("Data").Int()
 				msg := messageRepo.First(mid)
 				if msg != nil {
-					client, exist := userManager.GetConn(msg.GetUser())
-					if exist {
-						client.Deliver(NewReceiveAction(msg))
-					} else {
-						userManager.handleOffline(msg)
-					}
+					userManager.DeliveryMessage(msg, true)
 				}
 			case mq.TypeWaitingUserCount:
 				gid := message.Get("Data").Int()
@@ -153,10 +169,10 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 					_ = chat.AdminService.UpdateUser(msg.AdminId, msg.UserId, addTime)
 					msg.SessionId = session.Id
 					messageRepo.Save(msg)
-					AdminManager.DeliveryMessage(msg)
+					AdminManager.DeliveryMessage(msg, false)
 				} else { // 没有客服对象
 					if chat.TransferService.GetUserTransferId(conn.GetUserId()) == 0 {
-						if chat.ManualService.IsIn(conn.GetUserId()) {
+						if chat.ManualService.IsIn(conn.GetUserId(), conn.GetGroupId()) {
 							session := chat.SessionService.Get(conn.GetUserId(), 0)
 							if session != nil {
 								msg.SessionId = session.Id
@@ -199,8 +215,8 @@ func (userManager *userManager) PublishWaitingCount(groupId int64)  {
 // 推送前面等待人数
 func (userManager *userManager) DeliveryWaitingCount(conn Conn)  {
 	uid := conn.GetUserId()
-	uTime := chat.ManualService.GetTime(uid)
-	count := chat.ManualService.GetCountByTime("-inf",
+	uTime := chat.ManualService.GetTime(uid, conn.GetGroupId())
+	count := chat.ManualService.GetCountByTime(conn.GetGroupId(), "-inf",
 		strconv.FormatFloat(uTime, 'f', 0, 64))
 	conn.Deliver(NewWaitingUserCount(count - 1))
 }
@@ -216,7 +232,7 @@ func (userManager *userManager) BroadcastWaitingCount(gid int64)  {
 // 如果已经在待接入人工列表中，则推送当前队列位置
 // 如果不在待接入人工列表中且没有设置客服，则推送欢迎语
 func (userManager *userManager) registerHook(conn Conn) {
-	if chat.ManualService.IsIn(conn.GetUserId()) {
+	if chat.ManualService.IsIn(conn.GetUserId(), conn.GetGroupId()) {
 		userManager.DeliveryWaitingCount(conn)
 	} else if chat.UserService.GetValidAdmin(conn.GetUserId()) == 0 {
 		rule := autoRuleRepo.GetEnter()
@@ -236,35 +252,32 @@ func (userManager *userManager) registerHook(conn Conn) {
 
 // 加入人工列表
 func (userManager *userManager) addToManual(user auth.User) *models.ChatSession {
-	if !chat.ManualService.IsIn(user.GetPrimaryKey()) {
-		//onlineServerCount := len(AdminManager.Clients)
-		//if onlineServerCount == 0 { // 如果没有在线客服
-		//	rule := autoRuleRepo.GetAdminAllOffLine()
-		//	if rule != nil {
-		//		switch rule.ReplyType {
-		//		case models.ReplyTypeMessage:
-		//			msg := rule.GetReplyMessage(uid)
-		//			if msg != nil {
-		//				messageRepo.Save(msg)
-		//				rule.AddCount()
-		//				conn, exist := userManager.GetConn(uid)
-		//				if exist {
-		//					conn.Deliver(NewReceiveAction(msg))
-		//				}
-		//				return nil
-		//			}
-		//		default:
-		//		}
-		//	}
-		//}
-		_ = chat.ManualService.Add(user.GetPrimaryKey())
+	if !chat.ManualService.IsIn(user.GetPrimaryKey(), user.GetGroupId()) {
+		onlineServerCount := AdminManager.GetTotal(user.GetGroupId())
+		if onlineServerCount == 0 { // 如果没有在线客服
+			rule := autoRuleRepo.GetAdminAllOffLine()
+			if rule != nil {
+				switch rule.ReplyType {
+				case models.ReplyTypeMessage:
+					msg := rule.GetReplyMessage(user.GetPrimaryKey())
+					if msg != nil {
+						messageRepo.Save(msg)
+						rule.AddCount()
+						userManager.DeliveryMessage(msg, false)
+						return nil
+					}
+				default:
+				}
+			}
+		}
+		_ = chat.ManualService.Add(user.GetPrimaryKey(), user.GetGroupId())
 		session := chat.SessionService.Get(user.GetPrimaryKey(), 0)
 		if session == nil {
 			session = chat.SessionService.Create(user.GetPrimaryKey(), models.ChatSessionTypeNormal)
 		}
 		message := models.NewNoticeMessage(session, "正在为你转接人工客服")
 		messageRepo.Save(message)
-		userManager.DeliveryMessage(message)
+		userManager.DeliveryMessage(message, false)
 		AdminManager.PublishWaitingUser(user.GetGroupId())
 		userManager.PublishWaitingCount(user.GetGroupId())
 		return session
@@ -293,10 +306,7 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 				if msg != nil {
 					msg.SessionId = message.SessionId
 					messageRepo.Save(msg)
-					conn, exist := userManager.GetConn(msg.GetUser())
-					if exist {
-						conn.Deliver(NewReceiveAction(msg))
-					}
+					userManager.DeliveryMessage(msg, false)
 				}
 			//触发事件
 			case models.ReplyTypeEvent:
@@ -310,10 +320,7 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 					if msg != nil {
 						msg.SessionId = message.SessionId
 						messageRepo.Save(msg)
-						conn, exist := userManager.GetConn(msg.GetUser())
-						if exist {
-							conn.Deliver(NewReceiveAction(msg))
-						}
+						userManager.DeliveryMessage(msg, false)
 					}
 				}
 			}
