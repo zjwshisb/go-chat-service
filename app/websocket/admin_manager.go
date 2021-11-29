@@ -129,24 +129,37 @@ func (m *adminManager) handleRemoteMessage() {
 			case mq.TypeWaitingUser:
 				gid := message.Get("data").Int()
 				if gid > 0 {
-					m.BroadcastWaitingUser(gid)
+					m.broadcastWaitingUser(gid)
 				}
 			case mq.TypeAdmin:
 				gid := message.Get("data").Int()
 				if gid > 0 {
-					m.BroadcastAdmins(gid)
+					m.broadcastAdmins(gid)
 				}
-			case mq.TypeAdminLogin:
-			case mq.TypeTransfer:
-				adminIdI := message.Get("data").Int()
-				admin := adminRepo.First([]Where{
-					{
+			case mq.TypeOtherLogin:
+				uid := message.Get("data").Int()
+				if uid > 0 {
+					user := userRepo.First([]Where{{
 						Filed: "id = ?",
-						Value: adminIdI,
-					},
-				})
-				if admin != nil {
-					m.BroadcastUserTransfer(admin)
+						Value: uid,
+					}})
+					if user != nil {
+						m.handleRepeatLogin(user, true)
+					}
+				}
+
+			case mq.TypeTransfer:
+				adminId := message.Get("data").Int()
+				if adminId > 0 {
+					admin := adminRepo.First([]Where{
+						{
+							Filed: "id = ?",
+							Value: adminId,
+						},
+					})
+					if admin != nil {
+						m.broadcastUserTransfer(admin)
+					}
 				}
 			case mq.TypeMessage:
 				mid := message.Get("data").Int()
@@ -195,9 +208,9 @@ func (m *adminManager) handleMessage(payload *ConnMessage) {
 }
 
 func (m *adminManager) registerHook(conn Conn) {
-	m.BroadcastUserTransfer(conn.GetUser())
-	m.publishAdmins(conn.GetGroupId())
-	m.BroadcastWaitingUser(conn.GetGroupId())
+	m.broadcastUserTransfer(conn.GetUser())
+	m.PublishAdmins(conn.GetGroupId())
+	m.broadcastWaitingUser(conn.GetGroupId())
 }
 
 func (m *adminManager) unregisterHook(conn Conn) {
@@ -208,57 +221,46 @@ func (m *adminManager) unregisterHook(conn Conn) {
 		setting.LastOnline = time.Now()
 		adminRepo.SaveSetting(setting)
 	}
-	m.publishAdmins(conn.GetGroupId())
+	m.PublishAdmins(conn.GetGroupId())
 }
 
 // 推送待接入用户
 func (m *adminManager) PublishWaitingUser(groupId int64) {
 	if m.isCluster() {
-		channels := m.getAllChannel()
-		for _, channel := range channels {
-			_ = m.publish(channel, &mq.Payload{
-				Types: mq.TypeWaitingUser,
-				Data:  groupId,
-			})
-		}
+		m.publishToAllChannel(&mq.Payload{
+			Types: mq.TypeWaitingUser,
+			Data:  groupId,
+		})
 	} else {
-		m.BroadcastWaitingUser(groupId)
+		m.broadcastWaitingUser(groupId)
 	}
 }
 func (m *adminManager) PublishTransfer(admin auth.User) {
 	if m.isCluster() {
-		channel := m.getUserChannel(admin.GetPrimaryKey())
-		if channel != "" {
-			_ = m.publish(channel, &mq.Payload{
-				Types: mq.TypeTransfer,
-				Data:  admin.GetPrimaryKey(),
-			})
-		}
+		m.publishToAllChannel(&mq.Payload{
+			Types: mq.TypeTransfer,
+			Data:  admin.GetPrimaryKey(),
+		})
 	} else {
-		m.BroadcastUserTransfer(admin)
+		m.broadcastUserTransfer(admin)
 	}
 }
 
 // 推送在线admin
-func (m *adminManager) publishAdmins(gid int64) {
+func (m *adminManager) PublishAdmins(gid int64) {
 	if m.isCluster() {
-		channels := m.getAllChannel()
-		for _, channel := range channels {
-			_ = m.publish(channel, &mq.Payload{
-				Types: mq.TypeAdmin,
-				Data: gid,
-			})
-		}
+		m.publishToAllChannel(&mq.Payload{
+			Types: mq.TypeAdmin,
+			Data: gid,
+		})
 	} else {
-		m.BroadcastAdmins(gid)
+		m.broadcastAdmins(gid)
 	}
 }
-func (m *adminManager) publishLogin() {
 
-}
 
 // 广播待接入用户
-func (m *adminManager) BroadcastWaitingUser(groupId int64) {
+func (m *adminManager) broadcastWaitingUser(groupId int64) {
 	sessions := sessionRepo.GetWaitHandles()
 	userMap := make(map[int64]*models.User)
 	waitingUser := make([]*resource.WaitingChatSession, 0, len(sessions))
@@ -284,7 +286,7 @@ func (m *adminManager) BroadcastWaitingUser(groupId int64) {
 		})
 	}
 	sort.Slice(waitingUser, func(i, j int) bool {
-		return waitingUser[i].LastTime < waitingUser[j].LastTime
+		return waitingUser[i].LastTime > waitingUser[j].LastTime
 	})
 	adminConns := m.GetAllConn(groupId)
 	for _, conn := range adminConns {
@@ -301,7 +303,7 @@ func (m *adminManager) BroadcastWaitingUser(groupId int64) {
 }
 
 // 向admin推送待转接入的用户
-func (m *adminManager) BroadcastUserTransfer(admin auth.User) {
+func (m *adminManager) broadcastUserTransfer(admin auth.User) {
 	client, exist := m.GetConn(admin)
 	if exist {
 		transfers := transferRepo.Get([]Where{
@@ -327,7 +329,7 @@ func (m *adminManager) BroadcastUserTransfer(admin auth.User) {
 }
 
 // 广播在线admin
-func (m *adminManager) BroadcastAdmins(gid int64) {
+func (m *adminManager) broadcastAdmins(gid int64) {
 	ids := m.GetOnlineUserIds(gid)
 	admins := adminRepo.Get([]Where{{
 		Filed: "id in ?",

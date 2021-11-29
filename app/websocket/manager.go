@@ -17,6 +17,7 @@ import (
 type ConnContainer interface {
 	AddConn(conn Conn)
 	GetConn(user auth.User) (Conn, bool)
+	handleRepeatLogin(user auth.User, remote bool)
 	GetAllConn(gid int64) []Conn
 	GetTotal(gid int64) int64
 	ConnExist(user auth.User) bool
@@ -32,6 +33,7 @@ type ConnContainer interface {
 type ChannelManager interface {
 	GetSubscribeChannel() string
 	publish(channel string, payload *mq.Payload) error
+	publishToAllChannel(payload *mq.Payload)
 	getUserChannelKey(uid int64) string
 	setUserChannel(uid int64)
 	removeUserChannel(uid int64)
@@ -126,13 +128,20 @@ func (m *manager) publish(channel string, payload *mq.Payload) error {
 	err := mq.Mq().Publish(channel, payload)
 	return err
 }
+//
+func (m *manager) publishToAllChannel(payload *mq.Payload)  {
+	channels := m.getAllChannel()
+	for _, channel := range channels {
+		_ = m.publish(channel, payload)
+	}
+}
 
 // 获取用户channel cache key
 func (m *manager) getUserChannelKey(uid int64) string {
 	return fmt.Sprintf(m.userChannelCacheKey, uid)
 }
 
-// 设置用户所在channel
+// 设置用户所在channel为当前manager
 // 默认有效期24小时，用于程序意外退出后的清理
 func (m *manager) setUserChannel(uid int64)  {
 	if m.isCluster() {
@@ -166,6 +175,23 @@ func (m *manager) GetSubscribeChannel() string {
 // 接受消息
 func (m *manager) ReceiveMessage(cm *ConnMessage)  {
 	m.ConnMessages <- cm
+}
+func (m *manager) handleRepeatLogin(user auth.User, remote bool) {
+	s := m.getSpread(user.GetGroupId())
+	old , exist := s.Get(user.GetPrimaryKey())
+	if exist {
+		m.SendAction(NewMoreThanOne(), old)
+	} else if !remote {
+		if m.isCluster() {
+			oldChannel := m.getUserChannel(user.GetPrimaryKey())
+			if oldChannel != ""  && oldChannel != m.GetSubscribeChannel() {
+				_ = m.publish(oldChannel, &mq.Payload{
+					Types: mq.TypeOtherLogin,
+					Data: user.GetPrimaryKey(),
+				})
+			}
+		}
+	}
 }
 // 获取groupId对应的在线userIds
 func (m *manager) GetOnlineUserIds(gid int64) []int64 {
@@ -217,19 +243,20 @@ func (m *manager) SendAction(a  *Action, clients ...Conn) {
 		c.Deliver(a)
 	}
 }
+// 用户是否在线
 func (m *manager) IsOnline(user auth.User) bool  {
 	if m.isCluster() {
 		ctx := context.Background()
 		key := fmt.Sprintf(m.connGroupKeepAliveKey, user.GetGroupId())
-		limtTime := time.Now().Unix() - 60
+		lastTime := time.Now().Unix() - 60
 		cmd := databases.Redis.ZScore(ctx, key, strconv.FormatInt(user.GetPrimaryKey(), 10))
 		source := cmd.Val()
-		return source > float64(limtTime)
+		return source > float64(lastTime)
 	}else {
 		return m.ConnExist(user)
 	}
 }
-// 客户端是否存在
+// 用户客户端是否存在
 func (m *manager) ConnExist(user auth.User) bool {
 	_, exist := m.GetConn(user)
 	return exist
@@ -270,25 +297,11 @@ func (m *manager) Unregister(conn Conn) {
 	}
 }
 // 客户端注册
-// 如果是重复打开页面，关闭之前连接
+// 先处理是否重复连接
 // 集群模式下，如果不在本机则投递一个消息
 func (m *manager) Register(conn Conn) {
-	s := m.getSpread(conn.GetGroupId())
-	old , exist := s.Get(conn.GetUserId())
 	timer := time.After(1 * time.Second)
-	if exist {
-		m.SendAction(NewMoreThanOne(), old)
-	} else {
-		if m.isCluster() {
-			oldChannel := m.getUserChannel(conn.GetUserId())
-			if oldChannel != "" {
-				_ = m.publish(oldChannel, &mq.Payload{
-					Types: mq.TypeAdminLogin,
-					Data: conn.GetUserId(),
-				})
-			}
-		}
-	}
+	m.handleRepeatLogin(conn.GetUser(), false)
 	m.AddConn(conn)
 	m.setUserChannel(conn.GetUserId())
 	conn.run()

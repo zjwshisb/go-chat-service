@@ -10,7 +10,7 @@ import (
 const TypeMessage = "message"
 const TypeWaitingUser = "waiting-user"
 const TypeAdmin = "admin"
-const TypeAdminLogin = "admin-login"
+const TypeOtherLogin = "other-login"
 const TypeTransfer = "admin-transfer"
 
 const TypeWaitingUserCount = "waiting-user-count"

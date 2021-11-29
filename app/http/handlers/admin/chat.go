@@ -248,7 +248,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		transfer.IsAccepted = true
 		transferRepo.Save(transfer)
 		_ = chat.TransferService.RemoveUser(user.GetPrimaryKey())
-		websocket.AdminManager.BroadcastUserTransfer(admin)
+		websocket.AdminManager.PublishTransfer(admin)
 	}
 	unSendMsg := messageRepo.GetUnSend([]Where{
 		{
@@ -460,7 +460,7 @@ func (handle *ChatHandler) ChatCancelTransfer(c *gin.Context) {
 		return
 	}
 	_ = chat.TransferService.Cancel(transfer)
-	websocket.AdminManager.BroadcastUserTransfer(admin)
+	websocket.AdminManager.PublishTransfer(admin)
 	util.RespSuccess(c , gin.H{})
 }
 // 转接

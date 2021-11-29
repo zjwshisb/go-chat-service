@@ -74,7 +74,7 @@ func (userManager *userManager) DeliveryMessage(msg *models.Message, remote bool
 		if userChannel != "" {
 			_ = userManager.publish(userChannel, &mq.Payload{
 				Data: msg.Id,
-				Types: "message",
+				Types: mq.TypeMessage,
 			})
 		}
 	} else {
@@ -94,17 +94,17 @@ func (userManager *userManager) handleRemoteMessage()  {
 	for {
 		message := sub.ReceiveMessage()
 		go func() {
-			switch message.Get("Types").String() {
+			switch message.Get("types").String() {
 			case mq.TypeMessage:
-				mid := message.Get("Data").Int()
+				mid := message.Get("data").Int()
 				msg := messageRepo.First(mid)
 				if msg != nil {
 					userManager.DeliveryMessage(msg, true)
 				}
 			case mq.TypeWaitingUserCount:
-				gid := message.Get("Data").Int()
+				gid := message.Get("data").Int()
 				if gid > 0 {
-					userManager.BroadcastWaitingCount(gid)
+					userManager.broadcastWaitingCount(gid)
 				}
 			}
 		}()
@@ -178,7 +178,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 								msg.SessionId = session.Id
 							}
 							messageRepo.Save(msg)
-							AdminManager.BroadcastWaitingUser(msg.GetUser().GetGroupId())
+							AdminManager.broadcastWaitingUser(msg.GetUser().GetGroupId())
 						} else {
 							if chat.SettingService.GetIsAutoTransferManual() { // 自动转人工
 								session := UserManager.addToManual(conn.GetUser())
@@ -186,7 +186,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 									msg.SessionId = session.Id
 								}
 								messageRepo.Save(msg)
-								AdminManager.BroadcastWaitingUser(msg.GetUser().GetGroupId())
+								AdminManager.broadcastWaitingUser(msg.GetUser().GetGroupId())
 							} else {
 								messageRepo.Save(msg)
 								userManager.triggerMessageEvent(models.SceneNotAccepted, msg)
@@ -201,15 +201,12 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 // 广播等待人数
 func (userManager *userManager) PublishWaitingCount(groupId int64)  {
 	if userManager.isCluster() {
-		channels := userManager.getAllChannel()
-		for _, channel := range channels {
-			_ = userManager.publish(channel, &mq.Payload{
-				Types: mq.TypeWaitingUserCount,
-				Data: groupId,
-			})
-		}
+		userManager.publishToAllChannel(&mq.Payload{
+			Types: mq.TypeWaitingUserCount,
+			Data: groupId,
+		})
 	} else {
-		userManager.BroadcastWaitingCount(groupId)
+		userManager.broadcastWaitingCount(groupId)
 	}
 }
 // 推送前面等待人数
@@ -221,7 +218,7 @@ func (userManager *userManager) DeliveryWaitingCount(conn Conn)  {
 	conn.Deliver(NewWaitingUserCount(count - 1))
 }
 // 广播前面等待人数
-func (userManager *userManager) BroadcastWaitingCount(gid int64)  {
+func (userManager *userManager) broadcastWaitingCount(gid int64)  {
 	conns := userManager.GetAllConn(gid)
 	for _, conn := range conns {
 		userManager.DeliveryWaitingCount(conn)
@@ -299,7 +296,7 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 					message.SessionId = session.Id
 					messageRepo.Save(message)
 				}
-				AdminManager.BroadcastWaitingUser(message.GetUser().GetGroupId())
+				AdminManager.broadcastWaitingUser(message.GetUser().GetGroupId())
 			// 回复消息
 			case models.ReplyTypeMessage:
 				msg := rule.GetReplyMessage(message.UserId)
