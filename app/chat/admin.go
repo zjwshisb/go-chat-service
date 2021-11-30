@@ -22,7 +22,7 @@ var (
 
 type adminService struct {
 }
-// cache key
+// 用户cache key， score为有效时间
 func (adminService *adminService) getUserCacheKey(adminId int64) string  {
 	return fmt.Sprintf(adminChatUserKey, adminId)
 }

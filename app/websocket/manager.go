@@ -19,7 +19,7 @@ type ConnContainer interface {
 	GetConn(user auth.User) (Conn, bool)
 	handleRepeatLogin(user auth.User, remote bool)
 	GetAllConn(gid int64) []Conn
-	GetTotal(gid int64) int64
+	GetOnlineTotal(gid int64) int64
 	ConnExist(user auth.User) bool
 	Register(connect Conn)
 	Unregister(connect Conn)
@@ -225,7 +225,7 @@ func (m *manager) GetOnlineUserIds(gid int64) []int64 {
 	}
 }
 // 获取groupId对应在线客户端数量
-func (m *manager) GetTotal(gid int64) int64  {
+func (m *manager) GetOnlineTotal(gid int64) int64  {
 	if m.isCluster() {
 		key := fmt.Sprintf(m.connGroupKeepAliveKey, gid)
 		source := time.Now().Unix() - 60

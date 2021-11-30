@@ -250,7 +250,7 @@ func (userManager *userManager) registerHook(conn Conn) {
 // 加入人工列表
 func (userManager *userManager) addToManual(user auth.User) *models.ChatSession {
 	if !chat.ManualService.IsIn(user.GetPrimaryKey(), user.GetGroupId()) {
-		onlineServerCount := AdminManager.GetTotal(user.GetGroupId())
+		onlineServerCount := AdminManager.GetOnlineTotal(user.GetGroupId())
 		if onlineServerCount == 0 { // 如果没有在线客服
 			rule := autoRuleRepo.GetAdminAllOffLine()
 			if rule != nil {

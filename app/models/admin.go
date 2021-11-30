@@ -29,8 +29,8 @@ func (admin *Admin) GetGroupId() int64  {
 	return 1
 }
 // 是否有user的权限
-func (admin *Admin) AccessTo(User *User) bool {
-	return true
+func (admin *Admin) AccessTo(user *User) bool {
+	return admin.GetGroupId() == user.GetGroupId()
 }
 func (admin *Admin) GetIsSuper() bool {
 	return admin.IsSuper

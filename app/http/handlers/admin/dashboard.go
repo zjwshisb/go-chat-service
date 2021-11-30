@@ -96,8 +96,8 @@ func (handler *DashboardHandler) GetUserQueryInfo(c *gin.Context) {
 func (handler *DashboardHandler) GetOnlineInfo(c *gin.Context)  {
 	admin := auth.GetAdmin(c)
 	util.RespSuccess(c, gin.H{
-		"user_count": websocket.UserManager.GetTotal(admin.GetGroupId()),
-		"admin_count": websocket.AdminManager.GetTotal(admin.GetGroupId()),
+		"user_count": websocket.UserManager.GetOnlineTotal(admin.GetGroupId()),
+		"admin_count": websocket.AdminManager.GetOnlineTotal(admin.GetGroupId()),
 		"waiting_user_count": len(chat.ManualService.GetAll(admin.GetGroupId())),
 	})
 }
