@@ -15,17 +15,7 @@
     # 复制，修改 config.ini 配置信息
     cp config.ini.example config.ini 
     go build main
-    # 创建表 -u(是否创建用户表)
-    ./main -m=migrate -u 
-    # 插入必备的数据
-    ./main -m=seeder
-    # 假用户数据 
-    ./main -m=fake
-    # 启动
     ./main [-m=start] [-c=yourpath/config.ini]
-    # 停止
-    ./main -m=stop [-c=yourpath/config.ini]
-   
 ```
 
 ### 部署
