@@ -1,4 +1,4 @@
-package app
+package main
 
 import (
 	"golang.org/x/crypto/bcrypt"
@@ -7,7 +7,7 @@ import (
 	"ws/app/models"
 )
 
-func Fake()  {
+func main()  {
 	for i:=1; i<=20; i++ {
 		adminName :=  "admin" + strconv.Itoa(i)
 		var count int64
@@ -32,4 +32,5 @@ func Fake()  {
 		}
 	}
 }
+
 
