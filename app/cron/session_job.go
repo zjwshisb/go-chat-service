@@ -1,6 +1,7 @@
 package cron
 
 import (
+	"fmt"
 	"time"
 	"ws/app/chat"
 	"ws/app/repositories"
@@ -8,6 +9,7 @@ import (
 )
 
 func closeSessions()  {
+	fmt.Println("1111")
 	admins := adminRepo.Get([]*repositories.Where{},-1, []string{})
 	for _, admin := range admins {
 		uids, limits := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
