@@ -2,7 +2,7 @@ package util
 
 import (
 	"github.com/gin-gonic/gin"
-	"ws/configs"
+	"github.com/spf13/viper"
 )
 
 func GetToken(c *gin.Context) (token string) {
@@ -19,10 +19,10 @@ func GetToken(c *gin.Context) (token string) {
 	return token
 }
 func PublicAsset(path string) string {
-	return configs.App.Url + "/public/" + path
+	return viper.GetString("App.Url") + "/public/" + path
 }
 
-// 系统头像
+// SystemAvatar 系统头像
 func SystemAvatar() string  {
 	return PublicAsset("avatar.jpeg")
 }

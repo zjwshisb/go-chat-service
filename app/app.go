@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -10,46 +12,46 @@ import (
 	"syscall"
 	"time"
 	"ws/app/cron"
-	_ "ws/app/databases"
 	_ "ws/app/http/requests"
 	_ "ws/app/log"
 	"ws/app/routers"
 	"ws/app/websocket"
-	"ws/configs"
 )
 
 func Start()  {
 	routers.Setup()
 	srv := &http.Server{
-		Addr:    configs.Http.Host +":" + configs.Http.Port,
+		Addr:    viper.GetString("Http.Host") +":" +  viper.GetString("Http.Port"),
 		Handler: routers.Router,
 	}
 	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+
 	go func() {
 		err := srv.ListenAndServe()
 		if err != nil  {
 			if err != http.ErrServerClosed {
-				quit<-syscall.SIGINT
+				quit <- syscall.SIGINT
 				log.Fatalln(err)
 			}
 		}
 	}()
-	go func() {
-		cron.Run()
-	}()
+
 	defer func() {
 		websocket.AdminManager.Destroy()
 		websocket.UserManager.Destroy()
+		cron.Stop()
 	}()
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+
 	<-quit
 	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
 	defer func() {
 		cancel()
 	}()
 	if err:= srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server Shutdown:", err)
+		log.Fatal("Server Shutdown error :", err)
 	}
+	fmt.Println("exit forced")
 }
 
 

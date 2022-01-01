@@ -1,0 +1,39 @@
+App:
+  Url: http://localhost:9999
+  LogFile: ./storage/logs/ws.log
+  # local,production,test
+  Env: local
+  SystemChatName: 客服系统
+  PublicPath: ./public
+  Mq: redis
+  Cluster: true
+Mysql:
+  Database:
+  Username:
+  Password:
+  Port:
+  Host:
+Redis:
+  Addr: localhost:6379
+  Auth:
+  Db: 0
+Http:
+  Host: 0.0.0.0
+  Port: 9999
+File:
+  Storage: qiniu
+  LocalPath: ./asset/storage
+  LocalPrefix: ./storage
+  QiniuAk:
+  QiniuSK:
+  QiniuUrl:
+  QiniuBucket:
+Wechat:
+  MiniProgramAppId:
+  MiniProgramAppSecret:
+  SubscribeTemplateIdOne:
+RabbitMq:
+  User: admin
+  Password: admin
+  Host: localhost
+  Port: 5672

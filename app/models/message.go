@@ -1,12 +1,12 @@
 package models
 
 import (
+	"github.com/spf13/viper"
 	"gorm.io/gorm/clause"
 	"time"
 	"ws/app/databases"
 	"ws/app/resource"
 	"ws/app/util"
-	"ws/configs"
 )
 
 const (
@@ -60,7 +60,7 @@ func (message *Message) GetAdminName() string {
 	case SourceAdmin:
 		return message.GetAdmin().GetChatName()
 	case SourceSystem:
-		return configs.App.SystemChatName
+		return viper.GetString("App.SystemChatName")
 	}
 	return ""
 }
@@ -106,6 +106,6 @@ func NewNoticeMessage(session *ChatSession, content string) *Message {
 		ReceivedAT: time.Now().Unix(),
 		Source:     SourceSystem,
 		SessionId:  session.Id,
-		ReqId:      util.GetSystemReqId(),
+		ReqId:      databases.GetSystemReqId(),
 	}
 }

@@ -2,22 +2,30 @@ package databases
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-redis/redis/v8"
-	"log"
-	"ws/configs"
+	"github.com/spf13/viper"
+	"strconv"
 )
 
 
 var Redis *redis.Client
 
-func init() {
+func RedisSetup() {
 	Redis = redis.NewClient(&redis.Options{
-		Addr:     configs.Redis.Addr,
-		Password: configs.Redis.Auth,
-		DB:       configs.Redis.Db,
+		Addr:     viper.GetString("Redis.Addr"),
+		Password: viper.GetString("Redis.Auth"),
+		DB:       viper.GetInt("Redis.Db"),
 	})
 	cmd := Redis.Ping(context.Background())
 	if cmd.Err() != nil {
-		log.Fatal(cmd.Err().Error())
+		panic(fmt.Errorf("redis error: %w \n", cmd.Err()))
 	}
+}
+
+func GetSystemReqId() string {
+	key := "system:req-id"
+	ctx := context.Background()
+	cmd := Redis.Incr(ctx, key)
+	return "s" + strconv.FormatInt(cmd.Val(), 10)
 }

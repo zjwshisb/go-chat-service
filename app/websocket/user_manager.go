@@ -4,6 +4,7 @@ import (
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
 	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
+	"github.com/spf13/viper"
 	"strconv"
 	"time"
 	"ws/app/auth"
@@ -12,8 +13,8 @@ import (
 	"ws/app/models"
 	"ws/app/mq"
 	"ws/app/wechat"
-	"ws/configs"
 )
+
 const (
 	UserConnChannelKey = "user:%d:channel"
 	UserManageGroupKey = "user:channel:group"
@@ -41,11 +42,11 @@ var UserManager *userManager
 func init() {
 	UserManager = &userManager{
 		manager{
-			groupCount: 10,
-			Channel:      configs.App.Name + "-user",
-			ConnMessages: make(chan *ConnMessage, 100),
-			userChannelCacheKey: UserConnChannelKey,
-			groupCacheKey: UserManageGroupKey,
+			groupCount:            10,
+			Channel:               viper.GetString("App.Name") + "-user",
+			ConnMessages:          make(chan *ConnMessage, 100),
+			userChannelCacheKey:   UserConnChannelKey,
+			groupCacheKey:         UserManageGroupKey,
 			connGroupKeepAliveKey: UserGroupKeepAliveKey,
 		},
 	}
@@ -60,7 +61,8 @@ func (userManager *userManager) Run() {
 		go userManager.handleRemoteMessage()
 	}
 }
-// 投递消息
+
+// DeliveryMessage 投递消息
 // 查询user是否在本机上，是则直接投递
 // 查询user当前channel，如果存在则投递到该channel上
 // 最后则说明user不在线，处理相关逻辑
@@ -88,7 +90,7 @@ func (userManager *userManager) handleReceiveMessage() {
 		go userManager.handleMessage(payload)
 	}
 }
-// 处理远程消息
+// 订阅远程消息
 func (userManager *userManager) handleRemoteMessage()  {
 	sub := mq.Mq().Subscribe(userManager.GetSubscribeChannel())
 	for {
@@ -122,8 +124,8 @@ func (userManager *userManager) handleOffline(msg *models.Message) {
 	if hadSubscribe && user != nil && user.GetMpOpenId() != "" {
 		err := wechat.GetMp().GetSubscribe().Send(&subscribe.Message{
 			ToUser:           user.GetMpOpenId(),
-			TemplateID:       configs.Wechat.SubscribeTemplateIdOne,
-			Page:             configs.Wechat.ChatPath,
+			TemplateID:       viper.GetString("Wechat.SubscribeTemplateIdOne"),
+			Page:             viper.GetString("Wechat.ChatPath"),
 			MiniprogramState: "",
 			Data: map[string]*subscribe.DataItem{
 				"thing1": {

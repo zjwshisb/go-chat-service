@@ -1,16 +1,17 @@
 package main
 
 import (
-	"net/http"
+	"fmt"
 	_ "net/http/pprof"
-	"ws/app"
+	"os"
+	"path/filepath"
+	"ws/cmd/root"
 )
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ok"))
-	})
-	go http.ListenAndServe(":10000", nil)
-	app.Start()
-
+	rootCmd := root.NewRootCommand(filepath.Base(os.Args[0]))
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

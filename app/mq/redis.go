@@ -17,7 +17,6 @@ type RedisSubscribe struct {
 
 func (s *RedisSubscribe) Close()  {
 }
-
 func (s *RedisSubscribe) ReceiveMessage() gjson.Result  {
 	message := <-s.channel
 	result := gjson.Parse(message.Payload)

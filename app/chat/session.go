@@ -38,7 +38,8 @@ func (sessionService *sessionService) Create(uid int64, ty int) *models.ChatSess
 	_ = chatSessionRepo.Save(session)
 	return session
 }
-// 获取会话
+
+// Get 获取会话
 func (sessionService *sessionService) Get(uid int64, adminId int64) *models.ChatSession {
 	session := chatSessionRepo.First([]*repositories.Where{
 		{

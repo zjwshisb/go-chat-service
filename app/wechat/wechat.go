@@ -5,7 +5,7 @@ import (
 	"github.com/silenceper/wechat/v2/cache"
 	"github.com/silenceper/wechat/v2/miniprogram"
 	"github.com/silenceper/wechat/v2/miniprogram/config"
-	systemConfig "ws/configs"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -17,8 +17,8 @@ func GetMp() *miniprogram.MiniProgram {
 		wc := wechat.NewWechat()
 		memory := cache.NewMemory()
 		cfg := &config.Config{
-			AppID:     systemConfig.Wechat.MiniProgramAppId,
-			AppSecret: systemConfig.Wechat.MiniProgramAppSecret,
+			AppID:     viper.GetString("Wechat.MiniProgramAppId"),
+			AppSecret:  viper.GetString("Wechat.MiniProgramAppSecret"),
 			Cache: memory,
 		}
 		mp = wc.GetMiniProgram(cfg)

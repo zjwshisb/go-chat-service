@@ -5,7 +5,7 @@ import (
 	http "ws/app/http/handlers/user"
 	middleware "ws/app/http/middleware/user"
 	"ws/app/models"
-	hub "ws/app/websocket"
+	 "ws/app/websocket"
 )
 
 func registerFrontend()  {
@@ -26,8 +26,8 @@ func registerFrontend()  {
 			}
 			ui, _ := c.Get("frontend")
 			userModel := ui.(*models.User)
-			client := hub.NewUserConn(userModel, conn)
-			hub.UserManager.Register(client)
+			client := websocket.NewUserConn(userModel, conn)
+			websocket.UserManager.Register(client)
 		})
 	}
 }

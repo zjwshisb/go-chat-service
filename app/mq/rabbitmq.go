@@ -3,9 +3,8 @@ package mq
 import (
 	"fmt"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/spf13/viper"
 	"github.com/tidwall/gjson"
-	"log"
-	"ws/configs"
 )
 
 const DirectExchangeName = "message"
@@ -85,11 +84,14 @@ func (m *RabbitMq) Subscribe(channel string) SubScribeChannel {
 }
 
 func newRabbitMq() MessageQueue {
-	link := fmt.Sprintf("amqp://%s:%s@%s:%s/", configs.RabbitMq.User,
-		configs.RabbitMq.Password, configs.RabbitMq.Host, configs.RabbitMq.Port)
+	link := fmt.Sprintf("amqp://%s:%s@%s:%s/",
+		viper.GetString("RabbitMq.User"),
+		viper.GetString("RabbitMq.Password"),
+		viper.GetString("RabbitMq.Host"),
+		viper.GetString("RabbitMq.Port"))
 	conn, err := amqp.Dial(link)
 	if err != nil {
-		log.Fatal(err)
+		panic(fmt.Errorf("rabbitmq error: %w \n", err))
 	}
 	return &RabbitMq{
 		conn: conn,
@@ -107,6 +109,6 @@ func (subscribe *RabbitSubscribe) Close()  {
 
 func (subscribe *RabbitSubscribe) ReceiveMessage() gjson.Result  {
 	msg := <-subscribe.channel
-	result :=  gjson.Parse(string(msg.Body))
+	result := gjson.Parse(string(msg.Body))
 	return result
 }

@@ -2,7 +2,7 @@ package models
 
 import (
 	"time"
-	"ws/app/util"
+	"ws/app/databases"
 )
 
 type AdminChatSetting struct {
@@ -27,7 +27,7 @@ func (setting *AdminChatSetting) GetOfflineMsg(uid int64, sessionId uint64) *Mes
 		ReceivedAT: time.Now().Unix(),
 		Source:     SourceAdmin,
 		SessionId:  sessionId,
-		ReqId:      util.GetSystemReqId(),
+		ReqId:      databases.GetSystemReqId(),
 		IsRead:     false,
 	}
 	return offlineMsg

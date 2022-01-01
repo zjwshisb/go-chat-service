@@ -1,11 +1,11 @@
 package file
 
 import (
+	"github.com/spf13/viper"
 	"mime/multipart"
 	"os"
 	"path"
 	"ws/app/util"
-	"ws/configs"
 )
 
 type local struct {
@@ -15,8 +15,8 @@ type local struct {
 
 func NewLocal() *local {
 	return &local{
-		BaseUrl:     configs.App.Url + configs.File.LocalPrefix,
-		StoragePath: configs.File.LocalPath,
+		BaseUrl:     viper.GetString("App.Url") + viper.GetString("File.LocalPrefix"),
+		StoragePath: viper.GetString("File.LocalPath"),
 	}
 }
 

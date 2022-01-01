@@ -6,7 +6,6 @@ import (
 	"time"
 	"ws/app/databases"
 	"ws/app/resource"
-	"ws/app/util"
 )
 
 const (
@@ -170,7 +169,7 @@ func (rule *AutoRule) GetReplyMessage(uid int64) (message *Message) {
 			ReceivedAT: time.Now().Unix(),
 			SendAt:     0,
 			Source:     SourceSystem,
-			ReqId:      util.GetSystemReqId(),
+			ReqId:      databases.GetSystemReqId(),
 			IsRead:     true,
 		}
 	}

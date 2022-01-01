@@ -3,18 +3,16 @@ package admin
 import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+	"ws/app/http/requests"
 	"ws/app/models"
 	"ws/app/util"
 	"ws/app/websocket"
 )
 
-type loginForm struct {
-	Username string `form:"username" binding:"required"`
-	Password string `form:"password" binding:"required"`
-}
+
 
 func Login(c *gin.Context) {
-	form := &loginForm{}
+	form := &requests.LoginForm{}
 	err := c.ShouldBind(form)
 	if err != nil {
 		util.RespValidateFail(c, "表单验证失败")

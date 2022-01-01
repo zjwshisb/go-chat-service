@@ -3,6 +3,7 @@ package websocket
 import (
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
+	"github.com/spf13/viper"
 	"sort"
 	"time"
 	"ws/app/auth"
@@ -10,7 +11,6 @@ import (
 	"ws/app/models"
 	"ws/app/mq"
 	"ws/app/resource"
-	"ws/configs"
 )
 
 var AdminManager *adminManager
@@ -41,7 +41,7 @@ func init() {
 	AdminManager = &adminManager{
 		manager: manager{
 			groupCount:            10,
-			Channel:               configs.App.Name + "-admin",
+			Channel:               viper.GetString("App.Name") + "-admin",
 			ConnMessages:          make(chan *ConnMessage, 100),
 			userChannelCacheKey:   AdminConnChannelKey,
 			groupCacheKey:         AdminManageGroupKey,
@@ -61,6 +61,7 @@ func (m *adminManager) Run() {
 	}
 }
 
+// DeliveryMessage
 // 投递消息
 // 查询admin是否在本机上，是则直接投递
 // 查询admin当前channel，如果存在则投递到该channel上
@@ -118,7 +119,7 @@ func (m *adminManager) handleOffline(msg *models.Message) {
 	}
 }
 
-// 订阅本服务的channel， 处理消息
+// 订阅本manger的channel， 处理消息
 func (m *adminManager) handleRemoteMessage() {
 	subscribe := mq.Mq().Subscribe(m.GetSubscribeChannel())
 	defer subscribe.Close()
@@ -224,7 +225,7 @@ func (m *adminManager) unregisterHook(conn Conn) {
 	m.PublishAdmins(conn.GetGroupId())
 }
 
-// 推送待接入用户
+// PublishWaitingUser 推送待接入用户
 func (m *adminManager) PublishWaitingUser(groupId int64) {
 	if m.isCluster() {
 		m.publishToAllChannel(&mq.Payload{
@@ -246,7 +247,7 @@ func (m *adminManager) PublishTransfer(admin auth.User) {
 	}
 }
 
-// 推送在线admin
+// PublishAdmins 推送在线admin
 func (m *adminManager) PublishAdmins(gid int64) {
 	if m.isCluster() {
 		m.publishToAllChannel(&mq.Payload{

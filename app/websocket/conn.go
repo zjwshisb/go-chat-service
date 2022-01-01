@@ -36,6 +36,7 @@ type Client struct {
 	User auth.User
 	uid string
 	groupKeepAliveKey string // SortSet key
+	Created int64
 }
 // 根据groupId 分组
 // 通过redis SortSet保存最后在线时间
@@ -57,12 +58,13 @@ func (c *Client) ping()  {
 		fn()
 	}
 }
-// 分组Id
+
+// GetGroupId 分组Id
 func (c *Client) GetGroupId() int64 {
 	return c.User.GetGroupId()
 }
 
-// 每个连接的unique id
+// GetUid 每个连接的unique id
 func (c *Client) GetUid() string  {
 	return c.uid
 }
@@ -76,6 +78,7 @@ func (c *Client) GetUserId() int64 {
 }
 
 func (c *Client) run() {
+	c.Created = time.Now().Unix()
 	go c.readMsg()
 	go c.sendMsg()
 	if c.manager.isCluster() {
@@ -102,7 +105,6 @@ func (c *Client) readMsg() {
 			if err != nil {
 				c.close()
 			} else {
-				log.Log.Info(string(message))
 				msg <- message
 			}
 		}()
@@ -113,6 +115,7 @@ func (c *Client) readMsg() {
 			var act = &Action{}
 			err := act.UnMarshal(msgStr)
 			if err == nil {
+				log.Log.Info(act)
 				c.manager.ReceiveMessage(&ConnMessage{
 					Action: act,
 					Conn: c,
@@ -123,7 +126,8 @@ func (c *Client) readMsg() {
 		}
 	}
 }
-// 投递消息
+
+// Deliver 投递消息
 func (c *Client) Deliver(act *Action) {
 	c.send <- act
 }
@@ -134,8 +138,8 @@ func (c *Client) sendMsg() {
 		select {
 		case act := <-c.send:
 			msgStr, err := act.Marshal()
+			log.Log.Info(act)
 			if err == nil {
-				log.Log.Info(string(msgStr))
 				err := c.conn.WriteMessage(websocket.TextMessage, msgStr)
 				if err == nil {
 					switch act.Action {

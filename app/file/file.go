@@ -1,8 +1,8 @@
 package file
 
 import (
+	"github.com/spf13/viper"
 	"mime/multipart"
-	"ws/configs"
 )
 
 const (
@@ -40,7 +40,8 @@ func Disk(name string) Manager {
 }
 
 func Save(file *multipart.FileHeader, path string) (*File, error) {
-	storage := configs.File.Storage
+	storage := viper.GetString("File.Storage")
+
 	disk := Disk(storage)
 	return disk.Save(file, path)
 }

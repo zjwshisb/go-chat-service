@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/spf13/viper"
 	"strconv"
 	"sync"
 	"time"
@@ -11,9 +12,9 @@ import (
 	"ws/app/databases"
 	"ws/app/models"
 	"ws/app/mq"
-	"ws/configs"
 )
-// conn管理相关方法
+
+// ConnContainer 管理相关方法
 type ConnContainer interface {
 	AddConn(conn Conn)
 	GetConn(user auth.User) (Conn, bool)
@@ -27,7 +28,8 @@ type ConnContainer interface {
 	IsOnline(user auth.User) bool
 	GetOnlineUserIds(gid int64) []int64
 }
-// channel相关方法
+
+// ChannelManager channel相关方法
 // 集群模式下当读发消息的conn不在同一台机器时
 // 通过订阅/发布进行消息通信
 type ChannelManager interface {
@@ -106,13 +108,13 @@ func (s *Shard) Remove(uid int64)  {
 type manager struct {
 	groupCount int64 // 分组数量
 	groups []*Shard //
-	Channel string // 当前manager channel
+	Channel string // 当前manager channel name
 	ConnMessages chan *ConnMessage // 接受从conn所读取消息的chan
-	onRegister ManagerHook //客户端连接成功hook
-	onUnRegister ManagerHook //客户端连接断开hook
-	userChannelCacheKey string // 客户端所在机器的channel cache key
-	groupCacheKey string // 保存所在同类型manager群组SortSet keepalive key
-	connGroupKeepAliveKey string // 对应conn的keepalive key
+	onRegister ManagerHook //conn连接成功hook
+	onUnRegister ManagerHook //conn连接断开hook
+	userChannelCacheKey string // conn所在机器的redis缓存key
+	groupCacheKey string // 保存所有同类型manager群组redis SortSet keepalive key
+	connGroupKeepAliveKey string // 对应manager conn的redis SortSet keepalive key
 }
 
 
@@ -121,7 +123,7 @@ func (m *manager) getSpread(gid int64) *Shard  {
 }
 
 func (m *manager) isCluster() bool {
-	return configs.App.Cluster
+	return viper.GetBool("App.Cluster")
 }
 // 发布消息
 func (m *manager) publish(channel string, payload *mq.Payload) error {
@@ -168,14 +170,17 @@ func (m *manager) getUserChannel(uid int64) string {
 	}
 	return cmd.Val()
 }
-// 获取当前manager channel
+
+// GetSubscribeChannel 获取当前manager channel name
 func (m *manager) GetSubscribeChannel() string {
 	return m.Channel
 }
-// 接受消息
+
+// ReceiveMessage 接受消息
 func (m *manager) ReceiveMessage(cm *ConnMessage)  {
 	m.ConnMessages <- cm
 }
+// 处理重复登录|打开多个tab
 func (m *manager) handleRepeatLogin(user auth.User, remote bool) {
 	s := m.getSpread(user.GetGroupId())
 	old , exist := s.Get(user.GetPrimaryKey())
@@ -193,7 +198,8 @@ func (m *manager) handleRepeatLogin(user auth.User, remote bool) {
 		}
 	}
 }
-// 获取groupId对应的在线userIds
+
+// GetOnlineUserIds 获取groupId对应的在线userIds
 func (m *manager) GetOnlineUserIds(gid int64) []int64 {
 	if m.isCluster() {
 		key := fmt.Sprintf(m.connGroupKeepAliveKey, gid)
@@ -224,7 +230,8 @@ func (m *manager) GetOnlineUserIds(gid int64) []int64 {
 		return ids
 	}
 }
-// 获取groupId对应在线客户端数量
+
+// GetOnlineTotal 获取groupId对应在线客户端数量
 func (m *manager) GetOnlineTotal(gid int64) int64  {
 	if m.isCluster() {
 		key := fmt.Sprintf(m.connGroupKeepAliveKey, gid)
@@ -237,13 +244,14 @@ func (m *manager) GetOnlineTotal(gid int64) int64  {
 	return s.GetTotalCount()
 }
 
-// 给客户端发送消息
+// SendAction 给客户端发送消息
 func (m *manager) SendAction(a  *Action, clients ...Conn) {
 	for _,c := range clients {
 		c.Deliver(a)
 	}
 }
-// 用户是否在线
+
+// IsOnline 用户是否在线
 func (m *manager) IsOnline(user auth.User) bool  {
 	if m.isCluster() {
 		ctx := context.Background()
@@ -256,33 +264,39 @@ func (m *manager) IsOnline(user auth.User) bool  {
 		return m.ConnExist(user)
 	}
 }
-// 用户客户端是否存在
+
+// ConnExist 用户客户端是否存在
 func (m *manager) ConnExist(user auth.User) bool {
 	_, exist := m.GetConn(user)
 	return exist
 }
-// 获取客户端
+
+// GetConn 获取客户端
 func (m *manager) GetConn(user auth.User) (client Conn,ok bool) {
 	s := m.getSpread(user.GetGroupId())
 	client, ok = s.Get(user.GetPrimaryKey())
 	return
 }
-// 添加客户端
+
+// AddConn 添加客户端
 func (m *manager) AddConn(conn Conn) {
 	s := m.getSpread(conn.GetGroupId())
 	s.Set(conn)
 }
-// 移除客户端
+
+// RemoveConn 移除客户端
 func (m *manager) RemoveConn(user auth.User) {
 	s := m.getSpread(user.GetGroupId())
 	s.Remove(user.GetPrimaryKey())
 }
-// 获取所有客户端
+
+// GetAllConn 获取所有客户端
 func (m *manager) GetAllConn(groupId int64) (conns []Conn){
 	s := m.getSpread(groupId)
 	return s.GetAll()
 }
-// 客户端注销
+
+// Unregister 客户端注销
 func (m *manager) Unregister(conn Conn) {
 	s := m.getSpread(conn.GetGroupId())
 	existConn, exist := s.Get(conn.GetUserId())
@@ -296,7 +310,8 @@ func (m *manager) Unregister(conn Conn) {
 		}
 	}
 }
-// 客户端注册
+
+// Register 客户端注册
 // 先处理是否重复连接
 // 集群模式下，如果不在本机则投递一个消息
 func (m *manager) Register(conn Conn) {
@@ -311,6 +326,7 @@ func (m *manager) Register(conn Conn) {
 	}
 }
 
+// Ping
 // 给所有客户端发送心跳
 // 客户端因意外断开链接，服务器没有关闭事件，无法得知连接已关闭
 // 通过心跳发送""字符串，如果发送失败，则调用conn的close方法执行清理
@@ -387,6 +403,7 @@ func (m *manager) Run() {
 	}
 }
 
+// Destroy
 // 释放相关资源
 func (m *manager) Destroy()  {
 	if m.isCluster() {

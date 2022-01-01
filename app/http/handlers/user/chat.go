@@ -2,6 +2,7 @@ package user
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"strconv"
 	"ws/app/auth"
 	"ws/app/chat"
@@ -9,7 +10,6 @@ import (
 	"ws/app/repositories"
 	"ws/app/resource"
 	"ws/app/util"
-	"ws/configs"
 )
 
 // 消息记录
@@ -57,7 +57,7 @@ func GetTemplateId(c *gin.Context) {
 	user := auth.GetUser(c)
 	id := ""
 	if !chat.SubScribeService.IsSet(user.GetPrimaryKey()) {
-		id = configs.Wechat.SubscribeTemplateIdOne
+		id =  viper.GetString("config.Wechat.SubscribeTemplateIdOne")
 	}
 	util.RespSuccess(c , gin.H{
 		"id": id,

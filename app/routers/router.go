@@ -4,9 +4,9 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/spf13/viper"
 	"net/http"
 	"strings"
-	"ws/configs"
 )
 
 var Router *gin.Engine
@@ -20,7 +20,7 @@ var (
 )
 
 func Setup() {
-	if strings.ToLower(configs.App.Env) == "production" {
+	if strings.ToLower(viper.GetString("App.Env")) == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	Router = gin.New()
@@ -30,8 +30,8 @@ func Setup() {
 		AllowHeaders:     []string{"*"},
 		AllowCredentials: true,
 	}))
-	Router.Static(configs.File.LocalPrefix, configs.File.LocalPath)
-	Router.Static("/public", configs.App.PublicPath)
+	Router.Static(viper.GetString("File.LocalPrefix"), viper.GetString("File.LocalPath"))
+	Router.Static("/public", viper.GetString("App.PublicPath"))
 	Router.GET("/", func(c *gin.Context) {
 		c.JSON(200, "hello world")
 	})

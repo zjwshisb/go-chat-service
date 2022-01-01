@@ -2,9 +2,9 @@ package mq
 
 import (
 	"encoding/json"
+	"github.com/spf13/viper"
 	"github.com/tidwall/gjson"
 	"strings"
-	"ws/configs"
 )
 
 const TypeMessage = "message"
@@ -16,14 +16,14 @@ const TypeTransfer = "admin-transfer"
 const TypeWaitingUserCount = "waiting-user-count"
 
 type MessageQueue interface {
-	// 发布
+	// Publish 消息
 	Publish(channel string, p *Payload) error
-	// 订阅
+	// Subscribe 消息
 	Subscribe(channel string) SubScribeChannel
 }
 
 type SubScribeChannel interface {
-	// 接收消息
+	// ReceiveMessage 接收消息
 	ReceiveMessage() gjson.Result
 	Close()
 }
@@ -48,7 +48,7 @@ func NewMessagePayload(mid uint64) *Payload  {
 var mq MessageQueue
 
 func init()  {
-	switch strings.ToLower(configs.App.Mq) {
+	switch strings.ToLower(viper.GetString("App.Mq")) {
 	case "rabbitmq":
 		mq = newRabbitMq()
 	case "redis":

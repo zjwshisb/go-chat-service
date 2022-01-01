@@ -28,7 +28,8 @@ type Admin struct {
 func (admin *Admin) GetGroupId() int64  {
 	return 1
 }
-// 是否有user的权限
+
+// AccessTo 是否有user的权限
 func (admin *Admin) AccessTo(user *User) bool {
 	return admin.GetGroupId() == user.GetGroupId()
 }
@@ -44,6 +45,7 @@ func (admin *Admin) GetAvatarUrl() string {
 	}
 	return util.SystemAvatar()
 }
+
 func (admin *Admin) GetUsername() string {
 	return admin.Username
 }
@@ -66,7 +68,7 @@ func (admin *Admin) GetSetting() *AdminChatSetting {
 	return admin.Setting
 }
 
-// 客服名称
+// GetChatName 客服名称
 func (admin *Admin) GetChatName() string {
 	setting := admin.GetSetting()
 	if setting != nil {
@@ -76,7 +78,8 @@ func (admin *Admin) GetChatName() string {
 	}
 	return admin.GetUsername()
 }
-// 断开消息
+
+// GetBreakMessage 断开消息
 func (admin *Admin) GetBreakMessage(uid int64, sessionId uint64) *Message {
 	return &Message{
 		UserId:     uid,

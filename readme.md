@@ -12,12 +12,15 @@
 
 ### 开始
 ```shell script
-    # 复制，修改 config.ini 配置信息
-    cp config.ini.example config.ini
-    # 执行./commands/migrate/main [-c=yourpath/config.ini] 创建表
-    # 执行./commands/fake/main [-c=yourpath/config.ini] 创建测试数据
+    # 复制，修改 config.yaml 配置信息
+    cp config.yaml.example config.yaml
     go build main
-    ./main [-c=yourpath/config.ini]
+    # 创建表
+    ./main migrate
+    # 插入测试数据
+    ./main fake
+    # 启动服务
+    ./main serve
 ```
 
 ### 部署

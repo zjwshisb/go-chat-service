@@ -94,7 +94,8 @@ func (settingService *settingService) GetUserSessionSecond() int64 {
 	second := int64(dayFloat* 24 * 60 * 60)
 	return second
 }
-// 用户给客服发消息后的会话有效期, 既客服在这时间内可以回复用户
+
+// GetServiceSessionSecond 用户给客服发消息后的会话有效期, 既客服在这时间内可以回复用户
 func (settingService *settingService) GetServiceSessionSecond() int64 {
 	setting := settingService.Values[AdminSessionDuration]
 	dayFloat, err := strconv.ParseFloat(setting.GetValue(), 64)

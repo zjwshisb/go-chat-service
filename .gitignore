@@ -1,7 +1,7 @@
 .idea
 vendor
 .env
-config.ini
+config.yaml
 asset/storage/
 *.pid
 ws

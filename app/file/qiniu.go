@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/qiniu/go-sdk/v7/auth/qbox"
 	"github.com/qiniu/go-sdk/v7/storage"
+	"github.com/spf13/viper"
 	"mime/multipart"
 	"ws/app/util"
-	"ws/configs"
 )
 
 type qiniu struct {
@@ -18,10 +18,10 @@ type qiniu struct {
 
 func NewQiniu() *qiniu {
 	return &qiniu{
-		ak: configs.File.QiniuAk,
-		sk: configs.File.QiniuSK,
-		bucket: configs.File.QiniuBucket,
-		BaseUrl: configs.File.QiniuUrl,
+		ak:      viper.GetString("File.QiniuAk"),
+		sk:      viper.GetString("File.QiniuSK"),
+		bucket:  viper.GetString("QiniuBucket"),
+		BaseUrl: viper.GetString("File.QiniuUrl"),
 	}
 }
 func (qiniu *qiniu) Url(path string) string {

@@ -32,6 +32,14 @@ type Action struct {
 	Action string `json:"action"`
 }
 
+func (action *Action) String() string  {
+	b, err := json.Marshal(action)
+	if err == nil {
+		return string(b)
+	}
+	return ""
+}
+
 func (action *Action) Marshal() (b []byte, err error) {
 	if action.Action == PingAction {
 		return []byte(""), nil
@@ -57,7 +65,8 @@ func (action *Action) UnMarshal(b []byte) (err error) {
 	err =  json.Unmarshal(b, action)
 	return
 }
-// 获取action的message
+
+// GetMessage 获取action的message
 func (action *Action) GetMessage() (message *models.Message,err error)  {
 	if action.Action == SendMessageAction {
 		message = &models.Message{}

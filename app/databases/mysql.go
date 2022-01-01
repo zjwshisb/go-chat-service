@@ -2,31 +2,43 @@ package databases
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"log"
-	"ws/configs"
+	"strings"
+	"ws/app/util"
 )
 
 var Db *gorm.DB
 
-func init()  {
+func MysqlSetup()  {
+	env := util.GetEnv()
+
+	var level logger.LogLevel
+	switch strings.ToLower(env) {
+	case "production":
+		level = logger.Silent
+	case "local":
+		level = logger.Info
+	case "test":
+		level = logger.Info
+	}
 	dns := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		configs.Mysql.Username,
-		configs.Mysql.Password,
-		configs.Mysql.Host,
-		configs.Mysql.Port,
-		configs.Mysql.Name,
+		viper.GetString("Mysql.Username"),
+		viper.GetString("Mysql.Password"),
+		viper.GetString("Mysql.Host"),
+		viper.GetString("Mysql.Port"),
+		viper.GetString("Mysql.Database"),
 	)
 	db, err := gorm.Open(mysql.Open(dns),
 		&gorm.Config{
 			DisableForeignKeyConstraintWhenMigrating: true,
-			Logger: logger.Default.LogMode(logger.Error),
+			Logger: logger.Default.LogMode(level),
 		})
 	if err != nil {
-		log.Fatal(err)
+		panic(fmt.Errorf("mysql err: %w \n", err))
 	}
 	sqlDB, _ := db.DB()
 	sqlDB.SetMaxOpenConns(100)

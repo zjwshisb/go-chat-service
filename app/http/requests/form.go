@@ -25,3 +25,7 @@ type AdminChatSettingForm struct {
 	OfflineContent string `json:"offline_content" binding:"max=512"`
 	Name string `json:"name" binding:"max=20"`
 }
+type LoginForm struct {
+	Username string `form:"username" json:"username" binding:"required"`
+	Password string `form:"password" json:"password" binding:"required"`
+}
