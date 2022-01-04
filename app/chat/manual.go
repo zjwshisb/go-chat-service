@@ -21,7 +21,8 @@ type manualService struct {
 func (manual manualService) getManualKey(gid int64) string {
 	return fmt.Sprintf(manualUserKey, gid)
 }
-// 加入到待人工接入sortSet
+
+// Add 加入到待人工接入sortSet
 func (manual *manualService) Add(uid int64, gid int64) error  {
 	ctx := context.Background()
 	cmd := databases.Redis.ZAdd(ctx, manual.getManualKey(gid), &redis.Z{
@@ -30,7 +31,8 @@ func (manual *manualService) Add(uid int64, gid int64) error  {
 	})
 	return cmd.Err()
 }
-// 是否在待人工接入列表中
+
+// IsIn 是否在待人工接入列表中
 func (manual *manualService) IsIn(uid int64, gid int64) bool {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRank(ctx, manual.getManualKey(gid), strconv.FormatInt(uid, 10))
@@ -39,25 +41,29 @@ func (manual *manualService) IsIn(uid int64, gid int64) bool {
 	}
 	return true
 }
-// 从待人工接入列表中移除
+
+// Remove 从待人工接入列表中移除
 func (manual *manualService) Remove(uid int64, gid int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRem(ctx, manual.getManualKey(gid), uid)
 	return cmd.Err()
 }
-// 获取待人工接入的数量
+
+// GetTotalCount 获取待人工接入的数量
 func (manual *manualService) GetTotalCount(gid int64) int64 {
 	ctx := context.Background()
 	cmd := databases.Redis.ZCard(ctx, manual.getManualKey(gid))
 	return cmd.Val()
 }
-// 获取指定时间的数量
+
+// GetCountByTime 获取指定时间的数量
 func (manual *manualService) GetCountByTime(gid int64, min string, max string)  int64 {
 	ctx := context.Background()
 	cmd := databases.Redis.ZCount(ctx,manual.getManualKey(gid), min, max)
 	return cmd.Val()
 }
-// 通过加入时间获取
+
+// GetByTime 通过加入时间获取
 func (manual *manualService) GetByTime(gid int64, min string, max string) []string {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRangeByScore(ctx, manual.getManualKey(gid), &redis.ZRangeBy{
@@ -68,13 +74,15 @@ func (manual *manualService) GetByTime(gid int64, min string, max string) []stri
 	})
 	return cmd.Val()
 }
-// 获取加入时间
+
+// GetTime 获取加入时间
 func (manual *manualService) GetTime(uid int64, gid int64) float64 {
 	ctx := context.Background()
 	cmd := databases.Redis.ZScore(ctx, manual.getManualKey(gid), strconv.FormatInt(uid, 10))
 	return cmd.Val()
 }
-// 获取所有待人工接入ids
+
+// GetAll 获取所有待人工接入ids
 func (manual *manualService) GetAll(gid int64) []int64 {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRangeByScore(ctx, manual.getManualKey(gid), &redis.ZRangeBy{

@@ -23,7 +23,7 @@ func NewRootCommand(name string) *cobra.Command {
 	}
 
 	flag := rootCmd.PersistentFlags()
-	flag.StringVar(&configFile, "config", "config.yaml", "config file")
+	flag.StringVarP(&configFile, "config", "c","config.yaml", "config file")
 
 
 	rootCmd.AddCommand(serve.NewServeCommand(),

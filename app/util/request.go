@@ -2,7 +2,6 @@ package util
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 )
 
 func GetToken(c *gin.Context) (token string) {
@@ -17,12 +16,4 @@ func GetToken(c *gin.Context) (token string) {
 		}
 	}
 	return token
-}
-func PublicAsset(path string) string {
-	return viper.GetString("App.Url") + "/public/" + path
-}
-
-// SystemAvatar 系统头像
-func SystemAvatar() string  {
-	return PublicAsset("avatar.jpeg")
 }

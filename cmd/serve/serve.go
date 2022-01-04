@@ -6,24 +6,37 @@ import (
 	"ws/app"
 	"ws/app/cron"
 	"ws/app/databases"
+	"ws/app/file"
 	"ws/app/log"
+	"ws/app/util"
 )
+
+func initCheck(cmd *cobra.Command, args []string) {
+	workDir := util.GetWorkDir()
+	if !util.DirExist(workDir) {
+		panic(fmt.Sprintf("workdir:%s not exit", workDir))
+	}
+	storagePath := util.GetStoragePath()
+	if !util.DirExist(storagePath) {
+		err := util.MkDir(storagePath)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
 
 func NewServeCommand() *cobra.Command {
 
 	var cronFlag bool
-
 	cmd := &cobra.Command{
 		Use:                        "serve",
 		Short: "start the server",
-		FParseErrWhitelist:         cobra.FParseErrWhitelist{},
-		CompletionOptions:          cobra.CompletionOptions{},
-		SuggestionsMinimumDistance: 0,
+		PreRun: initCheck,
 		Run: func(cmd *cobra.Command, args []string) {
 			databases.MysqlSetup()
 			databases.RedisSetup()
+			file.Setup()
 			log.Setup()
-			fmt.Println(cronFlag)
 			if cronFlag {
 				go cron.Run()
 			}

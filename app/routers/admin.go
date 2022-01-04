@@ -10,7 +10,6 @@ import (
 	"ws/app/websocket"
 )
 
-
 var (
 	adminHandler = &http.AdminsHandler{}
 	userHandler = &http.UserHandler{}

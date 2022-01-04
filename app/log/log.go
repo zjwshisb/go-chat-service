@@ -3,17 +3,16 @@ package log
 import (
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	"os"
-	"path/filepath"
 	"strings"
 	"ws/app/util"
 )
 
 var Log *logrus.Logger
 
-func Setup()  {
+var prefix = "log"
 
+func Setup()  {
 
 	env := util.GetEnv()
 
@@ -23,8 +22,10 @@ func Setup()  {
 	case "production":
 		level = logrus.ErrorLevel
 	case "test":
-		level = logrus.DebugLevel
+		fallthrough
 	case "local":
+		fallthrough
+	default:
 		level = logrus.DebugLevel
 	}
 
@@ -35,17 +36,19 @@ func Setup()  {
 		TimestampFormat:"2006-01-02 15:04:05",
 	})
 	Log.SetFormatter(&logrus.JSONFormatter{})
-	LogFile := viper.GetString("App.LogFile")
-	path, _ := filepath.Split(LogFile)
-	_, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			panic(fmt.Errorf("log error: %s is not exist", path ))
+	storagePath := util.GetStoragePath()
+	logPath := storagePath + "/" + prefix
+	if !util.DirExist(logPath) {
+		err := util.MkDir(logPath)
+		if err != nil {
+			panic(fmt.Sprintf("make log dir[%s] err: %v", logPath, err))
 		}
 	}
+	LogFile := logPath + "/" + "app.log"
 	write, err := os.OpenFile(LogFile, os.O_APPEND | os.O_WRONLY | os.O_CREATE, 0755 )
 	if err != nil {
-		panic(fmt.Errorf("log err: %v", err ))
+		panic(fmt.Errorf("log file err: %v", err ))
 	}
 	Log.SetOutput(write)
+
 }

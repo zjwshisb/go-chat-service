@@ -1,13 +1,12 @@
 [Unit]
 Description=go-chat-service
-After=chat.service
 
 [Service]
 Type=simple
 User=root
 Group=root
 PIDFile=
-ExecStart=/yourpath/main -m=start -c=config.ini
+ExecStart=/yourpath/main server
 ExecReload=
 ExecStop=/yourpath/main -m=stop c=config.ini
 PrivateTmp=true

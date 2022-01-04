@@ -41,9 +41,9 @@ func (admin *Admin) GetPrimaryKey() int64 {
 }
 func (admin *Admin) GetAvatarUrl() string {
 	if admin.Avatar != "" {
-		return file.Disk("local").Url(admin.Avatar)
+		return file.Url(admin.Avatar)
 	}
-	return util.SystemAvatar()
+	return ""
 }
 
 func (admin *Admin) GetUsername() string {

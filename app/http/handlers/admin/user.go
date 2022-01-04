@@ -64,8 +64,7 @@ func (User *UserHandler) SettingImage(c *gin.Context) {
 
 func (User *UserHandler) Avatar(c *gin.Context) {
 	f, _ := c.FormFile("file")
-	storage := file.Disk("local")
-	fileInfo, err := storage.Save(f, "avatar")
+	fileInfo, err := file.Save(f, "avatar")
 	if err != nil {
 		util.RespError(c, err.Error())
 	} else {

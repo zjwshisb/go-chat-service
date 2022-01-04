@@ -375,7 +375,8 @@ func (handle *ChatHandler) ReadAll(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 	}
 }
-// 获取用户信息
+
+// GetUserInfo 获取用户信息
 func (handle *ChatHandler) GetUserInfo(c *gin.Context)  {
 	uidStr := c.Param("id")
 	uid, err := strconv.ParseInt(uidStr, 10, 64)
@@ -433,7 +434,8 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 	}
 	util.RespSuccess(c, res)
 }
-// 取消转接
+
+// ChatCancelTransfer 取消转接
 func (handle *ChatHandler) ChatCancelTransfer(c *gin.Context) {
 	id := c.Param("id")
 	admin := auth.GetAdmin(c)
@@ -463,7 +465,8 @@ func (handle *ChatHandler) ChatCancelTransfer(c *gin.Context) {
 	websocket.AdminManager.PublishTransfer(admin)
 	util.RespSuccess(c , gin.H{})
 }
-// 转接
+
+// Transfer 转接
 func (handle *ChatHandler) Transfer(c *gin.Context) {
 	form := &struct {
 		UserId int64 `json:"user_id" binding:"required"`
@@ -508,7 +511,8 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 	go websocket.AdminManager.PublishTransfer(toAdmin)
 	util.RespSuccess(c, gin.H{})
 }
-// 聊天图片
+
+// Image 聊天图片
 func (handle *ChatHandler) Image(c *gin.Context) {
 	f, _ := c.FormFile("file")
 	ff, err := file.Save(f, "chat")

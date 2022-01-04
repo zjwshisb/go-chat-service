@@ -6,7 +6,6 @@ import (
 	"time"
 	"ws/app/databases"
 	"ws/app/resource"
-	"ws/app/util"
 )
 
 const (
@@ -77,7 +76,7 @@ func (message *Message) GetAvatar() (avatar string) {
 	case SourceAdmin:
 		avatar = message.GetAdmin().GetAvatarUrl()
 	case SourceSystem:
-		avatar = util.SystemAvatar()
+		avatar = ""
 	}
 	return
 }

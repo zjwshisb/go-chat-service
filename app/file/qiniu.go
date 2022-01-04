@@ -20,7 +20,7 @@ func NewQiniu() *qiniu {
 	return &qiniu{
 		ak:      viper.GetString("File.QiniuAk"),
 		sk:      viper.GetString("File.QiniuSK"),
-		bucket:  viper.GetString("QiniuBucket"),
+		bucket:  viper.GetString("File.QiniuBucket"),
 		BaseUrl: viper.GetString("File.QiniuUrl"),
 	}
 }

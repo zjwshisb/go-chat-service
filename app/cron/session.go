@@ -3,6 +3,7 @@ package cron
 import (
 	"time"
 	"ws/app/chat"
+	"ws/app/log"
 	"ws/app/repositories"
 	"ws/app/websocket"
 )
@@ -39,4 +40,5 @@ func closeSessions()  {
 			}
 		}
 	}
+	log.Log.Info("close sessions done")
 }

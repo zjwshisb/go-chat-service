@@ -13,10 +13,19 @@ type local struct {
 	StoragePath string
 }
 
+const prefix = "assets"
+
 func NewLocal() *local {
+	storagePath := util.GetStoragePath() + "/" + prefix
+	if !util.DirExist(storagePath) {
+		err := util.MkDir(storagePath)
+		if err != nil {
+			panic(err)
+		}
+	}
 	return &local{
-		BaseUrl:     viper.GetString("App.Url") + viper.GetString("File.LocalPrefix"),
-		StoragePath: viper.GetString("File.LocalPath"),
+		BaseUrl:     viper.GetString("App.Url") + "/" + prefix,
+		StoragePath: storagePath ,
 	}
 }
 
@@ -28,24 +37,6 @@ func (local *local) Url(path string) string {
 	return local.BaseUrl + "/" + path
 }
 
-func (local *local) createDir(filePath string) error {
-	if !local.isExist(filePath) {
-		err := os.MkdirAll(filePath, os.ModePerm)
-		return err
-	}
-	return nil
-}
-
-func (local *local) isExist(path string) bool {
-	_, err := os.Stat(path)
-	if err != nil {
-		if os.IsExist(err) {
-			return true
-		}
-		return false
-	}
-	return true
-}
 
 func (local *local) Save(file *multipart.FileHeader, relativePath string) (*File, error) {
 	ff, err := file.Open()
@@ -73,7 +64,7 @@ func (local *local) Save(file *multipart.FileHeader, relativePath string) (*File
 	}
 	fullName := fullPath + "/" + filename
 
-	err = local.createDir(fullPath)
+	err =  util.MkDir(fullPath)
 	if err != nil {
 		return nil, err
 	}

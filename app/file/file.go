@@ -13,10 +13,11 @@ const (
 var diskQiniu  *qiniu
 var diskLocal *local
 
-func init()  {
+func Setup()  {
 	diskLocal = NewLocal()
 	diskQiniu = NewQiniu()
 }
+
 type File struct {
 	FullUrl string
 	Path string
@@ -39,9 +40,14 @@ func Disk(name string) Manager {
 	}
 }
 
-func Save(file *multipart.FileHeader, path string) (*File, error) {
-	storage := viper.GetString("File.Storage")
+func Url(path string) string  {
+	def := viper.GetString("File.Storage")
+	disk := Disk(def)
+	return disk.Url(path)
+}
 
-	disk := Disk(storage)
+func Save(file *multipart.FileHeader, path string) (*File, error) {
+	def := viper.GetString("File.Storage")
+	disk := Disk(def)
 	return disk.Save(file, path)
 }

@@ -1,10 +1,10 @@
 App:
   Url: http://localhost:9999
-  LogFile: ./storage/logs/ws.log
+  # 工作目录，保存本地图片，日志等。部署请用绝对路径
+  PublicPath: ./public
   # local,production,test
   Env: local
   SystemChatName: 客服系统
-  PublicPath: ./public
   Mq: redis
   Cluster: true
 Mysql:
@@ -17,13 +17,17 @@ Redis:
   Addr: localhost:6379
   Auth:
   Db: 0
+RabbitMq:
+  User: admin
+  Password: admin
+  Host: localhost
+  Port: 5672
 Http:
   Host: 0.0.0.0
   Port: 9999
 File:
+  # 图片存储类型 qiniu | local
   Storage: qiniu
-  LocalPath: ./asset/storage
-  LocalPrefix: ./storage
   QiniuAk:
   QiniuSK:
   QiniuUrl:
@@ -32,8 +36,4 @@ Wechat:
   MiniProgramAppId:
   MiniProgramAppSecret:
   SubscribeTemplateIdOne:
-RabbitMq:
-  User: admin
-  Password: admin
-  Host: localhost
-  Port: 5672
+
