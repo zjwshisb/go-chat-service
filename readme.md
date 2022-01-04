@@ -13,7 +13,7 @@
 ### 开始
 ```shell script
     # 复制，修改 config.yaml 配置信息
-    cp config.yaml.example config.yaml
+    cp config.example.yaml config.yaml
     go build main
     # 创建表
     ./main migrate

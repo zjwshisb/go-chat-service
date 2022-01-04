@@ -5,4 +5,4 @@ config.yaml
 *.pid
 ws
 main
-.storage
+/storage/

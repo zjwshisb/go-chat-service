@@ -14,8 +14,6 @@ func NewRootCommand(name string) *cobra.Command {
 
 	var rootCmd = &cobra.Command{
 		Use:                        name,
-		FParseErrWhitelist:         cobra.FParseErrWhitelist{},
-		CompletionOptions:          cobra.CompletionOptions{},
 		TraverseChildren: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			config.Setup(configFile)
