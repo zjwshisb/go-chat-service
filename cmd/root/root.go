@@ -5,6 +5,7 @@ import (
 	"ws/cmd/fake"
 	"ws/cmd/migrate"
 	"ws/cmd/serve"
+	"ws/cmd/stop"
 	"ws/config"
 )
 
@@ -27,6 +28,7 @@ func NewRootCommand(name string) *cobra.Command {
 	rootCmd.AddCommand(serve.NewServeCommand(),
 		migrate.NewMigrateCommand(),
 		fake.NewFakeCommand(),
+		stop.NewStopCommand(),
 	)
 
 	return rootCmd

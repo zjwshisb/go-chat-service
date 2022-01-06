@@ -9,14 +9,43 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 	"ws/app/cron"
 	_ "ws/app/http/requests"
 	_ "ws/app/log"
 	"ws/app/routers"
+	"ws/app/util"
 	"ws/app/websocket"
 )
+
+func GetPid() int {
+	dir := util.GetWorkDir()
+	pidFile := dir + "/pid.log"
+	b,err := os.ReadFile(pidFile)
+	if err != nil {
+		return 0
+	}
+	s := string(b)
+	pid, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+	return pid
+}
+
+func logPid() {
+	pid := os.Getpid()
+	dir := util.GetWorkDir()
+	pidFile := dir + "/pid.log"
+	file, err := os.OpenFile(pidFile, os.O_CREATE | os.O_TRUNC | os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	file.Write([]byte(strconv.Itoa(pid)))
+}
 
 func Start()  {
 	routers.Setup()
@@ -42,7 +71,7 @@ func Start()  {
 		websocket.UserManager.Destroy()
 		cron.Stop()
 	}()
-
+	logPid()
 	<-quit
 	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
 	defer func() {

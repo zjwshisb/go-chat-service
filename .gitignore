@@ -6,3 +6,4 @@ config.yaml
 ws
 main
 /storage/
+pid.log
