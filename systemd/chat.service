@@ -1,0 +1,14 @@
+[Unit]
+Description=go-chat-service
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/ws serve -c <path/to/config.yaml>
+ExecStop=/usr/local/bin/ws stop -c <path/to/config.yaml>
+Restart=always
+
+
+[Install]
+WantedBy=multi-user.target

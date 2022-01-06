@@ -21,11 +21,12 @@
     ./main fake
     # 启动服务
     ./main serve
+    # 停止服务
+    ./main stop
 ```
 
 ### 部署
-nginx部署可参考目录下nginx.conf   
-systemctl管理见chat.service
+nginx部署可参考目录下nginx.conf
 
     
 ### 功能
