@@ -1,15 +1,15 @@
 package migrate
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
+	"log"
 	"ws/app/databases"
 	"ws/app/models"
 )
 
 func printErr(err error)  {
 	if err != nil {
-		panic(fmt.Errorf("migrate error: %w \n", err))
+		log.Fatalf("migrate error: %v \n", err)
 	}
 }
 func NewMigrateCommand() *cobra.Command {

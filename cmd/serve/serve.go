@@ -3,15 +3,19 @@ package serve
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"log"
 	"ws/app"
 	"ws/app/cron"
 	"ws/app/databases"
 	"ws/app/file"
-	"ws/app/log"
+	mylog "ws/app/log"
 	"ws/app/util"
 )
 
 func initCheck(cmd *cobra.Command, args []string) {
+	if app.IsRunning() {
+		log.Fatalln("serve is running")
+	}
 	workDir := util.GetWorkDir()
 	if !util.DirExist(workDir) {
 		panic(fmt.Sprintf("workdir:%s not exit", workDir))
@@ -36,7 +40,7 @@ func NewServeCommand() *cobra.Command {
 			databases.MysqlSetup()
 			databases.RedisSetup()
 			file.Setup()
-			log.Setup()
+			mylog.Setup()
 			if cronFlag {
 				go cron.Run()
 			}

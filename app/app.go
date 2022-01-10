@@ -6,22 +6,36 @@ import (
 	"github.com/spf13/viper"
 	"log"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 	"ws/app/cron"
 	_ "ws/app/http/requests"
-	_ "ws/app/log"
 	"ws/app/routers"
 	"ws/app/util"
 	"ws/app/websocket"
 )
 
+func IsRunning() bool  {
+	pid := GetPid()
+	if pid == 0 {
+		return false
+	} else {
+		cmd := 	exec.Command("ps")
+		out, err := cmd.Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+		return strings.Contains(string(out), strconv.Itoa(pid))
+	}
+}
+
 func GetPid() int {
-	dir := util.GetWorkDir()
+	dir := util.GetStoragePath()
 	pidFile := dir + "/pid.log"
 	b,err := os.ReadFile(pidFile)
 	if err != nil {
@@ -37,11 +51,11 @@ func GetPid() int {
 
 func logPid() {
 	pid := os.Getpid()
-	dir := util.GetWorkDir()
+	dir := util.GetStoragePath()
 	pidFile := dir + "/pid.log"
 	file, err := os.OpenFile(pidFile, os.O_CREATE | os.O_TRUNC | os.O_WRONLY, os.ModePerm)
 	if err != nil {
-		panic(err)
+		log.Fatalf("pid file err: %v" , err)
 	}
 	defer file.Close()
 	file.Write([]byte(strconv.Itoa(pid)))

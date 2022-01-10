@@ -3,9 +3,9 @@ package stop
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"log"
 	"os/exec"
 	"strconv"
-	"strings"
 	"ws/app"
 )
 
@@ -14,26 +14,16 @@ func NewStopCommand() *cobra.Command  {
 		Use:                        "stop",
 		Short: "stop the server",
 		Run: func(cmd *cobra.Command, args []string) {
-			pid := app.GetPid()
-			if pid == 0 {
-				fmt.Println("serve not running")
-			} else {
-				cmd := 	exec.Command("ps")
-				out, err := cmd.Output()
-				if err != nil {
-					fmt.Println(err)
-				}
-				if strings.Contains(string(out), strconv.Itoa(pid)) {
-					cmd := exec.Command("kill", "15", strconv.Itoa(pid))
-					_, err := cmd.Output()
-					if err != nil{
-						fmt.Println(err)
-					}
-					fmt.Println("serve had stop")
-
-				} else {
-					fmt.Println("server not running")
-				}
+			if !app.IsRunning() {
+				log.Fatalln("serve is not running")
+			}
+ 			pid := app.GetPid()
+			e := exec.Command("kill", "15", strconv.Itoa(pid))
+			_, err := e.Output()
+			if err != nil{
+				log.Fatalln(err)
+			}  else {
+				fmt.Println("serve is stop")
 			}
 		},
 	}
