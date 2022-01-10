@@ -435,8 +435,8 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 	util.RespSuccess(c, res)
 }
 
-// ChatCancelTransfer 取消转接
-func (handle *ChatHandler) ChatCancelTransfer(c *gin.Context) {
+// CancelTransfer 取消转接
+func (handle *ChatHandler) CancelTransfer(c *gin.Context) {
 	id := c.Param("id")
 	admin := auth.GetAdmin(c)
 	transfer := transferRepo.First([]*repositories.Where{

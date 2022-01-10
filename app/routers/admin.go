@@ -49,7 +49,7 @@ func registerAdmin() {
 	authGroup.GET("/ws/messages", chatHandler.GetHistoryMessage)
 	authGroup.GET("/ws/user/:id", chatHandler.GetUserInfo)
 	authGroup.GET("/ws/sessions/:uid", chatHandler.GetHistorySession)
-	authGroup.POST("/ws/transfer/:id/cancel", chatHandler.ChatCancelTransfer)
+	authGroup.POST("/ws/transfer/:id/cancel", chatHandler.CancelTransfer)
 	authGroup.POST("/ws/transfer", chatHandler.Transfer)
 	authGroup.GET("/ws/transfer/:id/messages", chatHandler.TransferMessages)
 

@@ -21,7 +21,8 @@ var TransferService = &transferService{}
 type transferService struct {
 
 }
-// 取消待接入的转接
+
+// Cancel 取消待接入的转接
 func (transferService *transferService) Cancel(transfer *models.ChatTransfer) error {
 	chatSessionRepo.Delete([]*repositories.Where{
 		{
@@ -44,7 +45,8 @@ func (transferService *transferService) Cancel(transfer *models.ChatTransfer) er
 	_ = transferService.RemoveUser(transfer.UserId)
 	return nil
 }
-// 创建转接
+
+// Create 创建转接
 func (transferService *transferService) Create(fromId int64, toId int64, uid int64, remark  string) error  {
 	session := SessionService.Get(uid, fromId)
 	if session == nil {
@@ -65,7 +67,8 @@ func (transferService *transferService) Create(fromId int64, toId int64, uid int
 	SessionService.Create(uid, models.ChatSessionTypeTransfer)
 	return nil
 }
-// 在转接列表中移除user
+
+// RemoveUser 在转接列表中移除user
 func (transferService *transferService) RemoveUser(uid int64) error  {
 	ctx := context.Background()
 	cmd := databases.Redis.HDel(ctx, transferUserKey, strconv.FormatInt(uid, 10))
@@ -82,7 +85,7 @@ func (transferService *transferService) GetUserTransferId(uid int64) int64  {
 	return adminId
 }
 
-//  添加用户到转接列表中
+// AddUser 添加用户到转接列表中
 func (transferService *transferService) AddUser(uid int64, adminId int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.HSet(ctx, transferUserKey, uid, adminId)

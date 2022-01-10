@@ -79,7 +79,6 @@ func Start()  {
 			}
 		}
 	}()
-
 	defer func() {
 		websocket.AdminManager.Destroy()
 		websocket.UserManager.Destroy()
