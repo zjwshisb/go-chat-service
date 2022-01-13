@@ -194,6 +194,7 @@ func (m *adminManager) handleMessage(payload *ConnMessage) {
 					return
 				}
 				sessionAddTime := chat.SettingService.GetUserSessionSecond()
+				msg.GroupId = conn.GetUserId()
 				msg.AdminId = conn.GetUserId()
 				msg.Source = models.SourceAdmin
 				msg.ReceivedAT = time.Now().Unix()

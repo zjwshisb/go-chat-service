@@ -20,6 +20,10 @@ func (handler *TransferHandler) Cancel(c *gin.Context)  {
 			Filed: "id = ?",
 			Value: id,
 		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
+		},
 	}, []string{})
 	if transfer == nil {
 		util.RespNotFound(c)
@@ -44,6 +48,10 @@ func (handler *TransferHandler) Cancel(c *gin.Context)  {
 
 func (handler *TransferHandler) Index(c *gin.Context)  {
 	wheres := requests.GetFilterWhere(c, map[string]interface{}{})
+	wheres = append(wheres, &repositories.Where{
+		Filed: "group_id = ?",
+		Value: requests.GetAdmin(c).GetGroupId(),
+	})
 	p := transferRepo.Paginate(c, wheres, []string{"User","ToAdmin","FromAdmin"}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.ChatTransfer)

@@ -11,6 +11,7 @@ type ChatTransfer struct {
 	SessionId   uint64 `gorm:"index"`
 	FromAdminId int64  `gorm:"index"`
 	ToAdminId   int64  `gorm:"index"`
+	GroupId int64
 	Remark      string `gorm:"size:255"`
 	IsAccepted  bool
 	IsCanceled  bool

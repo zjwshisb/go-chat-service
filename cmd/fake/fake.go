@@ -23,6 +23,7 @@ func NewFakeCommand() *cobra.Command {
 					admins := &models.Admin{
 						Username:  adminName,
 						Password: string(password),
+						GroupId: 1,
 					}
 					databases.Db.Save(admins)
 				}
@@ -33,6 +34,7 @@ func NewFakeCommand() *cobra.Command {
 					admins := &models.User{
 						Username:  username,
 						Password: string(password),
+						GroupId: 1,
 					}
 					databases.Db.Save(admins)
 				}

@@ -7,7 +7,6 @@ import (
 	"ws/app/repositories"
 )
 
-
 func GetFilterWhere(c *gin.Context , fields map[string]interface{}) []*repositories.Where {
 	wheres := make([]*repositories.Where, 0, len(fields))
 	for field, handler := range fields {

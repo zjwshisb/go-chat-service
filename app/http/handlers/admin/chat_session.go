@@ -66,6 +66,10 @@ var sessionFilter = map[string]interface{}{
 func (handler *ChatSessionHandler) Index(c *gin.Context)  {
 	wheres := requests.GetFilterWhere(c, sessionFilter)
 	queriedAtArr := c.QueryArray("queried_at")
+	wheres = append(wheres,&repositories.Where{
+		Filed: "group_id = ?",
+		Value: requests.GetAdmin(c).GetGroupId(),
+	})
 	if len(queriedAtArr) > 0 {
 		start := carbon.Parse(queriedAtArr[0]).ToTimestamp()
 		wheres = append(wheres, &repositories.Where{
@@ -93,6 +97,10 @@ func (handler *ChatSessionHandler) Cancel(c *gin.Context)  {
 		{
 			Filed: "id = ?",
 			Value: sessionId,
+		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
 		},
 	}, []string{})
 	if session == nil {
@@ -122,11 +130,19 @@ func (handler *ChatSessionHandler) Show(c *gin.Context) {
 			Filed: "id = ?",
 			Value: sessionId,
 		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
+		},
 	}, []string{})
 	messages := messageRepo.Get([]Where{
 		{
 			Filed: "session_id = ?",
 			Value: sessionId,
+		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
 		},
 		{
 			Filed: "source in ?",

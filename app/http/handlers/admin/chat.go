@@ -209,7 +209,8 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		util.RespNotFound(c)
 		return
 	}
-	admin := requests.GetAdmin(c)
+	u := requests.GetAdmin(c)
+	admin, _ := u.(*models.Admin)
 	if !admin.AccessTo(user) {
 		util.RespNotFound(c)
 		return
@@ -284,7 +285,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			Value: session.Id,
 		},
 	}, map[string]interface{}{
-		"admin_id": admin.ID,
+		"admin_id": admin.GetPrimaryKey(),
 		"send_at":  now,
 	})
 	messages := messageRepo.Get([]*repositories.Where{
@@ -326,7 +327,8 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 // RemoveUser 移除用户
 func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 	uidStr := c.Param("id")
-	admin := requests.GetAdmin(c)
+	u := requests.GetAdmin(c)
+	admin, _ := u.(*models.Admin)
 	session := chatSessionRepo.First([]Where{
 		{
 			Filed: "user_id = ?",

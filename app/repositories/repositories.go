@@ -48,6 +48,8 @@ func Paginate(c *gin.Context) func(db *gorm.DB) *gorm.DB {
 		return db.Offset(offset).Limit(limit)
 	}
 }
+
+
 func AddLoad(relations []string) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		for _, load := range relations {

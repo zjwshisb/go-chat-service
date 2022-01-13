@@ -22,16 +22,18 @@ type Admin struct {
 	Password  string            `gorm:"string;size:255" `
 	ApiToken  string            `gorm:"string;size:255" `
 	Avatar    string            `gorm:"string;size:512"`
+	GroupId   int64            `gorm:"group_id"`
 	Setting   *AdminChatSetting `json:"message" gorm:"foreignKey:admin_id"`
 	IsSuper bool `gorm:"is_super"`
 }
 func (admin *Admin) GetGroupId() int64  {
-	return 1
+	return admin.GroupId
 }
 // AccessTo 是否有user的权限
 func (admin *Admin) AccessTo(user contract.User) bool {
 	return admin.GetGroupId() == user.GetGroupId()
 }
+
 func (admin *Admin) GetIsSuper() bool {
 	return admin.IsSuper
 }

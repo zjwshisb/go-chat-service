@@ -25,6 +25,7 @@ type Message struct {
 	Type       string `gorm:"size:16" mapstructure:"type"`
 	Content    string `gorm:"size:1024" mapstructure:"content"`
 	ReceivedAT int64
+	GroupId    int64            `gorm:"group_id"`
 	SendAt     int64  `gorm:"send_at"`
 	Source     int8   `gorm:"source"`
 	SessionId  uint64 `gorm:"session_id"`

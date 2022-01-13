@@ -23,7 +23,6 @@ const (
 	MoreThanOne = "more-than-one"
 	UserTransfer = "user-transfer"
 	ErrorMessage = "error-message"
-
 )
 
 type Action struct {

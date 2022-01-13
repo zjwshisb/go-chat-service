@@ -14,7 +14,10 @@ type AutoRuleHandler struct {
 }
 
 func (handle *AutoRuleHandler) MessageOptions(c *gin.Context)  {
-	messages := autoMessageRepo.Get([]Where{}, -1, []string{}, []string{})
+	messages := autoMessageRepo.Get([]Where{{
+		Filed: "group_id = ?",
+		Value: requests.GetAdmin(c).GetGroupId(),
+	}}, -1, []string{}, []string{})
 	options := make([]resource.Options, 0, len(messages))
 	for _, message := range messages {
 		options = append(options, resource.Options{
@@ -37,6 +40,7 @@ func (handle *AutoRuleHandler) EventOptions(c *gin.Context)  {
 
 // Index 获取自定义规则列表
 func (handle *AutoRuleHandler) Index(c *gin.Context)  {
+	admin := requests.GetAdmin(c)
 	filter := map[string]interface{}{
 		"reply_type": "=",
 		"name" : func(val string) Where {
@@ -56,6 +60,9 @@ func (handle *AutoRuleHandler) Index(c *gin.Context)  {
 	wheres = append(wheres, &repositories.Where{
 		Filed: "is_system = ?",
 		Value: 0,
+	}, &repositories.Where{
+		Filed: "group_id = ?",
+		Value: admin.GetGroupId(),
 	})
 	p := autoRuleRepo.Paginate(c, wheres, []string{"Message", "Scenes"}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
@@ -67,11 +74,16 @@ func (handle *AutoRuleHandler) Index(c *gin.Context)  {
 
 // Show 获取自定义规则
 func (handle *AutoRuleHandler) Show(c *gin.Context) {
+	admin := requests.GetAdmin(c)
 	id := c.Param("id")
 	rule := autoRuleRepo.First([]Where{
 		{
 			Filed: "id = ?",
 			Value: id,
+		},
+		{
+			Filed: "group_id = ?",
+			Value: admin.GetGroupId(),
 		},
 	}, []string{})
 	if rule != nil {
@@ -85,6 +97,7 @@ func (handle *AutoRuleHandler) Show(c *gin.Context) {
 func (handle *AutoRuleHandler) Store (c *gin.Context)  {
 	form := requests.AutoRuleForm{}
 	err := c.ShouldBind(&form)
+	admin := requests.GetAdmin(c)
 	if err != nil {
 		util.RespValidateFail(c, err.Error())
 		return
@@ -102,6 +115,7 @@ func (handle *AutoRuleHandler) Store (c *gin.Context)  {
 		Sort: form.Sort,
 		IsOpen: form.IsOpen,
 		Key: form.Key,
+		GroupId: admin.GetGroupId(),
 	}
 	var scenes = make([]*models.AutoRuleScene, 0)
 	for _, name := range form.Scenes {
@@ -128,6 +142,11 @@ func (handle *AutoRuleHandler) Update(c *gin.Context) {
 			Filed: "id = ?",
 			Value: c.Param("id"),
 		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
+		},
+
 	}, []string{})
 	if rule == nil {
 		util.RespNotFound(c)
@@ -181,6 +200,10 @@ func (handle *AutoRuleHandler) Delete(c *gin.Context)  {
 			Filed: "id = ?",
 			Value: id,
 		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
+		},
 	}, []string{})
 	if rule == nil {
 		util.RespNotFound(c)
@@ -202,6 +225,10 @@ func (handler *SystemRuleHandler) Index(c *gin.Context)  {
 			Filed: "is_system = ?",
 			Value: 1,
 		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
+		},
 	}, -1, []string{}, []string{})
 	result := make([]*resource.AutoRule, len(rules), len(rules))
 	for i, rule := range rules {
@@ -222,6 +249,10 @@ func (handler *SystemRuleHandler) Update(c *gin.Context) {
 			Filed: "is_system = ?",
 			Value: 1,
 		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
+		},
 	}, map[string]interface{}{
 		"message_id": 0,
 	})
@@ -234,6 +265,10 @@ func (handler *SystemRuleHandler) Update(c *gin.Context) {
 			{
 				Filed: "id = ?",
 				Value: id,
+			},
+			{
+				Filed: "group_id = ?",
+				Value: requests.GetAdmin(c).GetGroupId(),
 			},
 		}, map[string]interface{}{
 			"message_id": v,

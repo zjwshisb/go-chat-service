@@ -11,6 +11,7 @@ type AutoMessage struct {
 	Name      string `gorm:"size:255"`
 	Type      string `gorm:"size:255"`
 	Content   string `gorm:"type:text"`
+	GroupId  int64
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Rules     []*AutoRule `gorm:"foreignKey:message_id"`

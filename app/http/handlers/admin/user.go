@@ -22,11 +22,13 @@ func (User *UserHandler) Info(c *gin.Context)  {
 	})
 }
 func (User *UserHandler) Setting(c *gin.Context) {
-	admin := requests.GetAdmin(c)
+	u := requests.GetAdmin(c)
+	admin := u.(*models.Admin)
 	util.RespSuccess(c, admin.GetSetting())
 }
 func (User *UserHandler) UpdateSetting(c *gin.Context) {
-	admin := requests.GetAdmin(c)
+	u := requests.GetAdmin(c)
+	admin := u.(*models.Admin)
 	form  := requests.AdminChatSettingForm{}
 	err := c.ShouldBind(&form)
 	if err != nil {
@@ -67,7 +69,8 @@ func (User *UserHandler) Avatar(c *gin.Context) {
 	if err != nil {
 		util.RespError(c, err.Error())
 	} else {
-		admin := requests.GetAdmin(c)
+		u := requests.GetAdmin(c)
+		admin := u.(*models.Admin)
 		admin.Avatar = fileInfo.Path
 		adminRepo.Save(admin)
 		// 如果当前在线，更新信息

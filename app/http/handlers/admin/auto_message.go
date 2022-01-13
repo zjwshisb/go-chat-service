@@ -6,6 +6,7 @@ import (
 	"ws/app/file"
 	"ws/app/http/requests"
 	"ws/app/models"
+	"ws/app/repositories"
 	"ws/app/util"
 )
 
@@ -27,6 +28,11 @@ func (handler *AutoMessageHandler) Index(c *gin.Context)  {
 	wheres := requests.GetFilterWhere(c, map[string]interface{}{
 		"type" : "=",
 	})
+	admin := requests.GetAdmin(c)
+	wheres = append(wheres , &repositories.Where{
+		Filed: "group_id = ?",
+		Value: admin.GetGroupId(),
+	})
 	p := autoMessageRepo.Paginate(c, wheres, []string{"Rules"}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.AutoMessage)
@@ -37,10 +43,15 @@ func (handler *AutoMessageHandler) Index(c *gin.Context)  {
 
 func (handler *AutoMessageHandler) Show(c *gin.Context) {
 	id := c.Param("id")
+	admin := requests.GetAdmin(c)
 	message := autoMessageRepo.First([]Where{
 		{
 			Filed: "id = ?",
 			Value: id,
+		},
+		{
+			Filed: "group_id = ?",
+			Value: admin.GetGroupId(),
 		},
 	}, []string{})
 	if message != nil {
@@ -62,14 +73,20 @@ func (handler *AutoMessageHandler) Store(c *gin.Context)  {
 			Filed: "name = ?",
 			Value: form.Name,
 		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
+		},
 	}, []string{})
 	if exist != nil {
 		util.RespValidateFail(c, "已存在同名的消息")
 		return
 	}
+	admin := requests.GetAdmin(c)
 	message := &models.AutoMessage{
 		Name: form.Name,
 		Type: form.Type,
+		GroupId: admin.GetGroupId(),
 	}
 	if message.Type == models.TypeText  || message.Type == models.TypeImage {
 		message.Content = form.Content
@@ -96,6 +113,10 @@ func (handler *AutoMessageHandler) Update(c *gin.Context) {
 			Filed: "id = ?",
 			Value: c.Param("id"),
 		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
+		},
 	}, []string{})
 	if message == nil {
 		util.RespNotFound(c)
@@ -115,6 +136,10 @@ func (handler *AutoMessageHandler) Update(c *gin.Context) {
 		{
 			Filed: "id != ?",
 			Value: c.Param("id"),
+		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
 		},
 	}, []string{})
 	if exist != nil {
@@ -146,6 +171,10 @@ func (handler *AutoMessageHandler) Delete(c *gin.Context) {
 			Filed: "id = ?",
 			Value: c.Param("id"),
 		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
+		},
 	}, []string{})
 	if message == nil {
 		util.RespNotFound(c)
@@ -155,6 +184,10 @@ func (handler *AutoMessageHandler) Delete(c *gin.Context) {
 		{
 			Filed: "message_id = ?",
 			Value: message.ID,
+		},
+		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
 		},
 	}, -1, []string{}, []string{})
 	if len(rules) > 0 {

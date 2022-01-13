@@ -7,6 +7,7 @@ import (
 	"ws/app/chat"
 	"ws/app/http/requests"
 	"ws/app/models"
+	"ws/app/repositories"
 	"ws/app/resource"
 	"ws/app/util"
 	"ws/app/websocket"
@@ -18,6 +19,11 @@ type AdminsHandler struct {
 func (handle *AdminsHandler) Index(c *gin.Context){
 	where := requests.GetFilterWhere(c, map[string]interface{}{
 		"username": "=",
+	})
+	admin := requests.GetAdmin(c)
+	where = append(where, &repositories.Where{
+		Filed: "group_id = ?",
+		Value: admin.GetGroupId(),
 	})
 	p := adminRepo.Paginate(c, where, []string{}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
@@ -35,10 +41,15 @@ func (handle *AdminsHandler) Index(c *gin.Context){
 
 func (handle *AdminsHandler) Show(c *gin.Context){
 	id := c.Param("id")
+	u := requests.GetAdmin(c)
 	admin := adminRepo.First([]Where{
 		{
 			Filed: "id = ?",
 			Value: id,
+		},
+		{
+			Filed: "group_id = ?",
+			Value: u.GetGroupId(),
 		},
 	}, []string{})
 	if admin == nil {

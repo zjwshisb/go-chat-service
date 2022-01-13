@@ -6,9 +6,9 @@ import (
 	"ws/app/models"
 )
 
-func GetAdmin(c *gin.Context) *models.Admin {
+func GetAdmin(c *gin.Context) contract.User {
 	ui, _ := c.Get("admin")
-	user := ui.(*models.Admin)
+	user := ui.(contract.User)
 	return user
 }
 

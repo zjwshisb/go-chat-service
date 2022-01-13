@@ -6,6 +6,7 @@ import (
 	middleware "ws/app/http/middleware/admin"
 	"ws/app/http/requests"
 	"ws/app/log"
+	"ws/app/models"
 	"ws/app/util"
 	"ws/app/websocket"
 )
@@ -88,7 +89,8 @@ func registerAdmin() {
 	authGroup.POST("/transfers/:id/cancel", transferHandler.Cancel)
 
 	authGroup.GET("/ws", func(c *gin.Context) {
-		admin := requests.GetAdmin(c)
+		u := requests.GetAdmin(c)
+		admin := u.(*models.Admin)
 		admin.GetSetting()
 		conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {

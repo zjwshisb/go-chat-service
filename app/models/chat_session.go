@@ -15,6 +15,7 @@ type ChatSession struct {
 	AcceptedAt int64
 	CanceledAt   int64
 	BrokeAt    int64
+	GroupId   int64  `gorm:"group_id"`
 	AdminId    int64  `gorm:"index"`
 	Admin      *Admin `gorm:"foreignKey:admin_id"`
 	Type       int    `gorm:"default:0"`

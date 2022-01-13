@@ -13,4 +13,5 @@ type User interface {
 	Auth(c *gin.Context) bool
 	GetGroupId() int64
 	GetReqId() string
+	AccessTo(user User) bool
 }

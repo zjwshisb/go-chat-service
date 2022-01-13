@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 	"strconv"
 	"time"
+	"ws/app/contract"
 	"ws/app/databases"
 	"ws/app/util"
 )
@@ -20,11 +21,16 @@ type User struct {
 	Password  string `gorm:"string;size:255" json:"-"`
 	ApiToken  string `gogm:"string;size:255"  json:"-"`
 	OpenId    string `gorm:"string;size:255"`
+	GroupId   int64   `gorm:"group_id"`
+}
+
+func (user *User) AccessTo(admin contract.User) bool {
+	return user.GetGroupId() == admin.GetGroupId()
 }
 
 
 func (user *User) GetGroupId() int64  {
-	return 1
+	return user.GroupId
 }
 
 func (user *User) GetReqId() string {

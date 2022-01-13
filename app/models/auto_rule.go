@@ -65,6 +65,7 @@ type AutoRule struct {
 	IsSystem  uint8            `gorm:"is_system"`
 	Sort      uint8            `gorm:"sort"`
 	IsOpen    bool             `gorm:"is_open"`
+	GroupId   int64            `gorm:"group_id"`
 	Count     uint             `gorm:"not null;default:0"`
 	Scenes    []*AutoRuleScene `gorm:"foreignKey:RuleId"`
 	CreatedAt time.Time

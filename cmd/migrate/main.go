@@ -43,6 +43,7 @@ func NewMigrateCommand() *cobra.Command {
 					Match: models.MatchEnter,
 					ReplyType: models.ReplyTypeMessage,
 					IsSystem: 1,
+					GroupId: 1,
 				},
 				{
 					Name: "当转接到人工客服而没有客服在线时(如不设置则继续转接到人工客服)",
@@ -50,11 +51,13 @@ func NewMigrateCommand() *cobra.Command {
 					Match: models.MatchAdminAllOffLine,
 					ReplyType: models.ReplyTypeMessage,
 					IsSystem: 1,
+					GroupId: 1,
 				},
 			}
 			for _, rule := range rules {
 				var exist int64
-				databases.Db.
+				databases.Db.Model(&models.AutoRule{}).
+					Where("group_id", 1).
 					Where("`match`=?" , rule.Match).Count(&exist)
 				if exist == 0 {
 					databases.Db.Save(&rule)
