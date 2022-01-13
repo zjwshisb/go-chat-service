@@ -20,7 +20,7 @@ func (handler *TransferHandler) Cancel(c *gin.Context)  {
 			Filed: "id = ?",
 			Value: id,
 		},
-	})
+	}, []string{})
 	if transfer == nil {
 		util.RespNotFound(c)
 		return
@@ -44,7 +44,7 @@ func (handler *TransferHandler) Cancel(c *gin.Context)  {
 
 func (handler *TransferHandler) Index(c *gin.Context)  {
 	wheres := requests.GetFilterWhere(c, map[string]interface{}{})
-	p := transferRepo.Paginate(c, wheres, []string{"User","ToAdmin","FromAdmin"}, "id desc")
+	p := transferRepo.Paginate(c, wheres, []string{"User","ToAdmin","FromAdmin"}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.ChatTransfer)
 		return item.ToJson()

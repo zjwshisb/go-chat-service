@@ -11,6 +11,7 @@ import (
 	"ws/app/models"
 	"ws/app/mq"
 	"ws/app/resource"
+	"ws/app/util"
 )
 
 var AdminManager *adminManager
@@ -41,7 +42,7 @@ func init() {
 	AdminManager = &adminManager{
 		manager: manager{
 			groupCount:            10,
-			Channel:               viper.GetString("App.Name") + "-admin",
+			Channel:               util.GetIPs()[0] + ":" + viper.GetString("Http.Port") + "-admin",
 			ConnMessages:          make(chan *ConnMessage, 100),
 			userChannelCacheKey:   AdminConnChannelKey,
 			groupCacheKey:         AdminManageGroupKey,
@@ -97,7 +98,7 @@ func (m *adminManager) handleOffline(msg *models.Message) {
 			Filed: "id = ?",
 			Value: msg.AdminId,
 		},
-	})
+	}, []string{})
 	setting := admin.GetSetting()
 	if setting != nil {
 		// 发送离线消息
@@ -143,7 +144,7 @@ func (m *adminManager) handleRemoteMessage() {
 					user := userRepo.First([]Where{{
 						Filed: "id = ?",
 						Value: uid,
-					}})
+					}}, []string{})
 					if user != nil {
 						m.handleRepeatLogin(user, true)
 					}
@@ -157,7 +158,7 @@ func (m *adminManager) handleRemoteMessage() {
 							Filed: "id = ?",
 							Value: adminId,
 						},
-					})
+					}, []string{})
 					if admin != nil {
 						m.broadcastUserTransfer(admin)
 					}
@@ -320,7 +321,7 @@ func (m *adminManager) broadcastUserTransfer(admin auth.User) {
 				Filed: "is_canceled",
 				Value: 0,
 			},
-		}, -1, []string{"FromAdmin", "User"}, "id desc")
+		}, -1, []string{"FromAdmin", "User"}, []string{"id desc"})
 		data := make([]*resource.ChatTransfer, 0, len(transfers))
 		for _, transfer := range transfers {
 			data = append(data, transfer.ToJson())
@@ -335,7 +336,7 @@ func (m *adminManager) broadcastAdmins(gid int64) {
 	admins := adminRepo.Get([]Where{{
 		Filed: "id in ?",
 		Value: ids,
-	}}, -1, []string{})
+	}}, -1, []string{}, []string{})
 	data := make([]resource.Admin, 0, len(admins))
 	for _, admin := range admins {
 		data = append(data, resource.Admin{

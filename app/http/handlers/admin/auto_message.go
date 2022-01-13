@@ -27,7 +27,7 @@ func (handler *AutoMessageHandler) Index(c *gin.Context)  {
 	wheres := requests.GetFilterWhere(c, map[string]interface{}{
 		"type" : "=",
 	})
-	p := autoMessageRepo.Paginate(c, wheres, []string{"Rules"}, "id desc")
+	p := autoMessageRepo.Paginate(c, wheres, []string{"Rules"}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.AutoMessage)
 		return item.ToJson()
@@ -42,7 +42,7 @@ func (handler *AutoMessageHandler) Show(c *gin.Context) {
 			Filed: "id = ?",
 			Value: id,
 		},
-	})
+	}, []string{})
 	if message != nil {
 		util.RespSuccess(c, message.ToJson())
 	} else {
@@ -62,7 +62,7 @@ func (handler *AutoMessageHandler) Store(c *gin.Context)  {
 			Filed: "name = ?",
 			Value: form.Name,
 		},
-	})
+	}, []string{})
 	if exist != nil {
 		util.RespValidateFail(c, "已存在同名的消息")
 		return
@@ -96,7 +96,7 @@ func (handler *AutoMessageHandler) Update(c *gin.Context) {
 			Filed: "id = ?",
 			Value: c.Param("id"),
 		},
-	})
+	}, []string{})
 	if message == nil {
 		util.RespNotFound(c)
 		return
@@ -116,7 +116,7 @@ func (handler *AutoMessageHandler) Update(c *gin.Context) {
 			Filed: "id != ?",
 			Value: c.Param("id"),
 		},
-	})
+	}, []string{})
 	if exist != nil {
 		util.RespValidateFail(c, "已存在同名的其他消息")
 		return
@@ -146,7 +146,7 @@ func (handler *AutoMessageHandler) Delete(c *gin.Context) {
 			Filed: "id = ?",
 			Value: c.Param("id"),
 		},
-	})
+	}, []string{})
 	if message == nil {
 		util.RespNotFound(c)
 		return
@@ -156,7 +156,7 @@ func (handler *AutoMessageHandler) Delete(c *gin.Context) {
 			Filed: "message_id = ?",
 			Value: message.ID,
 		},
-	}, -1, []string{})
+	}, -1, []string{}, []string{})
 	if len(rules) > 0 {
 		util.RespValidateFail(c, "该消息在其他地方有使用，无法删除")
 		return

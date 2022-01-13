@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/spf13/viper"
+	"log"
 )
 
 func Setup(name string)  {
@@ -13,7 +14,7 @@ func Setup(name string)  {
 	err := viper.ReadInConfig()
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("log file err: %v", err)
 	}
 
 }

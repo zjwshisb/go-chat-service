@@ -21,7 +21,7 @@ func (repo *MessageRepo) First(id interface{}) *models.Message {
 	}
 	return message
 }
-func (repo *MessageRepo) Get(wheres []*Where, limit int, loads []string, orders ...string) []*models.Message {
+func (repo *MessageRepo) Get(wheres []*Where, limit int, loads []string, orders []string) []*models.Message {
 	messages := make([]*models.Message, 0)
 	query := databases.Db.
 		Limit(limit).
@@ -44,5 +44,5 @@ func (repo *MessageRepo) GetUnSend(wheres []*Where) []*models.Message {
 		Filed: "source = ?",
 		Value: models.SourceUser,
 	})
-	return repo.Get(wheres, -1, []string{}, "id desc")
+	return repo.Get(wheres, -1, []string{}, []string{"id desc"})
 }

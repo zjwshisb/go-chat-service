@@ -12,6 +12,7 @@ import (
 	"ws/app/log"
 	"ws/app/models"
 	"ws/app/mq"
+	"ws/app/util"
 	"ws/app/wechat"
 )
 
@@ -43,7 +44,7 @@ func init() {
 	UserManager = &userManager{
 		manager{
 			groupCount:            10,
-			Channel:               viper.GetString("App.Name") + "-user",
+			Channel:               util.GetIPs()[0] + ":" + viper.GetString("Http.Port") + "-user",
 			ConnMessages:          make(chan *ConnMessage, 100),
 			userChannelCacheKey:   UserConnChannelKey,
 			groupCacheKey:         UserManageGroupKey,
@@ -120,7 +121,7 @@ func (userManager *userManager) handleOffline(msg *models.Message) {
 			Filed: "id = ?",
 			Value: msg.UserId,
 		},
-	})
+	}, []string{})
 	if hadSubscribe && user != nil && user.GetMpOpenId() != "" {
 		err := wechat.GetMp().GetSubscribe().Send(&subscribe.Message{
 			ToUser:           user.GetMpOpenId(),
@@ -200,7 +201,8 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 		}
 	}
 }
-// 广播等待人数
+
+// PublishWaitingCount 广播等待人数
 func (userManager *userManager) PublishWaitingCount(groupId int64)  {
 	if userManager.isCluster() {
 		userManager.publishToAllChannel(&mq.Payload{
@@ -211,7 +213,8 @@ func (userManager *userManager) PublishWaitingCount(groupId int64)  {
 		userManager.broadcastWaitingCount(groupId)
 	}
 }
-// 推送前面等待人数
+
+// DeliveryWaitingCount 推送前面等待人数
 func (userManager *userManager) DeliveryWaitingCount(conn Conn)  {
 	uid := conn.GetUserId()
 	uTime := chat.ManualService.GetTime(uid, conn.GetGroupId())

@@ -9,7 +9,7 @@ import (
 type TransferRepo struct {
 }
 
-func (repo *TransferRepo) Get(wheres []*Where, limit int, load []string, orders ...string) []*models.ChatTransfer {
+func (repo *TransferRepo) Get(wheres []*Where, limit int, load []string, orders []string) []*models.ChatTransfer {
 	messages := make([]*models.ChatTransfer, 0)
 	databases.Db.
 		Limit(limit).
@@ -24,7 +24,7 @@ func (repo *TransferRepo) Save(transfer *models.ChatTransfer) int64 {
 	return result.RowsAffected
 }
 
-func (repo *TransferRepo) First(where []*Where, orders ...string) *models.ChatTransfer  {
+func (repo *TransferRepo) First(where []*Where, orders []string) *models.ChatTransfer  {
 	model := &models.ChatTransfer{}
 	result := databases.Db.Scopes(AddWhere(where)).Scopes(AddOrder(orders)).First(model)
 	if result.Error != nil {
@@ -33,7 +33,7 @@ func (repo *TransferRepo) First(where []*Where, orders ...string) *models.ChatTr
 	return model
 }
 
-func (repo *TransferRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order ...string) *Pagination {
+func (repo *TransferRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order []string) *Pagination {
 	transfer := make([]*models.ChatTransfer, 0)
 	databases.Db.Scopes(AddWhere(wheres)).
 		Scopes(AddOrder(order)).

@@ -17,7 +17,7 @@ import (
 type ChatHandler struct {
 }
 
-// 查看历史对话
+// GetHistorySession 查看历史对话
 func (handle *ChatHandler) GetHistorySession(c *gin.Context) {
 	useId := c.Param("uid")
 	sessions := chatSessionRepo.Get([]Where{
@@ -29,7 +29,7 @@ func (handle *ChatHandler) GetHistorySession(c *gin.Context) {
 			Filed: "admin_id > ?",
 			Value: 0,
 		},
-	}, -1, []string{"Admin","User"}, "id desc")
+	}, -1, []string{"Admin","User"}, []string{"id desc"})
 	resp := make([]*resource.ChatSession, len(sessions))
 	for i, session := range sessions {
 		resp[i] = session.ToJson()
@@ -37,7 +37,7 @@ func (handle *ChatHandler) GetHistorySession(c *gin.Context) {
 	util.RespSuccess(c, resp)
 }
 
-// 获取消息
+// GetHistoryMessage 获取消息
 func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 	var uid int64
 	var mid int64
@@ -88,21 +88,23 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 			})
 		}
 	}
-	messages := messageRepo.Get(wheres, 20, []string{"User", "Admin"}, "id desc")
+	messages := messageRepo.Get(wheres, 20, []string{"User", "Admin"}, []string{"id desc"})
 	res := make([]*resource.Message, 0)
 	for _, m := range messages {
 		res = append(res, m.ToJson())
 	}
 	util.RespSuccess(c, res)
 }
-// 获取reqId
+
+// GetReqId 获取reqId
 func (handle *ChatHandler) GetReqId(c *gin.Context)  {
 	admin := auth.GetAdmin(c)
 	util.RespSuccess(c, gin.H{
 		"reqId" : admin.GetReqId(),
 	})
 }
-// 聊天用户列表
+
+// ChatUserList 聊天用户列表
 func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 	admin := auth.GetAdmin(c)
 	ids, times := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
@@ -111,7 +113,7 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 			Filed: "id in ?",
 			Value: ids,
 		},
-	}, -1, []string{})
+	}, -1, []string{}, []string{})
 	resp := make([]*resource.User, 0, len(users))
 	userMap := make(map[int64]auth.User)
 	for _, user := range users {
@@ -154,7 +156,7 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 			Filed: "source in ?",
 			Value: []int{models.SourceAdmin, models.SourceUser},
 		},
-	}, -1, []string{"User","Admin"}, "id desc")
+	}, -1, []string{"User","Admin"}, []string{"id desc"})
 	for _, u := range resp {
 		for _, m := range messages {
 			if m.UserId == u.ID {
@@ -173,7 +175,7 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 	util.RespSuccess(c, resp)
 }
 
-// 接入用户
+// AcceptUser 接入用户
 // 分两种情况
 // 一种是普通的接入
 // 一种是转接的接入，转接的接入要判断转接的对象是否当前admin
@@ -191,7 +193,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			Filed: "id = ?",
 			Value: form.Sid,
 		},
-	})
+	}, []string{})
 	if session == nil || session.CanceledAt > 0 || session.AdminId > 0 {
 		util.RespNotFound(c)
 		return
@@ -201,7 +203,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			Filed: "id = ?",
 			Value: session.UserId,
 		},
-	})
+	}, []string{})
 	if user == nil {
 		util.RespNotFound(c)
 		return
@@ -238,7 +240,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 				Filed: "is_accepted = ?",
 				Value: 0,
 			},
-		})
+		}, []string{})
 		if transfer.Id == 0 {
 			util.RespValidateFail(c, "transfer error ")
 			return
@@ -297,7 +299,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			Filed: "source in ?",
 			Value: []int{models.SourceAdmin, models.SourceUser},
 		},
-	}, 20, []string{"User", "Admin"}, "id desc")
+	}, 20, []string{"User", "Admin"}, []string{"id desc"})
 	messageLength := len(messages)
 	chatUser := &resource.User{
 		ID:           user.GetPrimaryKey(),
@@ -320,7 +322,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	util.RespSuccess(c, chatUser)
 }
 
-// 移除用户
+// RemoveUser 移除用户
 func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 	uidStr := c.Param("id")
 	admin := auth.GetAdmin(c)
@@ -333,7 +335,7 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 			Filed: "admin_id = ?",
 			Value: admin.GetPrimaryKey(),
 		},
-	}, "id desc")
+	}, []string{"id desc"})
 	if session != nil {
 		if session.BrokeAt == 0 {
 			noticeMessage := models.NewNoticeMessage(session, admin.GetChatName() + "已断开服务")
@@ -344,7 +346,8 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 	}
 	util.RespSuccess(c, nil)
 }
-// 已读
+
+// ReadAll 已读
 func (handle *ChatHandler) ReadAll(c *gin.Context) {
 	form := &struct {
 		Id int64
@@ -389,7 +392,7 @@ func (handle *ChatHandler) GetUserInfo(c *gin.Context)  {
 			Filed: "id = ?",
 			Value: uid,
 		},
-	})
+	}, []string{})
 	if user == nil {
 		util.RespNotFound(c)
 		return
@@ -405,7 +408,8 @@ func (handle *ChatHandler) GetUserInfo(c *gin.Context)  {
 	})
 
 }
-// 转接历史消息
+
+// TransferMessages 转接历史消息
 func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 	admin := auth.GetAdmin(c)
 	transfer := transferRepo.First([]Where{
@@ -417,7 +421,7 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 			Filed: "id = ?",
 			Value: c.Param("id"),
 		},
-	})
+	}, []string{})
 	if transfer == nil {
 		util.RespNotFound(c)
 		return
@@ -427,7 +431,7 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 			Filed: "session_id = ?",
 			Value: transfer.SessionId,
 		},
-	}, -1 , []string{"Admin", "User"}, "id desc")
+	}, -1 , []string{"Admin", "User"}, []string{"id desc"})
 	res := make([]*resource.Message, 0, len(messages))
 	for _, m := range messages {
 		res = append(res, m.ToJson())
@@ -448,7 +452,7 @@ func (handle *ChatHandler) CancelTransfer(c *gin.Context) {
 			Filed: "id = ?",
 			Value: id,
 		},
-	})
+	}, []string{})
 	if transfer == nil {
 		util.RespNotFound(c)
 		return
@@ -483,7 +487,7 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 			Filed: "id = ?",
 			Value: form.UserId,
 		},
-	})
+	}, []string{})
 	if user == nil {
 		util.RespNotFound(c)
 		return
@@ -498,7 +502,7 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 			Filed: "id = ?",
 			Value: form.ToId,
 		},
-	})
+	}, []string{})
 	if toAdmin.ID == 0 {
 		util.RespValidateFail(c , "admin_not_exist")
 		return

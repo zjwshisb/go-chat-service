@@ -9,14 +9,15 @@ var SessionService = &sessionService{}
 type sessionService struct {
 
 }
-// 关闭会话
+
+// Close 关闭会话
 func (sessionService *sessionService) Close(sessionId uint64, isRemoveUser bool, updateTime bool) {
 	session := chatSessionRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: sessionId,
 		},
-	})
+	}, []string{})
 	if session != nil {
 		session.BrokeAt = time.Now().Unix()
 		chatSessionRepo.Save(session)
@@ -28,7 +29,8 @@ func (sessionService *sessionService) Close(sessionId uint64, isRemoveUser bool,
 		}
 	}
 }
-// 创建会话
+
+// Create 创建会话
 func (sessionService *sessionService) Create(uid int64, ty int) *models.ChatSession  {
 	session := &models.ChatSession{}
 	session.UserId = uid
@@ -58,7 +60,7 @@ func (sessionService *sessionService) Get(uid int64, adminId int64) *models.Chat
 			Filed: "canceled_at = ?",
 			Value: 0,
 		},
-	}, "id desc")
+	}, []string{"id desc"})
 	return session
 }
 

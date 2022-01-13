@@ -12,7 +12,7 @@ import (
 	"ws/app/util"
 )
 
-// 消息记录
+// GetHistoryMessage 消息记录
 func GetHistoryMessage(c *gin.Context) {
 	user := auth.GetUser(c)
 	wheres := []*repositories.Where{
@@ -39,7 +39,7 @@ func GetHistoryMessage(c *gin.Context) {
 			size = sizeInt
 		}
 	}
-	messages := messageRepo.Get(wheres, size, []string{"Admin","User"}, "id desc")
+	messages := messageRepo.Get(wheres, size, []string{"Admin","User"}, []string{"id desc"})
 	messagesResources := make([]*resource.Message, 0, len(messages))
 	for _, m := range messages {
 		messagesResources = append(messagesResources, m.ToJson())
@@ -52,7 +52,8 @@ func GetReqId(c *gin.Context)  {
 		"reqId": u.GetReqId(),
 	})
 }
-// 获取微信订阅消息ID，只有当前没有订阅的时候才会返回
+
+// GetTemplateId 获取微信订阅消息ID，只有当前没有订阅的时候才会返回
 func GetTemplateId(c *gin.Context) {
 	user := auth.GetUser(c)
 	id := ""
@@ -63,14 +64,15 @@ func GetTemplateId(c *gin.Context) {
 		"id": id,
 	})
 }
-// 标记已订阅微信订阅消息
+
+// Subscribe 标记已订阅微信订阅消息
 func Subscribe(c *gin.Context) {
 	user := auth.GetUser(c)
 	_ = chat.SubScribeService.Set(user.GetPrimaryKey())
 	util.RespSuccess(c, gin.H{})
 }
 
-// 聊天图片
+// Image 聊天图片
 func Image(c *gin.Context) {
 	f, _ := c.FormFile("file")
 	ff, err := file.Save(f, "chat")

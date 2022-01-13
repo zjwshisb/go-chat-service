@@ -19,7 +19,7 @@ func (handle *AdminsHandler) Index(c *gin.Context){
 	where := requests.GetFilterWhere(c, map[string]interface{}{
 		"username": "=",
 	})
-	p := adminRepo.Paginate(c, where, []string{}, "id desc")
+	p := adminRepo.Paginate(c, where, []string{}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		admin := i.(*models.Admin)
 		return &resource.Admin{
@@ -40,7 +40,7 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 			Filed: "id = ?",
 			Value: id,
 		},
-	})
+	}, []string{})
 	if admin == nil {
 		util.RespNotFound(c)
 		return
@@ -66,7 +66,7 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 			Filed: "admin_id = ?",
 			Value: admin.GetPrimaryKey(),
 		},
-	}, -1,  []string{}, "id")
+	}, -1,  []string{}, []string{"id"})
 	
 	value := make([]*resource.Line, lastDate.DayOfMonth())
 

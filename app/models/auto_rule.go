@@ -77,7 +77,8 @@ type AutoRule struct {
 func (rule *AutoRule) AddCount() {
 	databases.Db.Model(rule).Update("count", gorm.Expr("count + 1"))
 }
-// 是否匹配
+
+// IsMatch 是否匹配
 func (rule *AutoRule) IsMatch(str string) bool {
 	switch rule.MatchType {
 	case MatchTypeAll:
@@ -88,7 +89,7 @@ func (rule *AutoRule) IsMatch(str string) bool {
 	return false
 }
 
-// 场景
+// SceneInclude 场景
 func (rule *AutoRule) SceneInclude(str string) bool {
 	for _, s := range rule.Scenes {
 		if s.Name == str {
@@ -98,7 +99,7 @@ func (rule *AutoRule) SceneInclude(str string) bool {
 	return false
 }
 
-// 事件名称
+// GetEventLabel 事件名称
 func (rule *AutoRule) GetEventLabel() string {
 	if rule.ReplyType == ReplyTypeEvent {
 		for _, o := range EventOptions {

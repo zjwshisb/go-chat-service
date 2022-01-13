@@ -23,7 +23,7 @@ var sessionFilter = map[string]interface{}{
 				Filed: "username like ?",
 				Value: "%" + val + "%",
 			},
-		}, -1, []string{})
+		}, -1, []string{}, []string{})
 		ids := make([]int64, 0, 0)
 		for _, admin := range admins {
 			ids = append(ids, admin.ID)
@@ -62,7 +62,7 @@ var sessionFilter = map[string]interface{}{
 	},
 }
 
-// 获取会话列表
+// Index 获取会话列表
 func (handler *ChatSessionHandler) Index(c *gin.Context)  {
 	wheres := requests.GetFilterWhere(c, sessionFilter)
 	queriedAtArr := c.QueryArray("queried_at")
@@ -80,7 +80,7 @@ func (handler *ChatSessionHandler) Index(c *gin.Context)  {
 			})
 		}
 	}
-	p := chatSessionRepo.Paginate(c , wheres, []string{"Admin","User"},"id desc")
+	p := chatSessionRepo.Paginate(c , wheres, []string{"Admin","User"},[]string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.ChatSession)
 		return item.ToJson()
@@ -94,7 +94,7 @@ func (handler *ChatSessionHandler) Cancel(c *gin.Context)  {
 			Filed: "id = ?",
 			Value: sessionId,
 		},
-	})
+	}, []string{})
 	if session == nil {
 		util.RespNotFound(c)
 		return
@@ -114,7 +114,7 @@ func (handler *ChatSessionHandler) Cancel(c *gin.Context)  {
 	util.RespSuccess(c, gin.H{})
 }
 
-// 会话详情
+// Show 会话详情
 func (handler *ChatSessionHandler) Show(c *gin.Context) {
 	sessionId := c.Param("id")
 	session := chatSessionRepo.First([]Where{
@@ -122,7 +122,7 @@ func (handler *ChatSessionHandler) Show(c *gin.Context) {
 			Filed: "id = ?",
 			Value: sessionId,
 		},
-	})
+	}, []string{})
 	messages := messageRepo.Get([]Where{
 		{
 			Filed: "session_id = ?",
@@ -132,7 +132,7 @@ func (handler *ChatSessionHandler) Show(c *gin.Context) {
 			Filed: "source in ?",
 			Value: []int{models.SourceAdmin, models.SourceUser},
 		},
-	}, -1, []string{"User", "Admin"}, "id desc")
+	}, -1, []string{"User", "Admin"}, []string{"id desc"})
 	data := make([]*resource.Message, 0, 0)
 	for _, msg:= range messages {
 		data = append(data, msg.ToJson())

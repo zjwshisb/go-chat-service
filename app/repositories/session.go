@@ -18,7 +18,7 @@ func (session *ChatSessionRepo) Delete(where []*Where) int64  {
 	result := databases.Db.Scopes(AddWhere(where)).Delete(&models.ChatSession{})
 	return result.RowsAffected
 }
-func (session *ChatSessionRepo) First(where []*Where, orders ...string) *models.ChatSession  {
+func (session *ChatSessionRepo) First(where []*Where, orders []string) *models.ChatSession  {
 	model := &models.ChatSession{}
 	result := databases.Db.Scopes(AddWhere(where)).Scopes(AddOrder(orders)).Find(model)
 	if result.RowsAffected == 0 {
@@ -46,7 +46,7 @@ func (session *ChatSessionRepo) GetWaitHandles() []*models.ChatSession  {
 		Find(&sessions)
 	return sessions
 }
-func (session *ChatSessionRepo) Get(wheres []*Where, limit int, load []string, orders ...string) []*models.ChatSession {
+func (session *ChatSessionRepo) Get(wheres []*Where, limit int, load []string, orders []string) []*models.ChatSession {
 	sessions := make([]*models.ChatSession, 0)
 	databases.Db.
 		Limit(limit).
@@ -56,7 +56,7 @@ func (session *ChatSessionRepo) Get(wheres []*Where, limit int, load []string, o
 		Find(&sessions)
 	return sessions
 }
-func (session *ChatSessionRepo) Paginate(c *gin.Context, wheres []*Where, load []string, orders ...string) *Pagination {
+func (session *ChatSessionRepo) Paginate(c *gin.Context, wheres []*Where, load []string, orders []string) *Pagination {
 	sessions := make([]*models.ChatSession, 0)
 	databases.Db.Order("id desc").
 		Scopes(Paginate(c)).

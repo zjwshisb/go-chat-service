@@ -12,7 +12,7 @@ type AutoMessageRepo struct {
 }
 
 
-func (repo *AutoMessageRepo) Get(wheres []*Where, limit int, loads []string, orders ...string) []*models.AutoMessage {
+func (repo *AutoMessageRepo) Get(wheres []*Where, limit int, loads []string, orders []string) []*models.AutoMessage {
 	messages := make([]*models.AutoMessage, 0)
 	query := databases.Db.
 		Limit(limit).
@@ -21,7 +21,7 @@ func (repo *AutoMessageRepo) Get(wheres []*Where, limit int, loads []string, ord
 	return messages
 }
 
-func (repo *AutoMessageRepo) First(wheres []*Where, orders ...string) *models.AutoMessage {
+func (repo *AutoMessageRepo) First(wheres []*Where, orders []string) *models.AutoMessage {
 	message := &models.AutoMessage{}
 	result := databases.Db.Scopes(AddOrder(orders)).Scopes(AddWhere(wheres)).First(message)
 	if result.Error != nil {
@@ -39,7 +39,7 @@ func (repo *AutoMessageRepo) Save(model *models.AutoMessage)  {
 	databases.Db.Omit(clause.Associations).Save(model)
 }
 
-func (repo *AutoMessageRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order ...string) *Pagination {
+func (repo *AutoMessageRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order []string) *Pagination {
 	messages := make([]*models.AutoMessage, 0)
 	databases.Db.Order("id desc").
 		Scopes(AddWhere(wheres)).

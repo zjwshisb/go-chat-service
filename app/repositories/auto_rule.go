@@ -34,7 +34,7 @@ func (repo *AutoRuleRepo) DeleteScene(rule *models.AutoRule) int64 {
 	return result.RowsAffected
 }
 
-func (repo *AutoRuleRepo) Get(wheres []*Where, limit int, loads []string, orders ...string) []*models.AutoRule {
+func (repo *AutoRuleRepo) Get(wheres []*Where, limit int, loads []string, orders []string) []*models.AutoRule {
 	rules := make([]*models.AutoRule, 0)
 	query := databases.Db.
 		Limit(limit).
@@ -47,7 +47,7 @@ func (repo *AutoRuleRepo) GetWithScenesRuleIds(scene string) []string {
 	databases.Db.Model(&models.AutoRuleScene{}).Where("name = ?" , scene).Pluck("rule_id", &ids)
 	return ids
 }
-func (repo *AutoRuleRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order ...string) *Pagination {
+func (repo *AutoRuleRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order []string) *Pagination {
 	rules := make([]*models.AutoRule, 0)
 	databases.Db.
 		Scopes(Paginate(c)).
@@ -61,7 +61,8 @@ func (repo *AutoRuleRepo) Paginate(c *gin.Context, wheres []*Where, load []strin
 		Count(&total)
 	return NewPagination(rules, total)
 }
-// 获取所有的启用的普通规则
+
+// GetAllActiveNormal 获取所有的启用的普通规则
 func (repo *AutoRuleRepo) GetAllActiveNormal() []*models.AutoRule {
 	return repo.Get([]*Where{
 		{
@@ -72,7 +73,7 @@ func (repo *AutoRuleRepo) GetAllActiveNormal() []*models.AutoRule {
 			Filed: "is_open",
 			Value: 1,
 		},
-	}, -1 , []string{"Message", "Scenes"}, "sort")
+	}, -1 , []string{"Message", "Scenes"}, []string{"sort"})
 }
 func (repo *AutoRuleRepo) GetEnter() *models.AutoRule {
 	return repo.First([]*Where{
@@ -84,9 +85,10 @@ func (repo *AutoRuleRepo) GetEnter() *models.AutoRule {
 			Filed: "match",
 			Value: models.MatchEnter,
 		},
-	})
+	}, []string{})
 }
-// 获取转接人工时没有客服在线规则
+
+// GetAdminAllOffLine 获取转接人工时没有客服在线规则
 func (repo *AutoRuleRepo) GetAdminAllOffLine() *models.AutoRule {
 	return repo.First([]*Where{
 		{
@@ -97,10 +99,10 @@ func (repo *AutoRuleRepo) GetAdminAllOffLine() *models.AutoRule {
 			Filed: "match",
 			Value: models.MatchAdminAllOffLine,
 		},
-	})
+	}, []string{})
 }
 // get one
-func (repo *AutoRuleRepo) First(wheres []*Where, orders ...string) *models.AutoRule {
+func (repo *AutoRuleRepo) First(wheres []*Where, orders []string) *models.AutoRule {
 	rule := &models.AutoRule{}
 	result := databases.Db.Scopes(AddOrder(orders)).Scopes(AddWhere(wheres)).First(rule)
 	if result.Error != nil {

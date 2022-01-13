@@ -105,7 +105,8 @@ func (adminService *adminService) GetActiveCount(adminId int64) int  {
 	})
 	return len(cmd.Val())
 }
-// 更新有效期
+
+// UpdateLimitTime 更新有效期
 func (adminService *adminService) UpdateLimitTime(adminId int64, uid int64, duration int64) error {
 	if !adminService.IsUserExist(adminId, uid)  {
 		return errors.New("user not valid")

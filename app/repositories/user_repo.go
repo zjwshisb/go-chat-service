@@ -9,7 +9,7 @@ type UserRepo struct {
 	
 }
 
-func (repo *UserRepo) Get(wheres []*Where, limit int, load []string, orders ...string) []*models.User {
+func (repo *UserRepo) Get(wheres []*Where, limit int, load []string, orders []string) []*models.User {
 	users := make([]*models.User, 0)
 	databases.Db.
 		Limit(limit).
@@ -19,7 +19,7 @@ func (repo *UserRepo) Get(wheres []*Where, limit int, load []string, orders ...s
 	return users
 }
 
-func (repo *UserRepo) First(where []*Where, orders ...string) *models.User {
+func (repo *UserRepo) First(where []*Where, orders []string) *models.User {
 	user := &models.User{}
 	result := databases.Db.Scopes(AddOrder(orders)).Scopes(AddWhere(where)).First(user)
 	if result.Error != nil {

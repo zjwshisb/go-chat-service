@@ -9,7 +9,7 @@ import (
 )
 
 func closeSessions()  {
-	admins := adminRepo.Get([]*repositories.Where{},-1, []string{})
+	admins := adminRepo.Get([]*repositories.Where{},-1, []string{}, []string{})
 	for _, admin := range admins {
 		uids, limits := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
 		length := len(uids)
@@ -30,7 +30,7 @@ func closeSessions()  {
 						Filed: "broke_at = ?",
 						Value: 0,
 					},
-				}, "id desc")
+				}, []string{"id desc"})
 				if session != nil {
 					chat.SessionService.Close(session.Id, false, false)
 					noticeMessage := admin.GetBreakMessage(uid, session.Id)

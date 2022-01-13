@@ -14,7 +14,7 @@ type AutoRuleHandler struct {
 }
 
 func (handle *AutoRuleHandler) MessageOptions(c *gin.Context)  {
-	messages := autoMessageRepo.Get([]Where{}, -1, []string{})
+	messages := autoMessageRepo.Get([]Where{}, -1, []string{}, []string{})
 	options := make([]resource.Options, 0, len(messages))
 	for _, message := range messages {
 		options = append(options, resource.Options{
@@ -25,15 +25,17 @@ func (handle *AutoRuleHandler) MessageOptions(c *gin.Context)  {
 	util.RespSuccess(c, options)
 }
 
-// 可选择场景
+// SceneOptions 可选择场景
 func (handle *AutoRuleHandler) SceneOptions(c *gin.Context) {
 	util.RespSuccess(c , models.ScenesOptions)
 }
-// 可选择的事件
+
+// EventOptions 可选择的事件
 func (handle *AutoRuleHandler) EventOptions(c *gin.Context)  {
 	util.RespSuccess(c , models.EventOptions)
 }
-// 获取自定义规则列表
+
+// Index 获取自定义规则列表
 func (handle *AutoRuleHandler) Index(c *gin.Context)  {
 	filter := map[string]interface{}{
 		"reply_type": "=",
@@ -55,14 +57,15 @@ func (handle *AutoRuleHandler) Index(c *gin.Context)  {
 		Filed: "is_system = ?",
 		Value: 0,
 	})
-	p := autoRuleRepo.Paginate(c, wheres, []string{"Message", "Scenes"}, "id desc")
+	p := autoRuleRepo.Paginate(c, wheres, []string{"Message", "Scenes"}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.AutoRule)
 		return item.ToJson()
 	})
 	util.RespPagination(c , p)
 }
-// 获取自定义规则
+
+// Show 获取自定义规则
 func (handle *AutoRuleHandler) Show(c *gin.Context) {
 	id := c.Param("id")
 	rule := autoRuleRepo.First([]Where{
@@ -70,14 +73,15 @@ func (handle *AutoRuleHandler) Show(c *gin.Context) {
 			Filed: "id = ?",
 			Value: id,
 		},
-	})
+	}, []string{})
 	if rule != nil {
 		util.RespSuccess(c, rule.ToJson())
 	} else {
 		util.RespNotFound(c)
 	}
 }
-// 新增自定义规则
+
+// Store 新增自定义规则
 func (handle *AutoRuleHandler) Store (c *gin.Context)  {
 	form := requests.AutoRuleForm{}
 	err := c.ShouldBind(&form)
@@ -112,7 +116,8 @@ func (handle *AutoRuleHandler) Store (c *gin.Context)  {
 	autoRuleRepo.Save(rule)
 	util.RespSuccess(c, rule.ToJson())
 }
-// 更新自定义规则
+
+// Update 更新自定义规则
 func (handle *AutoRuleHandler) Update(c *gin.Context) {
 	rule := autoRuleRepo.First([]Where{
 		{
@@ -123,7 +128,7 @@ func (handle *AutoRuleHandler) Update(c *gin.Context) {
 			Filed: "id = ?",
 			Value: c.Param("id"),
 		},
-	})
+	}, []string{})
 	if rule == nil {
 		util.RespNotFound(c)
 		return
@@ -163,7 +168,8 @@ func (handle *AutoRuleHandler) Update(c *gin.Context) {
 	autoRuleRepo.Save(rule)
 	util.RespSuccess(c, rule.ToJson())
 }
-// 删除自定义规则
+
+// Delete 删除自定义规则
 func (handle *AutoRuleHandler) Delete(c *gin.Context)  {
 	id := c.Param("id")
 	rule := autoRuleRepo.First([]Where{
@@ -175,7 +181,7 @@ func (handle *AutoRuleHandler) Delete(c *gin.Context)  {
 			Filed: "id = ?",
 			Value: id,
 		},
-	})
+	}, []string{})
 	if rule == nil {
 		util.RespNotFound(c)
 		return
@@ -188,21 +194,23 @@ type SystemRuleHandler struct {
 
 
 }
-// 获取系统规则
+
+// Index 获取系统规则
 func (handler *SystemRuleHandler) Index(c *gin.Context)  {
 	rules := autoRuleRepo.Get([]Where{
 		{
 			Filed: "is_system = ?",
 			Value: 1,
 		},
-	}, -1, []string{})
+	}, -1, []string{}, []string{})
 	result := make([]*resource.AutoRule, len(rules), len(rules))
 	for i, rule := range rules {
 		result[i] = rule.ToJson()
 	}
 	util.RespSuccess(c, result)
 }
-// 更新系统规则
+
+// Update 更新系统规则
 func (handler *SystemRuleHandler) Update(c *gin.Context) {
 	m := make(map[int]int)
 	err := c.ShouldBind(&m)

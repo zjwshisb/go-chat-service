@@ -144,19 +144,37 @@ func (m *manager) getUserChannelKey(uid int64) string {
 }
 
 // 设置用户所在channel为当前manager
-// 默认有效期24小时，用于程序意外退出后的清理
 func (m *manager) setUserChannel(uid int64)  {
 	if m.isCluster() {
 		ctx := context.Background()
 		key := m.getUserChannelKey(uid)
-		databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), time.Hour * 24)
+		databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), time.Minute * 2)
 	}
 }
+
 // 移除用户所在channel
 func (m *manager) removeUserChannel(uid int64)  {
 	if m.isCluster() {
 		ctx := context.Background()
 		databases.Redis.Del(ctx, m.getUserChannelKey(uid))
+	}
+}
+// 更新用户channel
+func (m *manager) updateUserChannel() {
+	if m.isCluster() {
+		ticker := time.NewTicker(time.Minute)
+		for{
+			select {
+			case <-ticker.C : {
+				for _, s := range m.groups {
+					conns := s.GetAll()
+					for _, c:= range conns {
+						m.setUserChannel(c.GetUserId())
+					}
+				}
+			}
+			}
+		}
 	}
 }
 
@@ -348,15 +366,14 @@ func (m *manager) Ping()  {
 func (m *manager) getAllChannel() []string  {
 	ctx := context.Background()
 	now := time.Now().Unix()
-	fz := now -  (60 * 60 * 1 + 10)
+	fz := now -  (60 * 2)
 	cmd := databases.Redis.ZRangeByScore(ctx, m.groupCacheKey, &redis.ZRangeBy{
 		Min:   strconv.FormatInt(fz, 10),
 		Max:    "+inf",
 		Offset: 0,
 		Count:  0,
 	})
-	// 清理失效的channel
-	databases.Redis.ZRemRangeByScore(ctx , m.groupCacheKey, "-inf", strconv.FormatInt(fz, 10))
+
 	return cmd.Val()
 }
 // 集群模式下
@@ -380,6 +397,16 @@ func (m *manager) registerChannel()  {
 	}()
 
 }
+
+// ClearInactiveChannel 清理无效的channel
+func (m *manager) ClearInactiveChannel() {
+	if m.isCluster() {
+		ctx := context.Background()
+		now := time.Now().Unix()
+		fz := now -  (60 * 2)
+		databases.Redis.ZRemRangeByScore(ctx , m.groupCacheKey, "-inf", strconv.FormatInt(fz, 10))
+	}
+}
 // 移除频道
 func (m *manager) unRegisterChannel()  {
 	if m.isCluster() {
@@ -400,6 +427,7 @@ func (m *manager) Run() {
 	go m.Ping()
 	if m.isCluster() {
 		go m.registerChannel()
+		go m.updateUserChannel()
 	}
 }
 
