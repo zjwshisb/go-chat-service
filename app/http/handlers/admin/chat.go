@@ -4,9 +4,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"strconv"
 	"time"
-	"ws/app/auth"
 	"ws/app/chat"
+	"ws/app/contract"
 	"ws/app/file"
+	"ws/app/http/requests"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
@@ -52,7 +53,7 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	chatIds, _ := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
 	userExist := false
 	for _, chatId := range  chatIds {
@@ -98,7 +99,7 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 
 // GetReqId 获取reqId
 func (handle *ChatHandler) GetReqId(c *gin.Context)  {
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	util.RespSuccess(c, gin.H{
 		"reqId" : admin.GetReqId(),
 	})
@@ -106,7 +107,7 @@ func (handle *ChatHandler) GetReqId(c *gin.Context)  {
 
 // ChatUserList 聊天用户列表
 func (handle *ChatHandler) ChatUserList(c *gin.Context) {
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	ids, times := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
 	users := userRepo.Get([]Where{
 		{
@@ -115,7 +116,7 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 		},
 	}, -1, []string{}, []string{})
 	resp := make([]*resource.User, 0, len(users))
-	userMap := make(map[int64]auth.User)
+	userMap := make(map[int64]contract.User)
 	for _, user := range users {
 		userMap[user.GetPrimaryKey()] = user
 	}
@@ -208,7 +209,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		util.RespNotFound(c)
 		return
 	}
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	if !admin.AccessTo(user) {
 		util.RespNotFound(c)
 		return
@@ -325,7 +326,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 // RemoveUser 移除用户
 func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 	uidStr := c.Param("id")
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	session := chatSessionRepo.First([]Where{
 		{
 			Filed: "user_id = ?",
@@ -355,7 +356,7 @@ func (handle *ChatHandler) ReadAll(c *gin.Context) {
 	err := c.Bind(form)
 
 	if err == nil {
-		admin := auth.GetAdmin(c)
+		admin := requests.GetAdmin(c)
 		wheres := []Where{
 			{
 				Filed: "admin_id = ?",
@@ -397,7 +398,7 @@ func (handle *ChatHandler) GetUserInfo(c *gin.Context)  {
 		util.RespNotFound(c)
 		return
 	}
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	if !admin.AccessTo(user) {
 		util.RespNotFound(c)
 		return
@@ -411,7 +412,7 @@ func (handle *ChatHandler) GetUserInfo(c *gin.Context)  {
 
 // TransferMessages 转接历史消息
 func (handle *ChatHandler) TransferMessages(c *gin.Context) {
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	transfer := transferRepo.First([]Where{
 		{
 			Filed: "to_admin_id = ?",
@@ -442,7 +443,7 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 // CancelTransfer 取消转接
 func (handle *ChatHandler) CancelTransfer(c *gin.Context) {
 	id := c.Param("id")
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	transfer := transferRepo.First([]*repositories.Where{
 		{
 			Filed: "to_admin_id = ?",
@@ -492,7 +493,7 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		util.RespNotFound(c)
 		return
 	}
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	if !admin.AccessTo(user) {
 		util.RespNotFound(c)
 		return

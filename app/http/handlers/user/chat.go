@@ -4,9 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"strconv"
-	"ws/app/auth"
 	"ws/app/chat"
 	"ws/app/file"
+	"ws/app/http/requests"
 	"ws/app/repositories"
 	"ws/app/resource"
 	"ws/app/util"
@@ -14,7 +14,7 @@ import (
 
 // GetHistoryMessage 消息记录
 func GetHistoryMessage(c *gin.Context) {
-	user := auth.GetUser(c)
+	user := requests.GetUser(c)
 	wheres := []*repositories.Where{
 		{
 			Filed: "user_id = ?",
@@ -47,7 +47,7 @@ func GetHistoryMessage(c *gin.Context) {
 	util.RespSuccess(c, messagesResources)
 }
 func GetReqId(c *gin.Context)  {
-	u := auth.GetUser(c)
+	u := requests.GetUser(c)
 	util.RespSuccess(c ,gin.H{
 		"reqId": u.GetReqId(),
 	})
@@ -55,7 +55,7 @@ func GetReqId(c *gin.Context)  {
 
 // GetTemplateId 获取微信订阅消息ID，只有当前没有订阅的时候才会返回
 func GetTemplateId(c *gin.Context) {
-	user := auth.GetUser(c)
+	user := requests.GetUser(c)
 	id := ""
 	if !chat.SubScribeService.IsSet(user.GetPrimaryKey()) {
 		id =  viper.GetString("config.Wechat.SubscribeTemplateIdOne")
@@ -67,7 +67,7 @@ func GetTemplateId(c *gin.Context) {
 
 // Subscribe 标记已订阅微信订阅消息
 func Subscribe(c *gin.Context) {
-	user := auth.GetUser(c)
+	user := requests.GetUser(c)
 	_ = chat.SubScribeService.Set(user.GetPrimaryKey())
 	util.RespSuccess(c, gin.H{})
 }

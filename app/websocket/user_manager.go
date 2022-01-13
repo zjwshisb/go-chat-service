@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/viper"
 	"strconv"
 	"time"
-	"ws/app/auth"
 	"ws/app/chat"
+	"ws/app/contract"
 	"ws/app/log"
 	"ws/app/models"
 	"ws/app/mq"
@@ -22,7 +22,7 @@ const (
 	UserGroupKeepAliveKey = "user:group:%d:alive"
 )
 
-func NewUserConn(user auth.User, conn *websocket.Conn) Conn {
+func NewUserConn(user contract.User, conn *websocket.Conn) Conn {
 	return &Client{
 		conn:              conn,
 		closeSignal:       make(chan interface{}),
@@ -253,7 +253,7 @@ func (userManager *userManager) registerHook(conn Conn) {
 
 
 // 加入人工列表
-func (userManager *userManager) addToManual(user auth.User) *models.ChatSession {
+func (userManager *userManager) addToManual(user contract.User) *models.ChatSession {
 	if !chat.ManualService.IsIn(user.GetPrimaryKey(), user.GetGroupId()) {
 		onlineServerCount := AdminManager.GetOnlineTotal(user.GetGroupId())
 		if onlineServerCount == 0 { // 如果没有在线客服

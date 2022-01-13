@@ -2,9 +2,9 @@ package routers
 
 import (
 	"github.com/gin-gonic/gin"
-	"ws/app/auth"
 	http "ws/app/http/handlers/admin"
 	middleware "ws/app/http/middleware/admin"
+	"ws/app/http/requests"
 	"ws/app/log"
 	"ws/app/util"
 	"ws/app/websocket"
@@ -88,7 +88,7 @@ func registerAdmin() {
 	authGroup.POST("/transfers/:id/cancel", transferHandler.Cancel)
 
 	authGroup.GET("/ws", func(c *gin.Context) {
-		admin := auth.GetAdmin(c)
+		admin := requests.GetAdmin(c)
 		admin.GetSetting()
 		conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {

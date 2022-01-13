@@ -7,7 +7,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"strconv"
 	"time"
-	"ws/app/auth"
+	"ws/app/contract"
 	"ws/app/databases"
 )
 const (
@@ -28,7 +28,7 @@ func (adminService *adminService) getUserCacheKey(adminId int64) string  {
 }
 
 // AddUser 接入user
-func (adminService *adminService) AddUser(admin auth.User, user auth.User, duration int64) error  {
+func (adminService *adminService) AddUser(admin contract.User, user contract.User, duration int64) error  {
 	ctx := context.Background()
 	_ = UserService.SetAdmin(user.GetPrimaryKey(), admin.GetPrimaryKey())
 	m := &redis.Z{Member: user.GetPrimaryKey(), Score: float64(time.Now().Unix() + duration)}

@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/viper"
 	"sort"
 	"time"
-	"ws/app/auth"
 	"ws/app/chat"
+	"ws/app/contract"
 	"ws/app/models"
 	"ws/app/mq"
 	"ws/app/resource"
@@ -237,7 +237,7 @@ func (m *adminManager) PublishWaitingUser(groupId int64) {
 		m.broadcastWaitingUser(groupId)
 	}
 }
-func (m *adminManager) PublishTransfer(admin auth.User) {
+func (m *adminManager) PublishTransfer(admin contract.User) {
 	if m.isCluster() {
 		m.publishToAllChannel(&mq.Payload{
 			Types: mq.TypeTransfer,
@@ -305,7 +305,7 @@ func (m *adminManager) broadcastWaitingUser(groupId int64) {
 }
 
 // 向admin推送待转接入的用户
-func (m *adminManager) broadcastUserTransfer(admin auth.User) {
+func (m *adminManager) broadcastUserTransfer(admin contract.User) {
 	client, exist := m.GetConn(admin)
 	if exist {
 		transfers := transferRepo.Get([]Where{

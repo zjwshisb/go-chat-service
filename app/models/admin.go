@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 	"strconv"
 	"time"
+	"ws/app/contract"
 	"ws/app/databases"
 	"ws/app/file"
 	"ws/app/util"
@@ -24,13 +25,11 @@ type Admin struct {
 	Setting   *AdminChatSetting `json:"message" gorm:"foreignKey:admin_id"`
 	IsSuper bool `gorm:"is_super"`
 }
-// todo
 func (admin *Admin) GetGroupId() int64  {
 	return 1
 }
-
 // AccessTo 是否有user的权限
-func (admin *Admin) AccessTo(user *User) bool {
+func (admin *Admin) AccessTo(user contract.User) bool {
 	return admin.GetGroupId() == user.GetGroupId()
 }
 func (admin *Admin) GetIsSuper() bool {

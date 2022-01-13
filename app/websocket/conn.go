@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 	"sync"
 	"time"
-	"ws/app/auth"
+	"ws/app/contract"
 	"ws/app/databases"
 	"ws/app/log"
 	"ws/app/models"
@@ -21,7 +21,7 @@ type Conn interface {
 	run()
 	Deliver(action *Action)
 	GetUserId() int64
-	GetUser() auth.User
+	GetUser() contract.User
 	GetUid() string
 	GetGroupId() int64
 	ping()
@@ -32,11 +32,11 @@ type Client struct {
 	closeSignal chan interface{} // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
 	send        chan *Action  // 发送的消息chan
 	sync.Once
-	manager ConnManager
-	User auth.User
-	uid string
+	manager           ConnManager
+	User              contract.User
+	uid               string
 	groupKeepAliveKey string // SortSet key
-	Created int64
+	Created           int64
 }
 // 根据groupId 分组
 // 通过redis SortSet保存最后在线时间
@@ -69,7 +69,7 @@ func (c *Client) GetUid() string  {
 	return c.uid
 }
 
-func (c *Client) GetUser() auth.User  {
+func (c *Client) GetUser() contract.User  {
 	return c.User
 }
 

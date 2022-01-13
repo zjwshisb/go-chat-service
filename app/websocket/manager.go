@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
-	"ws/app/auth"
+	"ws/app/contract"
 	"ws/app/databases"
 	"ws/app/models"
 	"ws/app/mq"
@@ -17,15 +17,15 @@ import (
 // ConnContainer 管理相关方法
 type ConnContainer interface {
 	AddConn(conn Conn)
-	GetConn(user auth.User) (Conn, bool)
-	handleRepeatLogin(user auth.User, remote bool)
+	GetConn(user contract.User) (Conn, bool)
+	handleRepeatLogin(user contract.User, remote bool)
 	GetAllConn(gid int64) []Conn
 	GetOnlineTotal(gid int64) int64
-	ConnExist(user auth.User) bool
+	ConnExist(user contract.User) bool
 	Register(connect Conn)
 	Unregister(connect Conn)
-	RemoveConn(user auth.User)
-	IsOnline(user auth.User) bool
+	RemoveConn(user contract.User)
+	IsOnline(user contract.User) bool
 	GetOnlineUserIds(gid int64) []int64
 }
 
@@ -199,7 +199,7 @@ func (m *manager) ReceiveMessage(cm *ConnMessage)  {
 	m.ConnMessages <- cm
 }
 // 处理重复登录|打开多个tab
-func (m *manager) handleRepeatLogin(user auth.User, remote bool) {
+func (m *manager) handleRepeatLogin(user contract.User, remote bool) {
 	s := m.getSpread(user.GetGroupId())
 	old , exist := s.Get(user.GetPrimaryKey())
 	if exist {
@@ -270,7 +270,7 @@ func (m *manager) SendAction(a  *Action, clients ...Conn) {
 }
 
 // IsOnline 用户是否在线
-func (m *manager) IsOnline(user auth.User) bool  {
+func (m *manager) IsOnline(user contract.User) bool  {
 	if m.isCluster() {
 		ctx := context.Background()
 		key := fmt.Sprintf(m.connGroupKeepAliveKey, user.GetGroupId())
@@ -284,13 +284,13 @@ func (m *manager) IsOnline(user auth.User) bool  {
 }
 
 // ConnExist 用户客户端是否存在
-func (m *manager) ConnExist(user auth.User) bool {
+func (m *manager) ConnExist(user contract.User) bool {
 	_, exist := m.GetConn(user)
 	return exist
 }
 
 // GetConn 获取客户端
-func (m *manager) GetConn(user auth.User) (client Conn,ok bool) {
+func (m *manager) GetConn(user contract.User) (client Conn,ok bool) {
 	s := m.getSpread(user.GetGroupId())
 	client, ok = s.Get(user.GetPrimaryKey())
 	return
@@ -303,7 +303,7 @@ func (m *manager) AddConn(conn Conn) {
 }
 
 // RemoveConn 移除客户端
-func (m *manager) RemoveConn(user auth.User) {
+func (m *manager) RemoveConn(user contract.User) {
 	s := m.getSpread(user.GetGroupId())
 	s.Remove(user.GetPrimaryKey())
 }

@@ -2,7 +2,6 @@ package admin
 
 import (
 	"github.com/gin-gonic/gin"
-	"ws/app/auth"
 	"ws/app/file"
 	"ws/app/http/requests"
 	"ws/app/models"
@@ -15,7 +14,7 @@ type UserHandler struct {
 }
 
 func (User *UserHandler) Info(c *gin.Context)  {
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	util.RespSuccess(c, gin.H{
 		"username": admin.GetUsername(),
 		"id":       admin.GetPrimaryKey(),
@@ -23,11 +22,11 @@ func (User *UserHandler) Info(c *gin.Context)  {
 	})
 }
 func (User *UserHandler) Setting(c *gin.Context) {
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	util.RespSuccess(c, admin.GetSetting())
 }
 func (User *UserHandler) UpdateSetting(c *gin.Context) {
-	admin := auth.GetAdmin(c)
+	admin := requests.GetAdmin(c)
 	form  := requests.AdminChatSettingForm{}
 	err := c.ShouldBind(&form)
 	if err != nil {
@@ -68,7 +67,7 @@ func (User *UserHandler) Avatar(c *gin.Context) {
 	if err != nil {
 		util.RespError(c, err.Error())
 	} else {
-		admin := auth.GetAdmin(c)
+		admin := requests.GetAdmin(c)
 		admin.Avatar = fileInfo.Path
 		adminRepo.Save(admin)
 		// 如果当前在线，更新信息

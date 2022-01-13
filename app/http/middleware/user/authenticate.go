@@ -2,13 +2,14 @@ package user
 
 import (
 	"github.com/gin-gonic/gin"
-	"ws/app/auth"
+	"ws/app/http/requests"
+	"ws/app/models"
 )
 
 func Authenticate(c *gin.Context) {
-	user := auth.UserGuard()
+	user := &models.User{}
 	if user.Auth(c) {
-		auth.SetUser(c, user)
+		requests.SetUser(c, user)
 	} else {
 		c.JSON(401, gin.H{
 			"message": "Unauthorized",
