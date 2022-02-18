@@ -111,11 +111,12 @@ type ChatTransfer struct {
 	CanceledAt    *time.Time `json:"canceled_at"`
 }
 
-type SettingField struct {
+type ChatSetting struct {
+	Id int64 `json:"id"`
 	Name string `json:"name"`
 	Title string `json:"title"`
 	Value string `json:"value"`
-	Options map[string]string `json:"options"`
+	Options []map[string]string `json:"options"`
 }
 
 

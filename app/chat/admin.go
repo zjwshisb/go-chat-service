@@ -10,6 +10,8 @@ import (
 	"ws/app/contract"
 	"ws/app/databases"
 )
+
+
 const (
 	// 客服 => {value: userId, source: limitTime}[] sorted sets
 	adminChatUserKey = "admin:%d:chat-user"
@@ -18,7 +20,9 @@ const (
 )
 var (
 	AdminService = &adminService{}
+	DefaultSessionTime int64 = 24 * 60 * 60
 )
+
 
 type adminService struct {
 }
@@ -28,10 +32,10 @@ func (adminService *adminService) getUserCacheKey(adminId int64) string  {
 }
 
 // AddUser 接入user
-func (adminService *adminService) AddUser(admin contract.User, user contract.User, duration int64) error  {
+func (adminService *adminService) AddUser(admin contract.User, user contract.User) error  {
 	ctx := context.Background()
 	_ = UserService.SetAdmin(user.GetPrimaryKey(), admin.GetPrimaryKey())
-	m := &redis.Z{Member: user.GetPrimaryKey(), Score: float64(time.Now().Unix() + duration)}
+	m := &redis.Z{Member: user.GetPrimaryKey(), Score: float64(time.Now().Unix() + DefaultSessionTime)}
 	_ = databases.Redis.ZAdd(ctx, AdminService.getUserCacheKey(admin.GetPrimaryKey()),  m)
 	err := ManualService.Remove(user.GetPrimaryKey(), user.GetGroupId())
 	return err
@@ -40,8 +44,8 @@ func (adminService *adminService) AddUser(admin contract.User, user contract.Use
 // UpdateUser 更新user
 // 更新limit time
 // 更新最后聊天时间
-func (adminService *adminService) UpdateUser(adminId int64, uid int64, duration int64) error {
-	err := adminService.UpdateLimitTime(adminId, uid, duration)
+func (adminService *adminService) UpdateUser(adminId int64, uid int64) error {
+	err := adminService.UpdateLimitTime(adminId, uid, DefaultSessionTime)
 	if err != nil {
 		return err
 	}

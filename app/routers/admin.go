@@ -56,7 +56,7 @@ func registerAdmin() {
 
 
 	authGroup.GET("/settings", settingHandler.Index)
-	authGroup.PUT("/settings/:name", settingHandler.Update)
+	authGroup.PUT("/settings/:id", settingHandler.Update)
 
 	authGroup.GET("/auto-messages", autoMessageHandler.Index)
 	authGroup.POST("/auto-messages", autoMessageHandler.Store)

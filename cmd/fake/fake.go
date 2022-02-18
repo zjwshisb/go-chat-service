@@ -8,6 +8,9 @@ import (
 	"ws/app/models"
 )
 
+var defaultGroupId int64 = 1
+
+
 func NewFakeCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:                        "fake",
@@ -23,7 +26,7 @@ func NewFakeCommand() *cobra.Command {
 					admins := &models.Admin{
 						Username:  adminName,
 						Password: string(password),
-						GroupId: 1,
+						GroupId: defaultGroupId,
 					}
 					databases.Db.Save(admins)
 				}
@@ -34,7 +37,7 @@ func NewFakeCommand() *cobra.Command {
 					admins := &models.User{
 						Username:  username,
 						Password: string(password),
-						GroupId: 1,
+						GroupId: defaultGroupId,
 					}
 					databases.Db.Save(admins)
 				}

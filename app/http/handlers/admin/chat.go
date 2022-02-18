@@ -27,6 +27,10 @@ func (handle *ChatHandler) GetHistorySession(c *gin.Context) {
 			Value: useId,
 		},
 		{
+			Filed: "group_id = ?",
+			Value: requests.GetAdmin(c).GetGroupId(),
+		},
+		{
 			Filed: "admin_id > ?",
 			Value: 0,
 		},
@@ -264,11 +268,10 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			Value: session.Id,
 		},
 	})
-	sessionDuration := chat.SettingService.GetServiceSessionSecond()
 	session.AcceptedAt = time.Now().Unix()
 	session.AdminId = admin.GetPrimaryKey()
 	chatSessionRepo.Save(session)
-	_ = chat.AdminService.AddUser(admin, user, sessionDuration)
+	_ = chat.AdminService.AddUser(admin, user)
 	now := time.Now().Unix()
 	// 更新未发送的消息
 	messageRepo.Update([]*repositories.Where{

@@ -133,6 +133,7 @@ func (m *manager) publish(channel string, payload *mq.Payload) error {
 //
 func (m *manager) publishToAllChannel(payload *mq.Payload)  {
 	channels := m.getAllChannel()
+	fmt.Println(channels)
 	for _, channel := range channels {
 		_ = m.publish(channel, payload)
 	}

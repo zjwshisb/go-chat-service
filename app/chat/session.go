@@ -31,17 +31,18 @@ func (sessionService *sessionService) Close(sessionId uint64, isRemoveUser bool,
 }
 
 // Create 创建会话
-func (sessionService *sessionService) Create(uid int64, ty int) *models.ChatSession  {
+func (sessionService *sessionService) Create(uid int64, groupId int64, ty int) *models.ChatSession  {
 	session := &models.ChatSession{}
 	session.UserId = uid
 	session.QueriedAt = time.Now().Unix()
 	session.AdminId = 0
 	session.Type = ty
+	session.GroupId = groupId
 	_ = chatSessionRepo.Save(session)
 	return session
 }
 
-// Get 获取会话
+// Get 获取有效会话
 func (sessionService *sessionService) Get(uid int64, adminId int64) *models.ChatSession {
 	session := chatSessionRepo.First([]*repositories.Where{
 		{

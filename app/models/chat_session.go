@@ -23,6 +23,14 @@ type ChatSession struct {
 	Messages []*Message `gorm:"foreignKey:session_id"`
 }
 
+func (chatSession *ChatSession) GetAdmin() *Admin  {
+	if chatSession.Admin == nil {
+		admin := &Admin{}
+		databases.Db.Model(chatSession).Association("Admin").Find(admin)
+		chatSession.Admin = admin
+	}
+	return chatSession.Admin
+}
 func (chatSession *ChatSession) GetUser() *User  {
 	if chatSession.User == nil {
 		user := &User{}
@@ -51,19 +59,6 @@ func (chatSession *ChatSession) getStatus() string  {
 	return "wait"
 }
 func (chatSession *ChatSession) ToJson() *resource.ChatSession {
-	var userName, adminName string
-	if chatSession.Admin == nil {
-		admin := &Admin{}
-		databases.Db.Model(chatSession).Association("Admin").Find(admin)
-		chatSession.Admin = admin
-	}
-	adminName = chatSession.Admin.Username
-	if chatSession.User == nil {
-		user := &User{}
-		databases.Db.Model(chatSession).Association("User").Find(user)
-		chatSession.User = user
-	}
-	userName = chatSession.User.Username
 	return &resource.ChatSession{
 		Id:         chatSession.Id,
 		UserId:     chatSession.UserId,
@@ -74,8 +69,8 @@ func (chatSession *ChatSession) ToJson() *resource.ChatSession {
 		AdminId:    chatSession.AdminId,
 		TypeLabel:  chatSession.getTypeLabel(),
 		Status: chatSession.getStatus(),
-		UserName:   userName,
-		AdminName:  adminName,
+		UserName:   chatSession.GetUser().Username,
+		AdminName:  chatSession.GetAdmin().Username,
 	}
 }
 

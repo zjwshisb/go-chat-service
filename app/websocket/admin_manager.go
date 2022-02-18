@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"fmt"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
 	"github.com/spf13/viper"
@@ -8,6 +9,7 @@ import (
 	"time"
 	"ws/app/chat"
 	"ws/app/contract"
+	"ws/app/log"
 	"ws/app/models"
 	"ws/app/mq"
 	"ws/app/resource"
@@ -38,7 +40,7 @@ func NewAdminConn(user *models.Admin, conn *websocket.Conn) Conn {
 	}
 }
 
-func init() {
+func SetupAdmin() {
 	AdminManager = &adminManager{
 		manager: manager{
 			groupCount:            10,
@@ -110,7 +112,7 @@ func (m *adminManager) handleOffline(msg *models.Message) {
 		}
 		// 判断是否自动断开
 		lastOnline := setting.LastOnline
-		duration := chat.SettingService.GetOfflineDuration()
+		duration := chat.SettingService.GetOfflineDuration(msg.GroupId)
 		if (lastOnline.Unix() + duration) < time.Now().Unix() {
 			chat.SessionService.Close(msg.SessionId, false, true)
 			noticeMessage := admin.GetBreakMessage(msg.UserId, msg.SessionId) // 断开提醒
@@ -129,6 +131,7 @@ func (m *adminManager) handleRemoteMessage() {
 		go func() {
 			switch message.Get("types").String() {
 			case mq.TypeWaitingUser:
+				fmt.Println(mq.TypeWaitingUser)
 				gid := message.Get("data").Int()
 				if gid > 0 {
 					m.broadcastWaitingUser(gid)
@@ -193,15 +196,15 @@ func (m *adminManager) handleMessage(payload *ConnMessage) {
 					conn.Deliver(NewErrorMessage("无效的用户"))
 					return
 				}
-				sessionAddTime := chat.SettingService.GetUserSessionSecond()
-				msg.GroupId = conn.GetUserId()
+				msg.GroupId = conn.GetGroupId()
 				msg.AdminId = conn.GetUserId()
 				msg.Source = models.SourceAdmin
+				msg.GroupId = conn.GetGroupId()
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Admin = conn.User.(*models.Admin)
 				msg.SessionId = session.Id
 				messageRepo.Save(msg)
-				_ = chat.AdminService.UpdateUser(msg.AdminId, msg.UserId, sessionAddTime)
+				_ = chat.AdminService.UpdateUser(msg.AdminId, msg.UserId)
 				// 服务器回执d
 				conn.Deliver(NewReceiptAction(msg))
 				UserManager.DeliveryMessage(msg, false)
@@ -264,6 +267,7 @@ func (m *adminManager) PublishAdmins(gid int64) {
 
 // 广播待接入用户
 func (m *adminManager) broadcastWaitingUser(groupId int64) {
+	log.Log.Info("广播待接入用户")
 	sessions := sessionRepo.GetWaitHandles()
 	userMap := make(map[int64]*models.User)
 	waitingUser := make([]*resource.WaitingChatSession, 0, len(sessions))

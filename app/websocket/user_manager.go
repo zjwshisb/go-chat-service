@@ -40,7 +40,7 @@ type userManager struct {
 
 var UserManager *userManager
 
-func init() {
+func SetupUser() {
 	UserManager = &userManager{
 		manager{
 			groupCount:            10,
@@ -155,6 +155,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 			if len(msg.Content) != 0 {
 				msg.Source = models.SourceUser
 				msg.UserId = conn.GetUserId()
+				msg.GroupId = conn.GetGroupId()
 				msg.ReceivedAT = time.Now().Unix()
 				msg.User = conn.GetUser().(*models.User)
 				msg.AdminId = chat.UserService.GetValidAdmin(conn.GetUserId())
@@ -168,8 +169,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 					if session == nil {
 						return
 					}
-					addTime := chat.SettingService.GetServiceSessionSecond()
-					_ = chat.AdminService.UpdateUser(msg.AdminId, msg.UserId, addTime)
+					_ = chat.AdminService.UpdateUser(msg.AdminId, msg.UserId)
 					msg.SessionId = session.Id
 					messageRepo.Save(msg)
 					AdminManager.DeliveryMessage(msg, false)
@@ -181,15 +181,14 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 								msg.SessionId = session.Id
 							}
 							messageRepo.Save(msg)
-							AdminManager.broadcastWaitingUser(msg.GetUser().GetGroupId())
+							AdminManager.PublishWaitingUser(conn.GetGroupId())
 						} else {
-							if chat.SettingService.GetIsAutoTransferManual() { // 自动转人工
+							if chat.SettingService.GetIsAutoTransferManual(conn.GetGroupId()) { // 自动转人工
 								session := UserManager.addToManual(conn.GetUser())
 								if session != nil {
 									msg.SessionId = session.Id
 								}
 								messageRepo.Save(msg)
-								AdminManager.broadcastWaitingUser(msg.GetUser().GetGroupId())
 							} else {
 								messageRepo.Save(msg)
 								userManager.triggerMessageEvent(models.SceneNotAccepted, msg)
@@ -275,7 +274,9 @@ func (userManager *userManager) addToManual(user contract.User) *models.ChatSess
 		_ = chat.ManualService.Add(user.GetPrimaryKey(), user.GetGroupId())
 		session := chat.SessionService.Get(user.GetPrimaryKey(), 0)
 		if session == nil {
-			session = chat.SessionService.Create(user.GetPrimaryKey(), models.ChatSessionTypeNormal)
+			session = chat.SessionService.Create(user.GetPrimaryKey(),
+				user.GetGroupId(),
+				models.ChatSessionTypeNormal)
 		}
 		message := models.NewNoticeMessage(session, "正在为你转接人工客服")
 		messageRepo.Save(message)

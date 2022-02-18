@@ -1,17 +1,72 @@
 package migrate
 
 import (
+	"encoding/json"
 	"github.com/spf13/cobra"
 	"log"
 	"ws/app/databases"
 	"ws/app/models"
 )
 
+
+var defaultGroupId int64 = 1
+
 func printErr(err error)  {
 	if err != nil {
 		log.Fatalf("migrate error: %v \n", err)
 	}
 }
+func getSettings() []*models.ChatSetting  {
+	s := make([]*models.ChatSetting, 0 ,0)
+	options1, _ := json.Marshal([]map[string]string{
+		{
+			"label": "是",
+			"value": "1",
+		},
+		{
+			"label": "否",
+			"value": "0",
+		},
+	})
+	s = append(s, &models.ChatSetting{
+		Name:      models.IsAutoTransfer,
+		Title:     "是否自动转接人工客服",
+		GroupId:   defaultGroupId,
+		Value:     "1",
+		Options:   string(options1),
+		CreatedAt: nil,
+		UpdatedAt: nil,
+	})
+	options3 , _ := json.Marshal([]map[string]string{
+		{
+			"label": "5分钟",
+			"value": "5",
+		},
+		{
+			"label": "10分钟",
+			"value": "10",
+		},
+		{
+			"label": "30分钟",
+			"value": "30",
+		},
+		{
+			"label": "60分钟",
+			"value": "60",
+		},
+	})
+	s = append(s, &models.ChatSetting{
+		Name:      models.MinuteToBreak,
+		Title:     "客服离线多少分钟(用户发送消息时)自动断开会话",
+		GroupId:   defaultGroupId,
+		Value:     "30",
+		Options:   string(options3),
+		CreatedAt: nil,
+		UpdatedAt: nil,
+	})
+	return s
+}
+
 func NewMigrateCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:                        "migrate",
@@ -36,6 +91,7 @@ func NewMigrateCommand() *cobra.Command {
 			printErr(err)
 			err = databases.Db.Migrator().CreateTable(&models.User{})
 			printErr(err)
+			err = databases.Db.Migrator().CreateTable(&models.ChatSetting{})
 			rules := []models.AutoRule{
 				{
 					Name: "用户进入客服系统时",
@@ -43,7 +99,7 @@ func NewMigrateCommand() *cobra.Command {
 					Match: models.MatchEnter,
 					ReplyType: models.ReplyTypeMessage,
 					IsSystem: 1,
-					GroupId: 1,
+					GroupId: defaultGroupId,
 				},
 				{
 					Name: "当转接到人工客服而没有客服在线时(如不设置则继续转接到人工客服)",
@@ -57,12 +113,16 @@ func NewMigrateCommand() *cobra.Command {
 			for _, rule := range rules {
 				var exist int64
 				databases.Db.Model(&models.AutoRule{}).
-					Where("group_id", 1).
+					Where("group_id", defaultGroupId).
 					Where("`match`=?" , rule.Match).Count(&exist)
 				if exist == 0 {
 					databases.Db.Save(&rule)
 				}
 			}
+			for _, setting := range getSettings() {
+				databases.Db.Save(setting)
+			}
+
 		},
 	}
 }

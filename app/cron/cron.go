@@ -1,6 +1,7 @@
 package cron
 
 import (
+	"fmt"
 	"github.com/go-co-op/gocron"
 	"time"
 	"ws/app/websocket"
@@ -13,6 +14,7 @@ func clearChannel()  {
 }
 
 func Run()  {
+	fmt.Println("start cron")
 	s = gocron.NewScheduler(time.UTC)
 	s.Every(1).Minute().Do(closeSessions)
 	s.Every(1).Minute().Do(clearChannel)
