@@ -1,7 +1,6 @@
 package models
 
 import (
-	"time"
 	"ws/app/resource"
 )
 
@@ -15,24 +14,23 @@ type ChatTransfer struct {
 	Remark      string `gorm:"size:255"`
 	IsAccepted  bool
 	IsCanceled  bool
-	CreatedAt   *time.Time
-	AcceptedAt  *time.Time
-	CanceledAt  *time.Time
+	CreatedAt   int64
+	AcceptedAt  int64
+	CanceledAt  int64
 	Session     *ChatSession `gorm:"foreignKey:session_id"`
 	User        *User        `gorm:"foreignKey:user_id"`
 	FromAdmin   *Admin       `gorm:"foreignKey:from_admin_id"`
 	ToAdmin     *Admin       `gorm:"foreignKey:to_admin_id"`
 }
-
 func (transfer *ChatTransfer) ToJson() *resource.ChatTransfer {
 	json := &resource.ChatTransfer{
 		Id:         transfer.Id,
 		SessionId:  transfer.SessionId,
 		UserId:     transfer.UserId,
 		Remark:     transfer.Remark,
-		CreatedAt:  transfer.CreatedAt,
-		AcceptedAt: transfer.AcceptedAt,
-		CanceledAt: transfer.CanceledAt,
+		CreatedAt:  transfer.CreatedAt * 1000,
+		AcceptedAt: transfer.AcceptedAt * 1000,
+		CanceledAt: transfer.CanceledAt * 1000,
 	}
 	if transfer.FromAdmin != nil {
 		json.FromAdminName = transfer.FromAdmin.GetUsername()

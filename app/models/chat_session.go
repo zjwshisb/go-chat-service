@@ -18,7 +18,7 @@ type ChatSession struct {
 	GroupId   int64  `gorm:"group_id"`
 	AdminId    int64  `gorm:"index"`
 	Admin      *Admin `gorm:"foreignKey:admin_id"`
-	Type       int    `gorm:"default:0"`
+	Type       int8    `gorm:"default:0"`
 	User       *User  `gorm:"foreignKey:user_id"`
 	Messages []*Message `gorm:"foreignKey:session_id"`
 }

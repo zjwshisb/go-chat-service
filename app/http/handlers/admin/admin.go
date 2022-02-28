@@ -88,12 +88,10 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 			Label:    strconv.Itoa(day + 1) + "号",
 		}
 	}
-	
 	for _, session := range sessions {
 		d := (session.AcceptedAt - firstDateUnix) / (24 * 3600)
 		value[d].Value += 1
 	}
-
 	util.RespSuccess(c, gin.H{
 		"chart": value,
 		"admin": resource.Admin{

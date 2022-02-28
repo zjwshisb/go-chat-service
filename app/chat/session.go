@@ -31,7 +31,7 @@ func (sessionService *sessionService) Close(sessionId uint64, isRemoveUser bool,
 }
 
 // Create 创建会话
-func (sessionService *sessionService) Create(uid int64, groupId int64, ty int) *models.ChatSession  {
+func (sessionService *sessionService) Create(uid int64, groupId int64, ty int8) *models.ChatSession  {
 	session := &models.ChatSession{}
 	session.UserId = uid
 	session.QueriedAt = time.Now().Unix()

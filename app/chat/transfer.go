@@ -40,7 +40,7 @@ func (transferService *transferService) Cancel(transfer *models.ChatTransfer) er
 	})
 	transfer.IsCanceled = true
 	t := time.Now()
-	transfer.CanceledAt = &t
+	transfer.CanceledAt = t.Unix()
 	_ = transferRepo.Save(transfer)
 	_ = transferService.RemoveUser(transfer.UserId)
 	return nil
@@ -49,22 +49,22 @@ func (transferService *transferService) Cancel(transfer *models.ChatTransfer) er
 // Create 创建转接
 func (transferService *transferService) Create(fromId int64, toId int64, uid int64, remark  string) error  {
 	session := SessionService.Get(uid, fromId)
+	SessionService.Close(session.Id, true, true)
 	if session == nil {
 		return errors.New("invalid user")
 	}
 	now := time.Now()
+	newSession := SessionService.Create(uid, session.GroupId,models.ChatSessionTypeTransfer)
 	transfer := &models.ChatTransfer{
 		UserId:      uid,
-		SessionId:   session.Id,
+		SessionId:   newSession.Id,
 		FromAdminId: fromId,
 		ToAdminId:   toId,
 		Remark:      remark,
-		CreatedAt:   &now,
+		CreatedAt:   now.Unix(),
 	}
 	transferRepo.Save(transfer)
-	SessionService.Close(session.Id, true, true)
 	_ = transferService.AddUser(uid, toId)
-	SessionService.Create(uid, session.GroupId,models.ChatSessionTypeTransfer)
 	return nil
 }
 

@@ -74,14 +74,16 @@ func (m *adminManager) DeliveryMessage(msg *models.Message, remote bool) {
 	if exist { // admin在线且在当前服务上
 		UserManager.triggerMessageEvent(models.SceneAdminOnline, msg)
 		adminConn.Deliver(NewReceiveAction(msg))
+		return
 	} else if !remote && m.isCluster() {
 		adminChannel := m.getUserChannel(msg.AdminId) // 获取用户所在channel
 		if adminChannel != "" {
 			_ = m.publish(adminChannel, mq.NewMessagePayload(msg.Id))
+			return
 		}
-	} else {
-		m.handleOffline(msg)
 	}
+	m.handleOffline(msg)
+
 }
 
 // 从管道接受消息并处理

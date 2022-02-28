@@ -149,7 +149,7 @@ func (m *manager) setUserChannel(uid int64)  {
 	if m.isCluster() {
 		ctx := context.Background()
 		key := m.getUserChannelKey(uid)
-		databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), time.Minute * 2)
+		databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), time.Hour * 24 * 2)
 	}
 }
 
@@ -160,24 +160,7 @@ func (m *manager) removeUserChannel(uid int64)  {
 		databases.Redis.Del(ctx, m.getUserChannelKey(uid))
 	}
 }
-// 更新用户channel
-func (m *manager) updateUserChannel() {
-	if m.isCluster() {
-		ticker := time.NewTicker(time.Minute)
-		for{
-			select {
-			case <-ticker.C : {
-				for _, s := range m.groups {
-					conns := s.GetAll()
-					for _, c:= range conns {
-						m.setUserChannel(c.GetUserId())
-					}
-				}
-			}
-			}
-		}
-	}
-}
+
 
 // 获取用户channel
 func (m *manager) getUserChannel(uid int64) string {
@@ -321,7 +304,6 @@ func (m *manager) Unregister(conn Conn) {
 	existConn, exist := s.Get(conn.GetUserId())
 	if exist {
 		if existConn == conn {
-			m.removeUserChannel(conn.GetUserId())
 			m.RemoveConn(conn.GetUser())
 			if m.onUnRegister != nil {
 				m.onUnRegister(conn)
@@ -428,7 +410,6 @@ func (m *manager) Run() {
 	go m.Ping()
 	if m.isCluster() {
 		go m.registerChannel()
-		go m.updateUserChannel()
 	}
 }
 
@@ -437,11 +418,5 @@ func (m *manager) Run() {
 func (m *manager) Destroy()  {
 	if m.isCluster() {
 		m.unRegisterChannel()
-		for _, s:= range m.groups {
-			conns := s.GetAll()
-			for _, conn := range conns {
-				m.removeUserChannel(conn.GetUserId())
-			}
-		}
 	}
 }

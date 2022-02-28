@@ -40,6 +40,10 @@ func (session *ChatSessionRepo) GetWaitHandles() []*models.ChatSession  {
 			Filed: "canceled_at = ?",
 			Value: 0,
 		},
+		{
+			Filed: "type = ?",
+			Value: models.ChatSessionTypeNormal,
+		},
 	})).
 		Preload("Messages", "source = ?" , models.SourceUser).
 		Preload("User").

@@ -247,12 +247,12 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 				Value: 0,
 			},
 		}, []string{})
-		if transfer.Id == 0 {
+		if transfer == nil {
 			util.RespValidateFail(c, "transfer error ")
 			return
 		}
 		now := time.Now()
-		transfer.AcceptedAt = &now
+		transfer.AcceptedAt = now.Unix()
 		transfer.IsAccepted = true
 		transferRepo.Save(transfer)
 		_ = chat.TransferService.RemoveUser(user.GetPrimaryKey())

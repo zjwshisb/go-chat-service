@@ -106,9 +106,9 @@ type ChatTransfer struct {
 	FromAdminName string     `json:"from_admin_name"`
 	ToAdminName   string     `json:"to_admin_name"`
 	Username      string     `json:"username"`
-	CreatedAt     *time.Time `json:"created_at"`
-	AcceptedAt    *time.Time `json:"accepted_at"`
-	CanceledAt    *time.Time `json:"canceled_at"`
+	CreatedAt     int64 `json:"created_at"`
+	AcceptedAt    int64 `json:"accepted_at"`
+	CanceledAt    int64 `json:"canceled_at"`
 }
 
 type ChatSetting struct {

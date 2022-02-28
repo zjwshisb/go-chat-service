@@ -72,6 +72,7 @@ func (userManager *userManager) DeliveryMessage(msg *models.Message, remote bool
 	userConn, exist := UserManager.GetConn(msg.GetUser())
 	if exist {
 		userConn.Deliver(NewReceiveAction(msg))
+		return
 	} else if !remote && userManager.isCluster()  {
 		userChannel := userManager.getUserChannel(msg.UserId)
 		if userChannel != "" {
@@ -79,10 +80,10 @@ func (userManager *userManager) DeliveryMessage(msg *models.Message, remote bool
 				Data: msg.Id,
 				Types: mq.TypeMessage,
 			})
+			return
 		}
-	} else {
-		userManager.handleOffline(msg)
 	}
+	userManager.handleOffline(msg)
 }
 // 从conn接受消息并处理
 func (userManager *userManager) handleReceiveMessage() {
@@ -189,6 +190,8 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 									msg.SessionId = session.Id
 								}
 								messageRepo.Save(msg)
+								AdminManager.PublishWaitingUser(conn.GetGroupId())
+								userManager.PublishWaitingCount(conn.GetGroupId())
 							} else {
 								messageRepo.Save(msg)
 								userManager.triggerMessageEvent(models.SceneNotAccepted, msg)
@@ -281,8 +284,6 @@ func (userManager *userManager) addToManual(user contract.User) *models.ChatSess
 		message := models.NewNoticeMessage(session, "正在为你转接人工客服")
 		messageRepo.Save(message)
 		userManager.DeliveryMessage(message, false)
-		AdminManager.PublishWaitingUser(user.GetGroupId())
-		userManager.PublishWaitingCount(user.GetGroupId())
 		return session
 	}
 	return nil
@@ -302,6 +303,8 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 					message.SessionId = session.Id
 					messageRepo.Save(message)
 				}
+				AdminManager.PublishWaitingUser(message.GroupId)
+				userManager.PublishWaitingCount(message.GroupId)
 				AdminManager.broadcastWaitingUser(message.GetUser().GetGroupId())
 			// 回复消息
 			case models.ReplyTypeMessage:
