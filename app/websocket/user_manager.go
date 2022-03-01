@@ -281,7 +281,7 @@ func (userManager *userManager) addToManual(user contract.User) *models.ChatSess
 				user.GetGroupId(),
 				models.ChatSessionTypeNormal)
 		}
-		message := models.NewNoticeMessage(session, "正在为你转接人工客服")
+		message := messageRepo.NewNotice(session, "正在为你转接人工客服")
 		messageRepo.Save(message)
 		userManager.DeliveryMessage(message, false)
 		return session

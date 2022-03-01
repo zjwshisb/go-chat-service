@@ -116,6 +116,7 @@ type ChatSetting struct {
 	Name string `json:"name"`
 	Title string `json:"title"`
 	Value string `json:"value"`
+	Type string `json:"type"`
 	Options []map[string]string `json:"options"`
 }
 

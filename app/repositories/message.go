@@ -3,6 +3,7 @@ package repositories
 import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"time"
 	"ws/app/databases"
 	"ws/app/models"
 )
@@ -45,4 +46,17 @@ func (repo *MessageRepo) GetUnSend(wheres []*Where) []*models.Message {
 		Value: models.SourceUser,
 	})
 	return repo.Get(wheres, -1, []string{}, []string{"id desc"})
+}
+
+func (repo *MessageRepo) NewNotice(session *models.ChatSession, content string) *models.Message {
+	return &models.Message{
+		UserId:     session.UserId,
+		AdminId:    session.AdminId,
+		Type:       models.TypeNotice,
+		Content:    content,
+		ReceivedAT: time.Now().Unix(),
+		Source:     models.SourceSystem,
+		SessionId:  session.Id,
+		ReqId:      databases.GetSystemReqId(),
+	}
 }

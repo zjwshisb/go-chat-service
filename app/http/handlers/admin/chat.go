@@ -6,7 +6,6 @@ import (
 	"time"
 	"ws/app/chat"
 	"ws/app/contract"
-	"ws/app/file"
 	"ws/app/http/requests"
 	"ws/app/models"
 	"ws/app/repositories"
@@ -172,10 +171,6 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 				u.Messages = append(u.Messages, rm)
 			}
 		}
-		// todo
-		//if _, ok := websocket.UserManager.GetConn(u); ok {
-		//	u.Online = true
-		//}
 	}
 	util.RespSuccess(c, resp)
 }
@@ -315,7 +310,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	}
 	chatUser.Unread = len(unSendMsg)
 	chatUser.LastChatTime = time.Now().Unix()
-	noticeMessage := models.NewNoticeMessage(session, admin.GetChatName() + "为您服务")
+	noticeMessage := messageRepo.NewNotice(session, admin.GetChatName() + "为您服务")
 	messageRepo.Save(noticeMessage)
 	websocket.UserManager.DeliveryMessage(noticeMessage, false)
 	for index, m := range messages {
@@ -344,7 +339,7 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 	}, []string{"id desc"})
 	if session != nil {
 		if session.BrokeAt == 0 {
-			noticeMessage := models.NewNoticeMessage(session, admin.GetChatName() + "已断开服务")
+			noticeMessage := messageRepo.NewNotice(session, admin.GetChatName() + "已断开服务")
 			messageRepo.Save(noticeMessage)
 			websocket.UserManager.DeliveryMessage(noticeMessage, false)
 		}
@@ -520,18 +515,5 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 	}
 	go websocket.AdminManager.PublishTransfer(toAdmin)
 	util.RespSuccess(c, gin.H{})
-}
-
-// Image 聊天图片
-func (handle *ChatHandler) Image(c *gin.Context) {
-	f, _ := c.FormFile("file")
-	ff, err := file.Save(f, "chat")
-	if err != nil {
-		util.RespFail(c, err.Error(), 500)
-	} else {
-		util.RespSuccess(c, gin.H{
-			"url": ff.FullUrl,
-		})
-	}
 }
 

@@ -10,7 +10,6 @@ import (
 )
 
 
-
 func Login(c *gin.Context) {
 	form := &requests.LoginForm{}
 	err := c.ShouldBind(form)

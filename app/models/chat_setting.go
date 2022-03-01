@@ -9,9 +9,9 @@ import (
 
 const (
 	IsAutoTransfer = "is-auto-transfer"
-	AdminSessionDuration = "admin-session-duration"
-	UserSessionDuration = "user-session-duration"
 	MinuteToBreak = "minute-to-break"
+	SystemName = "system-name"
+	SystemAvatar = "system-avatar"
 )
 
 type ChatSetting struct {
@@ -21,6 +21,7 @@ type ChatSetting struct {
 	GroupId int64 `gorm:"index"`
 	Value string  `gorm:"size:255"`
 	Options string `gorm:"size:1024"`
+	Type string `gorm:"size:16"`
 	CreatedAt *time.Time
 	UpdatedAt *time.Time
 }
@@ -34,5 +35,6 @@ func (setting *ChatSetting) ToJson() *resource.ChatSetting {
 		Title:   setting.Title,
 		Value:   setting.Value,
 		Options: o,
+		Type: setting.Type,
 	}
 }

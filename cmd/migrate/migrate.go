@@ -36,8 +36,9 @@ func getSettings() []*models.ChatSetting  {
 		Options:   string(options1),
 		CreatedAt: nil,
 		UpdatedAt: nil,
+		Type: "select",
 	})
-	options3 , _ := json.Marshal([]map[string]string{
+	options2 , _ := json.Marshal([]map[string]string{
 		{
 			"label": "5分钟",
 			"value": "5",
@@ -60,7 +61,28 @@ func getSettings() []*models.ChatSetting  {
 		Title:     "客服离线多少分钟(用户发送消息时)自动断开会话",
 		GroupId:   defaultGroupId,
 		Value:     "30",
-		Options:   string(options3),
+		Options:   string(options2),
+		CreatedAt: nil,
+		UpdatedAt: nil,
+		Type: "select",
+	})
+	s = append(s, &models.ChatSetting{
+		Name:      models.SystemAvatar,
+		Title:     "系统头像",
+		GroupId:   defaultGroupId,
+		Value:     "",
+		Options:   "",
+		Type:      "text",
+		CreatedAt: nil,
+		UpdatedAt: nil,
+	})
+	s = append(s, &models.ChatSetting{
+		Name:      models.SystemName,
+		Title:     "系统名称",
+		GroupId:   defaultGroupId,
+		Value:     "",
+		Options:   "",
+		Type:      "text",
 		CreatedAt: nil,
 		UpdatedAt: nil,
 	})
@@ -107,7 +129,7 @@ func NewMigrateCommand() *cobra.Command {
 					Match: models.MatchAdminAllOffLine,
 					ReplyType: models.ReplyTypeMessage,
 					IsSystem: 1,
-					GroupId: 1,
+					GroupId: defaultGroupId,
 				},
 			}
 			for _, rule := range rules {

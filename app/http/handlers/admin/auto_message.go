@@ -3,7 +3,6 @@ package admin
 import (
 	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"ws/app/file"
 	"ws/app/http/requests"
 	"ws/app/models"
 	"ws/app/repositories"
@@ -13,17 +12,6 @@ import (
 type AutoMessageHandler struct {
 }
 
-func (handler *AutoMessageHandler) Image(c *gin.Context) {
-	f, _ := c.FormFile("file")
-	ff, err := file.Save(f, "auto_message")
-	if err != nil {
-		util.RespFail(c, err.Error(), 500)
-	} else {
-		util.RespSuccess(c, gin.H{
-			"url": ff.FullUrl,
-		})
-	}
-}
 func (handler *AutoMessageHandler) Index(c *gin.Context)  {
 	wheres := requests.GetFilterWhere(c, map[string]interface{}{
 		"type" : "=",

@@ -58,6 +58,7 @@ func (chatSession *ChatSession) getStatus() string  {
 	}
 	return "wait"
 }
+
 func (chatSession *ChatSession) ToJson() *resource.ChatSession {
 	return &resource.ChatSession{
 		Id:         chatSession.Id,

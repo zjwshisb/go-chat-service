@@ -1,9 +1,7 @@
 package models
 
 import (
-	"github.com/spf13/viper"
 	"gorm.io/gorm/clause"
-	"time"
 	"ws/app/databases"
 	"ws/app/resource"
 )
@@ -60,24 +58,24 @@ func (message *Message) GetAdminName() string {
 	case SourceAdmin:
 		return message.GetAdmin().GetChatName()
 	case SourceSystem:
-		return viper.GetString("App.SystemChatName")
+		setting := &ChatSetting{}
+		databases.Db.Where("type = ?", SystemName).
+			Where("group_id = ?", message.GroupId).First(setting)
+		return setting.Value
 	}
 	return ""
 }
 func (message *Message) GetAvatar() (avatar string) {
 	switch message.Source {
 	case SourceUser:
-		user := &User{}
-		if message.User == nil {
-			_ = databases.Db.Model(message).Association("User").Find(user)
-		} else {
-			user = message.User
-		}
-		avatar = user.GetAvatarUrl()
+		avatar = message.GetUser().GetAvatarUrl()
 	case SourceAdmin:
 		avatar = message.GetAdmin().GetAvatarUrl()
 	case SourceSystem:
-		avatar = ""
+		setting := &ChatSetting{}
+		databases.Db.Where("type = ?", SystemName).
+			Where("group_id = ?", message.GroupId).First(setting)
+		return setting.Value
 	}
 	return
 }
@@ -97,15 +95,4 @@ func (message *Message) ToJson() *resource.Message {
 		Avatar:     message.GetAvatar(),
 	}
 }
-func NewNoticeMessage(session *ChatSession, content string) *Message {
-	return &Message{
-		UserId:     session.UserId,
-		AdminId:    session.AdminId,
-		Type:       TypeNotice,
-		Content:    content,
-		ReceivedAT: time.Now().Unix(),
-		Source:     SourceSystem,
-		SessionId:  session.Id,
-		ReqId:      databases.GetSystemReqId(),
-	}
-}
+

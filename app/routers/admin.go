@@ -22,6 +22,7 @@ var (
 	chatSessionHandler = &http.ChatSessionHandler{}
 	dashboardHandler = &http.DashboardHandler{}
 	transferHandler = &http.TransferHandler{}
+	imageHandler = &http.ImageHandler{}
 )
 
 func registerAdmin() {
@@ -46,13 +47,14 @@ func registerAdmin() {
 	authGroup.POST("/ws/chat-user", chatHandler.AcceptUser)
 	authGroup.GET("/ws/chat-users", chatHandler.ChatUserList)
 	authGroup.POST("/ws/read-all", chatHandler.ReadAll)
-	authGroup.POST("/ws/image", chatHandler.Image)
 	authGroup.GET("/ws/messages", chatHandler.GetHistoryMessage)
 	authGroup.GET("/ws/user/:id", chatHandler.GetUserInfo)
 	authGroup.GET("/ws/sessions/:uid", chatHandler.GetHistorySession)
 	authGroup.POST("/ws/transfer/:id/cancel", chatHandler.CancelTransfer)
 	authGroup.POST("/ws/transfer", chatHandler.Transfer)
 	authGroup.GET("/ws/transfer/:id/messages", chatHandler.TransferMessages)
+
+	authGroup.POST("/images", imageHandler.Store)
 
 
 	authGroup.GET("/settings", settingHandler.Index)
@@ -63,7 +65,6 @@ func registerAdmin() {
 	authGroup.PUT("/auto-messages/:id", autoMessageHandler.Update)
 	authGroup.DELETE("/auto-messages/:id", autoMessageHandler.Delete)
 	authGroup.GET("/auto-messages/:id", autoMessageHandler.Show)
-	authGroup.POST("/auto-messages/image", autoMessageHandler.Image)
 
 	authGroup.GET("/system-auto-rules", systemRuleHandler.Index)
 	authGroup.PUT("/system-auto-rules", systemRuleHandler.Update)
