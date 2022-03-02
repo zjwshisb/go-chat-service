@@ -20,7 +20,7 @@ func MysqlSetup()  {
 	case "production":
 		level = logger.Silent
 	case "local":
-		level = logger.Silent
+		level = logger.Info
 	case "test":
 		level = logger.Info
 	}

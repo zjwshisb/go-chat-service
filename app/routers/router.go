@@ -22,6 +22,8 @@ var (
 func Setup() {
 	if strings.ToLower(util.GetEnv()) == "production" {
 		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
 	}
 	Router = gin.New()
 	Router.Use(cors.New(cors.Config{

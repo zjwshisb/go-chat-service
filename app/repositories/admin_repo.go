@@ -11,16 +11,20 @@ type AdminRepo struct {
 }
 
 func (repo *AdminRepo) First(wheres []*Where, orders []string) *models.Admin {
-	rule := &models.Admin{}
-	result := databases.Db.Scopes(AddOrder(orders)).Scopes(AddWhere(wheres)).First(rule)
+	admin := &models.Admin{}
+	result := databases.Db.Scopes(AddOrder(orders)).Scopes(AddWhere(wheres)).First(admin)
 	if result.Error != nil {
 		return nil
 	}
-	return rule
+	return admin
 }
 func (repo *AdminRepo) SaveSetting(setting *models.AdminChatSetting)  {
 	databases.Db.Omit(clause.Associations).Save(setting)
 }
+func (repo *AdminRepo) UpdateSetting(setting *models.AdminChatSetting, column string, value interface{})  {
+	databases.Db.Model(setting).Update(column, value)
+}
+
 func (repo *AdminRepo) Save(admin *models.Admin)  {
 	databases.Db.Omit(clause.Associations).Save(admin)
 }

@@ -14,6 +14,7 @@ type AdminChatSetting struct {
 	OfflineContent string `json:"offline_content" gorm:"size:512"`
 	Name string `json:"name" gorm:"size:64"`
 	LastOnline time.Time `json:"last_online"`
+	Avatar string `json:"avatar" gorm:"size:512"`
 	CreatedAt time.Time    `json:"created_at"`
 	UpdatedAt time.Time    `json:"updated_at"`
 }

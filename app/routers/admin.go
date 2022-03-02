@@ -40,7 +40,6 @@ func registerAdmin() {
 	authGroup.POST("/me/avatar", userHandler.Avatar)
 	authGroup.GET("/me/settings" , userHandler.Setting)
 	authGroup.PUT("/me/settings" , userHandler.UpdateSetting)
-	authGroup.POST("/me/settings/image", userHandler.SettingImage)
 
 	authGroup.DELETE("/ws/chat-user/:id", chatHandler.RemoveUser)
 	authGroup.POST("/ws/req-id", chatHandler.GetReqId)

@@ -131,6 +131,7 @@ func (m *adminManager) handleRemoteMessage() {
 	for {
 		message := subscribe.ReceiveMessage()
 		go func() {
+			log.Log.Info(message.Get("types"))
 			switch message.Get("types").String() {
 			case mq.TypeWaitingUser:
 				fmt.Println(mq.TypeWaitingUser)
@@ -154,7 +155,6 @@ func (m *adminManager) handleRemoteMessage() {
 						m.handleRepeatLogin(user, true)
 					}
 				}
-
 			case mq.TypeTransfer:
 				adminId := message.Get("data").Int()
 				if adminId > 0 {
@@ -173,6 +173,15 @@ func (m *adminManager) handleRemoteMessage() {
 				msg := messageRepo.First(mid)
 				if msg != nil {
 					m.DeliveryMessage(msg , true)
+				}
+			case mq.TypeUpdateSetting:
+				id := message.Get("data").Int()
+				admin := adminRepo.First([]Where{{
+					Filed: "id = ?",
+					Value: id,
+				}}, []string{})
+				if admin != nil {
+					m.updateSetting(admin)
 				}
 			}
 		}()
@@ -226,8 +235,7 @@ func (m *adminManager) unregisterHook(conn Conn) {
 	admin, ok := u.(*models.Admin)
 	if ok {
 		setting := admin.GetSetting()
-		setting.LastOnline = time.Now()
-		adminRepo.SaveSetting(setting)
+		adminRepo.UpdateSetting(setting, "last_online", time.Now())
 	}
 	m.PublishAdmins(conn.GetGroupId())
 }
@@ -253,6 +261,19 @@ func (m *adminManager) PublishTransfer(admin contract.User) {
 		m.broadcastUserTransfer(admin)
 	}
 }
+func (m *adminManager) PublishUpdateSetting(admin contract.User)  {
+	if m.isCluster() {
+		channel := m.getUserChannel(admin.GetPrimaryKey())
+		if channel != "" {
+			m.publish(channel, &mq.Payload{
+				Types: mq.TypeUpdateSetting,
+				Data:  admin.GetPrimaryKey(),
+			})
+		}
+	} else {
+		m.updateSetting(admin)
+	}
+}
 
 // PublishAdmins 推送在线admin
 func (m *adminManager) PublishAdmins(gid int64) {
@@ -266,6 +287,16 @@ func (m *adminManager) PublishAdmins(gid int64) {
 	}
 }
 
+// 更新设置
+func (m *adminManager) updateSetting(admin contract.User)  {
+	conn, exist := m.GetConn(admin)
+	if exist {
+		u, ok := conn.GetUser().(*models.Admin)
+		if ok {
+			u.RefreshSetting()
+		}
+	}
+}
 
 // 广播待接入用户
 func (m *adminManager) broadcastWaitingUser(groupId int64) {

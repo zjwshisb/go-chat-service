@@ -9,7 +9,6 @@ import (
 	"time"
 	"ws/app/contract"
 	"ws/app/databases"
-	"ws/app/file"
 	"ws/app/util"
 )
 
@@ -23,7 +22,7 @@ type Admin struct {
 	ApiToken  string            `gorm:"string;size:255" `
 	Avatar    string            `gorm:"string;size:512"`
 	GroupId   int64            `gorm:"group_id"`
-	Setting   *AdminChatSetting `json:"message" gorm:"foreignKey:admin_id"`
+	Setting   *AdminChatSetting `json:"setting" gorm:"foreignKey:admin_id"`
 	IsSuper bool `gorm:"is_super"`
 }
 func (admin *Admin) GetGroupId() int64  {
@@ -41,10 +40,7 @@ func (admin *Admin) GetPrimaryKey() int64 {
 	return admin.ID
 }
 func (admin *Admin) GetAvatarUrl() string {
-	if admin.Avatar != "" {
-		return file.Url(admin.Avatar)
-	}
-	return ""
+	return admin.GetSetting().Avatar
 }
 
 func (admin *Admin) GetUsername() string {
@@ -54,8 +50,8 @@ func (admin *Admin) GetUsername() string {
 func (admin *Admin) GetSetting() *AdminChatSetting {
 	if admin.Setting == nil {
 		setting := &AdminChatSetting{}
-		databases.Db.Model(admin).Association("Setting").Find(setting)
-		if setting.Id == 0 {
+		err := databases.Db.Model(admin).Association("Setting").Find(setting)
+		if err != nil {
 			setting = &AdminChatSetting{
 				AdminId:        admin.GetPrimaryKey(),
 				Name: admin.GetUsername(),

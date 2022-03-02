@@ -2,7 +2,6 @@ package admin
 
 import (
 	"github.com/gin-gonic/gin"
-	"ws/app/file"
 	"ws/app/http/requests"
 	"ws/app/models"
 	"ws/app/util"
@@ -18,7 +17,6 @@ func (User *UserHandler) Info(c *gin.Context)  {
 	util.RespSuccess(c, gin.H{
 		"username": admin.GetUsername(),
 		"id":       admin.GetPrimaryKey(),
-		"avatar":   admin.GetAvatarUrl(),
 	})
 }
 func (User *UserHandler) Setting(c *gin.Context) {
@@ -26,6 +24,7 @@ func (User *UserHandler) Setting(c *gin.Context) {
 	admin := u.(*models.Admin)
 	util.RespSuccess(c, admin.GetSetting())
 }
+
 func (User *UserHandler) UpdateSetting(c *gin.Context) {
 	u := requests.GetAdmin(c)
 	admin := u.(*models.Admin)
@@ -42,43 +41,23 @@ func (User *UserHandler) UpdateSetting(c *gin.Context) {
 	setting.OfflineContent = form.OfflineContent
 	setting.Name = form.Name
 	adminRepo.SaveSetting(setting)
-	// 如果当前在线，更新信息
-	connI , exist := websocket.AdminManager.GetConn(admin)
-	if exist {
-		admin := connI.GetUser().(*models.Admin)
-		admin.RefreshSetting()
-	}
+	websocket.AdminManager.PublishUpdateSetting(admin)
 	util.RespSuccess(c, gin.H{})
 }
 
-func (User *UserHandler) SettingImage(c *gin.Context) {
-	f, _ := c.FormFile("file")
-	ff, err := file.Save(f, "chat-settings")
-	if err != nil {
-		util.RespFail(c, err.Error(), 500)
-	} else {
-		util.RespSuccess(c, gin.H{
-			"url": ff.FullUrl,
-		})
-	}
-}
-
 func (User *UserHandler) Avatar(c *gin.Context) {
-	f, _ := c.FormFile("file")
-	fileInfo, err := file.Save(f, "avatar")
+	form := &struct {
+		Url string `json:"url"`
+	}{}
+	err := c.ShouldBind(form)
 	if err != nil {
 		util.RespError(c, err.Error())
 	} else {
 		u := requests.GetAdmin(c)
 		admin := u.(*models.Admin)
-		admin.Avatar = fileInfo.Path
-		adminRepo.Save(admin)
-		// 如果当前在线，更新信息
-		conn , exist := websocket.AdminManager.GetConn(admin)
-		if exist {
-			u := conn.GetUser().(*models.Admin)
-			u.RefreshSetting()
-		}
+		setting := admin.GetSetting()
+		adminRepo.UpdateSetting(setting, "avatar", form.Url)
+		websocket.AdminManager.PublishUpdateSetting(admin)
 		util.RespSuccess(c, gin.H{})
 	}
 }
