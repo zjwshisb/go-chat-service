@@ -2,9 +2,9 @@ package chat
 
 import (
 	"time"
-	"ws/app/models"
 	"ws/app/repositories"
 )
+
 var SessionService = &sessionService{}
 type sessionService struct {
 
@@ -30,38 +30,6 @@ func (sessionService *sessionService) Close(sessionId uint64, isRemoveUser bool,
 	}
 }
 
-// Create 创建会话
-func (sessionService *sessionService) Create(uid int64, groupId int64, ty int8) *models.ChatSession  {
-	session := &models.ChatSession{}
-	session.UserId = uid
-	session.QueriedAt = time.Now().Unix()
-	session.AdminId = 0
-	session.Type = ty
-	session.GroupId = groupId
-	_ = chatSessionRepo.Save(session)
-	return session
-}
 
-// Get 获取有效会话
-func (sessionService *sessionService) Get(uid int64, adminId int64) *models.ChatSession {
-	session := chatSessionRepo.First([]*repositories.Where{
-		{
-			Filed: "user_id = ?",
-			Value: uid,
-		},
-		{
-			Filed: "admin_id = ?",
-			Value: adminId,
-		},
-		{
-			Filed: "broke_at = ? ",
-			Value: 0,
-		},
-		{
-			Filed: "canceled_at = ?",
-			Value: 0,
-		},
-	}, []string{"id desc"})
-	return session
-}
+
 

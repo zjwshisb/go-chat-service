@@ -124,7 +124,7 @@ func (m *adminManager) handleOffline(msg *models.Message) {
 	}
 }
 
-// 订阅本manger的channel， 处理消息
+// 订阅本manager的channel， 处理消息
 func (m *adminManager) handleRemoteMessage() {
 	subscribe := mq.Mq().Subscribe(m.GetSubscribeChannel())
 	defer subscribe.Close()
@@ -202,7 +202,7 @@ func (m *adminManager) handleMessage(payload *ConnMessage) {
 					conn.Deliver(NewErrorMessage("该用户已失效，无法发送消息"))
 					return
 				}
-				session := chat.SessionService.Get(msg.UserId, conn.GetUserId())
+				session := sessionRepo.FirstActiveByUser(msg.UserId, conn.GetUserId())
 				if session == nil {
 					conn.Deliver(NewErrorMessage("无效的用户"))
 					return
@@ -230,6 +230,7 @@ func (m *adminManager) registerHook(conn Conn) {
 	m.broadcastWaitingUser(conn.GetGroupId())
 }
 
+// conn断开连接后，更新admin的最后在线时间
 func (m *adminManager) unregisterHook(conn Conn) {
 	u := conn.GetUser()
 	admin, ok := u.(*models.Admin)
@@ -251,6 +252,8 @@ func (m *adminManager) PublishWaitingUser(groupId int64) {
 		m.broadcastWaitingUser(groupId)
 	}
 }
+
+// PublishTransfer 推送待转接的用户
 func (m *adminManager) PublishTransfer(admin contract.User) {
 	if m.isCluster() {
 		m.publishToAllChannel(&mq.Payload{
@@ -261,6 +264,8 @@ func (m *adminManager) PublishTransfer(admin contract.User) {
 		m.broadcastUserTransfer(admin)
 	}
 }
+
+// PublishUpdateSetting admin修改设置后通知conn 更新admin的设置信息
 func (m *adminManager) PublishUpdateSetting(admin contract.User)  {
 	if m.isCluster() {
 		channel := m.getUserChannel(admin.GetPrimaryKey())

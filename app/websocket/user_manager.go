@@ -166,7 +166,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 				// 有对应的客服对象
 				if msg.AdminId > 0 {
 					// 更新会话有效期
-					session := chat.SessionService.Get(conn.GetUserId(), msg.AdminId)
+					session := sessionRepo.FirstActiveByUser(conn.GetUserId(), msg.AdminId)
 					if session == nil {
 						return
 					}
@@ -177,7 +177,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 				} else { // 没有客服对象
 					if chat.TransferService.GetUserTransferId(conn.GetUserId()) == 0 {
 						if chat.ManualService.IsIn(conn.GetUserId(), conn.GetGroupId()) {
-							session := chat.SessionService.Get(conn.GetUserId(), 0)
+							session := sessionRepo.FirstActiveByUser(conn.GetUserId(), 0)
 							if session != nil {
 								msg.SessionId = session.Id
 							}
@@ -239,7 +239,7 @@ func (userManager *userManager) registerHook(conn Conn) {
 	if chat.ManualService.IsIn(conn.GetUserId(), conn.GetGroupId()) {
 		userManager.DeliveryWaitingCount(conn)
 	} else if chat.UserService.GetValidAdmin(conn.GetUserId()) == 0 {
-		rule := autoRuleRepo.GetEnter()
+		rule := autoRuleRepo.GetEnterByGroup(conn.GetGroupId())
 		if rule != nil {
 			msg := rule.GetReplyMessage(conn.GetUserId())
 			if msg != nil {
@@ -259,7 +259,7 @@ func (userManager *userManager) addToManual(user contract.User) *models.ChatSess
 	if !chat.ManualService.IsIn(user.GetPrimaryKey(), user.GetGroupId()) {
 		onlineServerCount := AdminManager.GetOnlineTotal(user.GetGroupId())
 		if onlineServerCount == 0 { // 如果没有在线客服
-			rule := autoRuleRepo.GetAdminAllOffLine()
+			rule := autoRuleRepo.GetAdminAllOffLine(user.GetGroupId())
 			if rule != nil {
 				switch rule.ReplyType {
 				case models.ReplyTypeMessage:
@@ -275,9 +275,9 @@ func (userManager *userManager) addToManual(user contract.User) *models.ChatSess
 			}
 		}
 		_ = chat.ManualService.Add(user.GetPrimaryKey(), user.GetGroupId())
-		session := chat.SessionService.Get(user.GetPrimaryKey(), 0)
+		session := sessionRepo.FirstActiveByUser(user.GetPrimaryKey(), 0)
 		if session == nil {
-			session = chat.SessionService.Create(user.GetPrimaryKey(),
+			session = sessionRepo.Create(user.GetPrimaryKey(),
 				user.GetGroupId(),
 				models.ChatSessionTypeNormal)
 		}
@@ -292,7 +292,7 @@ func (userManager *userManager) addToManual(user contract.User) *models.ChatSess
 
 // 触发事件
 func (userManager *userManager) triggerMessageEvent(scene string, message *models.Message) {
-	rules := autoRuleRepo.GetAllActiveNormal()
+	rules := autoRuleRepo.GetAllActiveNormalByGroup(message.GroupId)
 	for _, rule := range rules {
 		if rule.IsMatch(message.Content) && rule.SceneInclude(scene) {
 			switch rule.ReplyType {

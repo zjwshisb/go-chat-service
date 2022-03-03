@@ -3,11 +3,24 @@ package repositories
 import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm/clause"
+	"time"
 	"ws/app/databases"
 	"ws/app/models"
 )
 
 type ChatSessionRepo struct {
+}
+
+
+func (session *ChatSessionRepo) Create(uid int64, groupId int64, ty int8) *models.ChatSession  {
+	s := &models.ChatSession{}
+	s.UserId = uid
+	s.QueriedAt = time.Now().Unix()
+	s.AdminId = 0
+	s.Type = ty
+	s.GroupId = groupId
+	session.Save(s)
+	return s
 }
 
 func (session *ChatSessionRepo) Save(model *models.ChatSession) int64 {
@@ -60,6 +73,30 @@ func (session *ChatSessionRepo) Get(wheres []*Where, limit int, load []string, o
 		Find(&sessions)
 	return sessions
 }
+
+// FirstActiveByUser 获取有效会话
+func (session *ChatSessionRepo) FirstActiveByUser(uid int64, adminId int64) *models.ChatSession {
+	s := session.First([]*Where{
+		{
+			Filed: "user_id = ?",
+			Value: uid,
+		},
+		{
+			Filed: "admin_id = ?",
+			Value: adminId,
+		},
+		{
+			Filed: "broke_at = ? ",
+			Value: 0,
+		},
+		{
+			Filed: "canceled_at = ?",
+			Value: 0,
+		},
+	}, []string{"id desc"})
+	return s
+}
+
 func (session *ChatSessionRepo) Paginate(c *gin.Context, wheres []*Where, load []string, orders []string) *Pagination {
 	sessions := make([]*models.ChatSession, 0)
 	databases.Db.Order("id desc").
