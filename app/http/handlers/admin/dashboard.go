@@ -22,6 +22,7 @@ func (handler *DashboardHandler) GetUserQueryInfo(c *gin.Context) {
 	endTime := carbon.Now().EndOfDay().ToTimestamp()
 	sessions := make([]models.ChatSession, 0)
 	static := make(map[int64]map[string]int64)
+	admin := requests.GetAdmin(c)
 	var i int64
 	for i = 0; i<=23; i++ {
 		item := make(map[string]int64)
@@ -32,11 +33,13 @@ func (handler *DashboardHandler) GetUserQueryInfo(c *gin.Context) {
 	databases.Db.Model(&models.ChatSession{}).
 		Where("queried_at >= ?", startTime).
 		Where("queried_at <= ?", endTime).
+		Where("group_id = ?", admin.GetGroupId()).
 		Count(&total)
 	var messageCount int64
 	databases.Db.Model(&models.Message{}).
 		Where("received_at >= ?", startTime).
 		Where("received_at <= ?" , endTime).
+		Where("group_id = ?", admin.GetGroupId()).
 		Where("source = ?" , models.SourceUser).
 		Count(&messageCount)
 

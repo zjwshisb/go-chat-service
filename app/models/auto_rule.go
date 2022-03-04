@@ -164,6 +164,7 @@ func (rule *AutoRule) GetReplyMessage(uid int64) (message *Message) {
 	}
 	if rule.Message.ID > 0{
 		message = &Message{
+			GroupId: rule.GroupId,
 			UserId:     uid,
 			AdminId:    0,
 			Type:       rule.Message.Type,

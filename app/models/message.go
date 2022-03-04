@@ -59,7 +59,7 @@ func (message *Message) GetAdminName() string {
 		return message.GetAdmin().GetChatName()
 	case SourceSystem:
 		setting := &ChatSetting{}
-		databases.Db.Where("type = ?", SystemName).
+		databases.Db.Where("name = ?", SystemName).
 			Where("group_id = ?", message.GroupId).First(setting)
 		return setting.Value
 	}
@@ -73,7 +73,7 @@ func (message *Message) GetAvatar() (avatar string) {
 		avatar = message.GetAdmin().GetAvatarUrl()
 	case SourceSystem:
 		setting := &ChatSetting{}
-		databases.Db.Where("type = ?", SystemName).
+		databases.Db.Where("name = ?", SystemAvatar).
 			Where("group_id = ?", message.GroupId).First(setting)
 		return setting.Value
 	}

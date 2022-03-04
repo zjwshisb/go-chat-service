@@ -26,6 +26,7 @@ var (
 
 type adminService struct {
 }
+
 // 用户cache key， score为有效时间
 func (adminService *adminService) getUserCacheKey(adminId int64) string  {
 	return fmt.Sprintf(adminChatUserKey, adminId)
@@ -132,7 +133,7 @@ func (adminService *adminService) GetLimitTime(adminId int64, uid int64) int64 {
 	return int64(score)
 }
 
-// GetUsersWithLimitTime 获取所有user
+// GetUsersWithLimitTime 获取所有user以及对应的有效期
 func (adminService *adminService) GetUsersWithLimitTime(adminId int64) ([]int64, []int64)  {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRevRangeWithScores(ctx, adminService.getUserCacheKey(adminId), 0, -1)

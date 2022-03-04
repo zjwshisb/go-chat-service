@@ -2,6 +2,7 @@ package root
 
 import (
 	"github.com/spf13/cobra"
+	"ws/cmd/conns"
 	"ws/cmd/fake"
 	"ws/cmd/migrate"
 	"ws/cmd/serve"
@@ -29,6 +30,7 @@ func NewRootCommand(name string) *cobra.Command {
 		migrate.NewMigrateCommand(),
 		fake.NewFakeCommand(),
 		stop.NewStopCommand(),
+		conns.NewConnsCommand(),
 	)
 
 	return rootCmd

@@ -24,6 +24,7 @@ type Conn interface {
 	GetUser() contract.User
 	GetUid() string
 	GetGroupId() int64
+	GetCreateTime() int64
 	ping()
 }
 
@@ -59,6 +60,9 @@ func (c *Client) ping()  {
 	}
 }
 
+func (c *Client) GetCreateTime()  int64 {
+	return c.Created
+}
 // GetGroupId 分组Id
 func (c *Client) GetGroupId() int64 {
 	return c.User.GetGroupId()

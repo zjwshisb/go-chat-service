@@ -18,6 +18,7 @@ func (repo *AdminRepo) First(wheres []*Where, orders []string) *models.Admin {
 	}
 	return admin
 }
+
 func (repo *AdminRepo) SaveSetting(setting *models.AdminChatSetting)  {
 	databases.Db.Omit(clause.Associations).Save(setting)
 }

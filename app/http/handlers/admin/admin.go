@@ -97,7 +97,7 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 		"admin": resource.Admin{
 			Avatar:        admin.GetAvatarUrl(),
 			Username:      admin.GetUsername(),
-			Online:        websocket.AdminManager.ConnExist(admin),
+			Online:        websocket.AdminManager.IsOnline(admin),
 			Id:            admin.GetPrimaryKey(),
 			AcceptedCount: chat.AdminService.GetActiveCount(admin.GetPrimaryKey()),
 		},

@@ -84,15 +84,15 @@ func (repo *AutoRuleRepo) GetAllActiveNormalByGroup(gid int64) []*models.AutoRul
 func (repo *AutoRuleRepo) GetEnterByGroup(gid int64) *models.AutoRule {
 	return repo.First([]*Where{
 		{
-			Filed: "is_system = ?",
+			Filed: "is_system",
 			Value: 1,
 		},
 		{
-			Filed: "match = ?",
+			Filed: "match",
 			Value: models.MatchEnter,
 		},
 		{
-			Filed: "group_id = ?",
+			Filed: "group_id",
 			Value: gid,
 		},
 	}, []string{})

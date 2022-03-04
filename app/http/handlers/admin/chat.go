@@ -351,25 +351,31 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 // ReadAll 已读
 func (handle *ChatHandler) ReadAll(c *gin.Context) {
 	form := &struct {
-		Id int64
+		Id int64 `json:"id"`
+		MsgId int64 `json:"msg_id" binding:"-"`
 	}{}
 	err := c.Bind(form)
-
+	admin := requests.GetAdmin(c)
+	wheres := []Where{
+		{
+			Filed: "admin_id = ?",
+			Value: admin.GetPrimaryKey(),
+		},
+		{
+			Filed: "user_id = ?",
+			Value: form.Id,
+		},
+		{
+			Filed: "is_read = ?",
+			Value: 0,
+		},
+	}
 	if err == nil {
-		admin := requests.GetAdmin(c)
-		wheres := []Where{
-			{
-				Filed: "admin_id = ?",
-				Value: admin.GetPrimaryKey(),
-			},
-			{
-				Filed: "user_id = ?",
-				Value: form.Id,
-			},
-			{
-				Filed: "is_read = ?",
-				Value: 0,
-			},
+		if form.MsgId > 0 {
+			wheres = append(wheres, &repositories.Where{
+				Filed: "id <= ?",
+				Value: form.MsgId,
+			})
 		}
 		messageRepo.Update(wheres, map[string]interface{}{
 			"is_read": 1,
@@ -388,17 +394,21 @@ func (handle *ChatHandler) GetUserInfo(c *gin.Context)  {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
+	admin := requests.GetAdmin(c)
 	user := userRepo.First([]Where{
 		{
 			Filed: "id = ?",
 			Value: uid,
+		},
+		{
+			Filed: "group_id = ?",
+			Value: admin.GetGroupId(),
 		},
 	}, []string{})
 	if user == nil {
 		util.RespNotFound(c)
 		return
 	}
-	admin := requests.GetAdmin(c)
 	if !admin.AccessTo(user) {
 		util.RespNotFound(c)
 		return

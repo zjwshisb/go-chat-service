@@ -84,7 +84,7 @@ func (s *Shard) GetAll() []Conn  {
 	return conns
 }
 func (s *Shard) GetTotalCount() int64  {
-	s.mutex.RUnlock()
+	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return int64(len(s.m))
 }
@@ -267,7 +267,7 @@ func (m *manager) IsOnline(user contract.User) bool  {
 	}
 }
 
-// ConnExist 用户客户端是否存在
+// ConnExist 连接是否存在
 func (m *manager) ConnExist(user contract.User) bool {
 	_, exist := m.GetConn(user)
 	return exist
@@ -296,6 +296,14 @@ func (m *manager) RemoveConn(user contract.User) {
 func (m *manager) GetAllConn(groupId int64) (conns []Conn){
 	s := m.getSpread(groupId)
 	return s.GetAll()
+}
+
+func (m *manager) GetTotalConn() []Conn  {
+	conns := make([]Conn, 0)
+	for gid := range m.groups {
+		conns = append(conns, m.GetAllConn(int64(gid))...)
+	}
+	return conns
 }
 
 // Unregister 客户端注销

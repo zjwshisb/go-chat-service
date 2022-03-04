@@ -21,9 +21,10 @@ func (handler *SettingHandler) Update(c *gin.Context) {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
+	admin := requests.GetAdmin(c)
 	id := c.Param("id")
 	var setting = &models.ChatSetting{}
-	databases.Db.Find(setting, id)
+	databases.Db.Where("group_id = ?" , admin.GetGroupId()).Find(setting, id)
 	if setting.Id <= 0 {
 		util.RespNotFound(c)
 		return

@@ -18,6 +18,7 @@ import (
 	_ "ws/app/http/requests"
 	mylog "ws/app/log"
 	"ws/app/routers"
+	"ws/app/rpc"
 	"ws/app/util"
 	"ws/app/websocket"
 )
@@ -64,7 +65,7 @@ func NewServeCommand() *cobra.Command {
 			}
 			quit := make(chan os.Signal, 1)
 			signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-
+			go rpc.Serve()
 			go func() {
 				err := srv.ListenAndServe()
 				if err != nil {
