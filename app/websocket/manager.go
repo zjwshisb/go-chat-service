@@ -12,6 +12,7 @@ import (
 	"ws/app/databases"
 	"ws/app/models"
 	"ws/app/mq"
+	"ws/app/rpc/client"
 )
 
 // ConnContainer 管理相关方法
@@ -83,11 +84,13 @@ func (s *Shard) GetAll() []Conn  {
 	}
 	return conns
 }
+
 func (s *Shard) GetTotalCount() int64  {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return int64(len(s.m))
 }
+
 func (s *Shard) Get(uid int64)  (conn Conn, exist bool) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -101,25 +104,26 @@ func (s *Shard) Set(conn Conn)  {
 }
 func (s *Shard) Remove(uid int64)  {
 	s.mutex.Lock()
-	defer  s.mutex.Unlock()
+	defer s.mutex.Unlock()
 	delete(s.m, uid)
 }
 
 type manager struct {
-	groupCount int64 // 分组数量
-	groups []*Shard //
+	shardCount int64 // 分组数量
+	shard []*Shard //
 	Channel string // 当前manager channel name
 	ConnMessages chan *ConnMessage // 接受从conn所读取消息的chan
 	onRegister ManagerHook //conn连接成功hook
 	onUnRegister ManagerHook //conn连接断开hook
-	userChannelCacheKey string // conn所在机器的redis缓存key
-	groupCacheKey string // 保存所有同类型manager群组redis SortSet keepalive key
-	connGroupKeepAliveKey string // 对应manager conn的redis SortSet keepalive key
+	types string //类型
 }
 
+func (m *manager) getMod(gid int64) int64 {
+	return gid % m.shardCount
+}
 
 func (m *manager) getSpread(gid int64) *Shard  {
-	return m.groups[gid]
+	return m.shard[m.getMod(gid)]
 }
 
 func (m *manager) isCluster() bool {
@@ -141,7 +145,7 @@ func (m *manager) publishToAllChannel(payload *mq.Payload)  {
 
 // 获取用户channel cache key
 func (m *manager) getUserChannelKey(uid int64) string {
-	return fmt.Sprintf(m.userChannelCacheKey, uid)
+	return fmt.Sprintf("%s:%d:channel",m.types, uid)
 }
 
 // 设置用户所在channel为当前manager
@@ -204,66 +208,46 @@ func (m *manager) handleRepeatLogin(user contract.User, remote bool) {
 // GetOnlineUserIds 获取groupId对应的在线userIds
 func (m *manager) GetOnlineUserIds(gid int64) []int64 {
 	if m.isCluster() {
-		key := fmt.Sprintf(m.connGroupKeepAliveKey, gid)
-		source := time.Now().Unix() - 60
-		ctx := context.Background()
-		cmd := databases.Redis.ZRangeByScore(ctx, key, &redis.ZRangeBy{
-			Min:    strconv.FormatInt(source, 10),
-			Max:    "+inf",
-			Offset: 0,
-			Count:  0,
-		})
-		idsStr := cmd.Val()
-		ids := make([]int64, 0, len(idsStr))
-		for _, s := range idsStr {
-			id, ok  := strconv.ParseInt(s, 10, 64)
-			if ok == nil {
-				ids = append(ids, id)
-			}
-		}
-		return ids
+		return make([]int64, 0, 0)
 	} else {
 		s := m.getSpread(gid)
 		allConn := s.GetAll()
-		ids := make([]int64, 0, len(allConn))
-		for _, c := range allConn {
-			ids = append(ids, c.GetUserId())
+		ids := make([]int64, 0, 0)
+		for _, conn := range allConn {
+			if conn.GetGroupId() == gid {
+				ids = append(ids, conn.GetUserId())
+			}
 		}
 		return ids
 	}
 }
 
+// GetLocalOnlineTotal 获取本地groupId对应在线客户端数量
+func (m *manager) GetLocalOnlineTotal(gid int64) int64 {
+	s := m.getSpread(gid)
+	return s.GetTotalCount()
+}
 // GetOnlineTotal 获取groupId对应在线客户端数量
 func (m *manager) GetOnlineTotal(gid int64) int64  {
 	if m.isCluster() {
-		key := fmt.Sprintf(m.connGroupKeepAliveKey, gid)
-		source := time.Now().Unix() - 60
-		ctx := context.Background()
-		cmd := databases.Redis.ZCount(ctx, key, strconv.FormatInt(source, 10), "+inf")
-		return cmd.Val()
+		return client.ClientTotal(gid, m.types)
 	}
-	s := m.getSpread(gid)
-	return s.GetTotalCount()
+	return m.GetLocalOnlineTotal(gid)
+}
+
+// IsOnline 用户是否在线
+func (m *manager) IsOnline(user contract.User) bool  {
+	if m.isCluster() {
+		return client.ClientExit(user.GetPrimaryKey())
+	}else {
+		return m.ConnExist(user)
+	}
 }
 
 // SendAction 给客户端发送消息
 func (m *manager) SendAction(a  *Action, clients ...Conn) {
 	for _,c := range clients {
 		c.Deliver(a)
-	}
-}
-
-// IsOnline 用户是否在线
-func (m *manager) IsOnline(user contract.User) bool  {
-	if m.isCluster() {
-		ctx := context.Background()
-		key := fmt.Sprintf(m.connGroupKeepAliveKey, user.GetGroupId())
-		lastTime := time.Now().Unix() - 60
-		cmd := databases.Redis.ZScore(ctx, key, strconv.FormatInt(user.GetPrimaryKey(), 10))
-		source := cmd.Val()
-		return source > float64(lastTime)
-	}else {
-		return m.ConnExist(user)
 	}
 }
 
@@ -300,7 +284,7 @@ func (m *manager) GetAllConn(groupId int64) (conns []Conn){
 
 func (m *manager) GetTotalConn() []Conn  {
 	conns := make([]Conn, 0)
-	for gid := range m.groups {
+	for gid := range m.shard {
 		conns = append(conns, m.GetAllConn(int64(gid))...)
 	}
 	return conns
@@ -345,26 +329,27 @@ func (m *manager) Ping()  {
 		select {
 		case <-ticker.C:
 			ping := NewPing()
-			for _, s := range m.groups {
+			for _, s := range m.shard {
 				conns := s.GetAll()
 				m.SendAction(ping, conns...)
 			}
 		}
 	}
 }
+func (m *manager) getClusterKey() string {
+	return fmt.Sprintf("%s:cluster:group", m.types)
+}
 // 获取同类型的所有channel
-// 同事清理掉意外退出的机器的channel
 func (m *manager) getAllChannel() []string  {
 	ctx := context.Background()
 	now := time.Now().Unix()
 	fz := now -  (60 * 2)
-	cmd := databases.Redis.ZRangeByScore(ctx, m.groupCacheKey, &redis.ZRangeBy{
+	cmd := databases.Redis.ZRangeByScore(ctx, m.getClusterKey(), &redis.ZRangeBy{
 		Min:   strconv.FormatInt(fz, 10),
 		Max:    "+inf",
 		Offset: 0,
 		Count:  0,
 	})
-
 	return cmd.Val()
 }
 // 集群模式下
@@ -373,7 +358,7 @@ func (m *manager) getAllChannel() []string  {
 func (m *manager) registerChannel()  {
 	fn := func() {
 		ctx := context.Background()
-		databases.Redis.ZAdd(ctx, m.groupCacheKey, &redis.Z{
+		databases.Redis.ZAdd(ctx, m.getClusterKey(), &redis.Z{
 			Score:  float64(time.Now().Unix()),
 			Member: m.Channel,
 		})
@@ -395,22 +380,22 @@ func (m *manager) ClearInactiveChannel() {
 		ctx := context.Background()
 		now := time.Now().Unix()
 		fz := now -  (60 * 2)
-		databases.Redis.ZRemRangeByScore(ctx , m.groupCacheKey, "-inf", strconv.FormatInt(fz, 10))
+		databases.Redis.ZRemRangeByScore(ctx , m.getClusterKey(), "-inf", strconv.FormatInt(fz, 10))
 	}
 }
 // 移除频道
 func (m *manager) unRegisterChannel()  {
 	if m.isCluster() {
 		ctx := context.Background()
-		databases.Redis.ZRem(ctx, m.groupCacheKey, m.Channel)
+		databases.Redis.ZRem(ctx, m.getClusterKey(), m.Channel)
 	}
 }
 
 func (m *manager) Run() {
-	m.groups = make([]*Shard, m.groupCount, m.groupCount)
+	m.shard = make([]*Shard, m.shardCount, m.shardCount)
 	var i int64
-	for i= 0; i< m.groupCount; i++ {
-		m.groups[i] = &Shard{
+	for i= 0; i< m.shardCount; i++ {
+		m.shard[i] = &Shard{
 			m:     make(map[int64]Conn),
 			mutex: sync.RWMutex{},
 		}

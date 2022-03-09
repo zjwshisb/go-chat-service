@@ -24,7 +24,6 @@ import (
 )
 
 
-
 func initCheck(cmd *cobra.Command, args []string) {
 	if app.IsRunning() {
 		log.Fatalln("serve is running")

@@ -18,11 +18,6 @@ import (
 
 var AdminManager *adminManager
 
-const (
-	AdminConnChannelKey    = "admin:%d:channel"
-	AdminManageGroupKey    = "admin:channel:group"
-	AdminGroupKeepAliveKey = "admin:group:%d:alive"
-)
 
 type adminManager struct {
 	manager
@@ -36,19 +31,16 @@ func NewAdminConn(user *models.Admin, conn *websocket.Conn) Conn {
 		manager:           AdminManager,
 		User:              user,
 		uid:               uuid.NewV4().String(),
-		groupKeepAliveKey: AdminGroupKeepAliveKey,
 	}
 }
 
 func SetupAdmin() {
 	AdminManager = &adminManager{
 		manager: manager{
-			groupCount:            10,
+			shardCount:            10,
 			Channel:               util.GetIPs()[0] + ":" + viper.GetString("Http.Port") + "-admin",
 			ConnMessages:          make(chan *ConnMessage, 100),
-			userChannelCacheKey:   AdminConnChannelKey,
-			groupCacheKey:         AdminManageGroupKey,
-			connGroupKeepAliveKey: AdminGroupKeepAliveKey,
+			types: "admin",
 		},
 	}
 	AdminManager.onRegister = AdminManager.registerHook

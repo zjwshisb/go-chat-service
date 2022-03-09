@@ -1,14 +1,10 @@
 package websocket
 
 import (
-	"context"
-	"fmt"
-	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 	"sync"
 	"time"
 	"ws/app/contract"
-	"ws/app/databases"
 	"ws/app/log"
 	"ws/app/models"
 )
@@ -25,7 +21,6 @@ type Conn interface {
 	GetUid() string
 	GetGroupId() int64
 	GetCreateTime() int64
-	ping()
 }
 
 type Client struct {
@@ -36,28 +31,7 @@ type Client struct {
 	manager           ConnManager
 	User              contract.User
 	uid               string
-	groupKeepAliveKey string // SortSet key
 	Created           int64
-}
-// 根据groupId 分组
-// 通过redis SortSet保存最后在线时间
-// 定时更新最后在线时间
-// 集群模式下通过获取分数大于当前时间-60s即为在线数量
-func (c *Client) ping()  {
-	ticker := time.NewTicker(time.Minute)
-	key := fmt.Sprintf(c.groupKeepAliveKey, c.GetGroupId())
-	fn := func() {
-		ctx := context.Background()
-		databases.Redis.ZAdd(ctx, key, &redis.Z{
-			Score:  float64(time.Now().Unix()),
-			Member: c.GetUserId(),
-		})
-	}
-	fn()
-	for {
-		<-ticker.C
-		fn()
-	}
 }
 
 func (c *Client) GetCreateTime()  int64 {
@@ -85,9 +59,6 @@ func (c *Client) run() {
 	c.Created = time.Now().Unix()
 	go c.readMsg()
 	go c.sendMsg()
-	if c.manager.isCluster() {
-		go c.ping()
-	}
 }
 
 //幂等的close方法 关闭连接，相关清理

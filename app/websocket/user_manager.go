@@ -16,11 +16,7 @@ import (
 	"ws/app/wechat"
 )
 
-const (
-	UserConnChannelKey = "user:%d:channel"
-	UserManageGroupKey = "user:channel:group"
-	UserGroupKeepAliveKey = "user:group:%d:alive"
-)
+
 
 func NewUserConn(user contract.User, conn *websocket.Conn) Conn {
 	return &Client{
@@ -30,7 +26,6 @@ func NewUserConn(user contract.User, conn *websocket.Conn) Conn {
 		manager:           UserManager,
 		User:              user,
 		uid:               uuid.NewV4().String(),
-		groupKeepAliveKey: UserGroupKeepAliveKey,
 	}
 }
 
@@ -43,12 +38,10 @@ var UserManager *userManager
 func SetupUser() {
 	UserManager = &userManager{
 		manager{
-			groupCount:            10,
+			shardCount:            10,
 			Channel:               util.GetIPs()[0] + ":" + viper.GetString("Http.Port") + "-user",
 			ConnMessages:          make(chan *ConnMessage, 100),
-			userChannelCacheKey:   UserConnChannelKey,
-			groupCacheKey:         UserManageGroupKey,
-			connGroupKeepAliveKey: UserGroupKeepAliveKey,
+			types: "user",
 		},
 	}
 	UserManager.onRegister = UserManager.registerHook

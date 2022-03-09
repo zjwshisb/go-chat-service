@@ -9,6 +9,7 @@
 - mysql
 - redis
 - rabbitmq(可选)
+- etcd(可选)
 
 ### 开始
 ```shell script

@@ -1,39 +1,41 @@
 App:
   Url: http://localhost:9999
-  # 工作目录，保存本地图片，日志等。部署请用绝对路径
-  PublicPath: ./public
+  Workdir: ./
   # local,production,test
   Env: local
-  SystemChatName: 客服系统
   Mq: redis
   Cluster: true
+Rpc:
+  Open: true
+  Port: 8888
+Etcd:
+  Host: [127.0.0.1:2379]
+  BasePath: chat
 Mysql:
-  Database:
-  Username:
-  Password:
-  Port:
-  Host:
+  Database: ws
+  Username: root
+  Password: 123456
+  Port: 3306
+  Host: localhost
 Redis:
   Addr: localhost:6379
   Auth:
   Db: 0
+Http:
+  Host: 0.0.0.0
+  Port: 9999
+File:
+  Storage: local
+  QiniuAk:
+  QiniuSK:
+  QiniuUrl:
+  QiniuBucket: weilvtest
+Wechat:
+  MiniProgramAppId:
+  MiniProgramAppSecret:
+  SubscribeTemplateIdOne:
 RabbitMq:
   User: admin
   Password: admin
   Host: localhost
   Port: 5672
-Http:
-  Host: 0.0.0.0
-  Port: 9999
-File:
-  # 图片存储类型 qiniu | local
-  Storage: qiniu
-  QiniuAk:
-  QiniuSK:
-  QiniuUrl:
-  QiniuBucket:
-Wechat:
-  MiniProgramAppId:
-  MiniProgramAppSecret:
-  SubscribeTemplateIdOne:
-

@@ -9,7 +9,6 @@ import (
 	"ws/app"
 )
 
-
 func NewStopCommand() *cobra.Command  {
 	cmd := &cobra.Command{
 		Use:                        "stop",
