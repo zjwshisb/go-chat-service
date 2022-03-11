@@ -2,9 +2,8 @@ package admin
 
 import (
 	"github.com/gin-gonic/gin"
-	"ws/app/databases"
 	"ws/app/http/requests"
-	"ws/app/models"
+	"ws/app/repositories"
 	"ws/app/resource"
 	"ws/app/util"
 )
@@ -23,22 +22,33 @@ func (handler *SettingHandler) Update(c *gin.Context) {
 	}
 	admin := requests.GetAdmin(c)
 	id := c.Param("id")
-	var setting = &models.ChatSetting{}
-	databases.Db.Where("group_id = ?" , admin.GetGroupId()).Find(setting, id)
-	if setting.Id <= 0 {
+	setting := repositories.ChatSettingRepo.First([]*repositories.Where{
+		{
+		Filed: "group_id = ?",
+		Value: admin.GetGroupId(),
+		},
+		{
+			Filed: "id = ?",
+			Value: id,
+		},
+	}, []string{})
+	if setting == nil {
 		util.RespNotFound(c)
 		return
 	}
 	setting.Value = form.Value
-	databases.Db.Save(setting)
-
+	repositories.ChatSettingRepo.Save(setting)
 	util.RespSuccess(c, gin.H{})
 }
 
 func (handler *SettingHandler) Index(c *gin.Context) {
 	admin := requests.GetAdmin(c)
-	settings := make([]*models.ChatSetting, 0)
-	databases.Db.Where("group_id = ?", admin.GetGroupId()).Find(&settings)
+	settings := repositories.ChatSettingRepo.Get([]*repositories.Where{
+		{
+			Filed: "group_id = ?",
+			Value: admin.GetGroupId(),
+		},
+	}, -1, []string{}, []string{})
 	resp := make([]*resource.ChatSetting, len(settings), len(settings))
 	for index, setting := range settings {
 		resp[index] = setting.ToJson()

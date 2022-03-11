@@ -12,11 +12,10 @@ import (
 	"ws/app/log"
 	"ws/app/models"
 	"ws/app/mq"
+	"ws/app/repositories"
 	"ws/app/util"
 	"ws/app/wechat"
 )
-
-
 
 func NewUserConn(user contract.User, conn *websocket.Conn) Conn {
 	return &Client{
@@ -45,15 +44,16 @@ func SetupUser() {
 		},
 	}
 	UserManager.onRegister = UserManager.registerHook
+	UserManager.onUnRegister = UserManager.unRegisterHook
 	UserManager.Run()
 }
 
 func (userManager *userManager) Run() {
 	userManager.manager.Run()
 	go userManager.handleReceiveMessage()
-	if userManager.isCluster() {
+	userManager.Do(func() {
 		go userManager.handleRemoteMessage()
-	}
+	}, nil)
 }
 
 // DeliveryMessage 投递消息
@@ -94,7 +94,7 @@ func (userManager *userManager) handleRemoteMessage()  {
 			switch message.Get("types").String() {
 			case mq.TypeMessage:
 				mid := message.Get("data").Int()
-				msg := messageRepo.First(mid)
+				msg := repositories.MessageRepo.First(mid)
 				if msg != nil {
 					userManager.DeliveryMessage(msg, true)
 				}
@@ -110,7 +110,7 @@ func (userManager *userManager) handleRemoteMessage()  {
 // 处理离线逻辑
 func (userManager *userManager) handleOffline(msg *models.Message) {
 	hadSubscribe := chat.SubScribeService.IsSet(msg.UserId)
-	user := userRepo.First([]Where{
+	user := repositories.UserRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: msg.UserId,
@@ -154,27 +154,27 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 				msg.User = conn.GetUser().(*models.User)
 				msg.AdminId = chat.UserService.GetValidAdmin(conn.GetUserId())
 				// 发送回执
-				messageRepo.Save(msg)
+				repositories.MessageRepo.Save(msg)
 				conn.Deliver(NewReceiptAction(msg))
 				// 有对应的客服对象
 				if msg.AdminId > 0 {
 					// 更新会话有效期
-					session := sessionRepo.FirstActiveByUser(conn.GetUserId(), msg.AdminId)
+					session := repositories.ChatSessionRepo.FirstActiveByUser(conn.GetUserId(), msg.AdminId)
 					if session == nil {
 						return
 					}
 					_ = chat.AdminService.UpdateUser(msg.AdminId, msg.UserId)
 					msg.SessionId = session.Id
-					messageRepo.Save(msg)
+					repositories.MessageRepo.Save(msg)
 					AdminManager.DeliveryMessage(msg, false)
 				} else { // 没有客服对象
 					if chat.TransferService.GetUserTransferId(conn.GetUserId()) == 0 {
 						if chat.ManualService.IsIn(conn.GetUserId(), conn.GetGroupId()) {
-							session := sessionRepo.FirstActiveByUser(conn.GetUserId(), 0)
+							session := repositories.ChatSessionRepo.FirstActiveByUser(conn.GetUserId(), 0)
 							if session != nil {
 								msg.SessionId = session.Id
 							}
-							messageRepo.Save(msg)
+							repositories.MessageRepo.Save(msg)
 							AdminManager.PublishWaitingUser(conn.GetGroupId())
 						} else {
 							if chat.SettingService.GetIsAutoTransferManual(conn.GetGroupId()) { // 自动转人工
@@ -182,11 +182,11 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 								if session != nil {
 									msg.SessionId = session.Id
 								}
-								messageRepo.Save(msg)
+								repositories.MessageRepo.Save(msg)
 								AdminManager.PublishWaitingUser(conn.GetGroupId())
 								userManager.PublishWaitingCount(conn.GetGroupId())
 							} else {
-								messageRepo.Save(msg)
+								repositories.MessageRepo.Save(msg)
 								userManager.triggerMessageEvent(models.SceneNotAccepted, msg)
 							}
 						}
@@ -199,14 +199,14 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 
 // PublishWaitingCount 广播等待人数
 func (userManager *userManager) PublishWaitingCount(groupId int64)  {
-	if userManager.isCluster() {
+	userManager.Do(func() {
 		userManager.publishToAllChannel(&mq.Payload{
 			Types: mq.TypeWaitingUserCount,
 			Data: groupId,
 		})
-	} else {
+	}, func() {
 		userManager.broadcastWaitingCount(groupId)
-	}
+	})
 }
 
 // DeliveryWaitingCount 推送前面等待人数
@@ -224,21 +224,24 @@ func (userManager *userManager) broadcastWaitingCount(gid int64)  {
 		userManager.DeliveryWaitingCount(conn)
 	}
 }
-
+func (userManager *userManager) unRegisterHook(conn Conn) {
+	AdminManager.PublishUserOffline(conn.GetUser())
+}
 // 链接建立后的额外操作
 // 如果已经在待接入人工列表中，则推送当前队列位置
 // 如果不在待接入人工列表中且没有设置客服，则推送欢迎语
 func (userManager *userManager) registerHook(conn Conn) {
+	AdminManager.PublishUserOnline(conn.GetUser())
 	if chat.ManualService.IsIn(conn.GetUserId(), conn.GetGroupId()) {
 		userManager.DeliveryWaitingCount(conn)
 	} else if chat.UserService.GetValidAdmin(conn.GetUserId()) == 0 {
-		rule := autoRuleRepo.GetEnterByGroup(conn.GetGroupId())
+		rule := repositories.AutoRuleRepo.GetEnterByGroup(conn.GetGroupId())
 		if rule != nil {
 			msg := rule.GetReplyMessage(conn.GetUserId())
 			if msg != nil {
-				messageRepo.Save(msg)
+				repositories.MessageRepo.Save(msg)
 				rule.Count++
-				autoRuleRepo.Save(rule)
+				repositories.AutoRuleRepo.Save(rule)
 				conn.Deliver(NewReceiveAction(msg))
 			}
 		}
@@ -252,13 +255,13 @@ func (userManager *userManager) addToManual(user contract.User) *models.ChatSess
 	if !chat.ManualService.IsIn(user.GetPrimaryKey(), user.GetGroupId()) {
 		onlineServerCount := AdminManager.GetOnlineTotal(user.GetGroupId())
 		if onlineServerCount == 0 { // 如果没有在线客服
-			rule := autoRuleRepo.GetAdminAllOffLine(user.GetGroupId())
+			rule := repositories.AutoRuleRepo.GetAdminAllOffLine(user.GetGroupId())
 			if rule != nil {
 				switch rule.ReplyType {
 				case models.ReplyTypeMessage:
 					msg := rule.GetReplyMessage(user.GetPrimaryKey())
 					if msg != nil {
-						messageRepo.Save(msg)
+						repositories.MessageRepo.Save(msg)
 						rule.AddCount()
 						userManager.DeliveryMessage(msg, false)
 						return nil
@@ -268,14 +271,14 @@ func (userManager *userManager) addToManual(user contract.User) *models.ChatSess
 			}
 		}
 		_ = chat.ManualService.Add(user.GetPrimaryKey(), user.GetGroupId())
-		session := sessionRepo.FirstActiveByUser(user.GetPrimaryKey(), 0)
+		session := repositories.ChatSessionRepo.FirstActiveByUser(user.GetPrimaryKey(), 0)
 		if session == nil {
-			session = sessionRepo.Create(user.GetPrimaryKey(),
+			session = repositories.ChatSessionRepo.Create(user.GetPrimaryKey(),
 				user.GetGroupId(),
 				models.ChatSessionTypeNormal)
 		}
-		message := messageRepo.NewNotice(session, "正在为你转接人工客服")
-		messageRepo.Save(message)
+		message := repositories.MessageRepo.NewNotice(session, "正在为你转接人工客服")
+		repositories.MessageRepo.Save(message)
 		userManager.DeliveryMessage(message, false)
 		return session
 	}
@@ -285,7 +288,7 @@ func (userManager *userManager) addToManual(user contract.User) *models.ChatSess
 
 // 触发事件
 func (userManager *userManager) triggerMessageEvent(scene string, message *models.Message) {
-	rules := autoRuleRepo.GetAllActiveNormalByGroup(message.GroupId)
+	rules := repositories.AutoRuleRepo.GetAllActiveNormalByGroup(message.GroupId)
 	for _, rule := range rules {
 		if rule.IsMatch(message.Content) && rule.SceneInclude(scene) {
 			switch rule.ReplyType {
@@ -294,7 +297,7 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 				session := userManager.addToManual(message.GetUser())
 				if session != nil {
 					message.SessionId = session.Id
-					messageRepo.Save(message)
+					repositories.MessageRepo.Save(message)
 				}
 				AdminManager.PublishWaitingUser(message.GroupId)
 				userManager.PublishWaitingCount(message.GroupId)
@@ -304,7 +307,7 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 				msg := rule.GetReplyMessage(message.UserId)
 				if msg != nil {
 					msg.SessionId = message.SessionId
-					messageRepo.Save(msg)
+					repositories.MessageRepo.Save(msg)
 					userManager.DeliveryMessage(msg, false)
 				}
 			//触发事件
@@ -318,7 +321,7 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 					msg := rule.GetReplyMessage(message.UserId)
 					if msg != nil {
 						msg.SessionId = message.SessionId
-						messageRepo.Save(msg)
+						repositories.MessageRepo.Save(msg)
 						userManager.DeliveryMessage(msg, false)
 					}
 				}

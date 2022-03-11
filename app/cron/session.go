@@ -9,7 +9,7 @@ import (
 )
 
 func closeSessions()  {
-	admins := adminRepo.Get([]*repositories.Where{},-1, []string{}, []string{})
+	admins := repositories.AdminRepo.Get([]*repositories.Where{},-1, []string{}, []string{})
 	for _, admin := range admins {
 		uids, limits := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
 		length := len(uids)
@@ -17,7 +17,7 @@ func closeSessions()  {
 			uid := uids[i]
 			limit := limits[i]
 			if limit <= time.Now().Unix() {
-				session := sessionRepo.First([]*repositories.Where{
+				session := repositories.ChatSessionRepo.First([]*repositories.Where{
 					{
 						Filed: "admin_id = ?",
 						Value: admin.GetPrimaryKey(),
@@ -35,7 +35,7 @@ func closeSessions()  {
 					chat.SessionService.Close(session.Id, false, false)
 					noticeMessage := admin.GetBreakMessage(uid, session.Id)
 					websocket.UserManager.DeliveryMessage(noticeMessage, false)
-					messageRepo.Save(noticeMessage)
+					repositories.MessageRepo.Save(noticeMessage)
 				}
 			}
 		}

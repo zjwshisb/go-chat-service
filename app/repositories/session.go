@@ -8,11 +8,11 @@ import (
 	"ws/app/models"
 )
 
-type ChatSessionRepo struct {
+type chatSessionRepo struct {
 }
 
 
-func (session *ChatSessionRepo) Create(uid int64, groupId int64, ty int8) *models.ChatSession  {
+func (session *chatSessionRepo) Create(uid int64, groupId int64, ty int8) *models.ChatSession  {
 	s := &models.ChatSession{}
 	s.UserId = uid
 	s.QueriedAt = time.Now().Unix()
@@ -23,15 +23,15 @@ func (session *ChatSessionRepo) Create(uid int64, groupId int64, ty int8) *model
 	return s
 }
 
-func (session *ChatSessionRepo) Save(model *models.ChatSession) int64 {
+func (session *chatSessionRepo) Save(model *models.ChatSession) int64 {
 	result := databases.Db.Omit(clause.Associations).Save(model)
 	return result.RowsAffected
 }
-func (session *ChatSessionRepo) Delete(where []*Where) int64  {
+func (session *chatSessionRepo) Delete(where []*Where) int64  {
 	result := databases.Db.Scopes(AddWhere(where)).Delete(&models.ChatSession{})
 	return result.RowsAffected
 }
-func (session *ChatSessionRepo) First(where []*Where, orders []string) *models.ChatSession  {
+func (session *chatSessionRepo) First(where []*Where, orders []string) *models.ChatSession  {
 	model := &models.ChatSession{}
 	databases.Db.Scopes(AddWhere(where)).Scopes(AddOrder(orders)).Find(model)
 	if model.Id == 0 {
@@ -40,7 +40,7 @@ func (session *ChatSessionRepo) First(where []*Where, orders []string) *models.C
 	return model
 }
 
-func (session *ChatSessionRepo) GetWaitHandles() []*models.ChatSession  {
+func (session *chatSessionRepo) GetWaitHandles() []*models.ChatSession  {
 	sessions := make([]*models.ChatSession, 0)
 	databases.Db.
 		Limit(-1).
@@ -63,7 +63,7 @@ func (session *ChatSessionRepo) GetWaitHandles() []*models.ChatSession  {
 		Find(&sessions)
 	return sessions
 }
-func (session *ChatSessionRepo) Get(wheres []*Where, limit int, load []string, orders []string) []*models.ChatSession {
+func (session *chatSessionRepo) Get(wheres []*Where, limit int, load []string, orders []string) []*models.ChatSession {
 	sessions := make([]*models.ChatSession, 0)
 	databases.Db.
 		Limit(limit).
@@ -75,7 +75,7 @@ func (session *ChatSessionRepo) Get(wheres []*Where, limit int, load []string, o
 }
 
 // FirstActiveByUser 获取有效会话
-func (session *ChatSessionRepo) FirstActiveByUser(uid int64, adminId int64) *models.ChatSession {
+func (session *chatSessionRepo) FirstActiveByUser(uid int64, adminId int64) *models.ChatSession {
 	s := session.First([]*Where{
 		{
 			Filed: "user_id = ?",
@@ -97,7 +97,7 @@ func (session *ChatSessionRepo) FirstActiveByUser(uid int64, adminId int64) *mod
 	return s
 }
 
-func (session *ChatSessionRepo) Paginate(c *gin.Context, wheres []*Where, load []string, orders []string) *Pagination {
+func (session *chatSessionRepo) Paginate(c *gin.Context, wheres []*Where, load []string, orders []string) *Pagination {
 	sessions := make([]*models.ChatSession, 0)
 	databases.Db.Order("id desc").
 		Scopes(Paginate(c)).

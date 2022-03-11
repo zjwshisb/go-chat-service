@@ -49,7 +49,7 @@ func (action *Action) Marshal() (b []byte, err error) {
 			err = errors.New("param error")
 			return
 		}
-		b, err = json.Marshal(Action{
+		b, err =  json.Marshal(Action{
 			Time:   action.Time,
 			Action: action.Action,
 			Data: msg.ToJson(),

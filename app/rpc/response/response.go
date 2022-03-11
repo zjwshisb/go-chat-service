@@ -1,10 +1,14 @@
 package response
 
-type ExistResponse struct {
+type ConnectionExistResponse struct {
 	Exists bool
 }
 
-type TotalResponse struct {
+type ConnectionTotalResponse struct {
 	Total int64
+}
+
+type ConnectionIdsResponse struct {
+	Ids []int64
 }
 

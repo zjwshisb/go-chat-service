@@ -7,15 +7,15 @@ import (
 	"ws/app/models"
 )
 
-type AutoRuleRepo struct {
+type autoRuleRepo struct {
 }
 
-func (repo *AutoRuleRepo) Update(wheres []*Where, values map[string]interface{}) int64 {
+func (repo *autoRuleRepo) Update(wheres []*Where, values map[string]interface{}) int64 {
 	query := databases.Db.Model(&models.AutoRule{}).Scopes(AddWhere(wheres))
 	query.Updates(values)
 	return query.RowsAffected
 }
-func (repo *AutoRuleRepo) Save(model *models.AutoRule)  {
+func (repo *autoRuleRepo) Save(model *models.AutoRule)  {
 	databases.Db.Omit(clause.Associations).Save(model)
 	for _ ,scene := range model.Scenes {
 		databases.Db.Save(&models.AutoRuleScene{
@@ -24,17 +24,17 @@ func (repo *AutoRuleRepo) Save(model *models.AutoRule)  {
 		})
 	}
 }
-func (repo *AutoRuleRepo) Delete(rule *models.AutoRule) int64 {
+func (repo *autoRuleRepo) Delete(rule *models.AutoRule) int64 {
 	result := databases.Db.Delete(rule)
 	repo.DeleteScene(rule)
 	return result.RowsAffected
 }
-func (repo *AutoRuleRepo) DeleteScene(rule *models.AutoRule) int64 {
+func (repo *autoRuleRepo) DeleteScene(rule *models.AutoRule) int64 {
 	result := databases.Db.Where("rule_id = ?", rule.ID).Delete(&models.AutoRuleScene{})
 	return result.RowsAffected
 }
 
-func (repo *AutoRuleRepo) Get(wheres []*Where, limit int, loads []string, orders []string) []*models.AutoRule {
+func (repo *autoRuleRepo) Get(wheres []*Where, limit int, loads []string, orders []string) []*models.AutoRule {
 	rules := make([]*models.AutoRule, 0)
 	query := databases.Db.
 		Limit(limit).
@@ -42,14 +42,14 @@ func (repo *AutoRuleRepo) Get(wheres []*Where, limit int, loads []string, orders
 	query.Find(&rules)
 	return rules
 }
-func (repo *AutoRuleRepo) GetWithScenesRuleIds(scene string) []string {
+func (repo *autoRuleRepo) GetWithScenesRuleIds(scene string) []string {
 	ids := make([]string, 0)
 	databases.Db.Model(&models.AutoRuleScene{}).
 		Where("name = ?" , scene).
 		Pluck("rule_id", &ids)
 	return ids
 }
-func (repo *AutoRuleRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order []string) *Pagination {
+func (repo *autoRuleRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order []string) *Pagination {
 	rules := make([]*models.AutoRule, 0)
 	databases.Db.
 		Scopes(Paginate(c)).
@@ -65,7 +65,7 @@ func (repo *AutoRuleRepo) Paginate(c *gin.Context, wheres []*Where, load []strin
 }
 
 // GetAllActiveNormalByGroup 获取所有的启用的普通规则
-func (repo *AutoRuleRepo) GetAllActiveNormalByGroup(gid int64) []*models.AutoRule {
+func (repo *autoRuleRepo) GetAllActiveNormalByGroup(gid int64) []*models.AutoRule {
 	return repo.Get([]*Where{
 		{
 			Filed: "is_system",
@@ -81,7 +81,7 @@ func (repo *AutoRuleRepo) GetAllActiveNormalByGroup(gid int64) []*models.AutoRul
 		},
 	}, -1 , []string{"Message", "Scenes"}, []string{"sort"})
 }
-func (repo *AutoRuleRepo) GetEnterByGroup(gid int64) *models.AutoRule {
+func (repo *autoRuleRepo) GetEnterByGroup(gid int64) *models.AutoRule {
 	return repo.First([]*Where{
 		{
 			Filed: "is_system",
@@ -99,7 +99,7 @@ func (repo *AutoRuleRepo) GetEnterByGroup(gid int64) *models.AutoRule {
 }
 
 // GetAdminAllOffLine 获取转接人工时没有客服在线规则
-func (repo *AutoRuleRepo) GetAdminAllOffLine(gid int64) *models.AutoRule {
+func (repo *autoRuleRepo) GetAdminAllOffLine(gid int64) *models.AutoRule {
 	return repo.First([]*Where{
 		{
 			Filed: "is_system = ?",
@@ -116,7 +116,7 @@ func (repo *AutoRuleRepo) GetAdminAllOffLine(gid int64) *models.AutoRule {
 	}, []string{})
 }
 
-func (repo *AutoRuleRepo) First(wheres []*Where, orders []string) *models.AutoRule {
+func (repo *autoRuleRepo) First(wheres []*Where, orders []string) *models.AutoRule {
 	rule := &models.AutoRule{}
 	result := databases.Db.Scopes(AddOrder(orders)).Scopes(AddWhere(wheres)).First(rule)
 	if result.Error != nil {

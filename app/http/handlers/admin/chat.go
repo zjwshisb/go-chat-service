@@ -20,7 +20,7 @@ type ChatHandler struct {
 // GetHistorySession 查看历史对话
 func (handle *ChatHandler) GetHistorySession(c *gin.Context) {
 	useId := c.Param("uid")
-	sessions := chatSessionRepo.Get([]Where{
+	sessions := repositories.ChatSessionRepo.Get([]*repositories.Where{
 		{
 			Filed: "user_id = ?",
 			Value: useId,
@@ -68,7 +68,7 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	wheres := []Where{
+	wheres := []*repositories.Where{
 		{
 			Filed: "admin_id = ?",
 			Value: admin.GetPrimaryKey(),
@@ -92,7 +92,7 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 			})
 		}
 	}
-	messages := messageRepo.Get(wheres, 20, []string{"User", "Admin"}, []string{"id desc"})
+	messages := repositories.MessageRepo.Get(wheres, 20, []string{"User", "Admin"}, []string{"id desc"})
 	res := make([]*resource.Message, 0)
 	for _, m := range messages {
 		res = append(res, m.ToJson())
@@ -112,7 +112,7 @@ func (handle *ChatHandler) GetReqId(c *gin.Context)  {
 func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 	admin := requests.GetAdmin(c)
 	ids, times := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
-	users := userRepo.Get([]Where{
+	users := repositories.UserRepo.Get([]*repositories.Where{
 		{
 			Filed: "id in ?",
 			Value: ids,
@@ -147,7 +147,7 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 		}
 		resp = append(resp, chatUserRes)
 	}
-	messages := messageRepo.Get([]Where{
+	messages := repositories.MessageRepo.Get([]*repositories.Where{
 		{
 			Filed: "received_at > ?",
 			Value: time.Now().Unix() - 3 * 24 * 60 * 60,
@@ -188,7 +188,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		util.RespValidateFail(c, "invalid params")
 		return
 	}
-	session := chatSessionRepo.First([]Where{
+	session := repositories.ChatSessionRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: form.Sid,
@@ -198,7 +198,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		util.RespNotFound(c)
 		return
 	}
-	user := userRepo.First([]Where{
+	user := repositories.UserRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: session.UserId,
@@ -228,7 +228,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			util.RespValidateFail(c, "transfer error ")
 			return
 		}
-		transfer := transferRepo.First([]Where{
+		transfer := repositories.TransferRepo.First([]*repositories.Where{
 			{
 				Filed: "to_admin_id = ?",
 				Value: admin.GetPrimaryKey(),
@@ -249,11 +249,11 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		now := time.Now()
 		transfer.AcceptedAt = now.Unix()
 		transfer.IsAccepted = true
-		transferRepo.Save(transfer)
+		repositories.TransferRepo.Save(transfer)
 		_ = chat.TransferService.RemoveUser(user.GetPrimaryKey())
 		websocket.AdminManager.PublishTransfer(admin)
 	}
-	unSendMsg := messageRepo.GetUnSend([]Where{
+	unSendMsg := repositories.MessageRepo.GetUnSend([]*repositories.Where{
 		{
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
@@ -265,11 +265,11 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	})
 	session.AcceptedAt = time.Now().Unix()
 	session.AdminId = admin.GetPrimaryKey()
-	chatSessionRepo.Save(session)
+	repositories.ChatSessionRepo.Save(session)
 	_ = chat.AdminService.AddUser(admin, user)
 	now := time.Now().Unix()
 	// 更新未发送的消息
-	messageRepo.Update([]*repositories.Where{
+	repositories.MessageRepo.Update([]*repositories.Where{
 		{
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
@@ -286,7 +286,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		"admin_id": admin.GetPrimaryKey(),
 		"send_at":  now,
 	})
-	messages := messageRepo.Get([]*repositories.Where{
+	messages := repositories.MessageRepo.Get([]*repositories.Where{
 		{
 			Filed: "user_id = ?",
 			Value: user.GetPrimaryKey(),
@@ -310,8 +310,8 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	}
 	chatUser.Unread = len(unSendMsg)
 	chatUser.LastChatTime = time.Now().Unix()
-	noticeMessage := messageRepo.NewNotice(session, admin.GetChatName() + "为您服务")
-	messageRepo.Save(noticeMessage)
+	noticeMessage := repositories.MessageRepo.NewNotice(session, admin.GetChatName() + "为您服务")
+	repositories.MessageRepo.Save(noticeMessage)
 	websocket.UserManager.DeliveryMessage(noticeMessage, false)
 	for index, m := range messages {
 		rm := m.ToJson()
@@ -327,7 +327,7 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 	uidStr := c.Param("id")
 	u := requests.GetAdmin(c)
 	admin, _ := u.(*models.Admin)
-	session := chatSessionRepo.First([]Where{
+	session := repositories.ChatSessionRepo.First([]*repositories.Where{
 		{
 			Filed: "user_id = ?",
 			Value: uidStr,
@@ -339,8 +339,8 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 	}, []string{"id desc"})
 	if session != nil {
 		if session.BrokeAt == 0 {
-			noticeMessage := messageRepo.NewNotice(session, admin.GetChatName() + "已断开服务")
-			messageRepo.Save(noticeMessage)
+			noticeMessage := repositories.MessageRepo.NewNotice(session, admin.GetChatName() + "已断开服务")
+			repositories.MessageRepo.Save(noticeMessage)
 			websocket.UserManager.DeliveryMessage(noticeMessage, false)
 		}
 		chat.SessionService.Close(session.Id, true, false)
@@ -356,7 +356,7 @@ func (handle *ChatHandler) ReadAll(c *gin.Context) {
 	}{}
 	err := c.Bind(form)
 	admin := requests.GetAdmin(c)
-	wheres := []Where{
+	wheres := []*repositories.Where{
 		{
 			Filed: "admin_id = ?",
 			Value: admin.GetPrimaryKey(),
@@ -377,7 +377,7 @@ func (handle *ChatHandler) ReadAll(c *gin.Context) {
 				Value: form.MsgId,
 			})
 		}
-		messageRepo.Update(wheres, map[string]interface{}{
+		repositories.MessageRepo.Update(wheres, map[string]interface{}{
 			"is_read": 1,
 		})
 		util.RespSuccess(c, gin.H{})
@@ -395,7 +395,7 @@ func (handle *ChatHandler) GetUserInfo(c *gin.Context)  {
 		return
 	}
 	admin := requests.GetAdmin(c)
-	user := userRepo.First([]Where{
+	user := repositories.UserRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: uid,
@@ -423,7 +423,7 @@ func (handle *ChatHandler) GetUserInfo(c *gin.Context)  {
 // TransferMessages 转接历史消息
 func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 	admin := requests.GetAdmin(c)
-	transfer := transferRepo.First([]Where{
+	transfer := repositories.TransferRepo.First([]*repositories.Where{
 		{
 			Filed: "to_admin_id = ?",
 			Value: admin.GetPrimaryKey(),
@@ -437,7 +437,7 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 		util.RespNotFound(c)
 		return
 	}
-	messages := messageRepo.Get([]Where{
+	messages := repositories.MessageRepo.Get([]*repositories.Where{
 		{
 			Filed: "session_id = ?",
 			Value: transfer.SessionId,
@@ -454,7 +454,7 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 func (handle *ChatHandler) CancelTransfer(c *gin.Context) {
 	id := c.Param("id")
 	admin := requests.GetAdmin(c)
-	transfer := transferRepo.First([]*repositories.Where{
+	transfer := repositories.TransferRepo.First([]*repositories.Where{
 		{
 			Filed: "to_admin_id = ?",
 			Value:  admin.GetPrimaryKey(),
@@ -493,7 +493,7 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		util.RespValidateFail(c , err.Error())
 		return
 	}
-	user := userRepo.First([]Where{
+	user := repositories.UserRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: form.UserId,
@@ -508,7 +508,7 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		util.RespNotFound(c)
 		return
 	}
-	toAdmin := adminRepo.First([]Where{
+	toAdmin := repositories.AdminRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: form.ToId,

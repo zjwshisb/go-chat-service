@@ -21,7 +21,7 @@ func (handler *AutoMessageHandler) Index(c *gin.Context)  {
 		Filed: "group_id = ?",
 		Value: admin.GetGroupId(),
 	})
-	p := autoMessageRepo.Paginate(c, wheres, []string{"Rules"}, []string{"id desc"})
+	p := repositories.AutoMessageRepo.Paginate(c, wheres, []string{"Rules"}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.AutoMessage)
 		return item.ToJson()
@@ -32,7 +32,7 @@ func (handler *AutoMessageHandler) Index(c *gin.Context)  {
 func (handler *AutoMessageHandler) Show(c *gin.Context) {
 	id := c.Param("id")
 	admin := requests.GetAdmin(c)
-	message := autoMessageRepo.First([]Where{
+	message := repositories.AutoMessageRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: id,
@@ -56,7 +56,7 @@ func (handler *AutoMessageHandler) Store(c *gin.Context)  {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
-	exist := autoMessageRepo.First([]Where{
+	exist := repositories.AutoMessageRepo.First([]*repositories.Where{
 		{
 			Filed: "name = ?",
 			Value: form.Name,
@@ -92,11 +92,11 @@ func (handler *AutoMessageHandler) Store(c *gin.Context)  {
 		}
 		message.Content = string(jsonBytes)
 	}
-	autoMessageRepo.Save(message)
+	repositories.AutoMessageRepo.Save(message)
 	util.RespSuccess(c, message)
 }
 func (handler *AutoMessageHandler) Update(c *gin.Context) {
-	message := autoMessageRepo.First([]Where{
+	message := repositories.AutoMessageRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: c.Param("id"),
@@ -116,7 +116,7 @@ func (handler *AutoMessageHandler) Update(c *gin.Context) {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
-	exist := autoMessageRepo.First([]Where{
+	exist := repositories.AutoMessageRepo.First([]*repositories.Where{
 		{
 			Filed: "name = ?",
 			Value: form.Name,
@@ -150,11 +150,11 @@ func (handler *AutoMessageHandler) Update(c *gin.Context) {
 		}
 		message.Content = string(jsonBytes)
 	}
-	autoMessageRepo.Save(message)
+	repositories.AutoMessageRepo.Save(message)
 	util.RespSuccess(c, message)
 }
 func (handler *AutoMessageHandler) Delete(c *gin.Context) {
-	message := autoMessageRepo.First([]Where{
+	message := repositories.AutoMessageRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: c.Param("id"),
@@ -168,7 +168,7 @@ func (handler *AutoMessageHandler) Delete(c *gin.Context) {
 		util.RespNotFound(c)
 		return
 	}
-	rules := autoRuleRepo.Get([]Where{
+	rules := repositories.AutoRuleRepo.Get([]*repositories.Where{
 		{
 			Filed: "message_id = ?",
 			Value: message.ID,
@@ -182,6 +182,6 @@ func (handler *AutoMessageHandler) Delete(c *gin.Context) {
 		util.RespValidateFail(c, "该消息在其他地方有使用，无法删除")
 		return
 	}
-	autoMessageRepo.Delete(message)
+	repositories.AutoMessageRepo.Delete(message)
 	util.RespSuccess(c, message)
 }

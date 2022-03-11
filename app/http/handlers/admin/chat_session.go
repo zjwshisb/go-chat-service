@@ -17,8 +17,8 @@ type ChatSessionHandler struct {
 
 }
 var sessionFilter = map[string]interface{}{
-	"admin_name": func(val string) Where {
-		admins := adminRepo.Get([]Where{
+	"admin_name": func(val string) *repositories.Where {
+		admins := repositories.AdminRepo.Get([]*repositories.Where{
 			{
 				Filed: "username like ?",
 				Value: "%" + val + "%",
@@ -84,7 +84,7 @@ func (handler *ChatSessionHandler) Index(c *gin.Context)  {
 			})
 		}
 	}
-	p := chatSessionRepo.Paginate(c , wheres, []string{"Admin","User"},[]string{"id desc"})
+	p := repositories.ChatSessionRepo.Paginate(c , wheres, []string{"Admin","User"},[]string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.ChatSession)
 		return item.ToJson()
@@ -93,7 +93,7 @@ func (handler *ChatSessionHandler) Index(c *gin.Context)  {
 }
 func (handler *ChatSessionHandler) Cancel(c *gin.Context)  {
 	sessionId := c.Param("id")
-	session := chatSessionRepo.First([]Where{
+	session := repositories.ChatSessionRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: sessionId,
@@ -116,7 +116,7 @@ func (handler *ChatSessionHandler) Cancel(c *gin.Context)  {
 		return
 	}
 	session.CanceledAt = time.Now().Unix()
-	chatSessionRepo.Save(session)
+	repositories.ChatSessionRepo.Save(session)
 	_ = chat.ManualService.Remove(session.UserId, session.GetUser().GetGroupId())
 	websocket.AdminManager.PublishWaitingUser(session.GetUser().GetGroupId())
 	util.RespSuccess(c, gin.H{})
@@ -125,7 +125,7 @@ func (handler *ChatSessionHandler) Cancel(c *gin.Context)  {
 // Show 会话详情
 func (handler *ChatSessionHandler) Show(c *gin.Context) {
 	sessionId := c.Param("id")
-	session := chatSessionRepo.First([]Where{
+	session := repositories.ChatSessionRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: sessionId,
@@ -135,7 +135,7 @@ func (handler *ChatSessionHandler) Show(c *gin.Context) {
 			Value: requests.GetAdmin(c).GetGroupId(),
 		},
 	}, []string{})
-	messages := messageRepo.Get([]Where{
+	messages := repositories.MessageRepo.Get([]*repositories.Where{
 		{
 			Filed: "session_id = ?",
 			Value: sessionId,

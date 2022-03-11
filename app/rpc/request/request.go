@@ -1,10 +1,10 @@
 package request
 
-type ExistRequest struct {
+type ConnectionExistRequest struct {
 	Uid int64
 }
 
-type GroupRequest struct {
+type ConnectionGroupRequest struct {
 	GroupId int64
 	Types string
 }

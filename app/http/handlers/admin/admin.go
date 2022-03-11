@@ -25,7 +25,7 @@ func (handle *AdminsHandler) Index(c *gin.Context){
 		Filed: "group_id = ?",
 		Value: admin.GetGroupId(),
 	})
-	p := adminRepo.Paginate(c, where, []string{}, []string{"id desc"})
+	p := repositories.AdminRepo.Paginate(c, where, []string{}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		admin := i.(*models.Admin)
 		return &resource.Admin{
@@ -42,7 +42,7 @@ func (handle *AdminsHandler) Index(c *gin.Context){
 func (handle *AdminsHandler) Show(c *gin.Context){
 	id := c.Param("id")
 	u := requests.GetAdmin(c)
-	admin := adminRepo.First([]Where{
+	admin := repositories.AdminRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: id,
@@ -64,7 +64,7 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 	firstDate := date.StartOfMonth()
 	lastDate := date.EndOfMonth()
 	firstDateUnix := firstDate.ToTimestamp()
-	sessions := chatSessionRepo.Get([]Where{
+	sessions := repositories.ChatSessionRepo.Get([]*repositories.Where{
 		{
 			Filed: "accepted_at >= ?",
 			Value: firstDateUnix,

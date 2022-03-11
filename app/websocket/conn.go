@@ -7,6 +7,7 @@ import (
 	"ws/app/contract"
 	"ws/app/log"
 	"ws/app/models"
+	"ws/app/repositories"
 )
 
 
@@ -126,7 +127,7 @@ func (c *Client) sendMsg() {
 						msg, ok := act.Data.(*models.Message)
 						if ok {
 							msg.SendAt = time.Now().Unix()
-							messageRepo.Save(msg)
+							repositories.MessageRepo.Save(msg)
 						}
 					default:
 					}

@@ -24,7 +24,7 @@ type transferService struct {
 
 // Cancel 取消待接入的转接
 func (transferService *transferService) Cancel(transfer *models.ChatTransfer) error {
-	chatSessionRepo.Delete([]*repositories.Where{
+	repositories.ChatSessionRepo.Delete([]*repositories.Where{
 		{
 			Filed: "admin_id = ?",
 			Value: 0,
@@ -41,20 +41,20 @@ func (transferService *transferService) Cancel(transfer *models.ChatTransfer) er
 	transfer.IsCanceled = true
 	t := time.Now()
 	transfer.CanceledAt = t.Unix()
-	_ = transferRepo.Save(transfer)
+	_ = repositories.TransferRepo.Save(transfer)
 	_ = transferService.RemoveUser(transfer.UserId)
 	return nil
 }
 
 // Create 创建转接
 func (transferService *transferService) Create(fromId int64, toId int64, uid int64, remark  string) error  {
-	session := chatSessionRepo.FirstActiveByUser(uid, fromId)
+	session := repositories.ChatSessionRepo.FirstActiveByUser(uid, fromId)
 	SessionService.Close(session.Id, true, true)
 	if session == nil {
 		return errors.New("invalid user")
 	}
 	now := time.Now()
-	newSession := chatSessionRepo.Create(uid, session.GroupId,models.ChatSessionTypeTransfer)
+	newSession := repositories.ChatSessionRepo.Create(uid, session.GroupId,models.ChatSessionTypeTransfer)
 	transfer := &models.ChatTransfer{
 		UserId:      uid,
 		SessionId:   newSession.Id,
@@ -63,7 +63,7 @@ func (transferService *transferService) Create(fromId int64, toId int64, uid int
 		Remark:      remark,
 		CreatedAt:   now.Unix(),
 	}
-	transferRepo.Save(transfer)
+	repositories.TransferRepo.Save(transfer)
 	_ = transferService.AddUser(uid, toId)
 	return nil
 }

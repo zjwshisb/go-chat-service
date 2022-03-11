@@ -1,15 +1,26 @@
 package repositories
 
 import (
+	"gorm.io/gorm/clause"
 	"ws/app/databases"
 	"ws/app/models"
 )
 
-type ChatSettingRepo struct {
+type chatSettingRepo struct {
 	
 }
+func (setting *chatSettingRepo) Save(s *models.ChatSetting)  {
+	databases.Db.Omit(clause.Associations).Save(s)
+}
+func (setting *chatSettingRepo) Get(wheres []*Where, limit int, load []string, orders []string) []*models.ChatSetting {
+	items := make([]*models.ChatSetting, 0 )
+	databases.Db.Scopes(AddWhere(wheres)).
+		Scopes(AddLoad(load)).
+		Scopes(AddOrder(orders)).Limit(limit).Find(&items)
+	return items
+}
 
-func (setting *ChatSettingRepo) First(wheres []*Where, orders []string) *models.ChatSetting {
+func (setting *chatSettingRepo) First(wheres []*Where, orders []string) *models.ChatSetting {
 	s := &models.ChatSetting{}
 	result := databases.Db.Scopes(AddOrder(orders)).Scopes(AddWhere(wheres)).First(s)
 	if result.Error != nil {
@@ -17,7 +28,7 @@ func (setting *ChatSettingRepo) First(wheres []*Where, orders []string) *models.
 	}
 	return s
 }
-func (setting *ChatSettingRepo) GetSystemAvatar(groupId int64)  string{
+func (setting *chatSettingRepo) GetSystemAvatar(groupId int64)  string{
 	s := setting.First([]*Where{
 		{
 			Filed: "type = ?",
@@ -33,7 +44,7 @@ func (setting *ChatSettingRepo) GetSystemAvatar(groupId int64)  string{
 	}
 	return ""
 }
-func (setting *ChatSettingRepo) GetSystemName(groupId int64) string {
+func (setting *chatSettingRepo) GetSystemName(groupId int64) string {
 	s := setting.First([]*Where{
 		{
 		Filed: "type = ?",

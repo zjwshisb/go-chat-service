@@ -12,6 +12,7 @@ import (
 	"ws/app/log"
 	"ws/app/models"
 	"ws/app/mq"
+	"ws/app/repositories"
 	"ws/app/resource"
 	"ws/app/util"
 )
@@ -51,9 +52,10 @@ func SetupAdmin() {
 func (m *adminManager) Run() {
 	m.manager.Run()
 	go m.handleReceiveMessage()
-	if m.isCluster() {
+	m.Do(func() {
 		go m.handleRemoteMessage()
-	}
+	}, nil)
+
 }
 
 // DeliveryMessage
@@ -89,7 +91,7 @@ func (m *adminManager) handleReceiveMessage() {
 // 处理离线消息
 func (m *adminManager) handleOffline(msg *models.Message) {
 	UserManager.triggerMessageEvent(models.SceneAdminOffline, msg)
-	admin := adminRepo.First([]Where{
+	admin := repositories.AdminRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: msg.AdminId,
@@ -101,7 +103,7 @@ func (m *adminManager) handleOffline(msg *models.Message) {
 		if setting.OfflineContent != "" {
 			offlineMsg := setting.GetOfflineMsg(msg.UserId, msg.SessionId)
 			offlineMsg.Admin = admin
-			messageRepo.Save(offlineMsg)
+			repositories.MessageRepo.Save(offlineMsg)
 			UserManager.DeliveryMessage(offlineMsg, false)
 		}
 		// 判断是否自动断开
@@ -139,7 +141,7 @@ func (m *adminManager) handleRemoteMessage() {
 			case mq.TypeOtherLogin:
 				uid := message.Get("data").Int()
 				if uid > 0 {
-					user := userRepo.First([]Where{{
+					user := repositories.UserRepo.First([]*repositories.Where{{
 						Filed: "id = ?",
 						Value: uid,
 					}}, []string{})
@@ -150,7 +152,7 @@ func (m *adminManager) handleRemoteMessage() {
 			case mq.TypeTransfer:
 				adminId := message.Get("data").Int()
 				if adminId > 0 {
-					admin := adminRepo.First([]Where{
+					admin := repositories.AdminRepo.First([]*repositories.Where{
 						{
 							Filed: "id = ?",
 							Value: adminId,
@@ -162,19 +164,25 @@ func (m *adminManager) handleRemoteMessage() {
 				}
 			case mq.TypeMessage:
 				mid := message.Get("data").Int()
-				msg := messageRepo.First(mid)
+				msg := repositories.MessageRepo.First(mid)
 				if msg != nil {
 					m.DeliveryMessage(msg , true)
 				}
 			case mq.TypeUpdateSetting:
 				id := message.Get("data").Int()
-				admin := adminRepo.First([]Where{{
+				admin := repositories.AdminRepo.First([]*repositories.Where{{
 					Filed: "id = ?",
 					Value: id,
 				}}, []string{})
 				if admin != nil {
 					m.updateSetting(admin)
 				}
+			case mq.TypeUserOnline:
+				userId := message.Get("data").Int()
+				m.NoticeUserOnline(userId)
+			case mq.TypeUserOffline:
+				userId := message.Get("data").Int()
+				m.NoticeUserOffline(userId)
 			}
 		}()
 	}
@@ -194,7 +202,7 @@ func (m *adminManager) handleMessage(payload *ConnMessage) {
 					conn.Deliver(NewErrorMessage("该用户已失效，无法发送消息"))
 					return
 				}
-				session := sessionRepo.FirstActiveByUser(msg.UserId, conn.GetUserId())
+				session := repositories.ChatSessionRepo.FirstActiveByUser(msg.UserId, conn.GetUserId())
 				if session == nil {
 					conn.Deliver(NewErrorMessage("无效的用户"))
 					return
@@ -206,7 +214,7 @@ func (m *adminManager) handleMessage(payload *ConnMessage) {
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Admin = conn.User.(*models.Admin)
 				msg.SessionId = session.Id
-				messageRepo.Save(msg)
+				repositories.MessageRepo.Save(msg)
 				_ = chat.AdminService.UpdateUser(msg.AdminId, msg.UserId)
 				// 服务器回执d
 				conn.Deliver(NewReceiptAction(msg))
@@ -228,60 +236,121 @@ func (m *adminManager) unregisterHook(conn Conn) {
 	admin, ok := u.(*models.Admin)
 	if ok {
 		setting := admin.GetSetting()
-		adminRepo.UpdateSetting(setting, "last_online", time.Now())
+		repositories.AdminRepo.UpdateSetting(setting, "last_online", time.Now())
 	}
 	m.PublishAdmins(conn.GetGroupId())
 }
-
 // PublishWaitingUser 推送待接入用户
 func (m *adminManager) PublishWaitingUser(groupId int64) {
-	if m.isCluster() {
+	m.Do(func() {
 		m.publishToAllChannel(&mq.Payload{
 			Types: mq.TypeWaitingUser,
 			Data:  groupId,
 		})
-	} else {
+	}, func() {
 		m.broadcastWaitingUser(groupId)
+	})
+}
+func (m *adminManager) PublishUserOffline(user contract.User) {
+	m.Do(func() {
+		adminId := chat.UserService.GetValidAdmin(user.GetPrimaryKey())
+		if adminId > 0 {
+			channel := m.getUserChannel(adminId)
+			if channel != "" {
+				_ = m.publish(channel, &mq.Payload{
+					Types: mq.TypeUserOffline,
+					Data:  user.GetPrimaryKey(),
+				})
+			}
+		}
+	}, func() {
+		m.NoticeUserOffline(user.GetPrimaryKey())
+	})
+}
+
+func (m *adminManager) PublishUserOnline(user contract.User) {
+	m.Do(func() {
+		adminId := chat.UserService.GetValidAdmin(user.GetPrimaryKey())
+		if adminId > 0 {
+			channel := m.getUserChannel(adminId)
+			if channel != "" {
+				_ = m.publish(channel, &mq.Payload{
+					Types: mq.TypeUserOnline,
+					Data:  user.GetPrimaryKey(),
+				})
+			}
+		}
+	}, func() {
+		m.NoticeUserOnline(user.GetPrimaryKey())
+	})
+}
+
+// NoticeUserOffline 通知用户离线
+func (m *adminManager) NoticeUserOffline(uid int64) {
+	adminId := chat.UserService.GetValidAdmin(uid)
+	admin := repositories.AdminRepo.First([]*repositories.Where{
+		{
+			Filed: "id = ?",
+			Value: adminId,
+		},
+	}, []string{})
+	conn, exist := m.GetConn(admin)
+	if exist {
+		m.SendAction(NewUserOffline(uid), conn)
+	}
+}
+// NoticeUserOnline 通知用户上线
+func (m *adminManager) NoticeUserOnline(uid int64) {
+	adminId := chat.UserService.GetValidAdmin(uid)
+	admin := repositories.AdminRepo.First([]*repositories.Where{
+		{
+			Filed: "id = ?",
+			Value: adminId,
+		},
+	}, []string{})
+	conn, exist := m.GetConn(admin)
+	if exist {
+		m.SendAction(NewUserOnline(uid), conn)
 	}
 }
 
 // PublishTransfer 推送待转接的用户
 func (m *adminManager) PublishTransfer(admin contract.User) {
-	if m.isCluster() {
+	m.Do(func() {
 		m.publishToAllChannel(&mq.Payload{
 			Types: mq.TypeTransfer,
 			Data:  admin.GetPrimaryKey(),
 		})
-	} else {
+	}, func() {
 		m.broadcastUserTransfer(admin)
-	}
+	})
 }
 
 // PublishUpdateSetting admin修改设置后通知conn 更新admin的设置信息
 func (m *adminManager) PublishUpdateSetting(admin contract.User)  {
-	if m.isCluster() {
+	m.Do(func() {
 		channel := m.getUserChannel(admin.GetPrimaryKey())
 		if channel != "" {
-			m.publish(channel, &mq.Payload{
+			_ = m.publish(channel, &mq.Payload{
 				Types: mq.TypeUpdateSetting,
 				Data:  admin.GetPrimaryKey(),
 			})
 		}
-	} else {
+	}, func() {
 		m.updateSetting(admin)
-	}
+	})
 }
 
 // PublishAdmins 推送在线admin
 func (m *adminManager) PublishAdmins(gid int64) {
-	if m.isCluster() {
+	m.Do(func() {
 		m.publishToAllChannel(&mq.Payload{
 			Types: mq.TypeAdmin,
 			Data: gid,
 		})
-	} else {
+	}, func() {
 		m.broadcastAdmins(gid)
-	}
+	})
 }
 
 // 更新设置
@@ -298,7 +367,7 @@ func (m *adminManager) updateSetting(admin contract.User)  {
 // 广播待接入用户
 func (m *adminManager) broadcastWaitingUser(groupId int64) {
 	log.Log.Info("广播待接入用户")
-	sessions := sessionRepo.GetWaitHandles()
+	sessions := repositories.ChatSessionRepo.GetWaitHandles()
 	userMap := make(map[int64]*models.User)
 	waitingUser := make([]*resource.WaitingChatSession, 0, len(sessions))
 	for _, session := range sessions {
@@ -343,7 +412,7 @@ func (m *adminManager) broadcastWaitingUser(groupId int64) {
 func (m *adminManager) broadcastUserTransfer(admin contract.User) {
 	client, exist := m.GetConn(admin)
 	if exist {
-		transfers := transferRepo.Get([]Where{
+		transfers := repositories.TransferRepo.Get([]*repositories.Where{
 			{
 				Filed: "to_admin_id = ?",
 				Value: admin.GetPrimaryKey(),
@@ -368,7 +437,7 @@ func (m *adminManager) broadcastUserTransfer(admin contract.User) {
 // 广播在线admin
 func (m *adminManager) broadcastAdmins(gid int64) {
 	ids := m.GetOnlineUserIds(gid)
-	admins := adminRepo.Get([]Where{{
+	admins := repositories.AdminRepo.Get([]*repositories.Where{{
 		Filed: "id in ?",
 		Value: ids,
 	}}, -1, []string{}, []string{})

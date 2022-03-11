@@ -1,4 +1,4 @@
-package client
+package rpcclient
 
 import (
 	etcdClient "github.com/rpcxio/rpcx-etcd/client"

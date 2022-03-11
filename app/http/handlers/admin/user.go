@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"ws/app/http/requests"
 	"ws/app/models"
+	"ws/app/repositories"
 	"ws/app/util"
 	"ws/app/websocket"
 )
@@ -40,7 +41,7 @@ func (User *UserHandler) UpdateSetting(c *gin.Context) {
 	setting.WelcomeContent = form.WelcomeContent
 	setting.OfflineContent = form.OfflineContent
 	setting.Name = form.Name
-	adminRepo.SaveSetting(setting)
+	repositories.AdminRepo.SaveSetting(setting)
 	websocket.AdminManager.PublishUpdateSetting(admin)
 	util.RespSuccess(c, gin.H{})
 }
@@ -56,7 +57,7 @@ func (User *UserHandler) Avatar(c *gin.Context) {
 		u := requests.GetAdmin(c)
 		admin := u.(*models.Admin)
 		setting := admin.GetSetting()
-		adminRepo.UpdateSetting(setting, "avatar", form.Url)
+		repositories.AdminRepo.UpdateSetting(setting, "avatar", form.Url)
 		websocket.AdminManager.PublishUpdateSetting(admin)
 		util.RespSuccess(c, gin.H{})
 	}

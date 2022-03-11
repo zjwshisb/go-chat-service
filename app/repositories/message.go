@@ -8,13 +8,13 @@ import (
 	"ws/app/models"
 )
 
-type MessageRepo struct {
+type messageRepo struct {
 }
 
-func (repo *MessageRepo) Save(message *models.Message)  {
+func (repo *messageRepo) Save(message *models.Message)  {
 	databases.Db.Omit(clause.Associations).Save(message)
 }
-func (repo *MessageRepo) First(id interface{}) *models.Message {
+func (repo *messageRepo) First(id interface{}) *models.Message {
 	message := &models.Message{}
 	query := databases.Db.Find(message, id)
 	if query.Error == gorm.ErrRecordNotFound {
@@ -22,7 +22,7 @@ func (repo *MessageRepo) First(id interface{}) *models.Message {
 	}
 	return message
 }
-func (repo *MessageRepo) Get(wheres []*Where, limit int, loads []string, orders []string) []*models.Message {
+func (repo *messageRepo) Get(wheres []*Where, limit int, loads []string, orders []string) []*models.Message {
 	messages := make([]*models.Message, 0)
 	query := databases.Db.
 		Limit(limit).
@@ -31,13 +31,13 @@ func (repo *MessageRepo) Get(wheres []*Where, limit int, loads []string, orders 
 	return messages
 }
 
-func (repo *MessageRepo) Update(wheres []*Where, values map[string]interface{}) int64 {
+func (repo *messageRepo) Update(wheres []*Where, values map[string]interface{}) int64 {
 	query := databases.Db.Table("messages").Scopes(AddWhere(wheres))
 	query.Updates(values)
 	return query.RowsAffected
 }
 
-func (repo *MessageRepo) GetUnSend(wheres []*Where) []*models.Message {
+func (repo *messageRepo) GetUnSend(wheres []*Where) []*models.Message {
 	wheres = append(wheres, &Where{
 		Filed: "admin_id = ?",
 		Value: 0,
@@ -48,7 +48,7 @@ func (repo *MessageRepo) GetUnSend(wheres []*Where) []*models.Message {
 	return repo.Get(wheres, -1, []string{}, []string{"id desc"})
 }
 
-func (repo *MessageRepo) NewNotice(session *models.ChatSession, content string) *models.Message {
+func (repo *messageRepo) NewNotice(session *models.ChatSession, content string) *models.Message {
 	return &models.Message{
 		UserId:     session.UserId,
 		AdminId:    session.AdminId,

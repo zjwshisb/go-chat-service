@@ -12,7 +12,7 @@ import (
 	"ws/app/databases"
 	"ws/app/models"
 	"ws/app/mq"
-	"ws/app/rpc/client"
+	"ws/app/rpc/rpcclient"
 )
 
 // ConnContainer 管理相关方法
@@ -28,6 +28,7 @@ type ConnContainer interface {
 	RemoveConn(user contract.User)
 	IsOnline(user contract.User) bool
 	GetOnlineUserIds(gid int64) []int64
+	Do(c func(), f func())
 }
 
 // ChannelManager channel相关方法
@@ -118,6 +119,18 @@ type manager struct {
 	types string //类型
 }
 
+func (m *manager) Do(clusterFunc func(), single func()) {
+	if m.isCluster() {
+		if clusterFunc != nil {
+			clusterFunc()
+		}
+	} else {
+		if single != nil {
+			single()
+		}
+	}
+}
+
 func (m *manager) getMod(gid int64) int64 {
 	return gid % m.shardCount
 }
@@ -150,19 +163,19 @@ func (m *manager) getUserChannelKey(uid int64) string {
 
 // 设置用户所在channel为当前manager
 func (m *manager) setUserChannel(uid int64)  {
-	if m.isCluster() {
+	m.Do(func() {
 		ctx := context.Background()
 		key := m.getUserChannelKey(uid)
 		databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), time.Hour * 24 * 2)
-	}
+	}, nil)
 }
 
 // 移除用户所在channel
 func (m *manager) removeUserChannel(uid int64)  {
-	if m.isCluster() {
+	m.Do(func() {
 		ctx := context.Background()
 		databases.Redis.Del(ctx, m.getUserChannelKey(uid))
-	}
+	}, nil)
 }
 
 
@@ -193,7 +206,7 @@ func (m *manager) handleRepeatLogin(user contract.User, remote bool) {
 	if exist {
 		m.SendAction(NewMoreThanOne(), old)
 	} else if !remote {
-		if m.isCluster() {
+		m.Do(func() {
 			oldChannel := m.getUserChannel(user.GetPrimaryKey())
 			if oldChannel != ""  && oldChannel != m.GetSubscribeChannel() {
 				_ = m.publish(oldChannel, &mq.Payload{
@@ -201,25 +214,28 @@ func (m *manager) handleRepeatLogin(user contract.User, remote bool) {
 					Data: user.GetPrimaryKey(),
 				})
 			}
-		}
+		}, nil)
 	}
 }
 
 // GetOnlineUserIds 获取groupId对应的在线userIds
 func (m *manager) GetOnlineUserIds(gid int64) []int64 {
 	if m.isCluster() {
-		return make([]int64, 0, 0)
+		return rpcclient.ConnectionIds(gid, m.types)
 	} else {
-		s := m.getSpread(gid)
-		allConn := s.GetAll()
-		ids := make([]int64, 0, 0)
-		for _, conn := range allConn {
-			if conn.GetGroupId() == gid {
-				ids = append(ids, conn.GetUserId())
-			}
-		}
-		return ids
+		return m.GetLocalOnlineUserIds(gid)
 	}
+}
+func (m *manager) GetLocalOnlineUserIds(gid int64) []int64 {
+	s := m.getSpread(gid)
+	allConn := s.GetAll()
+	ids := make([]int64, 0)
+	for _, conn := range allConn {
+		if conn.GetGroupId() == gid {
+			ids = append(ids, conn.GetUserId())
+		}
+	}
+	return ids
 }
 
 // GetLocalOnlineTotal 获取本地groupId对应在线客户端数量
@@ -227,10 +243,11 @@ func (m *manager) GetLocalOnlineTotal(gid int64) int64 {
 	s := m.getSpread(gid)
 	return s.GetTotalCount()
 }
+
 // GetOnlineTotal 获取groupId对应在线客户端数量
 func (m *manager) GetOnlineTotal(gid int64) int64  {
 	if m.isCluster() {
-		return client.ClientTotal(gid, m.types)
+		return rpcclient.ConnectionTotal(gid, m.types)
 	}
 	return m.GetLocalOnlineTotal(gid)
 }
@@ -238,7 +255,8 @@ func (m *manager) GetOnlineTotal(gid int64) int64  {
 // IsOnline 用户是否在线
 func (m *manager) IsOnline(user contract.User) bool  {
 	if m.isCluster() {
-		return client.ClientExit(user.GetPrimaryKey())
+		fmt.Println("test")
+		return rpcclient.ConnectionExist(user.GetPrimaryKey())
 	}else {
 		return m.ConnExist(user)
 	}
@@ -376,19 +394,19 @@ func (m *manager) registerChannel()  {
 
 // ClearInactiveChannel 清理无效的channel
 func (m *manager) ClearInactiveChannel() {
-	if m.isCluster() {
+	m.Do(func() {
 		ctx := context.Background()
 		now := time.Now().Unix()
 		fz := now -  (60 * 2)
 		databases.Redis.ZRemRangeByScore(ctx , m.getClusterKey(), "-inf", strconv.FormatInt(fz, 10))
-	}
+	}, nil)
 }
 // 移除频道
 func (m *manager) unRegisterChannel()  {
-	if m.isCluster() {
+	m.Do(func() {
 		ctx := context.Background()
 		databases.Redis.ZRem(ctx, m.getClusterKey(), m.Channel)
-	}
+	}, nil)
 }
 
 func (m *manager) Run() {
@@ -401,15 +419,15 @@ func (m *manager) Run() {
 		}
 	}
 	go m.Ping()
-	if m.isCluster() {
+	m.Do(func() {
 		go m.registerChannel()
-	}
+	}, nil)
 }
 
 // Destroy
 // 释放相关资源
 func (m *manager) Destroy()  {
-	if m.isCluster() {
+	m.Do(func() {
 		m.unRegisterChannel()
-	}
+	}, nil)
 }

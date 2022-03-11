@@ -11,9 +11,9 @@ import (
 
 type Connection struct {}
 
-func (conn *Connection) Exist(ctx context.Context, request *request.ExistRequest, response *response.ExistResponse) (err error) {
-	repo := repositories.UserRepo{}
-	user := repo.First([]*repositories.Where{
+func (conn *Connection) Exist(ctx context.Context, request *request.ConnectionExistRequest,
+	response *response.ConnectionExistResponse) (err error) {
+	user := repositories.UserRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: request.Uid,
@@ -24,8 +24,18 @@ func (conn *Connection) Exist(ctx context.Context, request *request.ExistRequest
 	}
 	return err
 }
+func (conn *Connection) Ids(ctx context.Context,
+	request *request.ConnectionGroupRequest,
+	response *response.ConnectionIdsResponse) error {
+	if request.Types == "admin" {
+		response.Ids = websocket.AdminManager.GetLocalOnlineUserIds(request.GroupId)
+	} else {
+		response.Ids = websocket.UserManager.GetLocalOnlineUserIds(request.GroupId)
+	}
+	return nil
+}
 
-func (conn *Connection) Total(ctx context.Context, request *request.GroupRequest, response *response.TotalResponse) (err error) {
+func (conn *Connection) Total(ctx context.Context, request *request.ConnectionGroupRequest, response *response.ConnectionTotalResponse) (err error) {
 	if request.Types == "admin" {
 		response.Total = websocket.AdminManager.GetLocalOnlineTotal(request.GroupId)
 	} else {

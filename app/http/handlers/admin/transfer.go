@@ -16,7 +16,7 @@ type TransferHandler struct {
 
 func (handler *TransferHandler) Cancel(c *gin.Context)  {
 	id := c.Param("id")
-	transfer := transferRepo.First([]*repositories.Where{
+	transfer := repositories.TransferRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: id,
@@ -49,7 +49,7 @@ func (handler *TransferHandler) Index(c *gin.Context)  {
 		Filed: "group_id = ?",
 		Value: requests.GetAdmin(c).GetGroupId(),
 	})
-	p := transferRepo.Paginate(c, wheres, []string{"User","ToAdmin","FromAdmin"}, []string{"id desc"})
+	p := repositories.TransferRepo.Paginate(c, wheres, []string{"User","ToAdmin","FromAdmin"}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.ChatTransfer)
 		return item.ToJson()

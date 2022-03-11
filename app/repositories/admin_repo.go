@@ -7,10 +7,10 @@ import (
 	"ws/app/models"
 )
 
-type AdminRepo struct {
+type adminRepo struct {
 }
 
-func (repo *AdminRepo) First(wheres []*Where, orders []string) *models.Admin {
+func (repo *adminRepo) First(wheres []*Where, orders []string) *models.Admin {
 	admin := &models.Admin{}
 	result := databases.Db.Scopes(AddOrder(orders)).Scopes(AddWhere(wheres)).First(admin)
 	if result.Error != nil {
@@ -19,24 +19,24 @@ func (repo *AdminRepo) First(wheres []*Where, orders []string) *models.Admin {
 	return admin
 }
 
-func (repo *AdminRepo) SaveSetting(setting *models.AdminChatSetting)  {
+func (repo *adminRepo) SaveSetting(setting *models.AdminChatSetting)  {
 	databases.Db.Omit(clause.Associations).Save(setting)
 }
-func (repo *AdminRepo) UpdateSetting(setting *models.AdminChatSetting, column string, value interface{})  {
+func (repo *adminRepo) UpdateSetting(setting *models.AdminChatSetting, column string, value interface{})  {
 	databases.Db.Model(setting).Update(column, value)
 }
 
-func (repo *AdminRepo) Save(admin *models.Admin)  {
+func (repo *adminRepo) Save(admin *models.Admin)  {
 	databases.Db.Omit(clause.Associations).Save(admin)
 }
-func (repo *AdminRepo) Get(wheres []*Where, limit int, load []string, orders []string) []*models.Admin {
+func (repo *adminRepo) Get(wheres []*Where, limit int, load []string, orders []string) []*models.Admin {
 	admins := make([]*models.Admin, 0 )
 	databases.Db.Scopes(AddWhere(wheres)).
 		Scopes(AddLoad(load)).
 		Scopes(AddOrder(orders)).Limit(limit).Find(&admins)
 	return admins
 }
-func (repo *AdminRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order []string) *Pagination {
+func (repo *adminRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order []string) *Pagination {
 	rules := make([]*models.Admin, 0)
 	databases.Db.
 		Scopes(Paginate(c)).

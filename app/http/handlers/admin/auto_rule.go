@@ -14,7 +14,7 @@ type AutoRuleHandler struct {
 }
 
 func (handle *AutoRuleHandler) MessageOptions(c *gin.Context)  {
-	messages := autoMessageRepo.Get([]Where{{
+	messages := repositories.AutoMessageRepo.Get([]*repositories.Where{{
 		Filed: "group_id = ?",
 		Value: requests.GetAdmin(c).GetGroupId(),
 	}}, -1, []string{}, []string{})
@@ -43,16 +43,16 @@ func (handle *AutoRuleHandler) Index(c *gin.Context)  {
 	admin := requests.GetAdmin(c)
 	filter := map[string]interface{}{
 		"reply_type": "=",
-		"name" : func(val string) Where {
+		"name" : func(val string) *repositories.Where {
 			return &repositories.Where{
 				Filed: "name like ?",
 				Value: "%" + val + "%",
 			}
 		},
-		"scenes": func(val string) Where {
+		"scenes": func(val string) *repositories.Where {
 			return &repositories.Where{
 				Filed: "id in ?",
-				Value: autoRuleRepo.GetWithScenesRuleIds(val),
+				Value: repositories.AutoRuleRepo.GetWithScenesRuleIds(val),
 			}
 		},
 	}
@@ -64,7 +64,7 @@ func (handle *AutoRuleHandler) Index(c *gin.Context)  {
 		Filed: "group_id = ?",
 		Value: admin.GetGroupId(),
 	})
-	p := autoRuleRepo.Paginate(c, wheres, []string{"Message", "Scenes"}, []string{"id desc"})
+	p := repositories.AutoRuleRepo.Paginate(c, wheres, []string{"Message", "Scenes"}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.AutoRule)
 		return item.ToJson()
@@ -76,7 +76,7 @@ func (handle *AutoRuleHandler) Index(c *gin.Context)  {
 func (handle *AutoRuleHandler) Show(c *gin.Context) {
 	admin := requests.GetAdmin(c)
 	id := c.Param("id")
-	rule := autoRuleRepo.First([]Where{
+	rule := repositories.AutoRuleRepo.First([]*repositories.Where{
 		{
 			Filed: "id = ?",
 			Value: id,
@@ -127,13 +127,13 @@ func (handle *AutoRuleHandler) Store (c *gin.Context)  {
 	if rule.ReplyType == models.ReplyTypeMessage  || rule.ReplyType == models.ReplyTypeEvent {
 		rule.MessageId = form.MessageId
 	}
-	autoRuleRepo.Save(rule)
+	repositories.AutoRuleRepo.Save(rule)
 	util.RespSuccess(c, rule.ToJson())
 }
 
 // Update 更新自定义规则
 func (handle *AutoRuleHandler) Update(c *gin.Context) {
-	rule := autoRuleRepo.First([]Where{
+	rule := repositories.AutoRuleRepo.First([]*repositories.Where{
 		{
 			Filed: "is_system = ?",
 			Value: 0,
@@ -158,7 +158,7 @@ func (handle *AutoRuleHandler) Update(c *gin.Context) {
 		util.RespValidateFail(c, err.Error())
 		return
 	}
-	autoRuleRepo.DeleteScene(rule)
+	repositories.AutoRuleRepo.DeleteScene(rule)
 	if form.ReplyType == models.ReplyTypeTransfer {
 		form.Scenes = []string{
 			models.SceneNotAccepted,
@@ -184,14 +184,14 @@ func (handle *AutoRuleHandler) Update(c *gin.Context) {
 	rule.Scenes = scenes
 	rule.Sort = form.Sort
 	rule.MessageId = form.MessageId
-	autoRuleRepo.Save(rule)
+	repositories.AutoRuleRepo.Save(rule)
 	util.RespSuccess(c, rule.ToJson())
 }
 
 // Delete 删除自定义规则
 func (handle *AutoRuleHandler) Delete(c *gin.Context)  {
 	id := c.Param("id")
-	rule := autoRuleRepo.First([]Where{
+	rule := repositories.AutoRuleRepo.First([]*repositories.Where{
 		{
 			Filed: "is_system = ?",
 			Value: 0,
@@ -209,7 +209,7 @@ func (handle *AutoRuleHandler) Delete(c *gin.Context)  {
 		util.RespNotFound(c)
 		return
 	}
-	autoRuleRepo.Delete(rule)
+	repositories.AutoRuleRepo.Delete(rule)
 	util.RespSuccess(c, gin.H{})
 }
 
@@ -220,7 +220,7 @@ type SystemRuleHandler struct {
 
 // Index 获取系统规则
 func (handler *SystemRuleHandler) Index(c *gin.Context)  {
-	rules := autoRuleRepo.Get([]Where{
+	rules := repositories.AutoRuleRepo.Get([]*repositories.Where{
 		{
 			Filed: "is_system = ?",
 			Value: 1,
@@ -244,7 +244,7 @@ func (handler *SystemRuleHandler) Update(c *gin.Context) {
 	if err != nil {
 		util.RespError(c, err.Error())
 	}
-	autoRuleRepo.Update([]Where{
+	repositories.AutoRuleRepo.Update([]*repositories.Where{
 		{
 			Filed: "is_system = ?",
 			Value: 1,
@@ -257,7 +257,7 @@ func (handler *SystemRuleHandler) Update(c *gin.Context) {
 		"message_id": 0,
 	})
 	for id, v := range m {
-		autoRuleRepo.Update([]Where{
+		repositories.AutoRuleRepo.Update([]*repositories.Where{
 			{
 				Filed: "is_system = ?",
 				Value: 1,

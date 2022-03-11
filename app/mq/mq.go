@@ -14,6 +14,8 @@ const TypeOtherLogin = "other-login"
 const TypeTransfer = "admin-transfer"
 const TypeWaitingUserCount = "waiting-user-count"
 const TypeUpdateSetting = "update-admin-setting"
+const TypeUserOnline = "user-online"
+const TypeUserOffline= "user-offline"
 
 type MessageQueue interface {
 	// Publish 消息

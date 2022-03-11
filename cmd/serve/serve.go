@@ -52,6 +52,7 @@ func NewServeCommand() *cobra.Command {
 			databases.RedisSetup()
 			file.Setup()
 			mylog.Setup()
+			go rpc.Serve()
 			websocket.SetupAdmin()
 			websocket.SetupUser()
 			if cronFlag {
@@ -64,7 +65,6 @@ func NewServeCommand() *cobra.Command {
 			}
 			quit := make(chan os.Signal, 1)
 			signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-			go rpc.Serve()
 			go func() {
 				err := srv.ListenAndServe()
 				if err != nil {
