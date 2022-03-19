@@ -3,13 +3,10 @@ package models
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"strconv"
 	"time"
 	"ws/app/contract"
 	"ws/app/databases"
-	"ws/app/util"
 )
 
 type Admin struct {
@@ -21,13 +18,15 @@ type Admin struct {
 	Password  string            `gorm:"string;size:255" `
 	ApiToken  string            `gorm:"string;size:255" `
 	Avatar    string            `gorm:"string;size:512"`
-	GroupId   int64            `gorm:"group_id"`
+	GroupId   int64             `gorm:"group_id"`
 	Setting   *AdminChatSetting `json:"setting" gorm:"foreignKey:admin_id"`
-	IsSuper bool `gorm:"is_super"`
+	IsSuper   bool              `gorm:"is_super"`
 }
-func (admin *Admin) GetGroupId() int64  {
+
+func (admin *Admin) GetGroupId() int64 {
 	return admin.GroupId
 }
+
 // AccessTo 是否有user的权限
 func (admin *Admin) AccessTo(user contract.User) bool {
 	return admin.GetGroupId() == user.GetGroupId()
@@ -36,9 +35,11 @@ func (admin *Admin) AccessTo(user contract.User) bool {
 func (admin *Admin) GetIsSuper() bool {
 	return admin.IsSuper
 }
+
 func (admin *Admin) GetPrimaryKey() int64 {
 	return admin.ID
 }
+
 func (admin *Admin) GetAvatarUrl() string {
 	return admin.GetSetting().Avatar
 }
@@ -53,10 +54,10 @@ func (admin *Admin) GetSetting() *AdminChatSetting {
 		err := databases.Db.Model(admin).Association("Setting").Find(setting)
 		if err != nil {
 			setting = &AdminChatSetting{
-				AdminId:        admin.GetPrimaryKey(),
-				Name: admin.GetUsername(),
-				CreatedAt:      time.Time{},
-				UpdatedAt:      time.Time{},
+				AdminId:   admin.GetPrimaryKey(),
+				Name:      admin.GetUsername(),
+				CreatedAt: time.Time{},
+				UpdatedAt: time.Time{},
 			}
 			databases.Db.Save(setting)
 		}
@@ -96,35 +97,7 @@ func (admin *Admin) GetReqId() string {
 	return "a" + strconv.FormatInt(cmd.Val(), 10)
 }
 
-func (admin *Admin) Login() (token string) {
-	token = util.RandomStr(32)
-	databases.Db.Model(admin).Update("api_token", token)
-	return
-}
-func (admin *Admin) Logout() {
-	databases.Db.Model(admin).Update("api_token", "")
-}
-
-func (admin *Admin) Auth(c *gin.Context) bool {
-	token := util.GetToken(c)
-	if token == "" {
-		return false
-	}
-	query := databases.Db.Where("api_token= ?", token).First(admin)
-	if query.Error == gorm.ErrRecordNotFound {
-		return false
-	}
-	return true
-}
-func (admin *Admin) FindByName(username string) bool {
-	query := databases.Db.Where("username= ?", username).First(admin)
-	if query.Error == gorm.ErrRecordNotFound {
-		return false
-	}
-	return true
-}
-
-func (admin *Admin) RefreshSetting()  {
+func (admin *Admin) RefreshSetting() {
 	setting := &AdminChatSetting{}
 	_ = databases.Db.Model(admin).Association("Setting").Find(setting)
 	admin.Setting = setting

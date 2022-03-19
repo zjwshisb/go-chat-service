@@ -5,17 +5,15 @@ import (
 	"ws/app/http/requests"
 	"ws/app/models"
 	"ws/app/repositories"
-	"ws/app/util"
 	"ws/app/websocket"
 )
 
 type UserHandler struct {
-
 }
 
-func (User *UserHandler) Info(c *gin.Context)  {
+func (User *UserHandler) Info(c *gin.Context) {
 	admin := requests.GetAdmin(c)
-	util.RespSuccess(c, gin.H{
+	requests.RespSuccess(c, gin.H{
 		"username": admin.GetUsername(),
 		"id":       admin.GetPrimaryKey(),
 	})
@@ -23,16 +21,16 @@ func (User *UserHandler) Info(c *gin.Context)  {
 func (User *UserHandler) Setting(c *gin.Context) {
 	u := requests.GetAdmin(c)
 	admin := u.(*models.Admin)
-	util.RespSuccess(c, admin.GetSetting())
+	requests.RespSuccess(c, admin.GetSetting())
 }
 
 func (User *UserHandler) UpdateSetting(c *gin.Context) {
 	u := requests.GetAdmin(c)
 	admin := u.(*models.Admin)
-	form  := requests.AdminChatSettingForm{}
+	form := requests.AdminChatSettingForm{}
 	err := c.ShouldBind(&form)
 	if err != nil {
-		util.RespValidateFail(c, err.Error())
+		requests.RespValidateFail(c, err.Error())
 		return
 	}
 	setting := admin.GetSetting()
@@ -43,7 +41,7 @@ func (User *UserHandler) UpdateSetting(c *gin.Context) {
 	setting.Name = form.Name
 	repositories.AdminRepo.SaveSetting(setting)
 	websocket.AdminManager.PublishUpdateSetting(admin)
-	util.RespSuccess(c, gin.H{})
+	requests.RespSuccess(c, gin.H{})
 }
 
 func (User *UserHandler) Avatar(c *gin.Context) {
@@ -52,14 +50,14 @@ func (User *UserHandler) Avatar(c *gin.Context) {
 	}{}
 	err := c.ShouldBind(form)
 	if err != nil {
-		util.RespError(c, err.Error())
+		requests.RespError(c, err.Error())
 	} else {
 		u := requests.GetAdmin(c)
 		admin := u.(*models.Admin)
 		setting := admin.GetSetting()
 		repositories.AdminRepo.UpdateSetting(setting, "avatar", form.Url)
 		websocket.AdminManager.PublishUpdateSetting(admin)
-		util.RespSuccess(c, gin.H{})
+		requests.RespSuccess(c, gin.H{})
 	}
 }
 

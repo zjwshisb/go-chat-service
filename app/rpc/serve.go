@@ -8,6 +8,7 @@ import (
 	"time"
 	"ws/app/rpc/service/connection"
 )
+
 func addRegistryPlugin(s *server.Server) {
 	r := &serverplugin.EtcdV3RegisterPlugin{
 		ServiceAddress: "tcp@127.0.0.1:" + viper.GetString("Rpc.Port"),
@@ -23,7 +24,7 @@ func addRegistryPlugin(s *server.Server) {
 }
 
 func Serve() {
-	if viper.GetBool("Rpc.Open") {
+	if viper.GetBool("Rpc.Open") && viper.GetBool("App.Cluster") {
 		s := server.NewServer()
 		addRegistryPlugin(s)
 		err := s.RegisterName("Connection", new(connection.Connection), "")
@@ -31,7 +32,7 @@ func Serve() {
 			log.Fatal(err)
 		}
 		go func() {
-			s.Serve("tcp", "127.0.0.1:" + viper.GetString("Rpc.port"))
+			s.Serve("tcp", "127.0.0.1:"+viper.GetString("Rpc.port"))
 		}()
 	}
 }

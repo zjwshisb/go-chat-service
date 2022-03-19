@@ -3,15 +3,12 @@ package models
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"strconv"
 	"time"
 	"ws/app/contract"
 	"ws/app/databases"
 	"ws/app/util"
 )
-
 
 type User struct {
 	ID        int64
@@ -21,15 +18,14 @@ type User struct {
 	Password  string `gorm:"string;size:255" json:"-"`
 	ApiToken  string `gogm:"string;size:255"  json:"-"`
 	OpenId    string `gorm:"string;size:255"`
-	GroupId   int64   `gorm:"group_id"`
+	GroupId   int64  `gorm:"group_id"`
 }
 
 func (user *User) AccessTo(admin contract.User) bool {
 	return user.GetGroupId() == admin.GetGroupId()
 }
 
-
-func (user *User) GetGroupId() int64  {
+func (user *User) GetGroupId() int64 {
 	return user.GroupId
 }
 
@@ -51,18 +47,6 @@ func (user *User) GetPrimaryKey() int64 {
 }
 func (user *User) GetMpOpenId() string {
 	return user.OpenId
-}
-
-func (user *User) Auth(c *gin.Context) bool {
-	token := util.GetToken(c)
-	if token == "" {
-		return false
-	}
-	query := databases.Db.Where("api_token= ?", token).Limit(1).First(user)
-	if query.Error == gorm.ErrRecordNotFound {
-		return false
-	}
-	return true
 }
 
 func (user *User) Login() (token string) {

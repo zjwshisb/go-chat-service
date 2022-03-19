@@ -9,14 +9,13 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
-	"ws/app/util"
 	"ws/app/websocket"
 )
 
 type AdminsHandler struct {
 }
 
-func (handle *AdminsHandler) Index(c *gin.Context){
+func (handle *AdminsHandler) Index(c *gin.Context) {
 	where := requests.GetFilterWhere(c, map[string]interface{}{
 		"username": "=",
 	})
@@ -36,10 +35,10 @@ func (handle *AdminsHandler) Index(c *gin.Context){
 			AcceptedCount: chat.AdminService.GetActiveCount(admin.GetPrimaryKey()),
 		}
 	})
-	util.RespPagination(c, p)
+	requests.RespPagination(c, p)
 }
 
-func (handle *AdminsHandler) Show(c *gin.Context){
+func (handle *AdminsHandler) Show(c *gin.Context) {
 	id := c.Param("id")
 	u := requests.GetAdmin(c)
 	admin := repositories.AdminRepo.First([]*repositories.Where{
@@ -53,7 +52,7 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 		},
 	}, []string{})
 	if admin == nil {
-		util.RespNotFound(c)
+		requests.RespNotFound(c)
 		return
 	}
 	month := c.Query("month")
@@ -77,22 +76,22 @@ func (handle *AdminsHandler) Show(c *gin.Context){
 			Filed: "admin_id = ?",
 			Value: admin.GetPrimaryKey(),
 		},
-	}, -1,  []string{}, []string{"id"})
-	
+	}, -1, []string{}, []string{"id"})
+
 	value := make([]*resource.Line, lastDate.DayOfMonth())
 
 	for day, _ := range value {
 		value[day] = &resource.Line{
 			Category: "每日接待数",
 			Value:    0,
-			Label:    strconv.Itoa(day + 1) + "号",
+			Label:    strconv.Itoa(day+1) + "号",
 		}
 	}
 	for _, session := range sessions {
 		d := (session.AcceptedAt - firstDateUnix) / (24 * 3600)
 		value[d].Value += 1
 	}
-	util.RespSuccess(c, gin.H{
+	requests.RespSuccess(c, gin.H{
 		"chart": value,
 		"admin": resource.Admin{
 			Avatar:        admin.GetAvatarUrl(),

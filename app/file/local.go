@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"ws/app/util"
+	"ws/config"
 )
 
 type local struct {
@@ -16,7 +17,7 @@ type local struct {
 const prefix = "assets"
 
 func NewLocal() *local {
-	storagePath := util.GetStoragePath() + "/" + prefix
+	storagePath := config.GetStoragePath() + "/" + prefix
 	if !util.DirExist(storagePath) {
 		err := util.MkDir(storagePath)
 		if err != nil {
@@ -25,7 +26,7 @@ func NewLocal() *local {
 	}
 	return &local{
 		BaseUrl:     viper.GetString("App.Url") + "/" + prefix,
-		StoragePath: storagePath ,
+		StoragePath: storagePath,
 	}
 }
 
@@ -36,7 +37,6 @@ func (local *local) Url(path string) string {
 	}
 	return local.BaseUrl + "/" + path
 }
-
 
 func (local *local) Save(file *multipart.FileHeader, relativePath string) (*File, error) {
 	ff, err := file.Open()
@@ -64,7 +64,7 @@ func (local *local) Save(file *multipart.FileHeader, relativePath string) (*File
 	}
 	fullName := fullPath + "/" + filename
 
-	err =  util.MkDir(fullPath)
+	err = util.MkDir(fullPath)
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +77,8 @@ func (local *local) Save(file *multipart.FileHeader, relativePath string) (*File
 		return nil, err
 	}
 	return &File{
-		Path:     relativeName,
-		FullUrl:  local.Url(relativeName),
-		Storage:  StorageLocal,
+		Path:    relativeName,
+		FullUrl: local.Url(relativeName),
+		Storage: StorageLocal,
 	}, nil
 }

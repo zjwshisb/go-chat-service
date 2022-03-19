@@ -19,7 +19,7 @@ import (
 type ConnContainer interface {
 	AddConn(conn Conn)
 	GetConn(user contract.User) (Conn, bool)
-	handleRepeatLogin(user contract.User, remote bool)
+	publishMoreThanOne(user contract.User)
 	GetAllConn(gid int64) []Conn
 	GetOnlineTotal(gid int64) int64
 	ConnExist(user contract.User) bool
@@ -69,54 +69,55 @@ type MessageHandle interface {
 type ManagerHook = func(conn Conn)
 
 type ConnMessage struct {
-	Conn *Client
+	Conn   *Client
 	Action *Action
 }
 type Shard struct {
-	m map[int64]Conn
+	m     map[int64]Conn
 	mutex sync.RWMutex
 }
-func (s *Shard) GetAll() []Conn  {
+
+func (s *Shard) GetAll() []Conn {
 	s.mutex.RLock()
-	defer  s.mutex.RUnlock()
-	conns := make([]Conn, 0,len(s.m))
+	defer s.mutex.RUnlock()
+	conns := make([]Conn, 0, len(s.m))
 	for _, conn := range s.m {
 		conns = append(conns, conn)
 	}
 	return conns
 }
 
-func (s *Shard) GetTotalCount() int64  {
+func (s *Shard) GetTotalCount() int64 {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return int64(len(s.m))
 }
 
-func (s *Shard) Get(uid int64)  (conn Conn, exist bool) {
+func (s *Shard) Get(uid int64) (conn Conn, exist bool) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	conn, exist = s.m[uid]
 	return
 }
-func (s *Shard) Set(conn Conn)  {
+func (s *Shard) Set(conn Conn) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.m[conn.GetUserId()] = conn
 }
-func (s *Shard) Remove(uid int64)  {
+func (s *Shard) Remove(uid int64) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	delete(s.m, uid)
 }
 
 type manager struct {
-	shardCount int64 // 分组数量
-	shard []*Shard //
-	Channel string // 当前manager channel name
+	shardCount   int64             // 分组数量
+	shard        []*Shard          //
+	Channel      string            // 当前manager channel name
 	ConnMessages chan *ConnMessage // 接受从conn所读取消息的chan
-	onRegister ManagerHook //conn连接成功hook
-	onUnRegister ManagerHook //conn连接断开hook
-	types string //类型
+	onRegister   ManagerHook       //conn连接成功hook
+	onUnRegister ManagerHook       //conn连接断开hook
+	types        string            //类型
 }
 
 func (m *manager) Do(clusterFunc func(), single func()) {
@@ -135,20 +136,22 @@ func (m *manager) getMod(gid int64) int64 {
 	return gid % m.shardCount
 }
 
-func (m *manager) getSpread(gid int64) *Shard  {
+func (m *manager) getSpread(gid int64) *Shard {
 	return m.shard[m.getMod(gid)]
 }
 
 func (m *manager) isCluster() bool {
 	return viper.GetBool("App.Cluster")
 }
+
 // 发布消息
 func (m *manager) publish(channel string, payload *mq.Payload) error {
 	err := mq.Mq().Publish(channel, payload)
 	return err
 }
+
 //
-func (m *manager) publishToAllChannel(payload *mq.Payload)  {
+func (m *manager) publishToAllChannel(payload *mq.Payload) {
 	channels := m.getAllChannel()
 	fmt.Println(channels)
 	for _, channel := range channels {
@@ -158,26 +161,25 @@ func (m *manager) publishToAllChannel(payload *mq.Payload)  {
 
 // 获取用户channel cache key
 func (m *manager) getUserChannelKey(uid int64) string {
-	return fmt.Sprintf("%s:%d:channel",m.types, uid)
+	return fmt.Sprintf("%s:%d:channel", m.types, uid)
 }
 
 // 设置用户所在channel为当前manager
-func (m *manager) setUserChannel(uid int64)  {
+func (m *manager) setUserChannel(uid int64) {
 	m.Do(func() {
 		ctx := context.Background()
 		key := m.getUserChannelKey(uid)
-		databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), time.Hour * 24 * 2)
+		databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), time.Hour*24*2)
 	}, nil)
 }
 
 // 移除用户所在channel
-func (m *manager) removeUserChannel(uid int64)  {
+func (m *manager) removeUserChannel(uid int64) {
 	m.Do(func() {
 		ctx := context.Background()
 		databases.Redis.Del(ctx, m.getUserChannelKey(uid))
 	}, nil)
 }
-
 
 // 获取用户channel
 func (m *manager) getUserChannel(uid int64) string {
@@ -196,25 +198,29 @@ func (m *manager) GetSubscribeChannel() string {
 }
 
 // ReceiveMessage 接受消息
-func (m *manager) ReceiveMessage(cm *ConnMessage)  {
+func (m *manager) ReceiveMessage(cm *ConnMessage) {
 	m.ConnMessages <- cm
 }
-// 处理重复登录|打开多个tab
-func (m *manager) handleRepeatLogin(user contract.User, remote bool) {
-	s := m.getSpread(user.GetGroupId())
-	old , exist := s.Get(user.GetPrimaryKey())
-	if exist {
-		m.SendAction(NewMoreThanOne(), old)
-	} else if !remote {
-		m.Do(func() {
-			oldChannel := m.getUserChannel(user.GetPrimaryKey())
-			if oldChannel != ""  && oldChannel != m.GetSubscribeChannel() {
-				_ = m.publish(oldChannel, &mq.Payload{
-					Types: mq.TypeOtherLogin,
-					Data: user.GetPrimaryKey(),
-				})
-			}
-		}, nil)
+
+// websocket 重复链接
+func (m *manager) publishMoreThanOne(user contract.User) {
+	m.Do(func() {
+		oldChannel := m.getUserChannel(user.GetPrimaryKey())
+		if oldChannel != "" && oldChannel != m.GetSubscribeChannel() {
+			_ = m.publish(oldChannel, &mq.Payload{
+				Types: mq.TypeMoreThanOne,
+				Data:  user.GetPrimaryKey(),
+			})
+		}
+	}, func() {
+		m.noticeMoreThanOne(user)
+	})
+}
+
+func (m *manager) noticeMoreThanOne(user contract.User) {
+	oldConn, ok := m.GetConn(user)
+	if ok {
+		m.SendAction(NewMoreThanOne(), oldConn)
 	}
 }
 
@@ -245,7 +251,7 @@ func (m *manager) GetLocalOnlineTotal(gid int64) int64 {
 }
 
 // GetOnlineTotal 获取groupId对应在线客户端数量
-func (m *manager) GetOnlineTotal(gid int64) int64  {
+func (m *manager) GetOnlineTotal(gid int64) int64 {
 	if m.isCluster() {
 		return rpcclient.ConnectionTotal(gid, m.types)
 	}
@@ -253,18 +259,17 @@ func (m *manager) GetOnlineTotal(gid int64) int64  {
 }
 
 // IsOnline 用户是否在线
-func (m *manager) IsOnline(user contract.User) bool  {
+func (m *manager) IsOnline(user contract.User) bool {
 	if m.isCluster() {
-		fmt.Println("test")
 		return rpcclient.ConnectionExist(user.GetPrimaryKey())
-	}else {
+	} else {
 		return m.ConnExist(user)
 	}
 }
 
 // SendAction 给客户端发送消息
-func (m *manager) SendAction(a  *Action, clients ...Conn) {
-	for _,c := range clients {
+func (m *manager) SendAction(a *Action, clients ...Conn) {
+	for _, c := range clients {
 		c.Deliver(a)
 	}
 }
@@ -276,7 +281,7 @@ func (m *manager) ConnExist(user contract.User) bool {
 }
 
 // GetConn 获取客户端
-func (m *manager) GetConn(user contract.User) (client Conn,ok bool) {
+func (m *manager) GetConn(user contract.User) (client Conn, ok bool) {
 	s := m.getSpread(user.GetGroupId())
 	client, ok = s.Get(user.GetPrimaryKey())
 	return
@@ -295,12 +300,12 @@ func (m *manager) RemoveConn(user contract.User) {
 }
 
 // GetAllConn 获取所有客户端
-func (m *manager) GetAllConn(groupId int64) (conns []Conn){
+func (m *manager) GetAllConn(groupId int64) (conns []Conn) {
 	s := m.getSpread(groupId)
 	return s.GetAll()
 }
 
-func (m *manager) GetTotalConn() []Conn  {
+func (m *manager) GetTotalConn() []Conn {
 	conns := make([]Conn, 0)
 	for gid := range m.shard {
 		conns = append(conns, m.GetAllConn(int64(gid))...)
@@ -327,7 +332,7 @@ func (m *manager) Unregister(conn Conn) {
 // 集群模式下，如果不在本机则投递一个消息
 func (m *manager) Register(conn Conn) {
 	timer := time.After(1 * time.Second)
-	m.handleRepeatLogin(conn.GetUser(), false)
+	m.publishMoreThanOne(conn.GetUser())
 	m.AddConn(conn)
 	m.setUserChannel(conn.GetUserId())
 	conn.run()
@@ -341,7 +346,7 @@ func (m *manager) Register(conn Conn) {
 // 给所有客户端发送心跳
 // 客户端因意外断开链接，服务器没有关闭事件，无法得知连接已关闭
 // 通过心跳发送""字符串，如果发送失败，则调用conn的close方法执行清理
-func (m *manager) Ping()  {
+func (m *manager) Ping() {
 	ticker := time.NewTicker(time.Second * 10)
 	for {
 		select {
@@ -357,23 +362,25 @@ func (m *manager) Ping()  {
 func (m *manager) getClusterKey() string {
 	return fmt.Sprintf("%s:cluster:group", m.types)
 }
+
 // 获取同类型的所有channel
-func (m *manager) getAllChannel() []string  {
+func (m *manager) getAllChannel() []string {
 	ctx := context.Background()
 	now := time.Now().Unix()
-	fz := now -  (60 * 2)
+	fz := now - (60 * 2)
 	cmd := databases.Redis.ZRangeByScore(ctx, m.getClusterKey(), &redis.ZRangeBy{
-		Min:   strconv.FormatInt(fz, 10),
+		Min:    strconv.FormatInt(fz, 10),
 		Max:    "+inf",
 		Offset: 0,
 		Count:  0,
 	})
 	return cmd.Val()
 }
+
 // 集群模式下
 // 注册频道
 // 心跳更新最后时间，用于程序意外退出后的清理
-func (m *manager) registerChannel()  {
+func (m *manager) registerChannel() {
 	fn := func() {
 		ctx := context.Background()
 		databases.Redis.ZAdd(ctx, m.getClusterKey(), &redis.Z{
@@ -397,12 +404,13 @@ func (m *manager) ClearInactiveChannel() {
 	m.Do(func() {
 		ctx := context.Background()
 		now := time.Now().Unix()
-		fz := now -  (60 * 2)
-		databases.Redis.ZRemRangeByScore(ctx , m.getClusterKey(), "-inf", strconv.FormatInt(fz, 10))
+		fz := now - (60 * 2)
+		databases.Redis.ZRemRangeByScore(ctx, m.getClusterKey(), "-inf", strconv.FormatInt(fz, 10))
 	}, nil)
 }
+
 // 移除频道
-func (m *manager) unRegisterChannel()  {
+func (m *manager) unRegisterChannel() {
 	m.Do(func() {
 		ctx := context.Background()
 		databases.Redis.ZRem(ctx, m.getClusterKey(), m.Channel)
@@ -412,7 +420,7 @@ func (m *manager) unRegisterChannel()  {
 func (m *manager) Run() {
 	m.shard = make([]*Shard, m.shardCount, m.shardCount)
 	var i int64
-	for i= 0; i< m.shardCount; i++ {
+	for i = 0; i < m.shardCount; i++ {
 		m.shard[i] = &Shard{
 			m:     make(map[int64]Conn),
 			mutex: sync.RWMutex{},
@@ -426,7 +434,7 @@ func (m *manager) Run() {
 
 // Destroy
 // 释放相关资源
-func (m *manager) Destroy()  {
+func (m *manager) Destroy() {
 	m.Do(func() {
 		m.unRegisterChannel()
 	}, nil)

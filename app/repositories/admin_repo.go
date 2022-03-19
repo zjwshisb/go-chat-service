@@ -19,23 +19,25 @@ func (repo *adminRepo) First(wheres []*Where, orders []string) *models.Admin {
 	return admin
 }
 
-func (repo *adminRepo) SaveSetting(setting *models.AdminChatSetting)  {
+func (repo *adminRepo) SaveSetting(setting *models.AdminChatSetting) {
 	databases.Db.Omit(clause.Associations).Save(setting)
 }
-func (repo *adminRepo) UpdateSetting(setting *models.AdminChatSetting, column string, value interface{})  {
+func (repo *adminRepo) UpdateSetting(setting *models.AdminChatSetting, column string, value interface{}) {
 	databases.Db.Model(setting).Update(column, value)
 }
 
-func (repo *adminRepo) Save(admin *models.Admin)  {
+func (repo *adminRepo) Save(admin *models.Admin) {
 	databases.Db.Omit(clause.Associations).Save(admin)
 }
+
 func (repo *adminRepo) Get(wheres []*Where, limit int, load []string, orders []string) []*models.Admin {
-	admins := make([]*models.Admin, 0 )
+	admins := make([]*models.Admin, 0)
 	databases.Db.Scopes(AddWhere(wheres)).
 		Scopes(AddLoad(load)).
 		Scopes(AddOrder(orders)).Limit(limit).Find(&admins)
 	return admins
 }
+
 func (repo *adminRepo) Paginate(c *gin.Context, wheres []*Where, load []string, order []string) *Pagination {
 	rules := make([]*models.Admin, 0)
 	databases.Db.

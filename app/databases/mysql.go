@@ -7,13 +7,13 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"strings"
-	"ws/app/util"
+	"ws/config"
 )
 
 var Db *gorm.DB
 
-func MysqlSetup()  {
-	env := util.GetEnv()
+func MysqlSetup() {
+	env := config.GetEnv()
 
 	var level logger.LogLevel
 	switch strings.ToLower(env) {
@@ -35,7 +35,7 @@ func MysqlSetup()  {
 	db, err := gorm.Open(mysql.Open(dns),
 		&gorm.Config{
 			DisableForeignKeyConstraintWhenMigrating: true,
-			Logger: logger.Default.LogMode(level),
+			Logger:                                   logger.Default.LogMode(level),
 		})
 	if err != nil {
 		panic(fmt.Errorf("mysql err: %w \n", err))

@@ -7,15 +7,15 @@ import (
 	"strconv"
 	"strings"
 	_ "ws/app/http/requests"
-	"ws/app/util"
+	"ws/config"
 )
 
-func IsRunning() bool  {
+func IsRunning() bool {
 	pid := GetPid()
 	if pid == 0 {
 		return false
 	} else {
-		cmd := 	exec.Command("ps")
+		cmd := exec.Command("ps")
 		out, err := cmd.Output()
 		if err != nil {
 			log.Fatal(err)
@@ -25,9 +25,9 @@ func IsRunning() bool  {
 }
 
 func GetPid() int {
-	dir := util.GetStoragePath()
+	dir := config.GetStoragePath()
 	pidFile := dir + "/pid.log"
-	b,err := os.ReadFile(pidFile)
+	b, err := os.ReadFile(pidFile)
 	if err != nil {
 		return 0
 	}
@@ -41,15 +41,12 @@ func GetPid() int {
 
 func LogPid() {
 	pid := os.Getpid()
-	dir := util.GetStoragePath()
+	dir := config.GetStoragePath()
 	pidFile := dir + "/pid.log"
-	file, err := os.OpenFile(pidFile, os.O_CREATE | os.O_TRUNC | os.O_WRONLY, os.ModePerm)
+	file, err := os.OpenFile(pidFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
 	if err != nil {
-		log.Fatalf("pid file err: %v" , err)
+		log.Fatalf("pid file err: %v", err)
 	}
 	defer file.Close()
 	file.Write([]byte(strconv.Itoa(pid)))
 }
-
-
-

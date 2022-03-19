@@ -3,17 +3,25 @@ package user
 import (
 	"github.com/gin-gonic/gin"
 	"ws/app/http/requests"
-	"ws/app/models"
+	"ws/app/repositories"
 )
 
 func Authenticate(c *gin.Context) {
-	user := &models.User{}
-	if user.Auth(c) {
-		requests.SetUser(c, user)
-	} else {
-		c.JSON(401, gin.H{
-			"message": "Unauthorized",
-		})
-		c.Abort()
+	token := requests.GetToken(c)
+	if token != "" {
+		user := repositories.UserRepo.First([]*repositories.Where{
+			{
+				Filed: "api_token = ?",
+				Value: token,
+			},
+		}, []string{})
+		if user != nil {
+			requests.SetUser(c, user)
+			return
+		}
 	}
+	c.JSON(401, gin.H{
+		"message": "Unauthorized",
+	})
+	c.Abort()
 }

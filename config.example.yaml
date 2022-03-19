@@ -5,6 +5,7 @@ App:
   Env: local
   Mq: redis
   Cluster: true
+  Secret: 3123dhwahduwad
 Rpc:
   Open: true
   Port: 8888

@@ -9,13 +9,12 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
-	"ws/app/util"
 	"ws/app/websocket"
 )
 
 type ChatSessionHandler struct {
-
 }
+
 var sessionFilter = map[string]interface{}{
 	"admin_name": func(val string) *repositories.Where {
 		admins := repositories.AdminRepo.Get([]*repositories.Where{
@@ -63,10 +62,10 @@ var sessionFilter = map[string]interface{}{
 }
 
 // Index 获取会话列表
-func (handler *ChatSessionHandler) Index(c *gin.Context)  {
+func (handler *ChatSessionHandler) Index(c *gin.Context) {
 	wheres := requests.GetFilterWhere(c, sessionFilter)
 	queriedAtArr := c.QueryArray("queried_at")
-	wheres = append(wheres,&repositories.Where{
+	wheres = append(wheres, &repositories.Where{
 		Filed: "group_id = ?",
 		Value: requests.GetAdmin(c).GetGroupId(),
 	})
@@ -84,14 +83,14 @@ func (handler *ChatSessionHandler) Index(c *gin.Context)  {
 			})
 		}
 	}
-	p := repositories.ChatSessionRepo.Paginate(c , wheres, []string{"Admin","User"},[]string{"id desc"})
+	p := repositories.ChatSessionRepo.Paginate(c, wheres, []string{"Admin", "User"}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.ChatSession)
 		return item.ToJson()
 	})
-	util.RespPagination(c, p)
+	requests.RespPagination(c, p)
 }
-func (handler *ChatSessionHandler) Cancel(c *gin.Context)  {
+func (handler *ChatSessionHandler) Cancel(c *gin.Context) {
 	sessionId := c.Param("id")
 	session := repositories.ChatSessionRepo.First([]*repositories.Where{
 		{
@@ -104,22 +103,22 @@ func (handler *ChatSessionHandler) Cancel(c *gin.Context)  {
 		},
 	}, []string{})
 	if session == nil {
-		util.RespNotFound(c)
+		requests.RespNotFound(c)
 		return
 	}
 	if session.AcceptedAt > 0 {
-		util.RespFail(c, "会话已接入，无法取消", 500)
+		requests.RespFail(c, "会话已接入，无法取消", 500)
 		return
 	}
 	if session.CanceledAt > 0 {
-		util.RespFail(c, "会话已取消，请勿重复取消", 500)
+		requests.RespFail(c, "会话已取消，请勿重复取消", 500)
 		return
 	}
 	session.CanceledAt = time.Now().Unix()
 	repositories.ChatSessionRepo.Save(session)
 	_ = chat.ManualService.Remove(session.UserId, session.GetUser().GetGroupId())
 	websocket.AdminManager.PublishWaitingUser(session.GetUser().GetGroupId())
-	util.RespSuccess(c, gin.H{})
+	requests.RespSuccess(c, gin.H{})
 }
 
 // Show 会话详情
@@ -150,12 +149,12 @@ func (handler *ChatSessionHandler) Show(c *gin.Context) {
 		},
 	}, -1, []string{"User", "Admin"}, []string{"id desc"})
 	data := make([]*resource.Message, 0, 0)
-	for _, msg:= range messages {
+	for _, msg := range messages {
 		data = append(data, msg.ToJson())
 	}
-	util.RespSuccess(c, gin.H{
+	requests.RespSuccess(c, gin.H{
 		"messages": data,
-		"total": len(data),
+		"total":    len(data),
 		"session": session.ToJson(),
 	})
 }

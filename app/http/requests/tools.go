@@ -7,7 +7,7 @@ import (
 	"ws/app/repositories"
 )
 
-func GetFilterWhere(c *gin.Context , fields map[string]interface{}) []*repositories.Where {
+func GetFilterWhere(c *gin.Context, fields map[string]interface{}) []*repositories.Where {
 	wheres := make([]*repositories.Where, 0, len(fields))
 	for field, handler := range fields {
 		if val, exist := c.GetQuery(field); exist && val != "" {
@@ -27,18 +27,18 @@ func GetFilterWhere(c *gin.Context , fields map[string]interface{}) []*repositor
 								ii := s.Interface()
 								switch ii.(type) {
 								case *repositories.Where:
-									w ,ok := ii.(*repositories.Where)
+									w, ok := ii.(*repositories.Where)
 									if ok {
 										wheres = append(wheres, w)
 									}
 								case []*repositories.Where:
-									ws ,ok := ii.([]*repositories.Where)
+									ws, ok := ii.([]*repositories.Where)
 									if ok {
 										wheres = append(wheres, ws...)
 									}
 								}
 							case reflect.Slice:
-								for i:= 0; i < s.Len(); i++ {
+								for i := 0; i < s.Len(); i++ {
 									v := s.Index(i)
 									where, ok := v.Interface().(*repositories.Where)
 									if ok {
@@ -47,7 +47,7 @@ func GetFilterWhere(c *gin.Context , fields map[string]interface{}) []*repositor
 								}
 							case reflect.Ptr:
 								i := s.Interface()
-								where ,ok := i.(*repositories.Where)
+								where, ok := i.(*repositories.Where)
 								if ok {
 									wheres = append(wheres, where)
 								}

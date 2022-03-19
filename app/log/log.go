@@ -6,15 +6,16 @@ import (
 	"os"
 	"strings"
 	"ws/app/util"
+	"ws/config"
 )
 
 var Log *logrus.Logger
 
 var prefix = "log"
 
-func Setup()  {
+func Setup() {
 
-	env := util.GetEnv()
+	env := config.GetEnv()
 
 	var level logrus.Level
 
@@ -33,10 +34,10 @@ func Setup()  {
 	Log.SetLevel(level)
 	Log.SetReportCaller(true)
 	Log.SetFormatter(&logrus.TextFormatter{
-		TimestampFormat:"2006-01-02 15:04:05",
+		TimestampFormat: "2006-01-02 15:04:05",
 	})
 	Log.SetFormatter(&logrus.JSONFormatter{})
-	storagePath := util.GetStoragePath()
+	storagePath := config.GetStoragePath()
 	logPath := storagePath + "/" + prefix
 	if !util.DirExist(logPath) {
 		err := util.MkDir(logPath)
@@ -45,9 +46,9 @@ func Setup()  {
 		}
 	}
 	LogFile := logPath + "/" + "app.log"
-	write, err := os.OpenFile(LogFile, os.O_APPEND | os.O_WRONLY | os.O_CREATE, 0755 )
+	write, err := os.OpenFile(LogFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
-		panic(fmt.Errorf("log file err: %v", err ))
+		panic(fmt.Errorf("log file err: %v", err))
 	}
 	Log.SetOutput(write)
 

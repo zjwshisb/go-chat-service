@@ -6,15 +6,13 @@ import (
 	"ws/app/http/requests"
 	"ws/app/models"
 	"ws/app/repositories"
-	"ws/app/util"
 	"ws/app/websocket"
 )
 
 type TransferHandler struct {
 }
 
-
-func (handler *TransferHandler) Cancel(c *gin.Context)  {
+func (handler *TransferHandler) Cancel(c *gin.Context) {
 	id := c.Param("id")
 	transfer := repositories.TransferRepo.First([]*repositories.Where{
 		{
@@ -27,32 +25,32 @@ func (handler *TransferHandler) Cancel(c *gin.Context)  {
 		},
 	}, []string{})
 	if transfer == nil {
-		util.RespNotFound(c)
+		requests.RespNotFound(c)
 		return
 	}
 	if transfer.IsCanceled {
-		util.RespValidateFail(c, "transfer is canceled")
+		requests.RespValidateFail(c, "transfer is canceled")
 		return
 	}
 	if transfer.IsAccepted {
-		util.RespValidateFail(c, "transfer is accepted")
+		requests.RespValidateFail(c, "transfer is accepted")
 		return
 	}
 	_ = chat.TransferService.Cancel(transfer)
 	websocket.AdminManager.PublishTransfer(requests.GetAdmin(c))
-	util.RespSuccess(c , gin.H{})
+	requests.RespSuccess(c, gin.H{})
 }
 
-func (handler *TransferHandler) Index(c *gin.Context)  {
+func (handler *TransferHandler) Index(c *gin.Context) {
 	wheres := requests.GetFilterWhere(c, map[string]interface{}{})
 	wheres = append(wheres, &repositories.Where{
 		Filed: "group_id = ?",
 		Value: requests.GetAdmin(c).GetGroupId(),
 	})
-	p := repositories.TransferRepo.Paginate(c, wheres, []string{"User","ToAdmin","FromAdmin"}, []string{"id desc"})
+	p := repositories.TransferRepo.Paginate(c, wheres, []string{"User", "ToAdmin", "FromAdmin"}, []string{"id desc"})
 	_ = p.DataFormat(func(i interface{}) interface{} {
 		item := i.(*models.ChatTransfer)
 		return item.ToJson()
 	})
-	util.RespPagination(c , p)
+	requests.RespPagination(c , p)
 }

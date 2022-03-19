@@ -9,7 +9,6 @@ import (
 	"ws/app/http/requests"
 	"ws/app/repositories"
 	"ws/app/resource"
-	"ws/app/util"
 )
 
 // GetHistoryMessage 消息记录
@@ -39,16 +38,16 @@ func GetHistoryMessage(c *gin.Context) {
 			size = sizeInt
 		}
 	}
-	messages := repositories.MessageRepo.Get(wheres, size, []string{"Admin","User"}, []string{"id desc"})
+	messages := repositories.MessageRepo.Get(wheres, size, []string{"Admin", "User"}, []string{"id desc"})
 	messagesResources := make([]*resource.Message, 0, len(messages))
 	for _, m := range messages {
 		messagesResources = append(messagesResources, m.ToJson())
 	}
-	util.RespSuccess(c, messagesResources)
+	requests.RespSuccess(c, messagesResources)
 }
-func GetReqId(c *gin.Context)  {
+func GetReqId(c *gin.Context) {
 	u := requests.GetUser(c)
-	util.RespSuccess(c ,gin.H{
+	requests.RespSuccess(c, gin.H{
 		"reqId": u.GetReqId(),
 	})
 }
@@ -58,9 +57,9 @@ func GetTemplateId(c *gin.Context) {
 	user := requests.GetUser(c)
 	id := ""
 	if !chat.SubScribeService.IsSet(user.GetPrimaryKey()) {
-		id =  viper.GetString("config.Wechat.SubscribeTemplateIdOne")
+		id = viper.GetString("config.Wechat.SubscribeTemplateIdOne")
 	}
-	util.RespSuccess(c , gin.H{
+	requests.RespSuccess(c, gin.H{
 		"id": id,
 	})
 }
@@ -69,7 +68,7 @@ func GetTemplateId(c *gin.Context) {
 func Subscribe(c *gin.Context) {
 	user := requests.GetUser(c)
 	_ = chat.SubScribeService.Set(user.GetPrimaryKey())
-	util.RespSuccess(c, gin.H{})
+	requests.RespSuccess(c, gin.H{})
 }
 
 // Image 聊天图片
@@ -77,9 +76,9 @@ func Image(c *gin.Context) {
 	f, _ := c.FormFile("file")
 	ff, err := file.Save(f, "chat")
 	if err != nil {
-		util.RespFail(c, err.Error(), 500)
+		requests.RespFail(c, err.Error(), 500)
 	} else {
-		util.RespSuccess(c, gin.H{
+		requests.RespSuccess(c, gin.H{
 			"url": ff.FullUrl,
 		})
 	}

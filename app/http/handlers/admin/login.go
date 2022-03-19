@@ -3,33 +3,36 @@ package admin
 import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+	"strconv"
 	"ws/app/http/requests"
-	"ws/app/models"
-	"ws/app/util"
+	"ws/app/repositories"
 	"ws/app/websocket"
 )
-
 
 func Login(c *gin.Context) {
 	form := &requests.LoginForm{}
 	err := c.ShouldBind(form)
 	if err != nil {
-		util.RespValidateFail(c, "表单验证失败")
+		requests.RespValidateFail(c, "表单验证失败")
 		return
 	}
-	user := &models.Admin{}
-	user.FindByName(form.Username)
-	if user.ID !=  0 {
+	user := repositories.AdminRepo.First([]*repositories.Where{
+		{
+			Filed: "username = ?",
+			Value: form.Username,
+		},
+	}, []string{})
+	if user != nil {
 		if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.Password)) == nil {
-			util.RespSuccess(c, gin.H{
-				"token": user.Login(),
+			uidStr := strconv.FormatInt(user.GetPrimaryKey(), 10)
+			token, _ := requests.CreateToken(uidStr)
+			requests.RespSuccess(c, gin.H{
+				"token": token,
 			})
-			old, exist := websocket.AdminManager.GetConn(user)
-			if exist {
-				old.Deliver(websocket.NewOtherLogin())
-			}
+			websocket.AdminManager.PublishOtherLogin(user)
+
 			return
 		}
 	}
-	util.RespValidateFail(c, "账号密码错误")
+	requests.RespValidateFail(c, "账号密码错误")
 }

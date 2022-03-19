@@ -6,6 +6,7 @@ import (
 	"ws/app/models"
 )
 
+
 func GetAdmin(c *gin.Context) contract.User {
 	ui, _ := c.Get("admin")
 	user := ui.(contract.User)

@@ -21,18 +21,18 @@ import (
 	"ws/app/rpc"
 	"ws/app/util"
 	"ws/app/websocket"
+	"ws/config"
 )
-
 
 func initCheck(cmd *cobra.Command, args []string) {
 	if app.IsRunning() {
 		log.Fatalln("serve is running")
 	}
-	workDir := util.GetWorkDir()
+	workDir := config.GetWorkDir()
 	if !util.DirExist(workDir) {
 		panic(fmt.Sprintf("workdir:%s not exit", workDir))
 	}
-	storagePath := util.GetStoragePath()
+	storagePath := config.GetStoragePath()
 	if !util.DirExist(storagePath) {
 		err := util.MkDir(storagePath)
 		if err != nil {

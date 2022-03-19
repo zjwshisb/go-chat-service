@@ -5,7 +5,6 @@ import (
 	"ws/app/http/requests"
 	"ws/app/repositories"
 	"ws/app/resource"
-	"ws/app/util"
 )
 
 type SettingHandler struct {
@@ -17,15 +16,15 @@ func (handler *SettingHandler) Update(c *gin.Context) {
 	}{}
 	err := c.ShouldBind(&form)
 	if err != nil {
-		util.RespValidateFail(c, err.Error())
+		requests.RespValidateFail(c, err.Error())
 		return
 	}
 	admin := requests.GetAdmin(c)
 	id := c.Param("id")
 	setting := repositories.ChatSettingRepo.First([]*repositories.Where{
 		{
-		Filed: "group_id = ?",
-		Value: admin.GetGroupId(),
+			Filed: "group_id = ?",
+			Value: admin.GetGroupId(),
 		},
 		{
 			Filed: "id = ?",
@@ -33,12 +32,12 @@ func (handler *SettingHandler) Update(c *gin.Context) {
 		},
 	}, []string{})
 	if setting == nil {
-		util.RespNotFound(c)
+		requests.RespNotFound(c)
 		return
 	}
 	setting.Value = form.Value
 	repositories.ChatSettingRepo.Save(setting)
-	util.RespSuccess(c, gin.H{})
+	requests.RespSuccess(c, gin.H{})
 }
 
 func (handler *SettingHandler) Index(c *gin.Context) {
@@ -53,5 +52,5 @@ func (handler *SettingHandler) Index(c *gin.Context) {
 	for index, setting := range settings {
 		resp[index] = setting.ToJson()
 	}
-	util.RespSuccess(c, resp)
+	requests.RespSuccess(c, resp)
 }

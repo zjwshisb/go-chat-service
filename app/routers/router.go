@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"net/http"
 	"strings"
-	"ws/app/util"
+	"ws/config"
 )
 
 var Router *gin.Engine
@@ -20,7 +20,7 @@ var (
 )
 
 func Setup() {
-	if strings.ToLower(util.GetEnv()) == "production" {
+	if strings.ToLower(config.GetEnv()) == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
@@ -32,7 +32,7 @@ func Setup() {
 		AllowHeaders:     []string{"*"},
 		AllowCredentials: true,
 	}))
-	Router.Static("/assets", util.GetStoragePath() + "/assets")
+	Router.Static("/assets", config.GetStoragePath()+"/assets")
 	Router.GET("/", func(c *gin.Context) {
 		c.JSON(200, "hello world")
 	})

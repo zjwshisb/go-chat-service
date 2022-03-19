@@ -11,11 +11,12 @@ const TypeMessage = "message"
 const TypeWaitingUser = "waiting-user"
 const TypeAdmin = "admin"
 const TypeOtherLogin = "other-login"
+const TypeMoreThanOne = "more-than-one"
 const TypeTransfer = "admin-transfer"
 const TypeWaitingUserCount = "waiting-user-count"
 const TypeUpdateSetting = "update-admin-setting"
 const TypeUserOnline = "user-online"
-const TypeUserOffline= "user-offline"
+const TypeUserOffline = "user-offline"
 
 type MessageQueue interface {
 	// Publish 消息
@@ -30,17 +31,16 @@ type SubScribeChannel interface {
 	Close()
 }
 
-
 type Payload struct {
-	Types string `json:"types"`
-	Data interface{} `json:"data"`
+	Types string      `json:"types"`
+	Data  interface{} `json:"data"`
 }
 
 func (payload *Payload) MarshalBinary() ([]byte, error) {
 	return json.Marshal(payload)
 }
 
-func NewMessagePayload(mid uint64) *Payload  {
+func NewMessagePayload(mid uint64) *Payload {
 	return &Payload{
 		Types: TypeMessage,
 		Data:  mid,
@@ -49,7 +49,7 @@ func NewMessagePayload(mid uint64) *Payload  {
 
 var mq MessageQueue
 
-func init()  {
+func init() {
 	switch strings.ToLower(viper.GetString("App.Mq")) {
 	case "rabbitmq":
 		mq = newRabbitMq()

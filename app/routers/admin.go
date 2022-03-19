@@ -7,22 +7,21 @@ import (
 	"ws/app/http/requests"
 	"ws/app/log"
 	"ws/app/models"
-	"ws/app/util"
 	"ws/app/websocket"
 )
 
 var (
-	adminHandler = &http.AdminsHandler{}
-	userHandler = &http.UserHandler{}
-	chatHandler = &http.ChatHandler{}
-	settingHandler = &http.SettingHandler{}
+	adminHandler       = &http.AdminsHandler{}
+	userHandler        = &http.UserHandler{}
+	chatHandler        = &http.ChatHandler{}
+	settingHandler     = &http.SettingHandler{}
 	autoMessageHandler = &http.AutoMessageHandler{}
-	autoRuleHandler = &http.AutoRuleHandler{}
-	systemRuleHandler = &http.SystemRuleHandler{}
+	autoRuleHandler    = &http.AutoRuleHandler{}
+	systemRuleHandler  = &http.SystemRuleHandler{}
 	chatSessionHandler = &http.ChatSessionHandler{}
-	dashboardHandler = &http.DashboardHandler{}
-	transferHandler = &http.TransferHandler{}
-	imageHandler = &http.ImageHandler{}
+	dashboardHandler   = &http.DashboardHandler{}
+	transferHandler    = &http.TransferHandler{}
+	imageHandler       = &http.ImageHandler{}
 )
 
 func registerAdmin() {
@@ -35,11 +34,10 @@ func registerAdmin() {
 	authGroup.GET("/admins", adminHandler.Index)
 	authGroup.GET("/admins/:id", adminHandler.Show)
 
-
 	authGroup.GET("/me", userHandler.Info)
 	authGroup.POST("/me/avatar", userHandler.Avatar)
-	authGroup.GET("/me/settings" , userHandler.Setting)
-	authGroup.PUT("/me/settings" , userHandler.UpdateSetting)
+	authGroup.GET("/me/settings", userHandler.Setting)
+	authGroup.PUT("/me/settings", userHandler.UpdateSetting)
 
 	authGroup.DELETE("/ws/chat-user/:id", chatHandler.RemoveUser)
 	authGroup.POST("/ws/req-id", chatHandler.GetReqId)
@@ -54,7 +52,6 @@ func registerAdmin() {
 	authGroup.GET("/ws/transfer/:id/messages", chatHandler.TransferMessages)
 
 	authGroup.POST("/images", imageHandler.Store)
-
 
 	authGroup.GET("/settings", settingHandler.Index)
 	authGroup.PUT("/settings/:id", settingHandler.Update)
@@ -95,7 +92,7 @@ func registerAdmin() {
 		conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			log.Log.Error(err)
-			util.RespError(c , err.Error())
+			requests.RespError(c, err.Error())
 			return
 		}
 		client := websocket.NewAdminConn(admin, conn)

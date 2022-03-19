@@ -19,29 +19,28 @@ import (
 
 var AdminManager *adminManager
 
-
 type adminManager struct {
 	manager
 }
 
 func NewAdminConn(user *models.Admin, conn *websocket.Conn) Conn {
 	return &Client{
-		conn:              conn,
-		closeSignal:       make(chan interface{}),
-		send:              make(chan *Action, 100),
-		manager:           AdminManager,
-		User:              user,
-		uid:               uuid.NewV4().String(),
+		conn:        conn,
+		closeSignal: make(chan interface{}),
+		send:        make(chan *Action, 100),
+		manager:     AdminManager,
+		User:        user,
+		uid:         uuid.NewV4().String(),
 	}
 }
 
 func SetupAdmin() {
 	AdminManager = &adminManager{
 		manager: manager{
-			shardCount:            10,
-			Channel:               util.GetIPs()[0] + ":" + viper.GetString("Http.Port") + "-admin",
-			ConnMessages:          make(chan *ConnMessage, 100),
-			types: "admin",
+			shardCount:   10,
+			Channel:      util.GetIPs()[0] + ":" + viper.GetString("Http.Port") + "-admin",
+			ConnMessages: make(chan *ConnMessage, 100),
+			types:        "admin",
 		},
 	}
 	AdminManager.onRegister = AdminManager.registerHook
@@ -146,7 +145,7 @@ func (m *adminManager) handleRemoteMessage() {
 						Value: uid,
 					}}, []string{})
 					if user != nil {
-						m.handleRepeatLogin(user, true)
+						m.noticeMoreThanOne(user)
 					}
 				}
 			case mq.TypeTransfer:
@@ -166,7 +165,7 @@ func (m *adminManager) handleRemoteMessage() {
 				mid := message.Get("data").Int()
 				msg := repositories.MessageRepo.First(mid)
 				if msg != nil {
-					m.DeliveryMessage(msg , true)
+					m.DeliveryMessage(msg, true)
 				}
 			case mq.TypeUpdateSetting:
 				id := message.Get("data").Int()
@@ -240,6 +239,7 @@ func (m *adminManager) unregisterHook(conn Conn) {
 	}
 	m.PublishAdmins(conn.GetGroupId())
 }
+
 // PublishWaitingUser 推送待接入用户
 func (m *adminManager) PublishWaitingUser(groupId int64) {
 	m.Do(func() {
@@ -267,7 +267,6 @@ func (m *adminManager) PublishUserOffline(user contract.User) {
 		m.NoticeUserOffline(user.GetPrimaryKey())
 	})
 }
-
 func (m *adminManager) PublishUserOnline(user contract.User) {
 	m.Do(func() {
 		adminId := chat.UserService.GetValidAdmin(user.GetPrimaryKey())
@@ -299,6 +298,7 @@ func (m *adminManager) NoticeUserOffline(uid int64) {
 		m.SendAction(NewUserOffline(uid), conn)
 	}
 }
+
 // NoticeUserOnline 通知用户上线
 func (m *adminManager) NoticeUserOnline(uid int64) {
 	adminId := chat.UserService.GetValidAdmin(uid)
@@ -311,6 +311,33 @@ func (m *adminManager) NoticeUserOnline(uid int64) {
 	conn, exist := m.GetConn(admin)
 	if exist {
 		m.SendAction(NewUserOnline(uid), conn)
+	}
+}
+func (m *adminManager) PublishOtherLogin(user contract.User) {
+	m.Do(func() {
+		channel := m.getUserChannel(user.GetPrimaryKey())
+		if channel != "" {
+			_ = m.publish(channel, &mq.Payload{
+				Types: mq.TypeOtherLogin,
+				Data:  user.GetPrimaryKey(),
+			})
+		}
+	}, func() {
+		m.NoticeOtherLogin(user.GetPrimaryKey())
+	})
+}
+
+// NoticeOtherLogin 重复登录
+func (m *adminManager) NoticeOtherLogin(adminId int64) {
+	admin := repositories.AdminRepo.First([]*repositories.Where{
+		{
+			Filed: "id = ?",
+			Value: adminId,
+		},
+	}, []string{})
+	conn, exist := m.GetConn(admin)
+	if exist {
+		m.SendAction(NewOtherLogin(), conn)
 	}
 }
 
@@ -327,7 +354,7 @@ func (m *adminManager) PublishTransfer(admin contract.User) {
 }
 
 // PublishUpdateSetting admin修改设置后通知conn 更新admin的设置信息
-func (m *adminManager) PublishUpdateSetting(admin contract.User)  {
+func (m *adminManager) PublishUpdateSetting(admin contract.User) {
 	m.Do(func() {
 		channel := m.getUserChannel(admin.GetPrimaryKey())
 		if channel != "" {
@@ -346,7 +373,7 @@ func (m *adminManager) PublishAdmins(gid int64) {
 	m.Do(func() {
 		m.publishToAllChannel(&mq.Payload{
 			Types: mq.TypeAdmin,
-			Data: gid,
+			Data:  gid,
 		})
 	}, func() {
 		m.broadcastAdmins(gid)
@@ -354,7 +381,7 @@ func (m *adminManager) PublishAdmins(gid int64) {
 }
 
 // 更新设置
-func (m *adminManager) updateSetting(admin contract.User)  {
+func (m *adminManager) updateSetting(admin contract.User) {
 	conn, exist := m.GetConn(admin)
 	if exist {
 		u, ok := conn.GetUser().(*models.Admin)
