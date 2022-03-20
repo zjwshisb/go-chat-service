@@ -2,13 +2,13 @@ package routers
 
 import (
 	"github.com/gin-gonic/gin"
-	http "ws/app/http/handlers/user"
+	http "ws/app/http/controllers/user"
 	middleware "ws/app/http/middleware/user"
+	"ws/app/http/websocket"
 	"ws/app/models"
-	 "ws/app/websocket"
 )
 
-func registerFrontend()  {
+func registerFrontend() {
 	u := Router.Group("/user")
 	{
 		u.POST("/login", http.Login)

@@ -8,8 +8,8 @@ import (
 	"ws/app/chat"
 	"ws/app/databases"
 	"ws/app/http/requests"
+	"ws/app/http/websocket"
 	"ws/app/models"
-	"ws/app/websocket"
 )
 
 type DashboardHandler struct {

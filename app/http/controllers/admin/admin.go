@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"ws/app/chat"
 	"ws/app/http/requests"
+	"ws/app/http/websocket"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
-	"ws/app/websocket"
 )
 
 type AdminsHandler struct {
@@ -102,5 +102,3 @@ func (handle *AdminsHandler) Show(c *gin.Context) {
 		},
 	})
 }
-
-

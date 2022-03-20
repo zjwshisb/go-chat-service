@@ -5,8 +5,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"strconv"
 	"ws/app/http/requests"
+	"ws/app/http/websocket"
 	"ws/app/repositories"
-	"ws/app/websocket"
 )
 
 func Login(c *gin.Context) {

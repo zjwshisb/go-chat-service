@@ -3,9 +3,9 @@ package admin
 import (
 	"github.com/gin-gonic/gin"
 	"ws/app/http/requests"
+	"ws/app/http/websocket"
 	"ws/app/models"
 	"ws/app/repositories"
-	"ws/app/websocket"
 )
 
 type UserHandler struct {
@@ -60,4 +60,3 @@ func (User *UserHandler) Avatar(c *gin.Context) {
 		requests.RespSuccess(c, gin.H{})
 	}
 }
-

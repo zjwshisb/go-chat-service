@@ -7,7 +7,7 @@ App:
   Cluster: true
   Secret: 3123dhwahduwad
 Rpc:
-  Open: true
+  Open: false
   Port: 8888
 Etcd:
   Host: [127.0.0.1:2379]

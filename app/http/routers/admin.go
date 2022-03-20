@@ -2,12 +2,12 @@ package routers
 
 import (
 	"github.com/gin-gonic/gin"
-	http "ws/app/http/handlers/admin"
+	http "ws/app/http/controllers/admin"
 	middleware "ws/app/http/middleware/admin"
 	"ws/app/http/requests"
+	"ws/app/http/websocket"
 	"ws/app/log"
 	"ws/app/models"
-	"ws/app/websocket"
 )
 
 var (

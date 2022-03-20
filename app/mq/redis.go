@@ -15,18 +15,19 @@ type RedisSubscribe struct {
 	channel <-chan *redis.Message
 }
 
-func (s *RedisSubscribe) Close()  {
+func (s *RedisSubscribe) Close() {
 }
-func (s *RedisSubscribe) ReceiveMessage() gjson.Result  {
+
+func (s *RedisSubscribe) ReceiveMessage() gjson.Result {
 	message := <-s.channel
 	result := gjson.Parse(message.Payload)
 	return result
 }
 
 type RedisMq struct {
-
 }
-func (m *RedisMq) Publish(channel string, p *Payload) error  {
+
+func (m *RedisMq) Publish(channel string, p *Payload) error {
 	ctx := context.Background()
 	cmd := databases.Redis.Publish(ctx, channel, p)
 	return cmd.Err()

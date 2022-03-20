@@ -19,12 +19,12 @@ import (
 
 func NewUserConn(user contract.User, conn *websocket.Conn) Conn {
 	return &Client{
-		conn:              conn,
-		closeSignal:       make(chan interface{}),
-		send:              make(chan *Action, 100),
-		manager:           UserManager,
-		User:              user,
-		uid:               uuid.NewV4().String(),
+		conn:        conn,
+		closeSignal: make(chan interface{}),
+		send:        make(chan *Action, 100),
+		manager:     UserManager,
+		User:        user,
+		uid:         uuid.NewV4().String(),
 	}
 }
 
@@ -37,10 +37,10 @@ var UserManager *userManager
 func SetupUser() {
 	UserManager = &userManager{
 		manager{
-			shardCount:            10,
-			Channel:               util.GetIPs()[0] + ":" + viper.GetString("Http.Port") + "-user",
-			ConnMessages:          make(chan *ConnMessage, 100),
-			types: "user",
+			shardCount:   10,
+			Channel:      util.GetIPs()[0] + ":" + viper.GetString("Http.Port") + "-user",
+			ConnMessages: make(chan *ConnMessage, 100),
+			types:        "user",
 		},
 	}
 	UserManager.onRegister = UserManager.registerHook
@@ -66,11 +66,11 @@ func (userManager *userManager) DeliveryMessage(msg *models.Message, remote bool
 	if exist {
 		userConn.Deliver(NewReceiveAction(msg))
 		return
-	} else if !remote && userManager.isCluster()  {
+	} else if !remote && userManager.isCluster() {
 		userChannel := userManager.getUserChannel(msg.UserId)
 		if userChannel != "" {
 			_ = userManager.publish(userChannel, &mq.Payload{
-				Data: msg.Id,
+				Data:  msg.Id,
 				Types: mq.TypeMessage,
 			})
 			return
@@ -78,15 +78,17 @@ func (userManager *userManager) DeliveryMessage(msg *models.Message, remote bool
 	}
 	userManager.handleOffline(msg)
 }
+
 // 从conn接受消息并处理
 func (userManager *userManager) handleReceiveMessage() {
 	for {
-		payload := <- userManager.ConnMessages
+		payload := <-userManager.ConnMessages
 		go userManager.handleMessage(payload)
 	}
 }
+
 // 订阅远程消息
-func (userManager *userManager) handleRemoteMessage()  {
+func (userManager *userManager) handleRemoteMessage() {
 	sub := mq.Mq().Subscribe(userManager.GetSubscribeChannel())
 	for {
 		message := sub.ReceiveMessage()
@@ -107,6 +109,7 @@ func (userManager *userManager) handleRemoteMessage()  {
 		}()
 	}
 }
+
 // 处理离线逻辑
 func (userManager *userManager) handleOffline(msg *models.Message) {
 	hadSubscribe := chat.SubScribeService.IsSet(msg.UserId)
@@ -138,6 +141,7 @@ func (userManager *userManager) handleOffline(msg *models.Message) {
 		}
 	}
 }
+
 // 处理消息
 func (userManager *userManager) handleMessage(payload *ConnMessage) {
 	act := payload.Action
@@ -198,11 +202,11 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 }
 
 // PublishWaitingCount 广播等待人数
-func (userManager *userManager) PublishWaitingCount(groupId int64)  {
+func (userManager *userManager) PublishWaitingCount(groupId int64) {
 	userManager.Do(func() {
 		userManager.publishToAllChannel(&mq.Payload{
 			Types: mq.TypeWaitingUserCount,
-			Data: groupId,
+			Data:  groupId,
 		})
 	}, func() {
 		userManager.broadcastWaitingCount(groupId)
@@ -210,15 +214,16 @@ func (userManager *userManager) PublishWaitingCount(groupId int64)  {
 }
 
 // DeliveryWaitingCount 推送前面等待人数
-func (userManager *userManager) DeliveryWaitingCount(conn Conn)  {
+func (userManager *userManager) DeliveryWaitingCount(conn Conn) {
 	uid := conn.GetUserId()
 	uTime := chat.ManualService.GetTime(uid, conn.GetGroupId())
 	count := chat.ManualService.GetCountByTime(conn.GetGroupId(), "-inf",
 		strconv.FormatFloat(uTime, 'f', 0, 64))
 	conn.Deliver(NewWaitingUserCount(count - 1))
 }
+
 // 广播前面等待人数
-func (userManager *userManager) broadcastWaitingCount(gid int64)  {
+func (userManager *userManager) broadcastWaitingCount(gid int64) {
 	conns := userManager.GetAllConn(gid)
 	for _, conn := range conns {
 		userManager.DeliveryWaitingCount(conn)
@@ -227,6 +232,7 @@ func (userManager *userManager) broadcastWaitingCount(gid int64)  {
 func (userManager *userManager) unRegisterHook(conn Conn) {
 	AdminManager.PublishUserOffline(conn.GetUser())
 }
+
 // 链接建立后的额外操作
 // 如果已经在待接入人工列表中，则推送当前队列位置
 // 如果不在待接入人工列表中且没有设置客服，则推送欢迎语
@@ -247,8 +253,6 @@ func (userManager *userManager) registerHook(conn Conn) {
 		}
 	}
 }
-
-
 
 // 加入人工列表
 func (userManager *userManager) addToManual(user contract.User) *models.ChatSession {

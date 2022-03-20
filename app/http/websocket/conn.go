@@ -10,7 +10,6 @@ import (
 	"ws/app/repositories"
 )
 
-
 type Conn interface {
 	readMsg()
 	sendMsg()
@@ -27,28 +26,29 @@ type Conn interface {
 type Client struct {
 	conn        *websocket.Conn
 	closeSignal chan interface{} // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
-	send        chan *Action  // 发送的消息chan
+	send        chan *Action     // 发送的消息chan
 	sync.Once
-	manager           ConnManager
-	User              contract.User
-	uid               string
-	Created           int64
+	manager ConnManager
+	User    contract.User
+	uid     string
+	Created int64
 }
 
-func (c *Client) GetCreateTime()  int64 {
+func (c *Client) GetCreateTime() int64 {
 	return c.Created
 }
+
 // GetGroupId 分组Id
 func (c *Client) GetGroupId() int64 {
 	return c.User.GetGroupId()
 }
 
 // GetUid 每个连接的unique id
-func (c *Client) GetUid() string  {
+func (c *Client) GetUid() string {
 	return c.uid
 }
 
-func (c *Client) GetUser() contract.User  {
+func (c *Client) GetUser() contract.User {
 	return c.User
 }
 
@@ -94,7 +94,7 @@ func (c *Client) readMsg() {
 				log.Log.Info(act)
 				c.manager.ReceiveMessage(&ConnMessage{
 					Action: act,
-					Conn: c,
+					Conn:   c,
 				})
 			} else {
 				log.Log.Error(err)
@@ -144,7 +144,3 @@ func (c *Client) sendMsg() {
 		}
 	}
 }
-
-
-
-

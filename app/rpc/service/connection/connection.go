@@ -2,14 +2,13 @@ package connection
 
 import (
 	"context"
+	"ws/app/http/websocket"
 	"ws/app/repositories"
 	"ws/app/rpc/request"
 	"ws/app/rpc/response"
-	"ws/app/websocket"
 )
 
-
-type Connection struct {}
+type Connection struct{}
 
 func (conn *Connection) Exist(ctx context.Context, request *request.ConnectionExistRequest,
 	response *response.ConnectionExistResponse) (err error) {
@@ -43,6 +42,3 @@ func (conn *Connection) Total(ctx context.Context, request *request.ConnectionGr
 	}
 	return nil
 }
-
-
-

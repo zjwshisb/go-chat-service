@@ -7,10 +7,10 @@ import (
 	"ws/app/chat"
 	"ws/app/contract"
 	"ws/app/http/requests"
+	"ws/app/http/websocket"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
-	"ws/app/websocket"
 )
 
 type ChatHandler struct {
@@ -519,10 +519,9 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 	}
 	err = chat.TransferService.Create(admin.GetPrimaryKey(), form.ToId, form.UserId, form.Remark)
 	if err != nil {
-		requests.RespValidateFail(c , err.Error())
+		requests.RespValidateFail(c, err.Error())
 		return
 	}
 	go websocket.AdminManager.PublishTransfer(toAdmin)
 	requests.RespSuccess(c, gin.H{})
 }
-

@@ -4,9 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"ws/app/chat"
 	"ws/app/http/requests"
+	"ws/app/http/websocket"
 	"ws/app/models"
 	"ws/app/repositories"
-	"ws/app/websocket"
 )
 
 type TransferHandler struct {
@@ -52,5 +52,5 @@ func (handler *TransferHandler) Index(c *gin.Context) {
 		item := i.(*models.ChatTransfer)
 		return item.ToJson()
 	})
-	requests.RespPagination(c , p)
+	requests.RespPagination(c, p)
 }

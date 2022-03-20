@@ -1,4 +1,4 @@
-package app
+package sys
 
 import (
 	"log"
@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	_ "ws/app/http/requests"
 	"ws/config"
 )
 

@@ -6,10 +6,10 @@ import (
 	"time"
 	"ws/app/chat"
 	"ws/app/http/requests"
+	"ws/app/http/websocket"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
-	"ws/app/websocket"
 )
 
 type ChatSessionHandler struct {
@@ -155,6 +155,6 @@ func (handler *ChatSessionHandler) Show(c *gin.Context) {
 	requests.RespSuccess(c, gin.H{
 		"messages": data,
 		"total":    len(data),
-		"session": session.ToJson(),
+		"session":  session.ToJson(),
 	})
 }

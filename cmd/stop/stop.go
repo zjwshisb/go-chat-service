@@ -6,26 +6,29 @@ import (
 	"log"
 	"os/exec"
 	"strconv"
-	"ws/app"
+	"ws/app/sys"
 )
 
-func NewStopCommand() *cobra.Command  {
+func NewStopCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                        "stop",
+		Use:   "stop",
 		Short: "stop the server",
 		Run: func(cmd *cobra.Command, args []string) {
-			if !app.IsRunning() {
-				log.Fatalln("serve is not running")
+			if !sys.IsRunning() {
+				log.Fatalln("service is not running")
 			}
- 			pid := app.GetPid()
+			pid := sys.GetPid()
+			if pid == 0 {
+				log.Fatalln("service is not running")
+			}
 			e := exec.Command("kill", "15", strconv.Itoa(pid))
 			_, err := e.Output()
-			if err != nil{
+			if err != nil {
 				log.Fatalln(err)
-			}  else {
-				fmt.Println("serve is stop")
+			} else {
+				fmt.Println("service had been stopped")
 			}
 		},
 	}
 	return cmd
-}	
+}

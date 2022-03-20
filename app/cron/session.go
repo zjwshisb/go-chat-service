@@ -3,13 +3,13 @@ package cron
 import (
 	"time"
 	"ws/app/chat"
+	"ws/app/http/websocket"
 	"ws/app/log"
 	"ws/app/repositories"
-	"ws/app/websocket"
 )
 
-func closeSessions()  {
-	admins := repositories.AdminRepo.Get([]*repositories.Where{},-1, []string{}, []string{})
+func closeSessions() {
+	admins := repositories.AdminRepo.Get([]*repositories.Where{}, -1, []string{}, []string{})
 	for _, admin := range admins {
 		uids, limits := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
 		length := len(uids)
