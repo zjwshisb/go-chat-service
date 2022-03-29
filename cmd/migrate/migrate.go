@@ -8,16 +8,15 @@ import (
 	"ws/app/models"
 )
 
-
 var defaultGroupId int64 = 1
 
-func printErr(err error)  {
+func printErr(err error) {
 	if err != nil {
 		log.Fatalf("migrate error: %v \n", err)
 	}
 }
-func getSettings() []*models.ChatSetting  {
-	s := make([]*models.ChatSetting, 0 ,0)
+func getSettings() []*models.ChatSetting {
+	s := make([]*models.ChatSetting, 0, 0)
 	options1, _ := json.Marshal([]map[string]string{
 		{
 			"label": "是",
@@ -36,9 +35,9 @@ func getSettings() []*models.ChatSetting  {
 		Options:   string(options1),
 		CreatedAt: nil,
 		UpdatedAt: nil,
-		Type: "select",
+		Type:      "select",
 	})
-	options2 , _ := json.Marshal([]map[string]string{
+	options2, _ := json.Marshal([]map[string]string{
 		{
 			"label": "5分钟",
 			"value": "5",
@@ -64,7 +63,7 @@ func getSettings() []*models.ChatSetting  {
 		Options:   string(options2),
 		CreatedAt: nil,
 		UpdatedAt: nil,
-		Type: "select",
+		Type:      "select",
 	})
 	s = append(s, &models.ChatSetting{
 		Name:      models.SystemAvatar,
@@ -72,7 +71,7 @@ func getSettings() []*models.ChatSetting  {
 		GroupId:   defaultGroupId,
 		Value:     "",
 		Options:   "",
-		Type:      "text",
+		Type:      "image",
 		CreatedAt: nil,
 		UpdatedAt: nil,
 	})
@@ -91,8 +90,8 @@ func getSettings() []*models.ChatSetting  {
 
 func NewMigrateCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:                        "migrate",
-		Short:                      "create table",
+		Use:   "migrate",
+		Short: "create table",
 		Run: func(cmd *cobra.Command, args []string) {
 			databases.MysqlSetup()
 			err := databases.Db.Migrator().CreateTable(&models.ChatSession{})
@@ -116,27 +115,27 @@ func NewMigrateCommand() *cobra.Command {
 			err = databases.Db.Migrator().CreateTable(&models.ChatSetting{})
 			rules := []models.AutoRule{
 				{
-					Name: "用户进入客服系统时",
+					Name:      "用户进入客服系统时",
 					MatchType: models.MatchTypeAll,
-					Match: models.MatchEnter,
+					Match:     models.MatchEnter,
 					ReplyType: models.ReplyTypeMessage,
-					IsSystem: 1,
-					GroupId: defaultGroupId,
+					IsSystem:  1,
+					GroupId:   defaultGroupId,
 				},
 				{
-					Name: "当转接到人工客服而没有客服在线时(如不设置则继续转接到人工客服)",
+					Name:      "当转接到人工客服而没有客服在线时(如不设置则继续转接到人工客服)",
 					MatchType: models.MatchTypeAll,
-					Match: models.MatchAdminAllOffLine,
+					Match:     models.MatchAdminAllOffLine,
 					ReplyType: models.ReplyTypeMessage,
-					IsSystem: 1,
-					GroupId: defaultGroupId,
+					IsSystem:  1,
+					GroupId:   defaultGroupId,
 				},
 			}
 			for _, rule := range rules {
 				var exist int64
 				databases.Db.Model(&models.AutoRule{}).
 					Where("group_id", defaultGroupId).
-					Where("`match`=?" , rule.Match).Count(&exist)
+					Where("`match`=?", rule.Match).Count(&exist)
 				if exist == 0 {
 					databases.Db.Save(&rule)
 				}
@@ -148,4 +147,3 @@ func NewMigrateCommand() *cobra.Command {
 		},
 	}
 }
-
