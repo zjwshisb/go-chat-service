@@ -51,8 +51,8 @@ func (admin *Admin) GetUsername() string {
 func (admin *Admin) GetSetting() *AdminChatSetting {
 	if admin.Setting == nil {
 		setting := &AdminChatSetting{}
-		err := databases.Db.Model(admin).Association("Setting").Find(setting)
-		if err != nil {
+		databases.Db.Model(admin).Association("Setting").Find(setting)
+		if setting.Id == 0 {
 			setting = &AdminChatSetting{
 				AdminId:   admin.GetPrimaryKey(),
 				Name:      admin.GetUsername(),
