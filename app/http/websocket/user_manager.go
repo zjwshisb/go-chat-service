@@ -1,10 +1,6 @@
 package websocket
 
 import (
-	"github.com/gorilla/websocket"
-	uuid "github.com/satori/go.uuid"
-	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
-	"github.com/spf13/viper"
 	"strconv"
 	"time"
 	"ws/app/chat"
@@ -15,6 +11,11 @@ import (
 	"ws/app/repositories"
 	"ws/app/util"
 	"ws/app/wechat"
+
+	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
+	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
+	"github.com/spf13/viper"
 )
 
 func NewUserConn(user contract.User, conn *websocket.Conn) Conn {
@@ -96,7 +97,7 @@ func (userManager *userManager) handleRemoteMessage() {
 			switch message.Get("types").String() {
 			case mq.TypeMessage:
 				mid := message.Get("data").Int()
-				msg := repositories.MessageRepo.First(mid)
+				msg := repositories.MessageRepo.FirstById(mid)
 				if msg != nil {
 					userManager.DeliveryMessage(msg, true)
 				}
@@ -113,12 +114,7 @@ func (userManager *userManager) handleRemoteMessage() {
 // 处理离线逻辑
 func (userManager *userManager) handleOffline(msg *models.Message) {
 	hadSubscribe := chat.SubScribeService.IsSet(msg.UserId)
-	user := repositories.UserRepo.First([]*repositories.Where{
-		{
-			Filed: "id = ?",
-			Value: msg.UserId,
-		},
-	}, []string{})
+	user := repositories.UserRepo.FirstById(msg.UserId)
 	if hadSubscribe && user != nil && user.GetMpOpenId() != "" {
 		err := wechat.GetMp().GetSubscribe().Send(&subscribe.Message{
 			ToUser:           user.GetMpOpenId(),

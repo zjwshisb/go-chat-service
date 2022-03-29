@@ -1,15 +1,17 @@
 package admin
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/golang-module/carbon"
-	"gorm.io/gorm"
 	"sort"
 	"ws/app/chat"
 	"ws/app/databases"
 	"ws/app/http/requests"
+	"ws/app/http/responses"
 	"ws/app/http/websocket"
 	"ws/app/models"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-module/carbon"
+	"gorm.io/gorm"
 )
 
 type DashboardHandler struct {
@@ -85,7 +87,7 @@ func (handler *DashboardHandler) GetUserQueryInfo(c *gin.Context) {
 	if acceptCount > 0 {
 		avgTime = totalTime / acceptCount
 	}
-	requests.RespSuccess(c, gin.H{
+	responses.RespSuccess(c, gin.H{
 		"user_count":    total,
 		"message_count": messageCount,
 		"avg_time":      avgTime,
@@ -96,7 +98,7 @@ func (handler *DashboardHandler) GetUserQueryInfo(c *gin.Context) {
 
 func (handler *DashboardHandler) GetOnlineInfo(c *gin.Context) {
 	admin := requests.GetAdmin(c)
-	requests.RespSuccess(c, gin.H{
+	responses.RespSuccess(c, gin.H{
 		"user_count":         websocket.UserManager.GetOnlineTotal(admin.GetGroupId()),
 		"admin_count":        websocket.AdminManager.GetOnlineTotal(admin.GetGroupId()),
 		"waiting_user_count": len(chat.ManualService.GetAll(admin.GetGroupId())),

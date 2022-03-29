@@ -1,12 +1,14 @@
 package admin
 
 import (
-	"github.com/gin-gonic/gin"
 	"ws/app/chat"
 	"ws/app/http/requests"
+	"ws/app/http/responses"
 	"ws/app/http/websocket"
 	"ws/app/models"
 	"ws/app/repositories"
+
+	"github.com/gin-gonic/gin"
 )
 
 type TransferHandler struct {
@@ -25,20 +27,20 @@ func (handler *TransferHandler) Cancel(c *gin.Context) {
 		},
 	}, []string{})
 	if transfer == nil {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	if transfer.IsCanceled {
-		requests.RespValidateFail(c, "transfer is canceled")
+		responses.RespValidateFail(c, "transfer is canceled")
 		return
 	}
 	if transfer.IsAccepted {
-		requests.RespValidateFail(c, "transfer is accepted")
+		responses.RespValidateFail(c, "transfer is accepted")
 		return
 	}
 	_ = chat.TransferService.Cancel(transfer)
 	websocket.AdminManager.PublishTransfer(requests.GetAdmin(c))
-	requests.RespSuccess(c, gin.H{})
+	responses.RespSuccess(c, gin.H{})
 }
 
 func (handler *TransferHandler) Index(c *gin.Context) {
@@ -48,9 +50,8 @@ func (handler *TransferHandler) Index(c *gin.Context) {
 		Value: requests.GetAdmin(c).GetGroupId(),
 	})
 	p := repositories.TransferRepo.Paginate(c, wheres, []string{"User", "ToAdmin", "FromAdmin"}, []string{"id desc"})
-	_ = p.DataFormat(func(i interface{}) interface{} {
-		item := i.(*models.ChatTransfer)
+	_ = p.DataFormat(func(item *models.ChatTransfer) interface{} {
 		return item.ToJson()
 	})
-	requests.RespPagination(c, p)
+	responses.RespPagination(c, p)
 }

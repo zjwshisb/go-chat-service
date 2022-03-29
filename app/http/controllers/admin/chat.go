@@ -1,16 +1,18 @@
 package admin
 
 import (
-	"github.com/gin-gonic/gin"
 	"strconv"
 	"time"
 	"ws/app/chat"
 	"ws/app/contract"
 	"ws/app/http/requests"
+	"ws/app/http/responses"
 	"ws/app/http/websocket"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ChatHandler struct {
@@ -37,7 +39,7 @@ func (handle *ChatHandler) GetHistorySession(c *gin.Context) {
 	for i, session := range sessions {
 		resp[i] = session.ToJson()
 	}
-	requests.RespSuccess(c, resp)
+	responses.RespSuccess(c, resp)
 }
 
 // GetHistoryMessage 获取消息
@@ -47,12 +49,12 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 	var err error
 	uidStr, exist := c.GetQuery("uid")
 	if !exist {
-		requests.RespValidateFail(c, "invalid params")
+		responses.RespValidateFail(c, "invalid params")
 		return
 	}
 	uid, err = strconv.ParseInt(uidStr, 10, 64)
 	if err != nil {
-		requests.RespValidateFail(c, "invalid params")
+		responses.RespValidateFail(c, "invalid params")
 		return
 	}
 	admin := requests.GetAdmin(c)
@@ -64,7 +66,7 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 		}
 	}
 	if !userExist {
-		requests.RespValidateFail(c, "invalid params")
+		responses.RespValidateFail(c, "invalid params")
 		return
 	}
 	wheres := []*repositories.Where{
@@ -96,13 +98,13 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 	for _, m := range messages {
 		res = append(res, m.ToJson())
 	}
-	requests.RespSuccess(c, res)
+	responses.RespSuccess(c, res)
 }
 
 // GetReqId 获取reqId
 func (handle *ChatHandler) GetReqId(c *gin.Context) {
 	admin := requests.GetAdmin(c)
-	requests.RespSuccess(c, gin.H{
+	responses.RespSuccess(c, gin.H{
 		"reqId": admin.GetReqId(),
 	})
 }
@@ -171,7 +173,7 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 			}
 		}
 	}
-	requests.RespSuccess(c, resp)
+	responses.RespSuccess(c, resp)
 }
 
 // AcceptUser 接入用户
@@ -184,7 +186,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	}{}
 	err := c.Bind(form)
 	if err != nil {
-		requests.RespValidateFail(c, "invalid params")
+		responses.RespValidateFail(c, "invalid params")
 		return
 	}
 	session := repositories.ChatSessionRepo.First([]*repositories.Where{
@@ -194,7 +196,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		},
 	}, []string{})
 	if session == nil || session.CanceledAt > 0 || session.AdminId > 0 {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	user := repositories.UserRepo.First([]*repositories.Where{
@@ -204,27 +206,27 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		},
 	}, []string{})
 	if user == nil {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	u := requests.GetAdmin(c)
 	admin, _ := u.(*models.Admin)
 	if !admin.AccessTo(user) {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	if chat.UserService.GetValidAdmin(user.GetPrimaryKey()) != 0 {
-		requests.RespFail(c, "user had been accepted", 10001)
+		responses.RespFail(c, "user had been accepted", 10001)
 		return
 	}
 	if session.Type == models.ChatSessionTypeTransfer {
 		transferAdminId := chat.TransferService.GetUserTransferId(user.GetPrimaryKey())
 		if transferAdminId == 0 {
-			requests.RespValidateFail(c, "transfer error ")
+			responses.RespValidateFail(c, "transfer error ")
 			return
 		}
 		if transferAdminId != admin.GetPrimaryKey() {
-			requests.RespValidateFail(c, "transfer error ")
+			responses.RespValidateFail(c, "transfer error ")
 			return
 		}
 		transfer := repositories.TransferRepo.First([]*repositories.Where{
@@ -242,7 +244,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 			},
 		}, []string{})
 		if transfer == nil {
-			requests.RespValidateFail(c, "transfer error ")
+			responses.RespValidateFail(c, "transfer error ")
 			return
 		}
 		now := time.Now()
@@ -318,7 +320,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	}
 	go websocket.AdminManager.PublishWaitingUser(user.GetGroupId())
 	go websocket.UserManager.PublishWaitingCount(user.GetGroupId())
-	requests.RespSuccess(c, chatUser)
+	responses.RespSuccess(c, chatUser)
 }
 
 // RemoveUser 移除用户
@@ -344,7 +346,7 @@ func (handle *ChatHandler) RemoveUser(c *gin.Context) {
 		}
 		chat.SessionService.Close(session.Id, true, false)
 	}
-	requests.RespSuccess(c, nil)
+	responses.RespSuccess(c, nil)
 }
 
 // ReadAll 已读
@@ -379,9 +381,9 @@ func (handle *ChatHandler) ReadAll(c *gin.Context) {
 		repositories.MessageRepo.Update(wheres, map[string]interface{}{
 			"is_read": 1,
 		})
-		requests.RespSuccess(c, gin.H{})
+		responses.RespSuccess(c, gin.H{})
 	} else {
-		requests.RespValidateFail(c, "invalid params")
+		responses.RespValidateFail(c, "invalid params")
 	}
 }
 
@@ -390,7 +392,7 @@ func (handle *ChatHandler) GetUserInfo(c *gin.Context) {
 	uidStr := c.Param("id")
 	uid, err := strconv.ParseInt(uidStr, 10, 64)
 	if err != nil {
-		requests.RespValidateFail(c, err.Error())
+		responses.RespValidateFail(c, err.Error())
 		return
 	}
 	admin := requests.GetAdmin(c)
@@ -405,14 +407,14 @@ func (handle *ChatHandler) GetUserInfo(c *gin.Context) {
 		},
 	}, []string{})
 	if user == nil {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	if !admin.AccessTo(user) {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
-	requests.RespSuccess(c, gin.H{
+	responses.RespSuccess(c, gin.H{
 		"username": user.GetUsername(),
 		// other info
 	})
@@ -433,7 +435,7 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 		},
 	}, []string{})
 	if transfer == nil {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	messages := repositories.MessageRepo.Get([]*repositories.Where{
@@ -446,7 +448,7 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 	for _, m := range messages {
 		res = append(res, m.ToJson())
 	}
-	requests.RespSuccess(c, res)
+	responses.RespSuccess(c, res)
 }
 
 // CancelTransfer 取消转接
@@ -464,20 +466,20 @@ func (handle *ChatHandler) CancelTransfer(c *gin.Context) {
 		},
 	}, []string{})
 	if transfer == nil {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	if transfer.IsCanceled {
-		requests.RespValidateFail(c, "transfer is canceled")
+		responses.RespValidateFail(c, "transfer is canceled")
 		return
 	}
 	if transfer.IsAccepted {
-		requests.RespValidateFail(c, "transfer is accepted")
+		responses.RespValidateFail(c, "transfer is accepted")
 		return
 	}
 	_ = chat.TransferService.Cancel(transfer)
 	websocket.AdminManager.PublishTransfer(admin)
-	requests.RespSuccess(c, gin.H{})
+	responses.RespSuccess(c, gin.H{})
 }
 
 // Transfer 转接
@@ -489,7 +491,7 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 	}{}
 	err := c.ShouldBind(form)
 	if err != nil {
-		requests.RespValidateFail(c, err.Error())
+		responses.RespValidateFail(c, err.Error())
 		return
 	}
 	user := repositories.UserRepo.First([]*repositories.Where{
@@ -499,12 +501,12 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		},
 	}, []string{})
 	if user == nil {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	admin := requests.GetAdmin(c)
 	if !admin.AccessTo(user) {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	toAdmin := repositories.AdminRepo.First([]*repositories.Where{
@@ -514,14 +516,14 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		},
 	}, []string{})
 	if toAdmin.ID == 0 {
-		requests.RespValidateFail(c, "admin_not_exist")
+		responses.RespValidateFail(c, "admin_not_exist")
 		return
 	}
 	err = chat.TransferService.Create(admin.GetPrimaryKey(), form.ToId, form.UserId, form.Remark)
 	if err != nil {
-		requests.RespValidateFail(c, err.Error())
+		responses.RespValidateFail(c, err.Error())
 		return
 	}
 	go websocket.AdminManager.PublishTransfer(toAdmin)
-	requests.RespSuccess(c, gin.H{})
+	responses.RespSuccess(c, gin.H{})
 }

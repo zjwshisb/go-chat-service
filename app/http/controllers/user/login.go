@@ -1,10 +1,11 @@
 package user
 
 import (
+	"ws/app/http/responses"
+	"ws/app/models"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
-	"ws/app/http/requests"
-	"ws/app/models"
 )
 
 type loginForm struct {
@@ -20,12 +21,12 @@ func Login(c *gin.Context) {
 		user.FindByName(form.Username)
 		if user.ID != 0 {
 			if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.Password)) == nil {
-				requests.RespSuccess(c, gin.H{
+				responses.RespSuccess(c, gin.H{
 					"token": user.Login(),
 				})
 				return
 			}
 		}
 	}
-	requests.RespFail(c, "账号密码错误", 500)
+	responses.RespFail(c, "账号密码错误", 500)
 }

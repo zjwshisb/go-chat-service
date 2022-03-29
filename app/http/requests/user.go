@@ -1,11 +1,11 @@
 package requests
 
 import (
-	"github.com/gin-gonic/gin"
 	"ws/app/contract"
 	"ws/app/models"
-)
 
+	"github.com/gin-gonic/gin"
+)
 
 func GetAdmin(c *gin.Context) contract.User {
 	ui, _ := c.Get("admin")
@@ -17,7 +17,7 @@ func SetAdmin(c *gin.Context, user *models.Admin) {
 	c.Set("admin", user)
 }
 
-func SetUser(c *gin.Context, user contract.User)  {
+func SetUser(c *gin.Context, user contract.User) {
 	c.Set("frontend", user)
 }
 

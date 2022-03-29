@@ -1,10 +1,12 @@
 package admin
 
 import (
-	"github.com/gin-gonic/gin"
 	"ws/app/http/requests"
+	"ws/app/http/responses"
 	"ws/app/repositories"
 	"ws/app/resource"
+
+	"github.com/gin-gonic/gin"
 )
 
 type SettingHandler struct {
@@ -16,7 +18,7 @@ func (handler *SettingHandler) Update(c *gin.Context) {
 	}{}
 	err := c.ShouldBind(&form)
 	if err != nil {
-		requests.RespValidateFail(c, err.Error())
+		responses.RespValidateFail(c, err.Error())
 		return
 	}
 	admin := requests.GetAdmin(c)
@@ -32,12 +34,12 @@ func (handler *SettingHandler) Update(c *gin.Context) {
 		},
 	}, []string{})
 	if setting == nil {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	setting.Value = form.Value
 	repositories.ChatSettingRepo.Save(setting)
-	requests.RespSuccess(c, gin.H{})
+	responses.RespSuccess(c, gin.H{})
 }
 
 func (handler *SettingHandler) Index(c *gin.Context) {
@@ -52,5 +54,5 @@ func (handler *SettingHandler) Index(c *gin.Context) {
 	for index, setting := range settings {
 		resp[index] = setting.ToJson()
 	}
-	requests.RespSuccess(c, resp)
+	responses.RespSuccess(c, resp)
 }

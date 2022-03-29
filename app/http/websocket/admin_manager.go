@@ -2,9 +2,6 @@ package websocket
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
-	uuid "github.com/satori/go.uuid"
-	"github.com/spf13/viper"
 	"sort"
 	"time"
 	"ws/app/chat"
@@ -15,6 +12,10 @@ import (
 	"ws/app/repositories"
 	"ws/app/resource"
 	"ws/app/util"
+
+	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
+	"github.com/spf13/viper"
 )
 
 var AdminManager *adminManager
@@ -90,12 +91,7 @@ func (m *adminManager) handleReceiveMessage() {
 // 处理离线消息
 func (m *adminManager) handleOffline(msg *models.Message) {
 	UserManager.triggerMessageEvent(models.SceneAdminOffline, msg)
-	admin := repositories.AdminRepo.First([]*repositories.Where{
-		{
-			Filed: "id = ?",
-			Value: msg.AdminId,
-		},
-	}, []string{})
+	admin := repositories.AdminRepo.FirstById(msg.AdminId)
 	setting := admin.GetSetting()
 	if setting != nil {
 		// 发送离线消息
@@ -151,19 +147,14 @@ func (m *adminManager) handleRemoteMessage() {
 			case mq.TypeTransfer:
 				adminId := message.Get("data").Int()
 				if adminId > 0 {
-					admin := repositories.AdminRepo.First([]*repositories.Where{
-						{
-							Filed: "id = ?",
-							Value: adminId,
-						},
-					}, []string{})
+					admin := repositories.AdminRepo.FirstById(adminId)
 					if admin != nil {
 						m.broadcastUserTransfer(admin)
 					}
 				}
 			case mq.TypeMessage:
 				mid := message.Get("data").Int()
-				msg := repositories.MessageRepo.First(mid)
+				msg := repositories.MessageRepo.FirstById(mid)
 				if msg != nil {
 					m.DeliveryMessage(msg, true)
 				}

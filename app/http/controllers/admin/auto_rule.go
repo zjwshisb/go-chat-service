@@ -1,11 +1,13 @@
 package admin
 
 import (
-	"github.com/gin-gonic/gin"
 	"ws/app/http/requests"
+	"ws/app/http/responses"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
+
+	"github.com/gin-gonic/gin"
 )
 
 type AutoRuleHandler struct {
@@ -23,17 +25,17 @@ func (handle *AutoRuleHandler) MessageOptions(c *gin.Context) {
 			Label: message.Name + "-" + message.TypeLabel(),
 		})
 	}
-	requests.RespSuccess(c, options)
+	responses.RespSuccess(c, options)
 }
 
 // SceneOptions 可选择场景
 func (handle *AutoRuleHandler) SceneOptions(c *gin.Context) {
-	requests.RespSuccess(c, models.ScenesOptions)
+	responses.RespSuccess(c, models.ScenesOptions)
 }
 
 // EventOptions 可选择的事件
 func (handle *AutoRuleHandler) EventOptions(c *gin.Context) {
-	requests.RespSuccess(c, models.EventOptions)
+	responses.RespSuccess(c, models.EventOptions)
 }
 
 // Index 获取自定义规则列表
@@ -63,11 +65,10 @@ func (handle *AutoRuleHandler) Index(c *gin.Context) {
 		Value: admin.GetGroupId(),
 	})
 	p := repositories.AutoRuleRepo.Paginate(c, wheres, []string{"Message", "Scenes"}, []string{"id desc"})
-	_ = p.DataFormat(func(i interface{}) interface{} {
-		item := i.(*models.AutoRule)
+	_ = p.DataFormat(func(item *models.AutoRule) interface{} {
 		return item.ToJson()
 	})
-	requests.RespPagination(c, p)
+	responses.RespPagination(c, p)
 }
 
 // Show 获取自定义规则
@@ -85,9 +86,9 @@ func (handle *AutoRuleHandler) Show(c *gin.Context) {
 		},
 	}, []string{})
 	if rule != nil {
-		requests.RespSuccess(c, rule.ToJson())
+		responses.RespSuccess(c, rule.ToJson())
 	} else {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 	}
 }
 
@@ -97,7 +98,7 @@ func (handle *AutoRuleHandler) Store(c *gin.Context) {
 	err := c.ShouldBind(&form)
 	admin := requests.GetAdmin(c)
 	if err != nil {
-		requests.RespValidateFail(c, err.Error())
+		responses.RespValidateFail(c, err.Error())
 		return
 	}
 	if form.ReplyType == models.ReplyTypeTransfer {
@@ -126,7 +127,7 @@ func (handle *AutoRuleHandler) Store(c *gin.Context) {
 		rule.MessageId = form.MessageId
 	}
 	repositories.AutoRuleRepo.Save(rule)
-	requests.RespSuccess(c, rule.ToJson())
+	responses.RespSuccess(c, rule.ToJson())
 }
 
 // Update 更新自定义规则
@@ -146,13 +147,13 @@ func (handle *AutoRuleHandler) Update(c *gin.Context) {
 		},
 	}, []string{})
 	if rule == nil {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	form := requests.AutoRuleForm{}
 	err := c.ShouldBind(&form)
 	if err != nil {
-		requests.RespValidateFail(c, err.Error())
+		responses.RespValidateFail(c, err.Error())
 		return
 	}
 	repositories.AutoRuleRepo.DeleteScene(rule)
@@ -182,7 +183,7 @@ func (handle *AutoRuleHandler) Update(c *gin.Context) {
 	rule.Sort = form.Sort
 	rule.MessageId = form.MessageId
 	repositories.AutoRuleRepo.Save(rule)
-	requests.RespSuccess(c, rule.ToJson())
+	responses.RespSuccess(c, rule.ToJson())
 }
 
 // Delete 删除自定义规则
@@ -203,11 +204,11 @@ func (handle *AutoRuleHandler) Delete(c *gin.Context) {
 		},
 	}, []string{})
 	if rule == nil {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	repositories.AutoRuleRepo.Delete(rule)
-	requests.RespSuccess(c, gin.H{})
+	responses.RespSuccess(c, gin.H{})
 }
 
 type SystemRuleHandler struct {
@@ -229,7 +230,7 @@ func (handler *SystemRuleHandler) Index(c *gin.Context) {
 	for i, rule := range rules {
 		result[i] = rule.ToJson()
 	}
-	requests.RespSuccess(c, result)
+	responses.RespSuccess(c, result)
 }
 
 // Update 更新系统规则
@@ -237,7 +238,7 @@ func (handler *SystemRuleHandler) Update(c *gin.Context) {
 	m := make(map[int]int)
 	err := c.ShouldBind(&m)
 	if err != nil {
-		requests.RespError(c, err.Error())
+		responses.RespError(c, err.Error())
 	}
 	repositories.AutoRuleRepo.Update([]*repositories.Where{
 		{
@@ -269,5 +270,5 @@ func (handler *SystemRuleHandler) Update(c *gin.Context) {
 			"message_id": v,
 		})
 	}
-	requests.RespSuccess(c, m)
+	responses.RespSuccess(c, m)
 }

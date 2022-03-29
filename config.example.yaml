@@ -4,7 +4,7 @@ App:
   # local,production,test
   Env: local
   Mq: redis
-  Cluster: true
+  Cluster: false
   Secret: 3123dhwahduwad
 Rpc:
   Open: false

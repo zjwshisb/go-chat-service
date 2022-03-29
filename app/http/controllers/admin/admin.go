@@ -1,15 +1,17 @@
 package admin
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/golang-module/carbon"
 	"strconv"
 	"ws/app/chat"
 	"ws/app/http/requests"
+	"ws/app/http/responses"
 	"ws/app/http/websocket"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-module/carbon"
 )
 
 type AdminsHandler struct {
@@ -25,8 +27,7 @@ func (handle *AdminsHandler) Index(c *gin.Context) {
 		Value: admin.GetGroupId(),
 	})
 	p := repositories.AdminRepo.Paginate(c, where, []string{}, []string{"id desc"})
-	_ = p.DataFormat(func(i interface{}) interface{} {
-		admin := i.(*models.Admin)
+	_ = p.DataFormat(func(admin *models.Admin) interface{} {
 		return &resource.Admin{
 			Avatar:        admin.GetAvatarUrl(),
 			Username:      admin.Username,
@@ -35,7 +36,7 @@ func (handle *AdminsHandler) Index(c *gin.Context) {
 			AcceptedCount: chat.AdminService.GetActiveCount(admin.GetPrimaryKey()),
 		}
 	})
-	requests.RespPagination(c, p)
+	responses.RespPagination(c, p)
 }
 
 func (handle *AdminsHandler) Show(c *gin.Context) {
@@ -52,7 +53,7 @@ func (handle *AdminsHandler) Show(c *gin.Context) {
 		},
 	}, []string{})
 	if admin == nil {
-		requests.RespNotFound(c)
+		responses.RespNotFound(c)
 		return
 	}
 	month := c.Query("month")
@@ -80,7 +81,7 @@ func (handle *AdminsHandler) Show(c *gin.Context) {
 
 	value := make([]*resource.Line, lastDate.DayOfMonth())
 
-	for day, _ := range value {
+	for day := range value {
 		value[day] = &resource.Line{
 			Category: "每日接待数",
 			Value:    0,
@@ -91,7 +92,7 @@ func (handle *AdminsHandler) Show(c *gin.Context) {
 		d := (session.AcceptedAt - firstDateUnix) / (24 * 3600)
 		value[d].Value += 1
 	}
-	requests.RespSuccess(c, gin.H{
+	responses.RespSuccess(c, gin.H{
 		"chart": value,
 		"admin": resource.Admin{
 			Avatar:        admin.GetAvatarUrl(),

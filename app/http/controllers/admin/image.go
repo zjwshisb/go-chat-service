@@ -2,9 +2,11 @@ package admin
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"ws/app/file"
 	"ws/app/http/requests"
+	"ws/app/http/responses"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ImageHandler struct {
@@ -15,15 +17,15 @@ func (handle *ImageHandler) Store(c *gin.Context) {
 	admin := requests.GetAdmin(c)
 	path := c.Query("path")
 	if path == "" {
-		requests.RespValidateFail(c, "invalid path")
+		responses.RespValidateFail(c, "invalid path")
 		return
 	}
 	prefix := fmt.Sprintf("chat/%d/", admin.GetGroupId())
 	ff, err := file.Save(f, prefix+path)
 	if err != nil {
-		requests.RespFail(c, err.Error(), 500)
+		responses.RespFail(c, err.Error(), 500)
 	} else {
-		requests.RespSuccess(c, gin.H{
+		responses.RespSuccess(c, gin.H{
 			"url": ff.FullUrl,
 		})
 	}

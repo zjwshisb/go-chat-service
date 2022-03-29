@@ -1,14 +1,16 @@
 package user
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 	"strconv"
 	"ws/app/chat"
 	"ws/app/file"
 	"ws/app/http/requests"
+	"ws/app/http/responses"
 	"ws/app/repositories"
 	"ws/app/resource"
+
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 // GetHistoryMessage 消息记录
@@ -43,11 +45,11 @@ func GetHistoryMessage(c *gin.Context) {
 	for _, m := range messages {
 		messagesResources = append(messagesResources, m.ToJson())
 	}
-	requests.RespSuccess(c, messagesResources)
+	responses.RespSuccess(c, messagesResources)
 }
 func GetReqId(c *gin.Context) {
 	u := requests.GetUser(c)
-	requests.RespSuccess(c, gin.H{
+	responses.RespSuccess(c, gin.H{
 		"reqId": u.GetReqId(),
 	})
 }
@@ -59,7 +61,7 @@ func GetTemplateId(c *gin.Context) {
 	if !chat.SubScribeService.IsSet(user.GetPrimaryKey()) {
 		id = viper.GetString("config.Wechat.SubscribeTemplateIdOne")
 	}
-	requests.RespSuccess(c, gin.H{
+	responses.RespSuccess(c, gin.H{
 		"id": id,
 	})
 }
@@ -68,7 +70,7 @@ func GetTemplateId(c *gin.Context) {
 func Subscribe(c *gin.Context) {
 	user := requests.GetUser(c)
 	_ = chat.SubScribeService.Set(user.GetPrimaryKey())
-	requests.RespSuccess(c, gin.H{})
+	responses.RespSuccess(c, gin.H{})
 }
 
 // Image 聊天图片
@@ -76,9 +78,9 @@ func Image(c *gin.Context) {
 	f, _ := c.FormFile("file")
 	ff, err := file.Save(f, "chat")
 	if err != nil {
-		requests.RespFail(c, err.Error(), 500)
+		responses.RespFail(c, err.Error(), 500)
 	} else {
-		requests.RespSuccess(c, gin.H{
+		responses.RespSuccess(c, gin.H{
 			"url": ff.FullUrl,
 		})
 	}

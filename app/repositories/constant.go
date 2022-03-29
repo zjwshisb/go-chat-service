@@ -1,12 +1,14 @@
 package repositories
 
+import "ws/app/models"
+
 var (
-	AdminRepo = &adminRepo{}
+	AdminRepo       = &adminRepo{}
 	AutoMessageRepo = &autoMessageRepo{}
-	AutoRuleRepo = &autoRuleRepo{}
-	ChatSettingRepo = &chatSettingRepo{}
-	MessageRepo = &messageRepo{}
+	AutoRuleRepo    = &autoRuleRepo{}
+	ChatSettingRepo = &Repository[models.ChatSetting]{}
+	MessageRepo     = &messageRepo{}
 	ChatSessionRepo = &chatSessionRepo{}
-	TransferRepo = &transferRepo{}
-	UserRepo = &userRepo{}
+	TransferRepo    = &transferRepo{}
+	UserRepo        = &userRepo{}
 )

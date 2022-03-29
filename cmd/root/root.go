@@ -1,13 +1,14 @@
 package root
 
 import (
-	"github.com/spf13/cobra"
 	"ws/cmd/conns"
 	"ws/cmd/fake"
 	"ws/cmd/migrate"
 	"ws/cmd/serve"
 	"ws/cmd/stop"
 	"ws/config"
+
+	"github.com/spf13/cobra"
 )
 
 func NewRootCommand(name string) *cobra.Command {
@@ -15,7 +16,7 @@ func NewRootCommand(name string) *cobra.Command {
 	var configFile string
 
 	var rootCmd = &cobra.Command{
-		Use:                        name,
+		Use:              name,
 		TraverseChildren: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			config.Setup(configFile)
@@ -23,8 +24,7 @@ func NewRootCommand(name string) *cobra.Command {
 	}
 
 	flag := rootCmd.PersistentFlags()
-	flag.StringVarP(&configFile, "config", "c","config.yaml", "config file")
-
+	flag.StringVarP(&configFile, "config", "c", "config.yaml", "config file")
 
 	rootCmd.AddCommand(serve.NewServeCommand(),
 		migrate.NewMigrateCommand(),

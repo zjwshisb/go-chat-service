@@ -1,13 +1,15 @@
 package routers
 
 import (
-	"github.com/gin-gonic/gin"
 	http "ws/app/http/controllers/admin"
 	middleware "ws/app/http/middleware/admin"
 	"ws/app/http/requests"
+	"ws/app/http/responses"
 	"ws/app/http/websocket"
 	"ws/app/log"
 	"ws/app/models"
+
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -92,7 +94,7 @@ func registerAdmin() {
 		conn, err := upgrade.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			log.Log.Error(err)
-			requests.RespError(c, err.Error())
+			responses.RespError(c, err.Error())
 			return
 		}
 		client := websocket.NewAdminConn(admin, conn)
