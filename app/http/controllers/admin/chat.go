@@ -39,6 +39,7 @@ func (handle *ChatHandler) GetHistorySession(c *gin.Context) {
 	for i, session := range sessions {
 		resp[i] = session.ToJson()
 	}
+
 	responses.RespSuccess(c, resp)
 }
 
@@ -94,11 +95,29 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 		}
 	}
 	messages := repositories.MessageRepo.Get(wheres, 20, []string{"User", "Admin"}, []string{"id desc"})
-	res := make([]*resource.Message, 0)
-	for _, m := range messages {
-		res = append(res, m.ToJson())
+	res := make([]*resource.Message, len(messages), len(messages))
+	msgIds := make([]uint64, len(messages), len(messages))
+	for i, m := range messages {
+		res[i] = m.ToJson()
 	}
 	responses.RespSuccess(c, res)
+	updateWhere := []*repositories.Where{
+		{
+			Filed: "id in ?",
+			Value: msgIds,
+		},
+		{
+			Filed: "send_at = ?",
+			Value: 0,
+		},
+		{
+			Filed: "source in ?",
+			Value: []int{models.SourceSystem, models.SourceUser},
+		},
+	}
+	repositories.MessageRepo.Update(updateWhere, map[string]interface{}{
+		"send_at": time.Now().Unix(),
+	})
 }
 
 // GetReqId 获取reqId
@@ -162,8 +181,10 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 			Value: []int{models.SourceAdmin, models.SourceUser},
 		},
 	}, -1, []string{"User", "Admin"}, []string{"id desc"})
+	messageIds := make([]uint64, len(messages), len(messages))
 	for _, u := range resp {
-		for _, m := range messages {
+		for i, m := range messages {
+			messageIds[i] = m.Id
 			if m.UserId == u.ID {
 				rm := m.ToJson()
 				if !m.IsRead && m.Source == models.SourceUser {
@@ -174,6 +195,23 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 		}
 	}
 	responses.RespSuccess(c, resp)
+	updateWhere := []*repositories.Where{
+		{
+			Filed: "id in ?",
+			Value: messageIds,
+		},
+		{
+			Filed: "source in ?",
+			Value: []int{models.SourceUser, models.SourceSystem},
+		},
+		{
+			Filed: "send_at = ?",
+			Value: 0,
+		},
+	}
+	repositories.MessageRepo.Update(updateWhere, map[string]interface{}{
+		"send_at": time.Now().Unix(),
+	})
 }
 
 // AcceptUser 接入用户

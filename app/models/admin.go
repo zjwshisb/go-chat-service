@@ -87,6 +87,7 @@ func (admin *Admin) GetBreakMessage(uid int64, sessionId uint64) *Message {
 		ReceivedAT: time.Now().Unix(),
 		Source:     SourceSystem,
 		SessionId:  sessionId,
+		GroupId:    admin.GetGroupId(),
 		ReqId:      admin.GetReqId(),
 	}
 }

@@ -96,7 +96,7 @@ func (m *adminManager) handleOffline(msg *models.Message) {
 	if setting != nil {
 		// 发送离线消息
 		if setting.OfflineContent != "" {
-			offlineMsg := setting.GetOfflineMsg(msg.UserId, msg.SessionId)
+			offlineMsg := setting.GetOfflineMsg(msg.UserId, msg.SessionId, msg.GroupId)
 			offlineMsg.Admin = admin
 			repositories.MessageRepo.Save(offlineMsg)
 			UserManager.DeliveryMessage(offlineMsg, false)
@@ -200,7 +200,6 @@ func (m *adminManager) handleMessage(payload *ConnMessage) {
 				msg.GroupId = conn.GetGroupId()
 				msg.AdminId = conn.GetUserId()
 				msg.Source = models.SourceAdmin
-				msg.GroupId = conn.GetGroupId()
 				msg.ReceivedAT = time.Now().Unix()
 				msg.Admin = conn.User.(*models.Admin)
 				msg.SessionId = session.Id
@@ -278,30 +277,24 @@ func (m *adminManager) PublishUserOnline(user contract.User) {
 // NoticeUserOffline 通知用户离线
 func (m *adminManager) NoticeUserOffline(uid int64) {
 	adminId := chat.UserService.GetValidAdmin(uid)
-	admin := repositories.AdminRepo.First([]*repositories.Where{
-		{
-			Filed: "id = ?",
-			Value: adminId,
-		},
-	}, []string{})
-	conn, exist := m.GetConn(admin)
-	if exist {
-		m.SendAction(NewUserOffline(uid), conn)
+	admin := repositories.AdminRepo.FirstById(adminId)
+	if admin != nil {
+		conn, exist := m.GetConn(admin)
+		if exist {
+			m.SendAction(NewUserOffline(uid), conn)
+		}
 	}
 }
 
 // NoticeUserOnline 通知用户上线
 func (m *adminManager) NoticeUserOnline(uid int64) {
 	adminId := chat.UserService.GetValidAdmin(uid)
-	admin := repositories.AdminRepo.First([]*repositories.Where{
-		{
-			Filed: "id = ?",
-			Value: adminId,
-		},
-	}, []string{})
-	conn, exist := m.GetConn(admin)
-	if exist {
-		m.SendAction(NewUserOnline(uid), conn)
+	admin := repositories.AdminRepo.FirstById(adminId)
+	if admin != nil {
+		conn, exist := m.GetConn(admin)
+		if exist {
+			m.SendAction(NewUserOnline(uid), conn)
+		}
 	}
 }
 func (m *adminManager) PublishOtherLogin(user contract.User) {

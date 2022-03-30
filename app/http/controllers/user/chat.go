@@ -2,16 +2,47 @@ package user
 
 import (
 	"strconv"
+	"time"
 	"ws/app/chat"
 	"ws/app/file"
 	"ws/app/http/requests"
 	"ws/app/http/responses"
+	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
+
+func ReadAll(c *gin.Context) {
+	form := &struct {
+		MsgId int64 `json:"msg_id" binding:"-"`
+	}{}
+	err := c.Bind(form)
+	if err != nil {
+		responses.RespValidateFail(c, err)
+		return
+	}
+	wheres := []*repositories.Where{
+		{
+			Filed: "id <= ?",
+			Value: form.MsgId,
+		},
+		{
+			Filed: "user_id = ?",
+			Value: requests.GetUser(c).GetPrimaryKey(),
+		},
+		{
+			Filed: "is_read = ?",
+			Value: 0,
+		},
+	}
+	repositories.MessageRepo.Update(wheres, map[string]interface{}{
+		"is_read": 1,
+	})
+	responses.RespSuccess(c, gin.H{})
+}
 
 // GetHistoryMessage 消息记录
 func GetHistoryMessage(c *gin.Context) {
@@ -41,12 +72,34 @@ func GetHistoryMessage(c *gin.Context) {
 		}
 	}
 	messages := repositories.MessageRepo.Get(wheres, size, []string{"Admin", "User"}, []string{"id desc"})
-	messagesResources := make([]*resource.Message, 0, len(messages))
-	for _, m := range messages {
-		messagesResources = append(messagesResources, m.ToJson())
+	messagesResources := make([]*resource.Message, len(messages), len(messages))
+	messageIds := make([]uint64, len(messages), len(messages))
+	for index, m := range messages {
+		messagesResources[index] = m.ToJson()
+		messageIds[index] = m.Id
 	}
 	responses.RespSuccess(c, messagesResources)
+	// update unread message
+	updateWheres := []*repositories.Where{
+		{
+			Filed: "send_at = ?",
+			Value: 0,
+		},
+		{
+			Filed: "source in ?",
+			Value: []int{models.SourceSystem, models.SourceAdmin},
+		},
+		{
+			Filed: "id in ?",
+			Value: messageIds,
+		},
+	}
+	repositories.MessageRepo.Update(updateWheres, map[string]interface{}{
+		"send_at": time.Now().Unix(),
+		"is_read": 1,
+	})
 }
+
 func GetReqId(c *gin.Context) {
 	u := requests.GetUser(c)
 	responses.RespSuccess(c, gin.H{

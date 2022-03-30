@@ -26,6 +26,7 @@ func (repo *messageRepo) NewNotice(session *models.ChatSession, content string) 
 		UserId:     session.UserId,
 		AdminId:    session.AdminId,
 		Type:       models.TypeNotice,
+		GroupId:    session.GroupId,
 		Content:    content,
 		ReceivedAT: time.Now().Unix(),
 		Source:     models.SourceSystem,
