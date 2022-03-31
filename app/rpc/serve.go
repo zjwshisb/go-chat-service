@@ -5,11 +5,11 @@ import (
 	"github.com/rpcxio/rpcx-etcd/serverplugin"
 	"github.com/smallnest/rpcx/server"
 	"github.com/spf13/viper"
-	"google.golang.org/genproto/googleapis/cloud/bigquery/connection/v1"
 	"log"
 	"os"
 	"syscall"
 	"time"
+	"ws/app/rpc/service/connection"
 )
 
 func addRegistryPlugin(s *server.Server) {
@@ -34,7 +34,7 @@ func Serve(c chan os.Signal) *server.Server {
 		log.Fatal(err)
 	}
 	go func() {
-		err := s.Serve("tcp", viper.GetString("Rpc.Host")+":"+viper.GetString("Rpc.port"))
+		err := s.Serve("tcp", ":"+viper.GetString("Rpc.port"))
 		if err != nil {
 			c <- syscall.SIGINT
 			fmt.Println(err)

@@ -4,7 +4,7 @@ type Pagination[T any] struct {
 	OriginData []T   `json:"-"`
 	Total      int64 `json:"total"`
 	Success    bool  `json:"success"`
-	Data       []any `json:"data"`
+	Data       interface{} `json:"data"`
 }
 
 func (p *Pagination[T]) DataFormat(f func(i T) interface{}) error {
@@ -22,5 +22,6 @@ func NewPagination[T any](data []T, total int64) *Pagination[T] {
 		OriginData: data,
 		Total:      total,
 		Success:    true,
+		Data: data,
 	}
 }

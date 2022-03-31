@@ -12,12 +12,7 @@ type sessionService struct {
 
 // Close 关闭会话
 func (sessionService *sessionService) Close(sessionId uint64, isRemoveUser bool, updateTime bool) {
-	session := repositories.ChatSessionRepo.First([]*repositories.Where{
-		{
-			Filed: "id = ?",
-			Value: sessionId,
-		},
-	}, []string{})
+	session := repositories.ChatSessionRepo.FirstById(sessionId)
 	if session != nil {
 		session.BrokeAt = time.Now().Unix()
 		repositories.ChatSessionRepo.Save(session)

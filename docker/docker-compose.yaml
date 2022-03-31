@@ -1,0 +1,128 @@
+version: "3"
+services:
+  nginx:
+    build:
+      context: ./services/nginx
+      args:
+        NGINX_VERSION: nginx:${NGINX_VERSION}
+        CONTAINER_PACKAGE_URL: ${CONTAINER_PACKAGE_URL}
+        NGINX_INSTALL_APPS: ${NGINX_INSTALL_APPS}
+    container_name: chat-nginx
+    ports:
+      - "${NGINX_HTTP_HOST_PORT}:80"
+      - "${NGINX_HTTPS_HOST_PORT}:443"
+    volumes:
+      - ${NGINX_SSL_CERTIFICATE_DIR}:/ssl:rw
+      - ${NGINX_CONFD_DIR}:/etc/nginx/conf.d/:rw
+      - ${NGINX_CONF_FILE}:/etc/nginx/nginx.conf:ro
+      - ${NGINX_LOG_DIR}:/var/log/nginx/:rw
+    environment:
+      TZ: "$TZ"
+    restart: always
+    networks:
+      - default
+  mysql:
+    image: mysql:${MYSQL_VERSION}
+    container_name: chat-mysql
+    ports:
+      - "${MYSQL_HOST_PORT}:3306"
+    volumes:
+      - ${MYSQL_CONF_FILE}:/etc/mysql/conf.d/mysql.cnf:ro
+      - ${DATA_DIR}/mysql:/var/lib/mysql/:rw
+    restart: always
+    networks:
+      - default
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      TZ: "$TZ"
+  go1:
+    build:
+      context: ./services/go
+    container_name: go-1
+    expose:
+      - 8080
+      - 8081
+    restart: always
+    volumes:
+      - ${DATA_DIR}/go:/data
+    networks:
+      - default
+  go2:
+    build:
+      context: ./services/go
+    container_name: go-2
+    expose:
+      - 8080
+      - 8081
+    restart: always
+    volumes:
+      - ${DATA_DIR}/go:/data
+    networks:
+      - default
+  go3:
+    build:
+      context: ./services/go
+    container_name: go-3
+    expose:
+      - 8080
+      - 8081
+    restart: always
+    volumes:
+      - ${DATA_DIR}/go:/data
+    networks:
+      - default
+  go4:
+    build:
+      context: ./services/go
+    container_name: go-4
+    expose:
+      - 8080
+      - 8081
+    restart: always
+    volumes:
+      - ${DATA_DIR}/go:/data
+    networks:
+      - default
+  redis:
+    image: redis:${REDIS_VERSION}
+    container_name: chat-redis
+    ports:
+      - "${REDIS_HOST_PORT}:6379"
+    volumes:
+      - ${REDIS_CONF_FILE}:/etc/redis.conf:ro
+      - ${DATA_DIR}/redis:/data:rw
+    restart: always
+    entrypoint: [ "redis-server", "/etc/redis.conf" ]
+    environment:
+      TZ: "$TZ"
+    networks:
+      - default
+  rabbitmq:
+    build:
+      context: ./services/rabbitmq
+      args:
+        RABBITMQ_VERSION: ${RABBITMQ_VERSION}
+        RABBITMQ_PLUGINS: ${RABBITMQ_PLUGINS}
+    container_name: chat-rabbitmq
+    restart: always
+    ports:
+      - "${RABBITMQ_HOST_PORT_C}:5672"
+      - "${RABBITMQ_HOST_PORT_S}:15672"
+    environment:
+      TZ: "$TZ"
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_DEFAULT_USER}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_DEFAULT_PASS}"
+    networks:
+      - default
+  etcd:
+    image: bitnami/etcd
+    container_name: chat-etcd-1
+    restart: always
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+    volumes:
+      - ${DATA_DIR}/etcd:/bitnami/etcd
+    networks:
+      - default
+networks:
+  default:
