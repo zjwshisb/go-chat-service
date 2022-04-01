@@ -5,5 +5,5 @@ config.yaml
 *.pid
 ws
 main
-/storage/
-pid.log
+storage
+.vscode

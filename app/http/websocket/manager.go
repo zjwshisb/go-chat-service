@@ -21,6 +21,8 @@ type ConnContainer interface {
 	GetConn(user contract.User) (Conn, bool)
 	publishMoreThanOne(user contract.User)
 	GetAllConn(gid int64) []Conn
+	GetUserUuid(user contract.User) string
+	SetUserUuid(user contract.User, uuid string)
 	GetOnlineTotal(gid int64) int64
 	ConnExist(user contract.User) bool
 	Register(connect Conn)
@@ -144,6 +146,21 @@ func (m *manager) isCluster() bool {
 	return viper.GetBool("App.Cluster")
 }
 
+func (m *manager) UserUuidKey(uid int64) string {
+	return fmt.Sprintf(m.types+":%d:uuid", uid)
+}
+
+// GetUserUuid 获取用户的当前连接uuid
+func (m *manager) GetUserUuid(user contract.User) string {
+	cmd := databases.Redis.Get(context.Background(), m.UserUuidKey(user.GetPrimaryKey()))
+	return cmd.Val()
+}
+
+// SetUserUuid 设置用户的当前连接的uuid
+func (m *manager) SetUserUuid(user contract.User, uuid string) {
+	databases.Redis.Set(context.Background(), m.UserUuidKey(user.GetPrimaryKey()), uuid, time.Hour*24)
+}
+
 // 发布消息
 func (m *manager) publish(channel string, payload *mq.Payload) error {
 	err := mq.Mq().Publish(channel, payload)
@@ -206,7 +223,7 @@ func (m *manager) ReceiveMessage(cm *ConnMessage) {
 func (m *manager) publishMoreThanOne(user contract.User) {
 	m.Do(func() {
 		oldChannel := m.getUserChannel(user.GetPrimaryKey())
-		if oldChannel != "" && oldChannel != m.GetSubscribeChannel() {
+		if oldChannel != "" {
 			_ = m.publish(oldChannel, &mq.Payload{
 				Types: mq.TypeMoreThanOne,
 				Data:  user.GetPrimaryKey(),
@@ -219,7 +236,7 @@ func (m *manager) publishMoreThanOne(user contract.User) {
 
 func (m *manager) noticeMoreThanOne(user contract.User) {
 	oldConn, ok := m.GetConn(user)
-	if ok {
+	if ok && oldConn.GetUuid() != m.GetUserUuid(user) {
 		m.SendAction(NewMoreThanOne(), oldConn)
 	}
 }
@@ -334,6 +351,7 @@ func (m *manager) Register(conn Conn) {
 	timer := time.After(1 * time.Second)
 	m.publishMoreThanOne(conn.GetUser())
 	m.AddConn(conn)
+	m.SetUserUuid(conn.GetUser(), conn.GetUuid())
 	m.setUserChannel(conn.GetUserId())
 	conn.run()
 	<-timer

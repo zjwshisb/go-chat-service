@@ -10,11 +10,14 @@ import (
 	"syscall"
 	"time"
 	"ws/app/rpc/service/connection"
+	"ws/app/util"
 )
 
 func addRegistryPlugin(s *server.Server) {
+	ips := util.GetIPs()
+
 	r := &serverplugin.EtcdV3RegisterPlugin{
-		ServiceAddress: "tcp@127.0.0.1:" + viper.GetString("Rpc.Port"),
+		ServiceAddress: "tcp@" + ips[0] + ":" + viper.GetString("Rpc.Port"),
 		EtcdServers:    viper.GetStringSlice("Etcd.Host"),
 		BasePath:       viper.GetString("Etcd.BasePath"),
 		UpdateInterval: time.Minute,

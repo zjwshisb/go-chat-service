@@ -1,5 +1,35 @@
 version: "3"
 services:
+  rabbitmq:
+    build:
+      context: ./services/rabbitmq
+      args:
+        RABBITMQ_VERSION: ${RABBITMQ_VERSION}
+        RABBITMQ_PLUGINS: ${RABBITMQ_PLUGINS}
+    container_name: chat-rabbitmq
+    restart: always
+    ports:
+      - "${RABBITMQ_HOST_PORT_C}:5672"
+      - "${RABBITMQ_HOST_PORT_S}:15672"
+    environment:
+      TZ: "$TZ"
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_DEFAULT_USER}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_DEFAULT_PASS}"
+    networks:
+      - default
+  etcd:
+    image: bitnami/etcd
+    container_name: chat-etcd-1
+    restart: always
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+    volumes:
+      - ${DATA_DIR}/etcd:/bitnami/etcd
+    networks:
+      - default
   nginx:
     build:
       context: ./services/nginx
@@ -97,32 +127,6 @@ services:
       TZ: "$TZ"
     networks:
       - default
-  rabbitmq:
-    build:
-      context: ./services/rabbitmq
-      args:
-        RABBITMQ_VERSION: ${RABBITMQ_VERSION}
-        RABBITMQ_PLUGINS: ${RABBITMQ_PLUGINS}
-    container_name: chat-rabbitmq
-    restart: always
-    ports:
-      - "${RABBITMQ_HOST_PORT_C}:5672"
-      - "${RABBITMQ_HOST_PORT_S}:15672"
-    environment:
-      TZ: "$TZ"
-      RABBITMQ_DEFAULT_USER: "${RABBITMQ_DEFAULT_USER}"
-      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_DEFAULT_PASS}"
-    networks:
-      - default
-  etcd:
-    image: bitnami/etcd
-    container_name: chat-etcd-1
-    restart: always
-    environment:
-      - ALLOW_NONE_AUTHENTICATION=yes
-    volumes:
-      - ${DATA_DIR}/etcd:/bitnami/etcd
-    networks:
-      - default
+
 networks:
   default:

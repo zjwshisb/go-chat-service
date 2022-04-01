@@ -25,7 +25,7 @@ func NewUserConn(user contract.User, conn *websocket.Conn) Conn {
 		send:        make(chan *Action, 100),
 		manager:     UserManager,
 		User:        user,
-		uid:         uuid.NewV4().String(),
+		uuid:        uuid.NewV4().String(),
 	}
 }
 

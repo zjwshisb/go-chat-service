@@ -12,19 +12,7 @@
 - etcd(可选)
 
 ### 开始
-```shell script
-    # 复制，修改 config.yaml 配置信息
-    cp config.example.yaml config.yaml
-    go build main
-    # 创建表
-    ./main migrate
-    # 插入测试数据
-    ./main fake
-    # 启动服务
-    ./main serve
-    # 停止服务
-    ./main stop
-```
+详见docker-compose/docker-composer.yaml，已集成所有所需服务，开箱即用
 
 ### 部署
 nginx部署可参考目录下nginx.conf
@@ -38,7 +26,7 @@ nginx部署可参考目录下nginx.conf
 - 离线消息提醒
 - 用户上下线提醒  
 - 多开提醒(重复登录，多个tab等)
-- 多租户
+- 多租户等
 
 
 ### 演示地址

@@ -31,7 +31,7 @@ func NewAdminConn(user *models.Admin, conn *websocket.Conn) Conn {
 		send:        make(chan *Action, 100),
 		manager:     AdminManager,
 		User:        user,
-		uid:         uuid.NewV4().String(),
+		uuid:        uuid.NewV4().String(),
 	}
 }
 
@@ -136,10 +136,15 @@ func (m *adminManager) handleRemoteMessage() {
 			case mq.TypeOtherLogin:
 				uid := message.Get("data").Int()
 				if uid > 0 {
-					user := repositories.UserRepo.First([]*repositories.Where{{
-						Filed: "id = ?",
-						Value: uid,
-					}}, []string{})
+					user := repositories.AdminRepo.FirstById(uid)
+					if user != nil {
+						m.NoticeOtherLogin(user)
+					}
+				}
+			case mq.TypeMoreThanOne:
+				uid := message.Get("data").Int()
+				if uid > 0 {
+					user := repositories.AdminRepo.FirstById(uid)
 					if user != nil {
 						m.noticeMoreThanOne(user)
 					}
@@ -307,20 +312,14 @@ func (m *adminManager) PublishOtherLogin(user contract.User) {
 			})
 		}
 	}, func() {
-		m.NoticeOtherLogin(user.GetPrimaryKey())
+		m.NoticeOtherLogin(user)
 	})
 }
 
 // NoticeOtherLogin 重复登录
-func (m *adminManager) NoticeOtherLogin(adminId int64) {
-	admin := repositories.AdminRepo.First([]*repositories.Where{
-		{
-			Filed: "id = ?",
-			Value: adminId,
-		},
-	}, []string{})
+func (m *adminManager) NoticeOtherLogin(admin contract.User) {
 	conn, exist := m.GetConn(admin)
-	if exist {
+	if exist && conn.GetUuid() != m.GetUserUuid(admin) {
 		m.SendAction(NewOtherLogin(), conn)
 	}
 }

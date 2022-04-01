@@ -18,7 +18,7 @@ type Conn interface {
 	Deliver(action *Action)
 	GetUserId() int64
 	GetUser() contract.User
-	GetUid() string
+	GetUuid() string
 	GetGroupId() int64
 	GetCreateTime() int64
 }
@@ -30,7 +30,7 @@ type Client struct {
 	sync.Once
 	manager ConnManager
 	User    contract.User
-	uid     string
+	uuid    string
 	Created int64
 }
 
@@ -43,9 +43,9 @@ func (c *Client) GetGroupId() int64 {
 	return c.User.GetGroupId()
 }
 
-// GetUid 每个连接的unique id
-func (c *Client) GetUid() string {
-	return c.uid
+// GetUuid 每个连接的unique id
+func (c *Client) GetUuid() string {
+	return c.uuid
 }
 
 func (c *Client) GetUser() contract.User {

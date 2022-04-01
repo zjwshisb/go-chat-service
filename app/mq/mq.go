@@ -49,7 +49,7 @@ func NewMessagePayload(mid uint64) *Payload {
 
 var mq MessageQueue
 
-func init() {
+func Setup() {
 	switch strings.ToLower(viper.GetString("App.Mq")) {
 	case "rabbitmq":
 		mq = newRabbitMq()
