@@ -91,7 +91,13 @@ func (c *Client) readMsg() {
 			var act = &Action{}
 			err := act.UnMarshal(msgStr)
 			if err == nil {
-				log.Log.Info(act)
+				log.Log.WithField("a-type", "websocket").
+					WithField("b-type", c.manager.GetTypes()).
+					WithField("b-type", "read-message").
+					Infof("<user-id:%d><action:%s> %s",
+						c.GetUserId(),
+						act.Action,
+						msgStr)
 				c.manager.ReceiveMessage(&ConnMessage{
 					Action: act,
 					Conn:   c,
@@ -114,9 +120,15 @@ func (c *Client) sendMsg() {
 		select {
 		case act := <-c.send:
 			msgStr, err := act.Marshal()
-			log.Log.Info(act)
 			if err == nil {
 				err := c.conn.WriteMessage(websocket.TextMessage, msgStr)
+				log.Log.WithField("a-type", "websocket").
+					WithField("b-type", c.manager.GetTypes()).
+					WithField("b-type", "send-message").
+					Infof("<user-id:%d><action:%s> %s",
+						c.GetUserId(),
+						act.Action,
+						msgStr)
 				if err == nil {
 					switch act.Action {
 					case MoreThanOne:

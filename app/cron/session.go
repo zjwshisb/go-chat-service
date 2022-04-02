@@ -9,6 +9,7 @@ import (
 )
 
 func closeSessions() {
+	log.Log.WithField("type", "cron").Info("<start-job:close-sessions>")
 	admins := repositories.AdminRepo.Get([]*repositories.Where{}, -1, []string{}, []string{})
 	for _, admin := range admins {
 		uids, limits := chat.AdminService.GetUsersWithLimitTime(admin.GetPrimaryKey())
@@ -40,5 +41,5 @@ func closeSessions() {
 			}
 		}
 	}
-	log.Log.Info("close sessions done")
+	log.Log.WithField("type", "cron").Info("<end-job:close-sessions>")
 }

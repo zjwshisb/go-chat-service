@@ -45,12 +45,8 @@ func ConnectionIds(groupId int64, types string) []int64 {
 	ids := make([]int64, 0)
 	result := make(chan []int64, len(services))
 	var wg sync.WaitGroup
-	fmt.Println("总服务")
-	fmt.Println(len(services))
 	for _, service := range services {
 		ser := service
-		fmt.Println(ser.Value)
-		fmt.Printf("%v", ser)
 		wg.Add(1)
 		go func() {
 			d, _ := client.NewPeer2PeerDiscovery(ser.Key, "")
@@ -59,7 +55,6 @@ func ConnectionIds(groupId int64, types string) []int64 {
 			req := &request.ConnectionGroupRequest{GroupId: groupId, Types: types}
 			resp := &response.ConnectionIdsResponse{}
 			err := c.Call(context.Background(), "Ids", req, resp)
-			fmt.Println(resp.Ids)
 			if err == nil {
 				result <- resp.Ids
 			} else {
@@ -71,8 +66,6 @@ func ConnectionIds(groupId int64, types string) []int64 {
 	wg.Wait()
 	close(result)
 	for r := range result {
-		fmt.Println("接受")
-		fmt.Println(r)
 		ids = append(ids, r...)
 	}
 	return ids

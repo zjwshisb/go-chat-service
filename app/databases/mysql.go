@@ -19,10 +19,10 @@ func MysqlSetup() {
 	switch strings.ToLower(env) {
 	case "production":
 		level = logger.Silent
-	case "local":
-		level = logger.Info
 	case "test":
 		level = logger.Info
+	case "local":
+		level = logger.Silent
 	}
 	dns := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",

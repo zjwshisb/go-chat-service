@@ -58,6 +58,7 @@ type ConnManager interface {
 	Ping()
 	SendAction(act *Action, conn ...Conn)
 	ReceiveMessage(cm *ConnMessage)
+	GetTypes() string
 }
 
 type MessageHandle interface {
@@ -122,6 +123,9 @@ type manager struct {
 	types        string            //类型
 }
 
+func (m *manager) GetTypes() string {
+	return m.types
+}
 func (m *manager) Do(clusterFunc func(), single func()) {
 	if m.isCluster() {
 		if clusterFunc != nil {
@@ -163,7 +167,7 @@ func (m *manager) SetUserUuid(user contract.User, uuid string) {
 
 // 发布消息
 func (m *manager) publish(channel string, payload *mq.Payload) error {
-	err := mq.Mq().Publish(channel, payload)
+	err := mq.Publish(channel, payload)
 	return err
 }
 

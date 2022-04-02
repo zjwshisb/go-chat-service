@@ -90,10 +90,17 @@ func (userManager *userManager) handleReceiveMessage() {
 
 // 订阅远程消息
 func (userManager *userManager) handleRemoteMessage() {
-	sub := mq.Mq().Subscribe(userManager.GetSubscribeChannel())
+	sub := mq.Subscribe(userManager.GetSubscribeChannel())
 	for {
 		message := sub.ReceiveMessage()
 		go func() {
+			log.Log.WithField("a-type", "publish/subscribe").
+				WithField("b-type", "subscribe").
+				WithField("c-type", "user").
+				Infof("<channel:%s><types:%s><data:%s>",
+					userManager.GetSubscribeChannel(),
+					message.Get("types"),
+					message.Get("data"))
 			switch message.Get("types").String() {
 			case mq.TypeMessage:
 				mid := message.Get("data").Int()
@@ -199,6 +206,8 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 
 // PublishWaitingCount 广播等待人数
 func (userManager *userManager) PublishWaitingCount(groupId int64) {
+	log.Log.WithField("type", "WEBSOCKET").
+		Infof("<user><publish><waiting-count><group-id:%d>", groupId)
 	userManager.Do(func() {
 		userManager.publishToAllChannel(&mq.Payload{
 			Types: mq.TypeWaitingUserCount,
@@ -209,8 +218,10 @@ func (userManager *userManager) PublishWaitingCount(groupId int64) {
 	})
 }
 
-// DeliveryWaitingCount 推送前面等待人数
-func (userManager *userManager) DeliveryWaitingCount(conn Conn) {
+// NoticeWaitingCount 推送前面等待人数
+func (userManager *userManager) NoticeWaitingCount(conn Conn) {
+	log.Log.WithField("type", "WEBSOCKET").
+		Infof("<user><notice><waiting-count><user-id:%d>", conn.GetGroupId())
 	uid := conn.GetUserId()
 	uTime := chat.ManualService.GetTime(uid, conn.GetGroupId())
 	count := chat.ManualService.GetCountByTime(conn.GetGroupId(), "-inf",
@@ -220,9 +231,11 @@ func (userManager *userManager) DeliveryWaitingCount(conn Conn) {
 
 // 广播前面等待人数
 func (userManager *userManager) broadcastWaitingCount(gid int64) {
+	log.Log.WithField("type", "WEBSOCKET").
+		Infof("<user><broadcast><waiting-count><group-id:%d>", gid)
 	conns := userManager.GetAllConn(gid)
 	for _, conn := range conns {
-		userManager.DeliveryWaitingCount(conn)
+		userManager.NoticeWaitingCount(conn)
 	}
 }
 func (userManager *userManager) unRegisterHook(conn Conn) {
@@ -235,7 +248,7 @@ func (userManager *userManager) unRegisterHook(conn Conn) {
 func (userManager *userManager) registerHook(conn Conn) {
 	AdminManager.PublishUserOnline(conn.GetUser())
 	if chat.ManualService.IsIn(conn.GetUserId(), conn.GetGroupId()) {
-		userManager.DeliveryWaitingCount(conn)
+		userManager.NoticeWaitingCount(conn)
 	} else if chat.UserService.GetValidAdmin(conn.GetUserId()) == 0 {
 		rule := repositories.AutoRuleRepo.GetEnterByGroup(conn.GetGroupId())
 		if rule != nil {

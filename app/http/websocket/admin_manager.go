@@ -115,12 +115,18 @@ func (m *adminManager) handleOffline(msg *models.Message) {
 
 // 订阅本manager的channel， 处理消息
 func (m *adminManager) handleRemoteMessage() {
-	subscribe := mq.Mq().Subscribe(m.GetSubscribeChannel())
+	subscribe := mq.Subscribe(m.GetSubscribeChannel())
 	defer subscribe.Close()
 	for {
 		message := subscribe.ReceiveMessage()
 		go func() {
-			log.Log.Info(message.Get("types"))
+			log.Log.WithField("a-type", "publish/subscribe").
+				WithField("b-type", "subscribe").
+				WithField("c-type", "admin").
+				Infof("<channel:%s><types:%s><data:%s>",
+					m.GetSubscribeChannel(),
+					message.Get("types"),
+					message.Get("data"))
 			switch message.Get("types").String() {
 			case mq.TypeWaitingUser:
 				fmt.Println(mq.TypeWaitingUser)
@@ -302,17 +308,17 @@ func (m *adminManager) NoticeUserOnline(uid int64) {
 		}
 	}
 }
-func (m *adminManager) PublishOtherLogin(user contract.User) {
+func (m *adminManager) PublishOtherLogin(admin contract.User) {
 	m.Do(func() {
-		channel := m.getUserChannel(user.GetPrimaryKey())
+		channel := m.getUserChannel(admin.GetPrimaryKey())
 		if channel != "" {
 			_ = m.publish(channel, &mq.Payload{
 				Types: mq.TypeOtherLogin,
-				Data:  user.GetPrimaryKey(),
+				Data:  admin.GetPrimaryKey(),
 			})
 		}
 	}, func() {
-		m.NoticeOtherLogin(user)
+		m.NoticeOtherLogin(admin)
 	})
 }
 
@@ -376,7 +382,6 @@ func (m *adminManager) updateSetting(admin contract.User) {
 
 // 广播待接入用户
 func (m *adminManager) broadcastWaitingUser(groupId int64) {
-	log.Log.Info("广播待接入用户")
 	sessions := repositories.ChatSessionRepo.GetWaitHandles()
 	userMap := make(map[int64]*models.User)
 	waitingUser := make([]*resource.WaitingChatSession, 0, len(sessions))

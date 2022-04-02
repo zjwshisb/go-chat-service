@@ -50,8 +50,8 @@ func NewServeCommand() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			databases.MysqlSetup()
 			databases.RedisSetup()
-			file.Setup()
 			mylog.Setup()
+			file.Setup()
 			mq.Setup()
 			quit := make(chan os.Signal, 1)
 			signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)

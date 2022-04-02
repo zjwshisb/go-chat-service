@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tidwall/gjson"
 	"strings"
+	"ws/app/log"
 )
 
 const TypeMessage = "message"
@@ -60,6 +61,13 @@ func Setup() {
 	}
 }
 
-func Mq() MessageQueue {
-	return mq
+func Publish(channel string, p *Payload) error {
+	log.Log.WithField("a-type", "publish/subscribe").
+		WithField("b-type", "publish").
+		Infof("<channel:%s><types:%s><data:%v>", channel, p.Types, p.Data)
+	return mq.Publish(channel, p)
+}
+
+func Subscribe(channel string) SubScribeChannel {
+	return mq.Subscribe(channel)
 }
