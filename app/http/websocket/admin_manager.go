@@ -13,8 +13,6 @@ import (
 	"ws/app/resource"
 	"ws/app/util"
 
-	"github.com/gorilla/websocket"
-	uuid "github.com/satori/go.uuid"
 	"github.com/spf13/viper"
 )
 
@@ -22,17 +20,6 @@ var AdminManager *adminManager
 
 type adminManager struct {
 	manager
-}
-
-func NewAdminConn(user *models.Admin, conn *websocket.Conn) Conn {
-	return &Client{
-		conn:        conn,
-		closeSignal: make(chan interface{}),
-		send:        make(chan *Action, 100),
-		manager:     AdminManager,
-		User:        user,
-		uuid:        uuid.NewV4().String(),
-	}
 }
 
 func SetupAdmin() {

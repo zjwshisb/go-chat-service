@@ -8,6 +8,5 @@ type User interface {
 	GetUsername() string
 	GetAvatarUrl() string
 	GetGroupId() int64
-	GetReqId() string
 	AccessTo(user User) bool
 }

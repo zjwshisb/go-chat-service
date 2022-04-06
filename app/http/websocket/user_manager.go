@@ -12,22 +12,9 @@ import (
 	"ws/app/util"
 	"ws/app/wechat"
 
-	"github.com/gorilla/websocket"
-	uuid "github.com/satori/go.uuid"
 	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
 	"github.com/spf13/viper"
 )
-
-func NewUserConn(user contract.User, conn *websocket.Conn) Conn {
-	return &Client{
-		conn:        conn,
-		closeSignal: make(chan interface{}),
-		send:        make(chan *Action, 100),
-		manager:     UserManager,
-		User:        user,
-		uuid:        uuid.NewV4().String(),
-	}
-}
 
 type userManager struct {
 	manager

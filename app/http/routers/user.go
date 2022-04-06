@@ -28,7 +28,7 @@ func registerFrontend() {
 			}
 			ui, _ := c.Get("frontend")
 			userModel := ui.(*models.User)
-			client := websocket.NewUserConn(userModel, conn)
+			client := websocket.NewConn(userModel, conn, websocket.UserManager)
 			websocket.UserManager.Register(client)
 		})
 	}

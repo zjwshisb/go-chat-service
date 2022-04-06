@@ -9,6 +9,7 @@ import (
 	"os"
 	"syscall"
 	"time"
+	mlog "ws/app/log"
 	"ws/app/rpc/service/connection"
 	"ws/app/util"
 )
@@ -37,6 +38,7 @@ func Serve(c chan os.Signal) *server.Server {
 		log.Fatal(err)
 	}
 	go func() {
+		mlog.Log.WithField("a-type", "rpc").Info("start")
 		err := s.Serve("tcp", ":"+viper.GetString("Rpc.port"))
 		if err != nil {
 			c <- syscall.SIGINT

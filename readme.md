@@ -1,9 +1,9 @@
 # gochat客服系统
 
 ### 介绍
-基于golang，ant-design-pro，Taro实现的在线客服IM系统，通过websocket实现消息接受发送。支持集群部署。
-- [客服前端代码仓库](https://github.com/zjwshisb/service-frontend)
-- [用户端前端代码仓库](https://github.com/zjwshisb/service-user) 
+基于golang，ant-design-pro，Taro实现的在线客服IM系统，通过websocket实现消息接受发送，支持集群部署。
+- [客服前端代码](https://github.com/zjwshisb/service-frontend)
+- [用户端前端代码](https://github.com/zjwshisb/service-user) 
 
 依赖
 - mysql
@@ -12,7 +12,8 @@
 - etcd(可选)
 
 ### 开始
-详见docker-compose/docker-composer.yaml，已集成所有所需服务，开箱即用
+详见[docker-compose/readme.md](https://github.com/zjwshisb/go-chat-service/tree/master/docker-compose)
+，已集成所有所需服务，开箱即用
 
 ### 部署
 nginx部署可参考目录下nginx.conf

@@ -97,7 +97,7 @@ func registerAdmin() {
 			responses.RespError(c, err.Error())
 			return
 		}
-		client := websocket.NewAdminConn(admin, conn)
+		client := websocket.NewConn(admin, conn, websocket.AdminManager)
 		websocket.AdminManager.Register(client)
 	})
 }

@@ -10,6 +10,7 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
+	"ws/app/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -101,9 +102,8 @@ func GetHistoryMessage(c *gin.Context) {
 }
 
 func GetReqId(c *gin.Context) {
-	u := requests.GetUser(c)
 	responses.RespSuccess(c, gin.H{
-		"reqId": u.GetReqId(),
+		"reqId": util.RandomStr(20),
 	})
 }
 

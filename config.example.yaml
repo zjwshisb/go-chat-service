@@ -10,16 +10,16 @@ Rpc:
   Open: false
   Port: 8888
 Etcd:
-  Host: [127.0.0.1:2379]
+  Host: [chat-etcd-1:2379]
   BasePath: chat
 Mysql:
   Database: ws
   Username: root
   Password: 123456
   Port: 3306
-  Host: localhost
+  Host: chat-mysql
 Redis:
-  Addr: localhost:6379
+  Addr: chat-redis:6379
   Auth:
   Db: 0
 Http:

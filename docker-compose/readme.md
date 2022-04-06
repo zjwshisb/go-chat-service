@@ -14,7 +14,7 @@
     docker-compose up
 ```
 ### 集群
-默认情况下会启动4个go服务，如不需要则在docker-composer.yaml里面注释掉,
+默认情况下会启动4个go服务，如不需要则在docker-compose.yaml里面注释掉,
 并修改go配置config.yaml以及services/nginx/nginx.conf里面upstream重新up即可
 
 ### 前端代码

@@ -1,14 +1,31 @@
 package websocket
 
 import (
+	"errors"
 	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
+	"golang.org/x/time/rate"
 	"sync"
 	"time"
+	"unicode/utf8"
 	"ws/app/contract"
+	"ws/app/exceptions"
 	"ws/app/log"
 	"ws/app/models"
 	"ws/app/repositories"
 )
+
+func NewConn(user contract.User, conn *websocket.Conn, manager ConnManager) Conn {
+	return &Client{
+		conn:        conn,
+		closeSignal: make(chan interface{}),
+		send:        make(chan *Action, 100),
+		manager:     manager,
+		User:        user,
+		uuid:        uuid.NewV4().String(),
+		limiter:     rate.NewLimiter(5, 10),
+	}
+}
 
 type Conn interface {
 	readMsg()
@@ -32,6 +49,7 @@ type Client struct {
 	User    contract.User
 	uuid    string
 	Created int64
+	limiter *rate.Limiter
 }
 
 func (c *Client) GetCreateTime() int64 {
@@ -57,7 +75,6 @@ func (c *Client) GetUserId() int64 {
 }
 
 func (c *Client) run() {
-	c.Created = time.Now().Unix()
 	go c.readMsg()
 	go c.sendMsg()
 }
@@ -71,6 +88,27 @@ func (c *Client) close() {
 	})
 }
 
+// 发送消息验证
+func (c *Client) validate(data map[string]interface{}) error {
+	if !c.limiter.Allow() {
+		c.send <- NewErrorMessage("发送过于频繁，请慢一些")
+	}
+	content, exist := data["content"]
+	if exist {
+		s, ok := content.(string)
+		if ok {
+			length := utf8.RuneCountInString(s)
+			if length == 0 {
+				return errors.New("请勿发送空内容")
+			}
+			if length > 512 {
+				return errors.New("内容长度必须小于512个字符")
+			}
+		}
+	}
+	return nil
+}
+
 // 从websocket读消息
 func (c *Client) readMsg() {
 	var msg = make(chan []byte, 50)
@@ -79,6 +117,7 @@ func (c *Client) readMsg() {
 			_, message, err := c.conn.ReadMessage()
 			// 读消息失败说明连接异常，调用close方法
 			if err != nil {
+				exceptions.Handler(err)
 				c.close()
 			} else {
 				msg <- message
@@ -91,20 +130,29 @@ func (c *Client) readMsg() {
 			var act = &Action{}
 			err := act.UnMarshal(msgStr)
 			if err == nil {
-				log.Log.WithField("a-type", "websocket").
-					WithField("b-type", c.manager.GetTypes()).
-					WithField("b-type", "read-message").
-					Infof("<user-id:%d><action:%s> %s",
-						c.GetUserId(),
-						act.Action,
-						msgStr)
-				c.manager.ReceiveMessage(&ConnMessage{
-					Action: act,
-					Conn:   c,
-				})
+				data, ok := act.Data.(map[string]interface{})
+				if ok {
+					err = c.validate(data)
+					if err != nil {
+						c.send <- NewErrorMessage(err.Error())
+					} else {
+						log.Log.WithField("a-type", "websocket").
+							WithField("b-type", c.manager.GetTypes()).
+							WithField("c-type", "read-message").
+							Infof("<user-id:%d><action:%s> %s",
+								c.GetUserId(),
+								act.Action,
+								msgStr)
+						c.manager.ReceiveMessage(&ConnMessage{
+							Action: act,
+							Conn:   c,
+						})
+					}
+				}
 			} else {
-				log.Log.Error(err)
+				exceptions.Handler(err)
 			}
+
 		}
 	}
 }
@@ -144,12 +192,13 @@ func (c *Client) sendMsg() {
 					default:
 					}
 				} else {
+					exceptions.Handler(err)
 					// 发送失败，close
 					c.close()
 					return
 				}
 			} else {
-				log.Log.Error(err)
+				exceptions.Handler(err)
 			}
 		case <-c.closeSignal:
 			return

@@ -11,6 +11,7 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
+	"ws/app/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -122,9 +123,8 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 
 // GetReqId 获取reqId
 func (handle *ChatHandler) GetReqId(c *gin.Context) {
-	admin := requests.GetAdmin(c)
 	responses.RespSuccess(c, gin.H{
-		"reqId": admin.GetReqId(),
+		"reqId": util.RandomStr(20),
 	})
 }
 
@@ -349,6 +349,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	}
 	chatUser.Unread = len(unSendMsg)
 	chatUser.LastChatTime = time.Now().Unix()
+	chatUser.Online = websocket.UserManager.IsOnline(user)
 	noticeMessage := repositories.MessageRepo.NewNotice(session, admin.GetChatName()+"为您服务")
 	repositories.MessageRepo.Save(noticeMessage)
 	websocket.UserManager.DeliveryMessage(noticeMessage, false)

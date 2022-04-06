@@ -1,12 +1,10 @@
 package models
 
 import (
-	"context"
-	"fmt"
-	"strconv"
 	"time"
 	"ws/app/contract"
 	"ws/app/databases"
+	"ws/app/util"
 )
 
 type Admin struct {
@@ -88,14 +86,8 @@ func (admin *Admin) GetBreakMessage(uid int64, sessionId uint64) *Message {
 		Source:     SourceSystem,
 		SessionId:  sessionId,
 		GroupId:    admin.GetGroupId(),
-		ReqId:      admin.GetReqId(),
+		ReqId:      util.RandomStr(20),
 	}
-}
-func (admin *Admin) GetReqId() string {
-	key := fmt.Sprintf("admin:%d:req-id", admin.ID)
-	ctx := context.Background()
-	cmd := databases.Redis.Incr(ctx, key)
-	return "a" + strconv.FormatInt(cmd.Val(), 10)
 }
 
 func (admin *Admin) RefreshSetting() {
