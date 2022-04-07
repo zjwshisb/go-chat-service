@@ -6,13 +6,14 @@ import (
 	"time"
 	"ws/app/databases"
 	"ws/app/resource"
+	"ws/app/util"
 )
 
 const (
 	MatchTypeAll  = "all"
 	MatchTypePart = "part"
 
-	MatchEnter             = "enter"
+	MatchEnter           = "enter"
 	MatchAdminAllOffLine = "u-offline"
 
 	ReplyTypeMessage  = "message"
@@ -72,8 +73,6 @@ type AutoRule struct {
 	UpdatedAt time.Time
 	Message   *AutoMessage `json:"message" gorm:"foreignKey:MessageId"`
 }
-
-
 
 func (rule *AutoRule) AddCount() {
 	databases.Db.Model(rule).Update("count", gorm.Expr("count + 1"))
@@ -162,9 +161,9 @@ func (rule *AutoRule) GetReplyMessage(uid int64) (message *Message) {
 		databases.Db.Model(rule).Association("Message").Find(autoMessage)
 		rule.Message = autoMessage
 	}
-	if rule.Message.ID > 0{
+	if rule.Message.ID > 0 {
 		message = &Message{
-			GroupId: rule.GroupId,
+			GroupId:    rule.GroupId,
 			UserId:     uid,
 			AdminId:    0,
 			Type:       rule.Message.Type,
@@ -172,7 +171,7 @@ func (rule *AutoRule) GetReplyMessage(uid int64) (message *Message) {
 			ReceivedAT: time.Now().Unix(),
 			SendAt:     0,
 			Source:     SourceSystem,
-			ReqId:      databases.GetSystemReqId(),
+			ReqId:      util.RandomStr(20),
 			IsRead:     true,
 		}
 	}

@@ -3,18 +3,21 @@ package chat
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"strconv"
 	"time"
 	"ws/app/databases"
+
+	"github.com/go-redis/redis/v8"
 )
 
 const (
 	manualUserKey = "user:%d:manual"
 )
+
 var (
 	ManualService = &manualService{}
 )
+
 type manualService struct {
 }
 
@@ -23,7 +26,7 @@ func (manual manualService) getManualKey(gid int64) string {
 }
 
 // Add 加入到待人工接入sortSet
-func (manual *manualService) Add(uid int64, gid int64) error  {
+func (manual *manualService) Add(uid int64, gid int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.ZAdd(ctx, manual.getManualKey(gid), &redis.Z{
 		Score:  float64(time.Now().Unix()),
@@ -57,9 +60,9 @@ func (manual *manualService) GetTotalCount(gid int64) int64 {
 }
 
 // GetCountByTime 获取指定时间的数量
-func (manual *manualService) GetCountByTime(gid int64, min string, max string)  int64 {
+func (manual *manualService) GetCountByTime(gid int64, min string, max string) int64 {
 	ctx := context.Background()
-	cmd := databases.Redis.ZCount(ctx,manual.getManualKey(gid), min, max)
+	cmd := databases.Redis.ZCount(ctx, manual.getManualKey(gid), min, max)
 	return cmd.Val()
 }
 
@@ -93,11 +96,25 @@ func (manual *manualService) GetAll(gid int64) []int64 {
 	})
 	uid := make([]int64, 0, len(cmd.Val()))
 	for _, uidStr := range cmd.Val() {
-		id , err := strconv.ParseInt(uidStr, 10, 64)
+		id, err := strconv.ParseInt(uidStr, 10, 64)
 		if err == nil {
 			uid = append(uid, id)
 		}
 	}
 	return uid
 }
-
+func (manual *manualService) GetBySource(gid int64, Offset, count int) []int64 {
+	ctx := context.Background()
+	cmd := databases.Redis.ZRangeByScore(ctx, manual.getManualKey(gid), &redis.ZRangeBy{
+		Offset: int64(Offset),
+		Count:  int64(count),
+	})
+	uid := make([]int64, 0, len(cmd.Val()))
+	for _, uidStr := range cmd.Val() {
+		id, err := strconv.ParseInt(uidStr, 10, 64)
+		if err == nil {
+			uid = append(uid, id)
+		}
+	}
+	return uid
+}

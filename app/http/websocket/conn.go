@@ -106,6 +106,33 @@ func (c *Client) validate(data map[string]interface{}) error {
 			}
 		}
 	}
+	reqId, exist := data["req_id"]
+	if !exist {
+		return errors.New("消息不合法")
+	} else {
+		idStr, ok := reqId.(string)
+		if ok {
+			length := len(idStr)
+			if length <= 0 && length > 20 {
+				return errors.New("消息不合法")
+			}
+		} else {
+			return errors.New("消息不合法")
+		}
+	}
+	types, exist := data["type"]
+	if !exist {
+		return errors.New("消息不合法")
+	} else {
+		typeStr, ok := types.(string)
+		if ok {
+			if typeStr != models.TypeText && typeStr != models.TypeImage {
+				return errors.New("消息不合法")
+			}
+		} else {
+			return errors.New("消息不合法")
+		}
+	}
 	return nil
 }
 
@@ -117,7 +144,6 @@ func (c *Client) readMsg() {
 			_, message, err := c.conn.ReadMessage()
 			// 读消息失败说明连接异常，调用close方法
 			if err != nil {
-				exceptions.Handler(err)
 				c.close()
 			} else {
 				msg <- message
@@ -186,8 +212,9 @@ func (c *Client) sendMsg() {
 					case ReceiveMessageAction:
 						msg, ok := act.Data.(*models.Message)
 						if ok {
-							msg.SendAt = time.Now().Unix()
-							repositories.MessageRepo.Save(msg)
+							repositories.MessageRepo.UpdateById(msg.Id, map[string]interface{}{
+								"send_at": time.Now().Unix(),
+							})
 						}
 					default:
 					}

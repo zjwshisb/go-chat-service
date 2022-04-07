@@ -2,8 +2,8 @@ package repositories
 
 import (
 	"time"
-	"ws/app/databases"
 	"ws/app/models"
+	"ws/app/util"
 )
 
 type messageRepo struct {
@@ -31,6 +31,6 @@ func (repo *messageRepo) NewNotice(session *models.ChatSession, content string) 
 		ReceivedAT: time.Now().Unix(),
 		Source:     models.SourceSystem,
 		SessionId:  session.Id,
-		ReqId:      databases.GetSystemReqId(),
+		ReqId:      util.RandomStr(20),
 	}
 }

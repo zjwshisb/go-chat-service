@@ -83,6 +83,8 @@ func registerAdmin() {
 
 	authGroup.GET("/dashboard/query-info", dashboardHandler.GetUserQueryInfo)
 	authGroup.GET("/dashboard/online-info", dashboardHandler.GetOnlineInfo)
+	authGroup.GET("/dashboard/online-users", dashboardHandler.GetOnlineUsers)
+	authGroup.GET("/dashboard/online-admins", dashboardHandler.GetOnlineAdmins)
 
 	authGroup.GET("/transfers", transferHandler.Index)
 	authGroup.POST("/transfers/:id/cancel", transferHandler.Cancel)

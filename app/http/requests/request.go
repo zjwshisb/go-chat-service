@@ -1,6 +1,8 @@
 package requests
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"github.com/spf13/viper"
@@ -39,4 +41,27 @@ func ParseToken(token string) (string, error) {
 		return "", err
 	}
 	return claim.Claims.(jwt.MapClaims)["uid"].(string), nil
+}
+func GetPageOffset(c *gin.Context) int {
+	limit := GetPageOffset(c)
+	page := 1
+	pageStr, ok := c.GetQuery("current")
+	if ok {
+		i, err := strconv.Atoi(pageStr)
+		if err == nil {
+			page = i
+		}
+	}
+	return (page - 1) * limit
+}
+func GetPageSize(c *gin.Context) int {
+	limit := 20
+	limitStr, ok := c.GetQuery("pageSize")
+	if ok {
+		i, err := strconv.Atoi(limitStr)
+		if err == nil {
+			limit = i
+		}
+	}
+	return limit
 }

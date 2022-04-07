@@ -33,6 +33,11 @@ func (Repository *Repository[T]) Update(wheres []*Where, values map[string]inter
 	return result.RowsAffected
 }
 
+func (Repository *Repository[T]) UpdateById(id interface{}, values map[string]interface{}) int64 {
+	result := databases.Db.Model(new(T)).Where("id", id).Updates(values)
+	return result.RowsAffected
+}
+
 // Save create or update model
 func (Repository *Repository[T]) Save(model *T) error {
 	query := databases.Db.Omit(clause.Associations).Save(model)

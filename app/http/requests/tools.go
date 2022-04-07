@@ -2,9 +2,10 @@ package requests
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"reflect"
 	"ws/app/repositories"
+
+	"github.com/gin-gonic/gin"
 )
 
 func GetFilterWhere(c *gin.Context, fields map[string]interface{}) []*repositories.Where {

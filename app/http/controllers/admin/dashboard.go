@@ -8,12 +8,50 @@ import (
 	"ws/app/http/responses"
 	"ws/app/http/websocket"
 	"ws/app/models"
+	"ws/app/repositories"
+	"ws/app/util"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-module/carbon"
 	"gorm.io/gorm"
 )
 
 type DashboardHandler struct {
+}
+
+func (handler *DashboardHandler) GetOnlineAdmins(c *gin.Context) {
+	user := requests.GetAdmin(c)
+	ids := websocket.AdminManager.GetOnlineUserIds(user.GetGroupId())
+	users := repositories.AdminRepo.Get([]*repositories.Where{
+		{
+			Filed: "id in ?",
+			Value: ids,
+		},
+	}, -1, []string{}, []string{})
+	res := util.SliceMap(users, func(s *models.Admin) gin.H {
+		return gin.H{
+			"username": s.Username,
+			"id":       s.ID,
+		}
+	})
+	responses.RespSuccess(c, res)
+}
+
+func (handler *DashboardHandler) GetOnlineUsers(c *gin.Context) {
+	user := requests.GetAdmin(c)
+	ids := websocket.UserManager.GetOnlineUserIds(user.GetGroupId())
+	users := repositories.UserRepo.Get([]*repositories.Where{
+		{
+			Filed: "id in ?",
+			Value: ids,
+		},
+	}, -1, []string{}, []string{})
+	res := util.SliceMap(users, func(s *models.User) gin.H {
+		return gin.H{
+			"username": s.Username,
+		}
+	})
+	responses.RespSuccess(c, res)
 }
 
 func (handler *DashboardHandler) GetUserQueryInfo(c *gin.Context) {
