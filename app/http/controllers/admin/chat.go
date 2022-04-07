@@ -100,6 +100,7 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 	msgIds := make([]uint64, len(messages), len(messages))
 	for i, m := range messages {
 		res[i] = m.ToJson()
+		msgIds[i] = m.Id
 	}
 	responses.RespSuccess(c, res)
 	updateWhere := []*repositories.Where{
@@ -483,10 +484,9 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 			Value: transfer.SessionId,
 		},
 	}, -1, []string{"Admin", "User"}, []string{"id desc"})
-	res := make([]*resource.Message, 0, len(messages))
-	for _, m := range messages {
-		res = append(res, m.ToJson())
-	}
+	res := util.SliceMap(messages, func(s *models.Message) *resource.Message {
+		return s.ToJson()
+	})
 	responses.RespSuccess(c, res)
 }
 
@@ -529,11 +529,16 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		Remark string `json:"remark"`
 	}{}
 	err := c.ShouldBind(form)
+	admin := requests.GetAdmin(c)
 	if err != nil {
 		responses.RespValidateFail(c, err.Error())
 		return
 	}
 	user := repositories.UserRepo.First([]*repositories.Where{
+		{
+			Filed: "group_id =?",
+			Value: admin.GetGroupId(),
+		},
 		{
 			Filed: "id = ?",
 			Value: form.UserId,
@@ -543,12 +548,15 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		responses.RespNotFound(c)
 		return
 	}
-	admin := requests.GetAdmin(c)
 	if !admin.AccessTo(user) {
 		responses.RespNotFound(c)
 		return
 	}
 	toAdmin := repositories.AdminRepo.First([]*repositories.Where{
+		{
+			Filed: "group_id =?",
+			Value: admin.GetGroupId(),
+		},
 		{
 			Filed: "id = ?",
 			Value: form.ToId,

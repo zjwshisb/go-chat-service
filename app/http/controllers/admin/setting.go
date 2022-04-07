@@ -3,8 +3,10 @@ package admin
 import (
 	"ws/app/http/requests"
 	"ws/app/http/responses"
+	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
+	"ws/app/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -50,9 +52,8 @@ func (handler *SettingHandler) Index(c *gin.Context) {
 			Value: admin.GetGroupId(),
 		},
 	}, -1, []string{}, []string{})
-	resp := make([]*resource.ChatSetting, len(settings), len(settings))
-	for index, setting := range settings {
-		resp[index] = setting.ToJson()
-	}
+	resp := util.SliceMap(settings, func(s *models.ChatSetting) *resource.ChatSetting {
+		return s.ToJson()
+	})
 	responses.RespSuccess(c, resp)
 }
