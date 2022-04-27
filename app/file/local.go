@@ -1,12 +1,14 @@
 package file
 
 import (
-	"github.com/spf13/viper"
 	"mime/multipart"
 	"os"
 	"path"
 	"ws/app/util"
 	"ws/config"
+
+	"github.com/duke-git/lancet/v2/fileutil"
+	"github.com/spf13/viper"
 )
 
 type local struct {
@@ -18,8 +20,8 @@ const prefix = "assets"
 
 func NewLocal() *local {
 	storagePath := config.GetStoragePath() + "/" + prefix
-	if !util.DirExist(storagePath) {
-		err := util.MkDir(storagePath)
+	if !fileutil.IsDir(storagePath) {
+		err := os.MkdirAll(storagePath, os.ModePerm)
 		if err != nil {
 			panic(err)
 		}
@@ -64,7 +66,7 @@ func (local *local) Save(file *multipart.FileHeader, relativePath string) (*File
 	}
 	fullName := fullPath + "/" + filename
 
-	err = util.MkDir(fullPath)
+	err = os.MkdirAll(fullPath, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}

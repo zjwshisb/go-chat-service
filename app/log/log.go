@@ -2,15 +2,16 @@ package log
 
 import (
 	"fmt"
-	nested "github.com/antonfisher/nested-logrus-formatter"
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
-	"ws/app/util"
 	"ws/config"
+
+	nested "github.com/antonfisher/nested-logrus-formatter"
+	"github.com/duke-git/lancet/v2/fileutil"
+	"github.com/sirupsen/logrus"
 )
 
 type log struct {
@@ -32,8 +33,8 @@ func Setup() {
 		level = logrus.ErrorLevel
 		storagePath := config.GetStoragePath()
 		logPath := storagePath + "/" + prefix
-		if !util.DirExist(logPath) {
-			err := util.MkDir(logPath)
+		if !fileutil.IsExist(logPath) {
+			err := os.MkdirAll(logPath, os.ModePerm)
 			if err != nil {
 				panic(fmt.Sprintf("make log dir[%s] err: %v", logPath, err))
 			}

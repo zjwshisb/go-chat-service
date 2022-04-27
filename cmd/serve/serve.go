@@ -3,8 +3,6 @@ package serve
 import (
 	"context"
 	"fmt"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"log"
 	"os"
 	"os/signal"
@@ -20,8 +18,11 @@ import (
 	"ws/app/mq"
 	"ws/app/rpc"
 	"ws/app/sys"
-	"ws/app/util"
 	"ws/config"
+
+	"github.com/duke-git/lancet/v2/fileutil"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func initCheck(cmd *cobra.Command, args []string) {
@@ -29,12 +30,12 @@ func initCheck(cmd *cobra.Command, args []string) {
 		log.Fatalln("service is running")
 	}
 	workDir := config.GetWorkDir()
-	if !util.DirExist(workDir) {
+	if !fileutil.IsExist(workDir) {
 		panic(fmt.Sprintf("workdir:%s not exit", workDir))
 	}
 	storagePath := config.GetStoragePath()
-	if !util.DirExist(storagePath) {
-		err := util.MkDir(storagePath)
+	if !fileutil.IsExist(storagePath) {
+		err := os.MkdirAll(storagePath, os.ModePerm)
 		if err != nil {
 			panic(err)
 		}
