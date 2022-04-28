@@ -1,0 +1,10 @@
+{{define "monitor.tmpl"}}
+<html>
+  <body style="display:flex;align-item:center;">
+    <div>
+      {{.admin}}
+      {{.user}}
+    </div>
+  </body>
+</html>
+{{ end }}

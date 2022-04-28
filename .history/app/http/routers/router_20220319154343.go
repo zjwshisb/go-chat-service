@@ -1,14 +1,12 @@
 package routers
 
 import (
-	"net/http"
-	"strings"
-	"ws/app/http/controllers/monitor"
-	"ws/config"
-
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"net/http"
+	"strings"
+	"ws/config"
 )
 
 var Router *gin.Engine
@@ -28,7 +26,6 @@ func Setup() {
 		gin.SetMode(gin.DebugMode)
 	}
 	Router = gin.New()
-
 	Router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"PUT", "PATCH", "POST", "DELETE"},
@@ -39,10 +36,6 @@ func Setup() {
 	Router.GET("/", func(c *gin.Context) {
 		c.JSON(200, "hello world")
 	})
-	if config.GetEnv() == "local" {
-		Router.LoadHTMLGlob("templates/*")
-		Router.GET("/monitor", monitor.Index)
-	}
 	registerAdmin()
 	registerFrontend()
 }

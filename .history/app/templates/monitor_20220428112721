@@ -1,0 +1,40 @@
+{{define "monitor.tmpl"}}
+<html>
+  <style>
+    .body{
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+    }
+    .table{
+      width: 700px;
+    }
+  </style>
+  <body class="body">
+    <table class="table">
+      <tr>
+        <td>
+          客服连接数
+        </td>
+        <td>
+          {{.admin}}
+        </td>
+      </tr>
+      <tr>
+        <td>
+          客服连接数
+        </td>
+        <td>
+          {{.user}}
+        </td>
+      </tr></div>
+      <tr>
+        <td>
+          模式
+        </td>
+        <td>
+          {{.admin}}
+        </td>
+      </tr></body>
+</html>
+{{ end }}

@@ -20,7 +20,6 @@ func Setup(name string) {
 func IsCluster() bool {
 	return viper.GetBool("App.Cluster")
 }
-
 func GetEnv() string {
 	env := viper.GetString("App.Env")
 	if env == "" {

@@ -11,3 +11,4 @@ type ConnectionTotalResponse struct {
 type ConnectionIdsResponse struct {
 	Ids []int64
 }
+

@@ -6,9 +6,6 @@ type ConnectionExistRequest struct {
 
 type ConnectionGroupRequest struct {
 	GroupId int64
-	Types   string
-}
-
-type ConnectionAllCountRequest struct {
 	Types string
 }
+

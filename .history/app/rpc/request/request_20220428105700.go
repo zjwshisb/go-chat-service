@@ -9,6 +9,5 @@ type ConnectionGroupRequest struct {
 	Types   string
 }
 
-type ConnectionAllCountRequest struct {
-	Types string
+type ConnectionAllCount struct {
 }

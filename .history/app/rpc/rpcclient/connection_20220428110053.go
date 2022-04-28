@@ -110,7 +110,7 @@ func ConnectionAllCount(types string) int64 {
 			defer c.Close()
 			req := &request.ConnectionAllCountRequest{Types: types}
 			resp := &response.ConnectionTotalResponse{}
-			err := c.Call(context.Background(), "AllTotal", req, resp)
+			err := c.Call(context.Background(), "Total", req, resp)
 			if err == nil {
 				result <- resp.Total
 			}
@@ -122,6 +122,5 @@ func ConnectionAllCount(types string) int64 {
 	for r := range result {
 		total += r
 	}
-	fmt.Print(total)
 	return total
 }

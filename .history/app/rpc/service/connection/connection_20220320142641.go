@@ -42,11 +42,3 @@ func (conn *Connection) Total(ctx context.Context, request *request.ConnectionGr
 	}
 	return nil
 }
-func (conn *Connection) AllTotal(ctx context.Context, request *request.ConnectionGroupRequest, response *response.ConnectionTotalResponse) (err error) {
-	if request.Types == "admin" {
-		response.Total = websocket.AdminManager.GetAllConnCount()
-	} else {
-		response.Total = websocket.UserManager.GetAllConnCount()
-	}
-	return nil
-}

@@ -40,7 +40,7 @@ func Setup() {
 		c.JSON(200, "hello world")
 	})
 	if config.GetEnv() == "local" {
-		Router.LoadHTMLGlob("templates/*")
+		Router.LoadHTMLGlob("app/templates/*")
 		Router.GET("/monitor", monitor.Index)
 	}
 	registerAdmin()

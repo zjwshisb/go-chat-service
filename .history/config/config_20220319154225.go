@@ -1,9 +1,8 @@
 package config
 
 import (
-	"log"
-
 	"github.com/spf13/viper"
+	"log"
 )
 
 func Setup(name string) {
@@ -16,9 +15,6 @@ func Setup(name string) {
 	if err != nil {
 		log.Fatalf("log file err: %v", err)
 	}
-}
-func IsCluster() bool {
-	return viper.GetBool("App.Cluster")
 }
 
 func GetEnv() string {

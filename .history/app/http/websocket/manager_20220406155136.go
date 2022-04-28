@@ -3,6 +3,8 @@ package websocket
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
+	"github.com/spf13/viper"
 	"strconv"
 	"sync"
 	"time"
@@ -11,9 +13,6 @@ import (
 	"ws/app/models"
 	"ws/app/mq"
 	"ws/app/rpc/rpcclient"
-
-	"github.com/go-redis/redis/v8"
-	"github.com/spf13/viper"
 )
 
 // ConnContainer 管理相关方法
@@ -325,14 +324,6 @@ func (m *manager) RemoveConn(user contract.User) {
 func (m *manager) GetAllConn(groupId int64) (conns []Conn) {
 	s := m.getSpread(groupId)
 	return s.GetAll()
-}
-
-func (m *manager) GetAllConnCount() int64 {
-	var count int64
-	for gid := range m.shard {
-		count += m.GetOnlineTotal(int64(gid))
-	}
-	return count
 }
 
 func (m *manager) GetTotalConn() []Conn {

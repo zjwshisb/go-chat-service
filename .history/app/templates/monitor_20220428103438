@@ -1,0 +1,6 @@
+{{define "monitor"}}
+<html>
+  <body>
+    text
+  </body>
+</html>

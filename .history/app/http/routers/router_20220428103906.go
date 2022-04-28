@@ -28,7 +28,10 @@ func Setup() {
 		gin.SetMode(gin.DebugMode)
 	}
 	Router = gin.New()
-
+	if config.GetEnv() == "local" {
+		Router.LoadHTMLGlob("app/templates/*")
+		Router.GET("/monitor", monitor.Index)
+	}
 	Router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"PUT", "PATCH", "POST", "DELETE"},
@@ -39,10 +42,6 @@ func Setup() {
 	Router.GET("/", func(c *gin.Context) {
 		c.JSON(200, "hello world")
 	})
-	if config.GetEnv() == "local" {
-		Router.LoadHTMLGlob("templates/*")
-		Router.GET("/monitor", monitor.Index)
-	}
 	registerAdmin()
 	registerFrontend()
 }

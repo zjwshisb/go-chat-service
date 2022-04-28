@@ -1,0 +1,27 @@
+{{define "monitor.tmpl"}}
+<html>
+  <style>
+    .body{
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+    }
+    .table{
+      width: 700px;
+    }
+  </style>
+  <body class="body">
+    <table class="table">
+      <tr>
+        <td>
+        </td>
+        <td>
+          
+        </td>
+      </tr>
+      {{.admin}}
+      {{.user}}
+    </div>
+  </body>
+</html>
+{{ end }}

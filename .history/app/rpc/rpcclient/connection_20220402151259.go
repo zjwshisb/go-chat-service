@@ -3,11 +3,10 @@ package rpcclient
 import (
 	"context"
 	"fmt"
+	"github.com/smallnest/rpcx/client"
 	"sync"
 	"ws/app/rpc/request"
 	"ws/app/rpc/response"
-
-	"github.com/smallnest/rpcx/client"
 )
 
 func ConnectionTotal(groupId int64, types string) int64 {
@@ -94,34 +93,4 @@ func ConnectionExist(uid int64) (result bool) {
 	}
 	wg.Wait()
 	return result
-}
-func ConnectionAllCount(types string) int64 {
-	d := NewClient("Connection")
-	services := d.GetServices()
-	var total int64
-	result := make(chan int64, len(services))
-	var wg sync.WaitGroup
-	for _, service := range services {
-		wg.Add(1)
-		ser := service
-		go func() {
-			d, _ := client.NewPeer2PeerDiscovery(ser.Key, "")
-			c := client.NewXClient("Connection", client.Failtry, client.RandomSelect, d, client.DefaultOption)
-			defer c.Close()
-			req := &request.ConnectionAllCountRequest{Types: types}
-			resp := &response.ConnectionTotalResponse{}
-			err := c.Call(context.Background(), "AllTotal", req, resp)
-			if err == nil {
-				result <- resp.Total
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-	close(result)
-	for r := range result {
-		total += r
-	}
-	fmt.Print(total)
-	return total
 }
