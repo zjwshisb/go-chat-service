@@ -13,9 +13,18 @@ func Index(c *gin.Context) {
 	var adminCount int64
 	var userCount int64
 	isCluster := config.IsCluster()
+	serverStr := ""
 	if isCluster {
 		adminCount = rpcclient.ConnectionAllCount("admin")
 		userCount = rpcclient.ConnectionAllCount("user")
+		d := rpcclient.NewClient("Connection")
+		services := d.GetServices()
+		for _, s := range services {
+			if serverStr != "" {
+				serverStr += "|"
+			}
+			serverStr += s.Key
+		}
 	} else {
 		adminCount = websocket.AdminManager.GetAllConnCount()
 		userCount = websocket.UserManager.GetAllConnCount()
@@ -25,5 +34,6 @@ func Index(c *gin.Context) {
 		"admin":     adminCount,
 		"user":      userCount,
 		"isCluster": isCluster,
+		"server":    serverStr,
 	})
 }

@@ -122,6 +122,5 @@ func ConnectionAllCount(types string) int64 {
 	for r := range result {
 		total += r
 	}
-	fmt.Print(total)
 	return total
 }

@@ -11,8 +11,12 @@
       border-right:1px solid #eaeaea;border-bottom:1px solid #eaeaea
     }
     .table td {
-      border-left:1px solid #eaeaee;border-top:1px solid #eaeaea
+      border-left:1px solid #eaeaee;border-top:1px solid #eaeaea;
+      padding: 3px 10px;
     }
+    .table tr td:first-child{
+      width: 200px;
+    } 
   </style>
   <body class="body">
     <table class="table">
@@ -39,6 +43,15 @@
         <td>
           {{.isCluster}}
         </td>
-      </tr></body>
+      </tr>
+      <tr>
+        <td>
+          服务(集群模式下)
+        </td>
+        <td>
+          {{.server}}
+        </td>
+      </tr>
+    </body>
 </html>
 {{ end }}
