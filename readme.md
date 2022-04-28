@@ -30,7 +30,7 @@ nginx部署可参考目录下nginx.conf
 - 多租户等
 
 ### update
-4.28 在本地环境下新增一个简易监控面板，http://host/monitor,可查看所有websocket连接数
+4.28 在本地环境下新增一个简易监控面板(localhost/monitor)，可查看所有websocket连接数
 
 ### 演示地址
 用户端(移动端): [http://119.29.196.153/mobile](http://119.29.196.153/mobile)  
