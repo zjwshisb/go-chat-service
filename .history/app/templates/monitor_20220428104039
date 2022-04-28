@@ -1,6 +1,0 @@
-{{define "monitor.tmpl"}}
-<html>
-  <body>
-    text
-  </body>
-</html>

@@ -1,9 +1,0 @@
-{{define "monitor.tmpl"}}
-<html>
-  <body>
-    <div>
-      haha
-    </div>
-  </body>
-</html>
-{{ end }}
