@@ -10,11 +10,14 @@ import (
 var Redis *redis.Client
 
 func RedisSetup() {
-	Redis = redis.NewClient(&redis.Options{
-		Addr:     viper.GetString("Redis.Addr"),
-		Password: viper.GetString("Redis.Auth"),
-		DB:       viper.GetInt("Redis.Db"),
-	})
+	options := &redis.Options{
+		Addr: viper.GetString("Redis.Addr"),
+		DB:   viper.GetInt("Redis.Db"),
+	}
+	if viper.GetString("Redis.Auth") != "" {
+		options.Password = ""
+	}
+	Redis = redis.NewClient(options)
 	cmd := Redis.Ping(context.Background())
 	if cmd.Err() != nil {
 		panic(fmt.Errorf("redis error: %w \n", cmd.Err()))
