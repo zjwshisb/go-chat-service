@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 	mlog "ws/app/log"
-	"ws/app/rpc/service/connection"
+	"ws/app/rpc/service"
 	"ws/app/util"
 )
 
@@ -33,7 +33,8 @@ func addRegistryPlugin(s *server.Server) {
 func Serve(c chan os.Signal) *server.Server {
 	s := server.NewServer()
 	addRegistryPlugin(s)
-	err := s.RegisterName("Connection", new(connection.Connection), "")
+	err := s.RegisterName("Status", new(service.Status), "")
+	err = s.RegisterName("Message", new(service.Message), "")
 	if err != nil {
 		log.Fatal(err)
 	}

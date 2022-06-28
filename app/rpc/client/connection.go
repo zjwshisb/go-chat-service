@@ -1,17 +1,29 @@
-package rpcclient
+package client
 
 import (
 	"context"
 	"fmt"
+	"github.com/smallnest/rpcx/client"
 	"sync"
 	"ws/app/rpc/request"
 	"ws/app/rpc/response"
-
-	"github.com/smallnest/rpcx/client"
 )
 
+func ConnectionOnline(id int64, types string, server string) bool {
+	d, _ := client.NewPeer2PeerDiscovery(server, "")
+	c := client.NewXClient("Status", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+	defer c.Close()
+	req := &request.OnlineRequest{Types: types, Id: id}
+	resp := &response.OnlineResponse{}
+	err := c.Call(context.Background(), "Online", req, resp)
+	if err != nil {
+
+	}
+	return resp.Data
+}
+
 func ConnectionTotal(groupId int64, types string) int64 {
-	d := NewClient("Connection")
+	d := NewClient("Status")
 	services := d.GetServices()
 	var total int64
 	result := make(chan int64, len(services))
@@ -21,13 +33,13 @@ func ConnectionTotal(groupId int64, types string) int64 {
 		ser := service
 		go func() {
 			d, _ := client.NewPeer2PeerDiscovery(ser.Key, "")
-			c := client.NewXClient("Connection", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+			c := client.NewXClient("Status", client.Failtry, client.RandomSelect, d, client.DefaultOption)
 			defer c.Close()
-			req := &request.ConnectionGroupRequest{GroupId: groupId, Types: types}
-			resp := &response.ConnectionTotalResponse{}
+			req := &request.NormalRequest{GroupId: groupId, Types: types}
+			resp := &response.CountResponse{}
 			err := c.Call(context.Background(), "Total", req, resp)
 			if err == nil {
-				result <- resp.Total
+				result <- resp.Data
 			}
 			wg.Done()
 		}()
@@ -41,7 +53,7 @@ func ConnectionTotal(groupId int64, types string) int64 {
 }
 
 func ConnectionIds(groupId int64, types string) []int64 {
-	d := NewClient("Connection")
+	d := NewClient("Status")
 	services := d.GetServices()
 	ids := make([]int64, 0)
 	result := make(chan []int64, len(services))
@@ -51,13 +63,13 @@ func ConnectionIds(groupId int64, types string) []int64 {
 		wg.Add(1)
 		go func() {
 			d, _ := client.NewPeer2PeerDiscovery(ser.Key, "")
-			c := client.NewXClient("Connection", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+			c := client.NewXClient("Status", client.Failtry, client.RandomSelect, d, client.DefaultOption)
 			defer c.Close()
-			req := &request.ConnectionGroupRequest{GroupId: groupId, Types: types}
-			resp := &response.ConnectionIdsResponse{}
+			req := &request.IdsRequest{GroupId: groupId, Types: types}
+			resp := &response.IdsResponse{}
 			err := c.Call(context.Background(), "Ids", req, resp)
 			if err == nil {
-				result <- resp.Ids
+				result <- resp.Data
 			} else {
 				fmt.Println(err)
 			}
@@ -72,31 +84,8 @@ func ConnectionIds(groupId int64, types string) []int64 {
 	return ids
 }
 
-func ConnectionExist(uid int64) (result bool) {
-	d := NewClient("Connection")
-	services := d.GetServices()
-	var wg sync.WaitGroup
-	for _, service := range services {
-		ser := service
-		wg.Add(1)
-		go func() {
-			d, _ := client.NewPeer2PeerDiscovery(ser.Key, "")
-			c := client.NewXClient("Connection", client.Failtry, client.RandomSelect, d, client.DefaultOption)
-			defer c.Close()
-			req := &request.ConnectionExistRequest{Uid: uid}
-			resp := &response.ConnectionExistResponse{}
-			c.Call(context.Background(), "Exists", req, resp)
-			if resp.Exists {
-				result = true
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-	return result
-}
 func ConnectionAllCount(types string) int64 {
-	d := NewClient("Connection")
+	d := NewClient("Status")
 	services := d.GetServices()
 	var total int64
 	result := make(chan int64, len(services))
@@ -106,13 +95,13 @@ func ConnectionAllCount(types string) int64 {
 		ser := service
 		go func() {
 			d, _ := client.NewPeer2PeerDiscovery(ser.Key, "")
-			c := client.NewXClient("Connection", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+			c := client.NewXClient("Status", client.Failtry, client.RandomSelect, d, client.DefaultOption)
 			defer c.Close()
-			req := &request.ConnectionAllCountRequest{Types: types}
-			resp := &response.ConnectionTotalResponse{}
+			req := &request.NormalRequest{Types: types}
+			resp := &response.CountResponse{}
 			err := c.Call(context.Background(), "AllTotal", req, resp)
 			if err == nil {
-				result <- resp.Total
+				result <- resp.Data
 			}
 			wg.Done()
 		}()

@@ -41,7 +41,7 @@ func (payload *Payload) MarshalBinary() ([]byte, error) {
 	return json.Marshal(payload)
 }
 
-func NewMessagePayload(mid uint64) *Payload {
+func NewMessagePayload(mid int64) *Payload {
 	return &Payload{
 		Types: TypeMessage,
 		Data:  mid,

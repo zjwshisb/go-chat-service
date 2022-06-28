@@ -1,14 +1,25 @@
 package request
 
-type ConnectionExistRequest struct {
-	Uid int64
-}
-
-type ConnectionGroupRequest struct {
-	GroupId int64
+type NormalRequest struct {
 	Types   string
+	GroupId int64
 }
 
-type ConnectionAllCountRequest struct {
+type OnlineRequest struct {
+	Id    int64
 	Types string
+}
+
+type IdsRequest struct {
+	Types   string
+	GroupId int64
+}
+
+type SendMessageRequest struct {
+	Id int64
+}
+
+type RepeatConnectRequest struct {
+	Types string
+	Id    int64
 }

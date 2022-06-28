@@ -74,7 +74,7 @@ func GetHistoryMessage(c *gin.Context) {
 	}
 	messages := repositories.MessageRepo.Get(wheres, size, []string{"Admin", "User"}, []string{"id desc"})
 	messagesResources := make([]*resource.Message, len(messages), len(messages))
-	messageIds := make([]uint64, len(messages), len(messages))
+	messageIds := make([]int64, len(messages), len(messages))
 	for index, m := range messages {
 		messagesResources[index] = m.ToJson()
 		messageIds[index] = m.Id

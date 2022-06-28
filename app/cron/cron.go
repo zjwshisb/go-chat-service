@@ -3,13 +3,11 @@ package cron
 import (
 	"github.com/go-co-op/gocron"
 	"time"
-	"ws/app/http/websocket"
 	"ws/app/log"
 )
 
 func clearChannel() {
-	websocket.AdminManager.ClearInactiveChannel()
-	websocket.UserManager.ClearInactiveChannel()
+
 }
 
 func Serve() *gocron.Scheduler {

@@ -1,13 +1,17 @@
 package response
 
-type ConnectionExistResponse struct {
-	Exists bool
+type NilResponse struct {
 }
 
-type ConnectionTotalResponse struct {
-	Total int64
+type OnlineResponse struct {
+	Data bool
+}
+type IdsResponse struct {
+	Data []int64
 }
 
-type ConnectionIdsResponse struct {
-	Ids []int64
+type CountResponse struct {
+	Data int64
+}
+type SendMessageResponse struct {
 }

@@ -3,14 +3,14 @@ package websocket
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 	"ws/app/contract"
 	"ws/app/databases"
 	"ws/app/models"
 	"ws/app/mq"
-	"ws/app/rpc/rpcclient"
+	"ws/app/rpc/client"
+	"ws/app/util"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
@@ -34,26 +34,18 @@ type ConnContainer interface {
 	Do(c func(), f func())
 }
 
-// ChannelManager channel相关方法
-// 集群模式下当读发消息的conn不在同一台机器时
-// 通过订阅/发布进行消息通信
-type ChannelManager interface {
-	GetSubscribeChannel() string
-	publish(channel string, payload *mq.Payload) error
-	publishToAllChannel(payload *mq.Payload)
-	getUserChannelKey(uid int64) string
-	setUserChannel(uid int64)
-	removeUserChannel(uid int64)
-	getUserChannel(uid int64) string
-	getAllChannel() []string
-	registerChannel()
-	unRegisterChannel()
+type ServiceManager interface {
+	getUserServerKey(uid int64) string
+	setUserServer(uid int64)
+	removeUserServer(uid int64)
+	getUserServer(uid int64) string
+	getServer() string
 	isCluster() bool
 }
 
 type ConnManager interface {
 	ConnContainer
-	ChannelManager
+	ServiceManager
 	Run()
 	Destroy()
 	Ping()
@@ -65,7 +57,6 @@ type ConnManager interface {
 type MessageHandle interface {
 	handleReceiveMessage()
 	handleMessage(cm *ConnMessage)
-	handleRemoteMessage()
 	handleOffline(msg *models.Message)
 	DeliveryMessage(msg *models.Message, remote bool)
 }
@@ -116,8 +107,8 @@ func (s *Shard) Remove(uid int64) {
 
 type manager struct {
 	shardCount   int64             // 分组数量
-	shard        []*Shard          //
-	Channel      string            // 当前manager channel name
+	shard        []*Shard          // 分组切片
+	ipAddr       string            // 当前manager channel name
 	ConnMessages chan *ConnMessage // 接受从conn所读取消息的chan
 	onRegister   ManagerHook       //conn连接成功hook
 	onUnRegister ManagerHook       //conn连接断开hook
@@ -171,52 +162,42 @@ func (m *manager) publish(channel string, payload *mq.Payload) error {
 	err := mq.Publish(channel, payload)
 	return err
 }
-
-//
-func (m *manager) publishToAllChannel(payload *mq.Payload) {
-	channels := m.getAllChannel()
-	fmt.Println(channels)
-	for _, channel := range channels {
-		_ = m.publish(channel, payload)
-	}
+func (m *manager) getServer() string {
+	return m.ipAddr
 }
 
-// 获取用户channel cache key
-func (m *manager) getUserChannelKey(uid int64) string {
-	return fmt.Sprintf("%s:%d:channel", m.types, uid)
+// 获取用户server cache key
+func (m *manager) getUserServerKey(uid int64) string {
+	return fmt.Sprintf("%s:%d:service", m.getServer(), uid)
 }
 
-// 设置用户所在channel为当前manager
-func (m *manager) setUserChannel(uid int64) {
+// 设置用户所在server为当前server
+func (m *manager) setUserServer(uid int64) {
 	m.Do(func() {
 		ctx := context.Background()
-		key := m.getUserChannelKey(uid)
-		databases.Redis.Set(ctx, key, m.GetSubscribeChannel(), time.Hour*24*2)
+		key := m.getUserServerKey(uid)
+		ips := util.GetIPs()
+		databases.Redis.Set(ctx, key, ips[0], time.Hour*24*2)
 	}, nil)
 }
 
 // 移除用户所在channel
-func (m *manager) removeUserChannel(uid int64) {
+func (m *manager) removeUserServer(uid int64) {
 	m.Do(func() {
 		ctx := context.Background()
-		databases.Redis.Del(ctx, m.getUserChannelKey(uid))
+		databases.Redis.Del(ctx, m.getUserServerKey(uid))
 	}, nil)
 }
 
 // 获取用户channel
-func (m *manager) getUserChannel(uid int64) string {
+func (m *manager) getUserServer(uid int64) string {
 	ctx := context.Background()
-	key := m.getUserChannelKey(uid)
+	key := m.getUserServerKey(uid)
 	cmd := databases.Redis.Get(ctx, key)
 	if cmd.Err() == redis.Nil {
 		return ""
 	}
 	return cmd.Val()
-}
-
-// GetSubscribeChannel 获取当前manager channel name
-func (m *manager) GetSubscribeChannel() string {
-	return m.Channel
 }
 
 // ReceiveMessage 接受消息
@@ -227,7 +208,7 @@ func (m *manager) ReceiveMessage(cm *ConnMessage) {
 // websocket 重复链接
 func (m *manager) publishMoreThanOne(user contract.User) {
 	m.Do(func() {
-		oldChannel := m.getUserChannel(user.GetPrimaryKey())
+		oldChannel := m.getUserServer(user.GetPrimaryKey())
 		if oldChannel != "" {
 			_ = m.publish(oldChannel, &mq.Payload{
 				Types: mq.TypeMoreThanOne,
@@ -249,7 +230,7 @@ func (m *manager) noticeMoreThanOne(user contract.User) {
 // GetOnlineUserIds 获取groupId对应的在线userIds
 func (m *manager) GetOnlineUserIds(gid int64) []int64 {
 	if m.isCluster() {
-		return rpcclient.ConnectionIds(gid, m.types)
+		return client.ConnectionIds(gid, m.types)
 	} else {
 		return m.GetLocalOnlineUserIds(gid)
 	}
@@ -275,7 +256,7 @@ func (m *manager) GetLocalOnlineTotal(gid int64) int64 {
 // GetOnlineTotal 获取groupId对应在线客户端数量
 func (m *manager) GetOnlineTotal(gid int64) int64 {
 	if m.isCluster() {
-		return rpcclient.ConnectionTotal(gid, m.types)
+		return client.ConnectionTotal(gid, m.types)
 	}
 	return m.GetLocalOnlineTotal(gid)
 }
@@ -283,7 +264,11 @@ func (m *manager) GetOnlineTotal(gid int64) int64 {
 // IsOnline 用户是否在线
 func (m *manager) IsOnline(user contract.User) bool {
 	if m.isCluster() {
-		return rpcclient.ConnectionExist(user.GetPrimaryKey())
+		server := m.getUserServer(user.GetPrimaryKey())
+		if server != "" {
+			return client.ConnectionOnline(user.GetPrimaryKey(), m.GetTypes(), server)
+		}
+		return false
 	} else {
 		return m.ConnExist(user)
 	}
@@ -365,7 +350,7 @@ func (m *manager) Register(conn Conn) {
 	m.publishMoreThanOne(conn.GetUser())
 	m.AddConn(conn)
 	m.SetUserUuid(conn.GetUser(), conn.GetUuid())
-	m.setUserChannel(conn.GetUserId())
+	m.setUserServer(conn.GetUserId())
 	conn.run()
 	<-timer
 	if m.onRegister != nil {
@@ -390,63 +375,6 @@ func (m *manager) Ping() {
 		}
 	}
 }
-func (m *manager) getClusterKey() string {
-	return fmt.Sprintf("%s:cluster:group", m.types)
-}
-
-// 获取同类型的所有channel
-func (m *manager) getAllChannel() []string {
-	ctx := context.Background()
-	now := time.Now().Unix()
-	fz := now - (60 * 2)
-	cmd := databases.Redis.ZRangeByScore(ctx, m.getClusterKey(), &redis.ZRangeBy{
-		Min:    strconv.FormatInt(fz, 10),
-		Max:    "+inf",
-		Offset: 0,
-		Count:  0,
-	})
-	return cmd.Val()
-}
-
-// 集群模式下
-// 注册频道
-// 心跳更新最后时间，用于程序意外退出后的清理
-func (m *manager) registerChannel() {
-	fn := func() {
-		ctx := context.Background()
-		databases.Redis.ZAdd(ctx, m.getClusterKey(), &redis.Z{
-			Score:  float64(time.Now().Unix()),
-			Member: m.Channel,
-		})
-	}
-	fn()
-	go func() {
-		tinker := time.NewTicker(time.Minute)
-		for {
-			<-tinker.C
-			fn()
-		}
-	}()
-
-}
-
-// ClearInactiveChannel 清理无效的channel
-func (m *manager) ClearInactiveChannel() {
-	m.Do(func() {
-		ctx := context.Background()
-		now := time.Now().Unix()
-		fz := now - (60 * 2)
-		databases.Redis.ZRemRangeByScore(ctx, m.getClusterKey(), "-inf", strconv.FormatInt(fz, 10))
-	}, nil)
-}
-
-// 移除频道
-func (m *manager) unRegisterChannel() {
-	m.Do(func() {
-		ctx := context.Background()
-		databases.Redis.ZRem(ctx, m.getClusterKey(), m.Channel)
-	}, nil)
-}
 
 func (m *manager) Run() {
 	m.shard = make([]*Shard, m.shardCount, m.shardCount)
@@ -458,15 +386,11 @@ func (m *manager) Run() {
 		}
 	}
 	go m.Ping()
-	m.Do(func() {
-		go m.registerChannel()
-	}, nil)
 }
 
 // Destroy
 // 释放相关资源
 func (m *manager) Destroy() {
 	m.Do(func() {
-		m.unRegisterChannel()
 	}, nil)
 }

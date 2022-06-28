@@ -1,19 +1,18 @@
 package websocket
 
 import (
+	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
+	"github.com/spf13/viper"
 	"strconv"
 	"time"
 	"ws/app/chat"
 	"ws/app/contract"
 	"ws/app/log"
 	"ws/app/models"
-	"ws/app/mq"
 	"ws/app/repositories"
+	"ws/app/rpc/client"
 	"ws/app/util"
 	"ws/app/wechat"
-
-	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
-	"github.com/spf13/viper"
 )
 
 type userManager struct {
@@ -22,13 +21,15 @@ type userManager struct {
 
 var UserManager *userManager
 
+const TypeUser = "user"
+
 func SetupUser() {
 	UserManager = &userManager{
 		manager{
 			shardCount:   10,
-			Channel:      util.GetIPs()[0] + ":" + viper.GetString("Http.Port") + "-user",
+			ipAddr:       util.GetIPs()[0],
 			ConnMessages: make(chan *ConnMessage, 100),
-			types:        "user",
+			types:        TypeUser,
 		},
 	}
 	UserManager.onRegister = UserManager.registerHook
@@ -40,7 +41,7 @@ func (userManager *userManager) Run() {
 	userManager.manager.Run()
 	go userManager.handleReceiveMessage()
 	userManager.Do(func() {
-		go userManager.handleRemoteMessage()
+		//go userManager.handleRemoteMessage()
 	}, nil)
 }
 
@@ -55,14 +56,18 @@ func (userManager *userManager) DeliveryMessage(msg *models.Message, remote bool
 		userConn.Deliver(NewReceiveAction(msg))
 		return
 	} else if !remote && userManager.isCluster() {
-		userChannel := userManager.getUserChannel(msg.UserId)
-		if userChannel != "" {
-			_ = userManager.publish(userChannel, &mq.Payload{
-				Data:  msg.Id,
-				Types: mq.TypeMessage,
-			})
-			return
+		server := userManager.getUserService(msg.UserId)
+		if server != "" {
+			client.SendMessage(msg.Id, server)
 		}
+		//userChannel := userManager.getUserChannel(msg.UserId)
+		//if userChannel != "" {
+		//	_ = userManager.publish(userChannel, &mq.Payload{
+		//		Data:  msg.Id,
+		//		Types: mq.TypeMessage,
+		//	})
+		//	return
+		//}
 	}
 	userManager.handleOffline(msg)
 }
@@ -76,34 +81,34 @@ func (userManager *userManager) handleReceiveMessage() {
 }
 
 // 订阅远程消息
-func (userManager *userManager) handleRemoteMessage() {
-	sub := mq.Subscribe(userManager.GetSubscribeChannel())
-	for {
-		message := sub.ReceiveMessage()
-		go func() {
-			log.Log.WithField("a-type", "publish/subscribe").
-				WithField("b-type", "subscribe").
-				WithField("c-type", "user").
-				Infof("<channel:%s><types:%s><data:%s>",
-					userManager.GetSubscribeChannel(),
-					message.Get("types"),
-					message.Get("data"))
-			switch message.Get("types").String() {
-			case mq.TypeMessage:
-				mid := message.Get("data").Int()
-				msg := repositories.MessageRepo.FirstById(mid)
-				if msg != nil {
-					userManager.DeliveryMessage(msg, true)
-				}
-			case mq.TypeWaitingUserCount:
-				gid := message.Get("data").Int()
-				if gid > 0 {
-					userManager.broadcastWaitingCount(gid)
-				}
-			}
-		}()
-	}
-}
+//func (userManager *userManager) handleRemoteMessage() {
+//	sub := mq.Subscribe(userManager.GetSubscribeChannel())
+//	for {
+//		message := sub.ReceiveMessage()
+//		go func() {
+//			log.Log.WithField("a-type", "publish/subscribe").
+//				WithField("b-type", "subscribe").
+//				WithField("c-type", "user").
+//				Infof("<channel:%s><types:%s><data:%s>",
+//					userManager.GetSubscribeChannel(),
+//					message.Get("types"),
+//					message.Get("data"))
+//			switch message.Get("types").String() {
+//			case mq.TypeMessage:
+//				mid := message.Get("data").Int()
+//				msg := repositories.MessageRepo.FirstById(mid)
+//				if msg != nil {
+//					userManager.DeliveryMessage(msg, true)
+//				}
+//			case mq.TypeWaitingUserCount:
+//				gid := message.Get("data").Int()
+//				if gid > 0 {
+//					userManager.broadcastWaitingCount(gid)
+//				}
+//			}
+//		}()
+//	}
+//}
 
 // 处理离线逻辑
 func (userManager *userManager) handleOffline(msg *models.Message) {
@@ -196,10 +201,10 @@ func (userManager *userManager) PublishWaitingCount(groupId int64) {
 	log.Log.WithField("type", "WEBSOCKET").
 		Infof("<user><publish><waiting-count><group-id:%d>", groupId)
 	userManager.Do(func() {
-		userManager.publishToAllChannel(&mq.Payload{
-			Types: mq.TypeWaitingUserCount,
-			Data:  groupId,
-		})
+		//userManager.publishToAllChannel(&mq.Payload{
+		//	Types: mq.TypeWaitingUserCount,
+		//	Data:  groupId,
+		//})
 	}, func() {
 		userManager.broadcastWaitingCount(groupId)
 	})

@@ -1,4 +1,4 @@
-package rpcclient
+package client
 
 import (
 	etcdClient "github.com/rpcxio/rpcx-etcd/client"
@@ -22,7 +22,7 @@ func NewClient(servicePath string) xclient.ServiceDiscovery {
 			log.Fatal(err)
 		}
 	} else {
-		d, _ = xclient.NewPeer2PeerDiscovery("127.0.0.1:" + viper.GetString("Rpc.Port"), "")
+		d, _ = xclient.NewPeer2PeerDiscovery("127.0.0.1:"+viper.GetString("Rpc.Port"), "")
 	}
 	return d
 }

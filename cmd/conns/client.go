@@ -3,7 +3,7 @@ package conns
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"ws/app/rpc/rpcclient"
+	"ws/app/rpc/client"
 )
 
 type Reply struct {
@@ -15,7 +15,7 @@ func NewConnsCommand() *cobra.Command {
 		Use:   "connection",
 		Short: "show the connections",
 		Run: func(cmd *cobra.Command, args []string) {
-			c := rpcclient.ConnectionIds(1, "admin")
+			c := client.ConnectionIds(1, "admin")
 			fmt.Println(c)
 		},
 	}

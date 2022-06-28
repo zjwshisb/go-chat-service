@@ -3,7 +3,7 @@ package monitor
 import (
 	"net/http"
 	"ws/app/http/websocket"
-	"ws/app/rpc/rpcclient"
+	"ws/app/rpc/client"
 	"ws/config"
 
 	"github.com/gin-gonic/gin"
@@ -15,9 +15,9 @@ func Index(c *gin.Context) {
 	isCluster := config.IsCluster()
 	serverStr := ""
 	if isCluster {
-		adminCount = rpcclient.ConnectionAllCount("admin")
-		userCount = rpcclient.ConnectionAllCount("user")
-		d := rpcclient.NewClient("Connection")
+		adminCount = client.ConnectionAllCount("admin")
+		userCount = client.ConnectionAllCount("user")
+		d := client.NewClient("Connection")
 		services := d.GetServices()
 		for _, s := range services {
 			if serverStr != "" {

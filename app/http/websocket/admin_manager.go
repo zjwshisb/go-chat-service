@@ -1,22 +1,20 @@
 package websocket
 
 import (
-	"fmt"
 	"sort"
 	"time"
 	"ws/app/chat"
 	"ws/app/contract"
-	"ws/app/log"
 	"ws/app/models"
-	"ws/app/mq"
 	"ws/app/repositories"
 	"ws/app/resource"
+	"ws/app/rpc/client"
 	"ws/app/util"
-
-	"github.com/spf13/viper"
 )
 
 var AdminManager *adminManager
+
+const TypeAdmin = "admin"
 
 type adminManager struct {
 	manager
@@ -26,9 +24,9 @@ func SetupAdmin() {
 	AdminManager = &adminManager{
 		manager: manager{
 			shardCount:   10,
-			Channel:      util.GetIPs()[0] + ":" + viper.GetString("Http.Port") + "-admin",
+			ipAddr:       util.GetIPs()[0],
 			ConnMessages: make(chan *ConnMessage, 100),
-			types:        "admin",
+			types:        TypeAdmin,
 		},
 	}
 	AdminManager.onRegister = AdminManager.registerHook
@@ -39,10 +37,6 @@ func SetupAdmin() {
 func (m *adminManager) Run() {
 	m.manager.Run()
 	go m.handleReceiveMessage()
-	m.Do(func() {
-		go m.handleRemoteMessage()
-	}, nil)
-
 }
 
 // DeliveryMessage
@@ -57,10 +51,9 @@ func (m *adminManager) DeliveryMessage(msg *models.Message, remote bool) {
 		adminConn.Deliver(NewReceiveAction(msg))
 		return
 	} else if !remote && m.isCluster() {
-		adminChannel := m.getUserChannel(msg.AdminId) // 获取用户所在channel
-		if adminChannel != "" {
-			_ = m.publish(adminChannel, mq.NewMessagePayload(msg.Id))
-			return
+		server := m.getUserServer(msg.AdminId) // 获取用户所在channel
+		if server != "" {
+			client.SendMessage(msg.Id, server)
 		}
 	}
 	m.handleOffline(msg)
@@ -97,82 +90,6 @@ func (m *adminManager) handleOffline(msg *models.Message) {
 			noticeMessage.Save()
 			UserManager.DeliveryMessage(noticeMessage, false)
 		}
-	}
-}
-
-// 订阅本manager的channel， 处理消息
-func (m *adminManager) handleRemoteMessage() {
-	subscribe := mq.Subscribe(m.GetSubscribeChannel())
-	defer subscribe.Close()
-	for {
-		message := subscribe.ReceiveMessage()
-		go func() {
-			log.Log.WithField("a-type", "publish/subscribe").
-				WithField("b-type", "subscribe").
-				WithField("c-type", "admin").
-				Infof("<channel:%s><types:%s><data:%s>",
-					m.GetSubscribeChannel(),
-					message.Get("types"),
-					message.Get("data"))
-			switch message.Get("types").String() {
-			case mq.TypeWaitingUser:
-				fmt.Println(mq.TypeWaitingUser)
-				gid := message.Get("data").Int()
-				if gid > 0 {
-					m.broadcastWaitingUser(gid)
-				}
-			case mq.TypeAdmin:
-				gid := message.Get("data").Int()
-				if gid > 0 {
-					m.broadcastAdmins(gid)
-				}
-			case mq.TypeOtherLogin:
-				uid := message.Get("data").Int()
-				if uid > 0 {
-					user := repositories.AdminRepo.FirstById(uid)
-					if user != nil {
-						m.NoticeOtherLogin(user)
-					}
-				}
-			case mq.TypeMoreThanOne:
-				uid := message.Get("data").Int()
-				if uid > 0 {
-					user := repositories.AdminRepo.FirstById(uid)
-					if user != nil {
-						m.noticeMoreThanOne(user)
-					}
-				}
-			case mq.TypeTransfer:
-				adminId := message.Get("data").Int()
-				if adminId > 0 {
-					admin := repositories.AdminRepo.FirstById(adminId)
-					if admin != nil {
-						m.broadcastUserTransfer(admin)
-					}
-				}
-			case mq.TypeMessage:
-				mid := message.Get("data").Int()
-				msg := repositories.MessageRepo.FirstById(mid)
-				if msg != nil {
-					m.DeliveryMessage(msg, true)
-				}
-			case mq.TypeUpdateSetting:
-				id := message.Get("data").Int()
-				admin := repositories.AdminRepo.First([]*repositories.Where{{
-					Filed: "id = ?",
-					Value: id,
-				}}, []string{})
-				if admin != nil {
-					m.updateSetting(admin)
-				}
-			case mq.TypeUserOnline:
-				userId := message.Get("data").Int()
-				m.NoticeUserOnline(userId)
-			case mq.TypeUserOffline:
-				userId := message.Get("data").Int()
-				m.NoticeUserOffline(userId)
-			}
-		}()
 	}
 }
 
@@ -231,42 +148,39 @@ func (m *adminManager) unregisterHook(conn Conn) {
 // PublishWaitingUser 推送待接入用户
 func (m *adminManager) PublishWaitingUser(groupId int64) {
 	m.Do(func() {
-		m.publishToAllChannel(&mq.Payload{
-			Types: mq.TypeWaitingUser,
-			Data:  groupId,
-		})
+
 	}, func() {
 		m.broadcastWaitingUser(groupId)
 	})
 }
 func (m *adminManager) PublishUserOffline(user contract.User) {
 	m.Do(func() {
-		adminId := chat.UserService.GetValidAdmin(user.GetPrimaryKey())
-		if adminId > 0 {
-			channel := m.getUserChannel(adminId)
-			if channel != "" {
-				_ = m.publish(channel, &mq.Payload{
-					Types: mq.TypeUserOffline,
-					Data:  user.GetPrimaryKey(),
-				})
-			}
-		}
+		//adminId := chat.UserService.GetValidAdmin(user.GetPrimaryKey())
+		//if adminId > 0 {
+		//	channel := m.getUserChannel(adminId)
+		//	if channel != "" {
+		//		_ = m.publish(channel, &mq.Payload{
+		//			Types: mq.TypeUserOffline,
+		//			Data:  user.GetPrimaryKey(),
+		//		})
+		//	}
+		//}
 	}, func() {
 		m.NoticeUserOffline(user.GetPrimaryKey())
 	})
 }
 func (m *adminManager) PublishUserOnline(user contract.User) {
 	m.Do(func() {
-		adminId := chat.UserService.GetValidAdmin(user.GetPrimaryKey())
-		if adminId > 0 {
-			channel := m.getUserChannel(adminId)
-			if channel != "" {
-				_ = m.publish(channel, &mq.Payload{
-					Types: mq.TypeUserOnline,
-					Data:  user.GetPrimaryKey(),
-				})
-			}
-		}
+		//adminId := chat.UserService.GetValidAdmin(user.GetPrimaryKey())
+		//if adminId > 0 {
+		//	channel := m.getUserChannel(adminId)
+		//	if channel != "" {
+		//		_ = m.publish(channel, &mq.Payload{
+		//			Types: mq.TypeUserOnline,
+		//			Data:  user.GetPrimaryKey(),
+		//		})
+		//	}
+		//}
 	}, func() {
 		m.NoticeUserOnline(user.GetPrimaryKey())
 	})
@@ -297,13 +211,13 @@ func (m *adminManager) NoticeUserOnline(uid int64) {
 }
 func (m *adminManager) PublishOtherLogin(admin contract.User) {
 	m.Do(func() {
-		channel := m.getUserChannel(admin.GetPrimaryKey())
-		if channel != "" {
-			_ = m.publish(channel, &mq.Payload{
-				Types: mq.TypeOtherLogin,
-				Data:  admin.GetPrimaryKey(),
-			})
-		}
+		//channel := m.getUserChannel(admin.GetPrimaryKey())
+		//if channel != "" {
+		//	_ = m.publish(channel, &mq.Payload{
+		//		Types: mq.TypeOtherLogin,
+		//		Data:  admin.GetPrimaryKey(),
+		//	})
+		//}
 	}, func() {
 		m.NoticeOtherLogin(admin)
 	})
@@ -320,10 +234,10 @@ func (m *adminManager) NoticeOtherLogin(admin contract.User) {
 // PublishTransfer 推送待转接的用户
 func (m *adminManager) PublishTransfer(admin contract.User) {
 	m.Do(func() {
-		m.publishToAllChannel(&mq.Payload{
-			Types: mq.TypeTransfer,
-			Data:  admin.GetPrimaryKey(),
-		})
+		//m.publishToAllChannel(&mq.Payload{
+		//	Types: mq.TypeTransfer,
+		//	Data:  admin.GetPrimaryKey(),
+		//})
 	}, func() {
 		m.broadcastUserTransfer(admin)
 	})
@@ -332,13 +246,13 @@ func (m *adminManager) PublishTransfer(admin contract.User) {
 // PublishUpdateSetting admin修改设置后通知conn 更新admin的设置信息
 func (m *adminManager) PublishUpdateSetting(admin contract.User) {
 	m.Do(func() {
-		channel := m.getUserChannel(admin.GetPrimaryKey())
-		if channel != "" {
-			_ = m.publish(channel, &mq.Payload{
-				Types: mq.TypeUpdateSetting,
-				Data:  admin.GetPrimaryKey(),
-			})
-		}
+		//channel := m.getUserChannel(admin.GetPrimaryKey())
+		//if channel != "" {
+		//	_ = m.publish(channel, &mq.Payload{
+		//		Types: mq.TypeUpdateSetting,
+		//		Data:  admin.GetPrimaryKey(),
+		//	})
+		//}
 	}, func() {
 		m.updateSetting(admin)
 	})
@@ -347,10 +261,10 @@ func (m *adminManager) PublishUpdateSetting(admin contract.User) {
 // PublishAdmins 推送在线admin
 func (m *adminManager) PublishAdmins(gid int64) {
 	m.Do(func() {
-		m.publishToAllChannel(&mq.Payload{
-			Types: mq.TypeAdmin,
-			Data:  gid,
-		})
+		//m.publishToAllChannel(&mq.Payload{
+		//	Types: mq.TypeAdmin,
+		//	Data:  gid,
+		//})
 	}, func() {
 		m.broadcastAdmins(gid)
 	})

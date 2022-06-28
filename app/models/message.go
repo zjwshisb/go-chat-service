@@ -17,17 +17,17 @@ const (
 )
 
 type Message struct {
-	Id         uint64 `gorm:"primaryKey"`
+	Id         int64  `gorm:"primaryKey"`
 	UserId     int64  `gorm:"index" mapstructure:"user_id"`
 	AdminId    int64  `gorm:"index"`
 	Type       string `gorm:"size:16" mapstructure:"type"`
 	Content    string `gorm:"size:1024" mapstructure:"content"`
 	ReceivedAT int64
-	GroupId    int64            `gorm:"group_id"`
+	GroupId    int64  `gorm:"group_id"`
 	SendAt     int64  `gorm:"send_at"`
 	Source     int8   `gorm:"source"`
 	SessionId  uint64 `gorm:"session_id"`
-	ReqId      string  `gorm:"index" mapstructure:"req_id"`
+	ReqId      string `gorm:"index" mapstructure:"req_id"`
 	IsRead     bool   `gorm:"bool"`
 	Admin      *Admin `gorm:"foreignKey:admin_id"`
 	User       *User  `gorm:"foreignKey:user_id"`
@@ -37,7 +37,7 @@ func (message *Message) Save() {
 	databases.Db.Omit(clause.Associations).Save(message)
 }
 
-func (message *Message) GetUser() *User  {
+func (message *Message) GetUser() *User {
 	if message.User == nil {
 		user := &User{}
 		_ = databases.Db.Model(message).Association("User").Find(user)
@@ -45,7 +45,7 @@ func (message *Message) GetUser() *User  {
 	}
 	return message.User
 }
-func (message *Message) GetAdmin() *Admin  {
+func (message *Message) GetAdmin() *Admin {
 	if message.Admin == nil {
 		admin := &Admin{}
 		_ = databases.Db.Model(message).Association("Admin").Find(admin)
@@ -95,4 +95,3 @@ func (message *Message) ToJson() *resource.Message {
 		Avatar:     message.GetAvatar(),
 	}
 }
-

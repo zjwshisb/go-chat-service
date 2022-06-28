@@ -97,7 +97,7 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 	}
 	messages := repositories.MessageRepo.Get(wheres, 20, []string{"User", "Admin"}, []string{"id desc"})
 	res := make([]*resource.Message, len(messages), len(messages))
-	msgIds := make([]uint64, len(messages), len(messages))
+	msgIds := make([]int64, len(messages), len(messages))
 	for i, m := range messages {
 		res[i] = m.ToJson()
 		msgIds[i] = m.Id
@@ -182,7 +182,7 @@ func (handle *ChatHandler) ChatUserList(c *gin.Context) {
 			Value: []int{models.SourceAdmin, models.SourceUser},
 		},
 	}, -1, []string{"User", "Admin"}, []string{"id desc"})
-	messageIds := make([]uint64, len(messages), len(messages))
+	messageIds := make([]int64, len(messages), len(messages))
 	for _, u := range resp {
 		for i, m := range messages {
 			messageIds[i] = m.Id
