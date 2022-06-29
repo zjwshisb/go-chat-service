@@ -10,10 +10,10 @@ import (
 	"ws/app/rpc/response"
 )
 
-type Status struct {
+type Connection struct {
 }
 
-func (status *Status) count(ctx context.Context, request *request.NormalRequest,
+func (connection *Connection) Count(ctx context.Context, request *request.NormalRequest,
 	response *response.CountResponse) error {
 	if request.Types == websocket.TypeAdmin {
 		response.Data = websocket.AdminManager.GetLocalOnlineTotal(request.GroupId)
@@ -23,7 +23,7 @@ func (status *Status) count(ctx context.Context, request *request.NormalRequest,
 	return nil
 }
 
-func (status *Status) allCount(
+func (connection *Connection) AllCount(
 	ctx context.Context,
 	request *request.NormalRequest,
 	response *response.CountResponse) error {
@@ -35,7 +35,7 @@ func (status *Status) allCount(
 	return nil
 }
 
-func (status *Status) Ids(ctx context.Context, request *request.NormalRequest, response *response.IdsResponse) error {
+func (connection *Connection) Ids(ctx context.Context, request *request.NormalRequest, response *response.IdsResponse) error {
 	var ids []int64
 	if request.Types == websocket.TypeUser {
 		ids = websocket.UserManager.GetLocalOnlineUserIds(request.GroupId)
@@ -46,7 +46,7 @@ func (status *Status) Ids(ctx context.Context, request *request.NormalRequest, r
 	return nil
 }
 
-func (status *Status) Online(ctx context.Context, request *request.OnlineRequest, response *response.OnlineResponse) error {
+func (connection *Connection) Online(ctx context.Context, request *request.OnlineRequest, response *response.OnlineResponse) error {
 	var m websocket.ConnContainer
 	var user contract.User
 	if request.Types == websocket.TypeUser {
@@ -59,14 +59,16 @@ func (status *Status) Online(ctx context.Context, request *request.OnlineRequest
 	if user == nil {
 		return errors.New("user not exit")
 	}
-	response.Data = m.ConnExist(user)
+	response.Data = m.IsLocalOnline(user)
 	return nil
 }
 
-func (status *Status) RepeatConnect(ctx context.Context, request *request.RepeatConnectRequest, response *response.NilResponse) error {
+func (connection *Connection) RepeatConnect(ctx context.Context, request *request.RepeatConnectRequest, response *response.NilResponse) error {
 	if request.Types == websocket.TypeAdmin {
 		admin := repositories.AdminRepo.FirstById(request.Id)
-		websocket.AdminManager.NoticeOtherLogin(admin)
+		if admin != nil {
+			websocket.AdminManager.NoticeLocalRepeatConnect(admin, request.NewUuid)
+		}
 	}
 	return nil
 }

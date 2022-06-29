@@ -13,5 +13,3 @@ type IdsResponse struct {
 type CountResponse struct {
 	Data int64
 }
-type SendMessageResponse struct {
-}

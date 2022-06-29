@@ -1,6 +1,8 @@
 package websocket
 
 import (
+	"fmt"
+	"github.com/spf13/viper"
 	"sort"
 	"time"
 	"ws/app/chat"
@@ -8,7 +10,7 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
-	"ws/app/rpc/client"
+	rpcClient "ws/app/rpc/client"
 	"ws/app/util"
 )
 
@@ -24,7 +26,7 @@ func SetupAdmin() {
 	AdminManager = &adminManager{
 		manager: manager{
 			shardCount:   10,
-			ipAddr:       util.GetIPs()[0],
+			ipAddr:       util.GetIPs()[0] + ":" + viper.GetString("Rpc.Port"),
 			ConnMessages: make(chan *ConnMessage, 100),
 			types:        TypeAdmin,
 		},
@@ -44,16 +46,17 @@ func (m *adminManager) Run() {
 // 查询admin是否在本机上，是则直接投递
 // 查询admin当前channel，如果存在则投递到该channel上
 // 最后则说明admin不在线，处理离线逻辑
-func (m *adminManager) DeliveryMessage(msg *models.Message, remote bool) {
+func (m *adminManager) DeliveryMessage(msg *models.Message, isRemote bool) {
 	adminConn, exist := m.GetConn(msg.GetAdmin())
 	if exist { // admin在线且在当前服务上
 		UserManager.triggerMessageEvent(models.SceneAdminOnline, msg)
 		adminConn.Deliver(NewReceiveAction(msg))
 		return
-	} else if !remote && m.isCluster() {
+	} else if !isRemote && m.isCluster() {
 		server := m.getUserServer(msg.AdminId) // 获取用户所在channel
 		if server != "" {
-			client.SendMessage(msg.Id, server)
+			rpcClient.SendMessage(msg.Id, server)
+			return
 		}
 	}
 	m.handleOffline(msg)
@@ -129,9 +132,9 @@ func (m *adminManager) handleMessage(payload *ConnMessage) {
 }
 
 func (m *adminManager) registerHook(conn Conn) {
-	m.broadcastUserTransfer(conn.GetUser())
-	m.PublishAdmins(conn.GetGroupId())
-	m.broadcastWaitingUser(conn.GetGroupId())
+	m.NoticeUserTransfer(conn.GetUser())
+	m.BroadcastOnlineAdmins(conn.GetGroupId())
+	m.BroadcastWaitingUser(conn.GetGroupId())
 }
 
 // conn断开连接后，更新admin的最后在线时间
@@ -142,147 +145,18 @@ func (m *adminManager) unregisterHook(conn Conn) {
 		setting := admin.GetSetting()
 		repositories.AdminRepo.UpdateSetting(setting, "last_online", time.Now())
 	}
-	m.PublishAdmins(conn.GetGroupId())
+	m.BroadcastOnlineAdmins(conn.GetGroupId())
 }
 
-// PublishWaitingUser 推送待接入用户
-func (m *adminManager) PublishWaitingUser(groupId int64) {
+func (m *adminManager) BroadcastWaitingUser(groupId int64) {
 	m.Do(func() {
-
+		rpcClient.BroadcastWaitingUser(groupId)
 	}, func() {
-		m.broadcastWaitingUser(groupId)
-	})
-}
-func (m *adminManager) PublishUserOffline(user contract.User) {
-	m.Do(func() {
-		//adminId := chat.UserService.GetValidAdmin(user.GetPrimaryKey())
-		//if adminId > 0 {
-		//	channel := m.getUserChannel(adminId)
-		//	if channel != "" {
-		//		_ = m.publish(channel, &mq.Payload{
-		//			Types: mq.TypeUserOffline,
-		//			Data:  user.GetPrimaryKey(),
-		//		})
-		//	}
-		//}
-	}, func() {
-		m.NoticeUserOffline(user.GetPrimaryKey())
-	})
-}
-func (m *adminManager) PublishUserOnline(user contract.User) {
-	m.Do(func() {
-		//adminId := chat.UserService.GetValidAdmin(user.GetPrimaryKey())
-		//if adminId > 0 {
-		//	channel := m.getUserChannel(adminId)
-		//	if channel != "" {
-		//		_ = m.publish(channel, &mq.Payload{
-		//			Types: mq.TypeUserOnline,
-		//			Data:  user.GetPrimaryKey(),
-		//		})
-		//	}
-		//}
-	}, func() {
-		m.NoticeUserOnline(user.GetPrimaryKey())
+		m.BroadcastLocalWaitingUser(groupId)
 	})
 }
 
-// NoticeUserOffline 通知用户离线
-func (m *adminManager) NoticeUserOffline(uid int64) {
-	adminId := chat.UserService.GetValidAdmin(uid)
-	admin := repositories.AdminRepo.FirstById(adminId)
-	if admin != nil {
-		conn, exist := m.GetConn(admin)
-		if exist {
-			m.SendAction(NewUserOffline(uid), conn)
-		}
-	}
-}
-
-// NoticeUserOnline 通知用户上线
-func (m *adminManager) NoticeUserOnline(uid int64) {
-	adminId := chat.UserService.GetValidAdmin(uid)
-	admin := repositories.AdminRepo.FirstById(adminId)
-	if admin != nil {
-		conn, exist := m.GetConn(admin)
-		if exist {
-			m.SendAction(NewUserOnline(uid), conn)
-		}
-	}
-}
-func (m *adminManager) PublishOtherLogin(admin contract.User) {
-	m.Do(func() {
-		//channel := m.getUserChannel(admin.GetPrimaryKey())
-		//if channel != "" {
-		//	_ = m.publish(channel, &mq.Payload{
-		//		Types: mq.TypeOtherLogin,
-		//		Data:  admin.GetPrimaryKey(),
-		//	})
-		//}
-	}, func() {
-		m.NoticeOtherLogin(admin)
-	})
-}
-
-// NoticeOtherLogin 重复登录
-func (m *adminManager) NoticeOtherLogin(admin contract.User) {
-	conn, exist := m.GetConn(admin)
-	if exist && conn.GetUuid() != m.GetUserUuid(admin) {
-		m.SendAction(NewOtherLogin(), conn)
-	}
-}
-
-// PublishTransfer 推送待转接的用户
-func (m *adminManager) PublishTransfer(admin contract.User) {
-	m.Do(func() {
-		//m.publishToAllChannel(&mq.Payload{
-		//	Types: mq.TypeTransfer,
-		//	Data:  admin.GetPrimaryKey(),
-		//})
-	}, func() {
-		m.broadcastUserTransfer(admin)
-	})
-}
-
-// PublishUpdateSetting admin修改设置后通知conn 更新admin的设置信息
-func (m *adminManager) PublishUpdateSetting(admin contract.User) {
-	m.Do(func() {
-		//channel := m.getUserChannel(admin.GetPrimaryKey())
-		//if channel != "" {
-		//	_ = m.publish(channel, &mq.Payload{
-		//		Types: mq.TypeUpdateSetting,
-		//		Data:  admin.GetPrimaryKey(),
-		//	})
-		//}
-	}, func() {
-		m.updateSetting(admin)
-	})
-}
-
-// PublishAdmins 推送在线admin
-func (m *adminManager) PublishAdmins(gid int64) {
-	m.Do(func() {
-		//m.publishToAllChannel(&mq.Payload{
-		//	Types: mq.TypeAdmin,
-		//	Data:  gid,
-		//})
-	}, func() {
-		m.broadcastAdmins(gid)
-	})
-}
-
-// 更新设置
-func (m *adminManager) updateSetting(admin contract.User) {
-	conn, exist := m.GetConn(admin)
-	if exist {
-		u, ok := conn.GetUser().(*models.Admin)
-		if ok {
-			u.RefreshSetting()
-		}
-	}
-}
-
-// 广播待接入用户
-func (m *adminManager) broadcastWaitingUser(groupId int64) {
+func (m *adminManager) BroadcastLocalWaitingUser(groupId int64) {
 	sessions := repositories.ChatSessionRepo.GetWaitHandles()
 	userMap := make(map[int64]*models.User)
 	waitingUser := make([]*resource.WaitingChatSession, 0, len(sessions))
@@ -324,8 +198,107 @@ func (m *adminManager) broadcastWaitingUser(groupId int64) {
 	}
 }
 
-// 向admin推送待转接入的用户
-func (m *adminManager) broadcastUserTransfer(admin contract.User) {
+func (m *adminManager) BroadcastOnlineAdmins(gid int64) {
+	m.Do(func() {
+		rpcClient.BroadcastOnlineAdmin(gid)
+	}, func() {
+		m.BroadcastLocalOnlineAdmins(gid)
+	})
+}
+
+func (m *adminManager) BroadcastLocalOnlineAdmins(gid int64) {
+	ids := m.GetOnlineUserIds(gid)
+	admins := repositories.AdminRepo.Get([]*repositories.Where{{
+		Filed: "id in ?",
+		Value: ids,
+	}}, -1, []string{}, []string{})
+	data := make([]resource.Admin, 0, len(admins))
+	for _, admin := range admins {
+		data = append(data, resource.Admin{
+			Avatar:        admin.GetAvatarUrl(),
+			Username:      admin.Username,
+			Online:        true,
+			Id:            admin.GetPrimaryKey(),
+			AcceptedCount: chat.AdminService.GetActiveCount(admin.GetPrimaryKey()),
+		})
+	}
+	m.SendAction(NewAdminsAction(data), m.GetAllConn(gid)...)
+}
+
+func (m *adminManager) NoticeUserOffline(user contract.User) {
+	m.Do(func() {
+		adminId := chat.UserService.GetValidAdmin(user.GetPrimaryKey())
+		server := m.getUserServer(adminId)
+		fmt.Println(server)
+		if server != "" {
+			rpcClient.NoticeUserOffLine(user.GetPrimaryKey(), server)
+		}
+	}, func() {
+		m.NoticeLocalUserOffline(user.GetPrimaryKey())
+	})
+}
+
+func (m *adminManager) NoticeLocalUserOffline(uid int64) {
+	adminId := chat.UserService.GetValidAdmin(uid)
+	admin := repositories.AdminRepo.FirstById(adminId)
+	if admin != nil {
+		conn, exist := m.GetConn(admin)
+		if exist {
+			m.SendAction(NewUserOffline(uid), conn)
+		}
+	}
+}
+
+func (m *adminManager) NoticeUserOnline(user contract.User) {
+	m.Do(func() {
+		adminId := chat.UserService.GetValidAdmin(user.GetPrimaryKey())
+		server := m.getUserServer(adminId)
+		if server != "" {
+			rpcClient.NoticeUserOnline(user.GetPrimaryKey(), server)
+		}
+	}, func() {
+		m.NoticeLocalUserOnline(user.GetPrimaryKey())
+	})
+}
+
+func (m *adminManager) NoticeLocalUserOnline(uid int64) {
+	adminId := chat.UserService.GetValidAdmin(uid)
+	admin := repositories.AdminRepo.FirstById(adminId)
+	if admin != nil {
+		conn, exist := m.GetConn(admin)
+		if exist {
+			m.SendAction(NewUserOnline(uid), conn)
+		}
+	}
+}
+
+//func (m *adminManager) NoticeRepeatConnect(admin contract.User) {
+//	m.Do(func() {
+//		//rpcClient.C
+//	}, func() {
+//		m.NoticeLocalRepeatConnect(admin)
+//	})
+//}
+//
+//func (m *adminManager) NoticeLocalRepeatConnect(admin contract.User) {
+//	conn, exist := m.GetConn(admin)
+//	if exist && conn.GetUuid() != m.GetUserUuid(admin) {
+//		m.SendAction(NewOtherLogin(), conn)
+//	}
+//}
+
+func (m *adminManager) NoticeUserTransfer(admin contract.User) {
+	m.Do(func() {
+		server := m.getUserServer(admin.GetPrimaryKey())
+		if server != "" {
+			rpcClient.NoticeUserTransfer(admin.GetPrimaryKey(), server)
+		}
+	}, func() {
+		m.NoticeLocalUserTransfer(admin)
+	})
+}
+
+func (m *adminManager) NoticeLocalUserTransfer(admin contract.User) {
 	client, exist := m.GetConn(admin)
 	if exist {
 		transfers := repositories.TransferRepo.Get([]*repositories.Where{
@@ -350,22 +323,28 @@ func (m *adminManager) broadcastUserTransfer(admin contract.User) {
 	}
 }
 
-// 广播在线admin
-func (m *adminManager) broadcastAdmins(gid int64) {
-	ids := m.GetOnlineUserIds(gid)
-	admins := repositories.AdminRepo.Get([]*repositories.Where{{
-		Filed: "id in ?",
-		Value: ids,
-	}}, -1, []string{}, []string{})
-	data := make([]resource.Admin, 0, len(admins))
-	for _, admin := range admins {
-		data = append(data, resource.Admin{
-			Avatar:        admin.GetAvatarUrl(),
-			Username:      admin.Username,
-			Online:        true,
-			Id:            admin.GetPrimaryKey(),
-			AcceptedCount: chat.AdminService.GetActiveCount(admin.GetPrimaryKey()),
-		})
+// PublishUpdateSetting admin修改设置后通知conn 更新admin的设置信息
+func (m *adminManager) PublishUpdateSetting(admin contract.User) {
+	m.Do(func() {
+		//channel := m.getUserChannel(admin.GetPrimaryKey())
+		//if channel != "" {
+		//	_ = m.publish(channel, &mq.Payload{
+		//		Types: mq.TypeUpdateSetting,
+		//		Data:  admin.GetPrimaryKey(),
+		//	})
+		//}
+	}, func() {
+		m.updateSetting(admin)
+	})
+}
+
+// 更新设置
+func (m *adminManager) updateSetting(admin contract.User) {
+	conn, exist := m.GetConn(admin)
+	if exist {
+		u, ok := conn.GetUser().(*models.Admin)
+		if ok {
+			u.RefreshSetting()
+		}
 	}
-	m.SendAction(NewAdminsAction(data), m.GetAllConn(gid)...)
 }

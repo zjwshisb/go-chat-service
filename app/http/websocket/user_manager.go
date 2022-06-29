@@ -10,7 +10,7 @@ import (
 	"ws/app/log"
 	"ws/app/models"
 	"ws/app/repositories"
-	"ws/app/rpc/client"
+	rpcClient "ws/app/rpc/client"
 	"ws/app/util"
 	"ws/app/wechat"
 )
@@ -27,7 +27,7 @@ func SetupUser() {
 	UserManager = &userManager{
 		manager{
 			shardCount:   10,
-			ipAddr:       util.GetIPs()[0],
+			ipAddr:       util.GetIPs()[0] + ":" + viper.GetString("Rpc.Port"),
 			ConnMessages: make(chan *ConnMessage, 100),
 			types:        TypeUser,
 		},
@@ -47,27 +47,20 @@ func (userManager *userManager) Run() {
 
 // DeliveryMessage 投递消息
 // 查询user是否在本机上，是则直接投递
-// 查询user当前channel，如果存在则投递到该channel上
+// 查询user当前server，如果存在则投递到该channel上
 // 最后则说明user不在线，处理相关逻辑
 // remote 是否从消息队列读取的消息
-func (userManager *userManager) DeliveryMessage(msg *models.Message, remote bool) {
+func (userManager *userManager) DeliveryMessage(msg *models.Message, isRemote bool) {
 	userConn, exist := UserManager.GetConn(msg.GetUser())
 	if exist {
 		userConn.Deliver(NewReceiveAction(msg))
 		return
-	} else if !remote && userManager.isCluster() {
-		server := userManager.getUserService(msg.UserId)
+	} else if !isRemote && userManager.isCluster() {
+		server := userManager.getUserServer(msg.UserId)
 		if server != "" {
-			client.SendMessage(msg.Id, server)
+			rpcClient.SendMessage(msg.Id, server)
+			return
 		}
-		//userChannel := userManager.getUserChannel(msg.UserId)
-		//if userChannel != "" {
-		//	_ = userManager.publish(userChannel, &mq.Payload{
-		//		Data:  msg.Id,
-		//		Types: mq.TypeMessage,
-		//	})
-		//	return
-		//}
 	}
 	userManager.handleOffline(msg)
 }
@@ -174,7 +167,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 								msg.SessionId = session.Id
 							}
 							repositories.MessageRepo.Save(msg)
-							AdminManager.PublishWaitingUser(conn.GetGroupId())
+							AdminManager.BroadcastWaitingUser(conn.GetGroupId())
 						} else {
 							if chat.SettingService.GetIsAutoTransferManual(conn.GetGroupId()) { // 自动转人工
 								session := UserManager.addToManual(conn.GetUser())
@@ -182,7 +175,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 									msg.SessionId = session.Id
 								}
 								repositories.MessageRepo.Save(msg)
-								AdminManager.PublishWaitingUser(conn.GetGroupId())
+								AdminManager.BroadcastWaitingUser(conn.GetGroupId())
 								userManager.PublishWaitingCount(conn.GetGroupId())
 							} else {
 								repositories.MessageRepo.Save(msg)
@@ -231,14 +224,14 @@ func (userManager *userManager) broadcastWaitingCount(gid int64) {
 	}
 }
 func (userManager *userManager) unRegisterHook(conn Conn) {
-	AdminManager.PublishUserOffline(conn.GetUser())
+	AdminManager.NoticeUserOffline(conn.GetUser())
 }
 
 // 链接建立后的额外操作
 // 如果已经在待接入人工列表中，则推送当前队列位置
 // 如果不在待接入人工列表中且没有设置客服，则推送欢迎语
 func (userManager *userManager) registerHook(conn Conn) {
-	AdminManager.PublishUserOnline(conn.GetUser())
+	AdminManager.NoticeUserOnline(conn.GetUser())
 	if chat.ManualService.IsIn(conn.GetUserId(), conn.GetGroupId()) {
 		userManager.NoticeWaitingCount(conn)
 	} else if chat.UserService.GetValidAdmin(conn.GetUserId()) == 0 {
@@ -304,9 +297,9 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 					message.SessionId = session.Id
 					repositories.MessageRepo.Save(message)
 				}
-				AdminManager.PublishWaitingUser(message.GroupId)
+				AdminManager.BroadcastWaitingUser(message.GroupId)
 				userManager.PublishWaitingCount(message.GroupId)
-				AdminManager.broadcastWaitingUser(message.GetUser().GetGroupId())
+				AdminManager.BroadcastWaitingUser(message.GetUser().GetGroupId())
 			// 回复消息
 			case models.ReplyTypeMessage:
 				msg := rule.GetReplyMessage(message.UserId)

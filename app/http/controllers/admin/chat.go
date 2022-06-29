@@ -291,7 +291,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		transfer.IsAccepted = true
 		repositories.TransferRepo.Save(transfer)
 		_ = chat.TransferService.RemoveUser(user.GetPrimaryKey())
-		websocket.AdminManager.PublishTransfer(admin)
+		websocket.AdminManager.NoticeUserTransfer(admin)
 	}
 	unSendMsg := repositories.MessageRepo.GetUnSend([]*repositories.Where{
 		{
@@ -358,7 +358,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		rm := m.ToJson()
 		chatUser.Messages[index] = rm
 	}
-	go websocket.AdminManager.PublishWaitingUser(user.GetGroupId())
+	go websocket.AdminManager.BroadcastWaitingUser(user.GetGroupId())
 	go websocket.UserManager.PublishWaitingCount(user.GetGroupId())
 	responses.RespSuccess(c, chatUser)
 }
@@ -517,7 +517,7 @@ func (handle *ChatHandler) CancelTransfer(c *gin.Context) {
 		return
 	}
 	_ = chat.TransferService.Cancel(transfer)
-	websocket.AdminManager.PublishTransfer(admin)
+	websocket.AdminManager.NoticeUserTransfer(admin)
 	responses.RespSuccess(c, gin.H{})
 }
 
@@ -571,6 +571,6 @@ func (handle *ChatHandler) Transfer(c *gin.Context) {
 		responses.RespValidateFail(c, err.Error())
 		return
 	}
-	go websocket.AdminManager.PublishTransfer(toAdmin)
+	go websocket.AdminManager.NoticeUserTransfer(toAdmin)
 	responses.RespSuccess(c, gin.H{})
 }

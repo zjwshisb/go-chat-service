@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"ws/app/http/requests"
 	"ws/app/http/responses"
-	"ws/app/http/websocket"
 	"ws/app/repositories"
 
 	"github.com/gin-gonic/gin"
@@ -31,7 +30,8 @@ func Login(c *gin.Context) {
 			responses.RespSuccess(c, gin.H{
 				"token": token,
 			})
-			websocket.AdminManager.PublishOtherLogin(user)
+			// todo
+			//websocket.AdminManager.NoticeOtherLogin(user)
 
 			return
 		}

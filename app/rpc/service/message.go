@@ -12,7 +12,7 @@ import (
 type Message struct {
 }
 
-func (message *Message) Send(ctx context.Context, request *request.SendMessageRequest, response *response.SendMessageResponse) error {
+func (message *Message) Send(ctx context.Context, request *request.SendMessageRequest, response *response.NilResponse) error {
 	msg := repositories.MessageRepo.FirstById(request.Id)
 	var m websocket.MessageHandle
 	if msg != nil {
@@ -22,7 +22,7 @@ func (message *Message) Send(ctx context.Context, request *request.SendMessageRe
 		case models.SourceAdmin:
 			m = websocket.UserManager
 		}
-		m.DeliveryMessage(msg, false)
+		m.DeliveryMessage(msg, true)
 	}
 	return nil
 }

@@ -39,7 +39,7 @@ func (handler *TransferHandler) Cancel(c *gin.Context) {
 		return
 	}
 	_ = chat.TransferService.Cancel(transfer)
-	websocket.AdminManager.PublishTransfer(requests.GetAdmin(c))
+	websocket.AdminManager.NoticeUserTransfer(requests.GetAdmin(c))
 	responses.RespSuccess(c, gin.H{})
 }
 

@@ -3,33 +3,30 @@ package websocket
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
+	"github.com/spf13/viper"
 	"sync"
 	"time"
 	"ws/app/contract"
 	"ws/app/databases"
 	"ws/app/models"
 	"ws/app/mq"
-	"ws/app/rpc/client"
-	"ws/app/util"
-
-	"github.com/go-redis/redis/v8"
-	"github.com/spf13/viper"
+	rpcClient "ws/app/rpc/client"
 )
 
 // ConnContainer 管理相关方法
 type ConnContainer interface {
 	AddConn(conn Conn)
 	GetConn(user contract.User) (Conn, bool)
-	publishMoreThanOne(user contract.User)
+	NoticeRepeatConnect(user contract.User, oldUuid string)
 	GetAllConn(gid int64) []Conn
-	GetUserUuid(user contract.User) string
-	SetUserUuid(user contract.User, uuid string)
 	GetOnlineTotal(gid int64) int64
 	ConnExist(user contract.User) bool
 	Register(connect Conn)
 	Unregister(connect Conn)
 	RemoveConn(user contract.User)
 	IsOnline(user contract.User) bool
+	IsLocalOnline(user contract.User) bool
 	GetOnlineUserIds(gid int64) []int64
 	Do(c func(), f func())
 }
@@ -142,33 +139,19 @@ func (m *manager) isCluster() bool {
 	return viper.GetBool("App.Cluster")
 }
 
-func (m *manager) UserUuidKey(uid int64) string {
-	return fmt.Sprintf(m.types+":%d:uuid", uid)
-}
-
-// GetUserUuid 获取用户的当前连接uuid
-func (m *manager) GetUserUuid(user contract.User) string {
-	cmd := databases.Redis.Get(context.Background(), m.UserUuidKey(user.GetPrimaryKey()))
-	return cmd.Val()
-}
-
-// SetUserUuid 设置用户的当前连接的uuid
-func (m *manager) SetUserUuid(user contract.User, uuid string) {
-	databases.Redis.Set(context.Background(), m.UserUuidKey(user.GetPrimaryKey()), uuid, time.Hour*24)
-}
-
 // 发布消息
 func (m *manager) publish(channel string, payload *mq.Payload) error {
 	err := mq.Publish(channel, payload)
 	return err
 }
+
 func (m *manager) getServer() string {
 	return m.ipAddr
 }
 
 // 获取用户server cache key
 func (m *manager) getUserServerKey(uid int64) string {
-	return fmt.Sprintf("%s:%d:service", m.getServer(), uid)
+	return fmt.Sprintf("%s:%d:service", m.GetTypes(), uid)
 }
 
 // 设置用户所在server为当前server
@@ -176,8 +159,7 @@ func (m *manager) setUserServer(uid int64) {
 	m.Do(func() {
 		ctx := context.Background()
 		key := m.getUserServerKey(uid)
-		ips := util.GetIPs()
-		databases.Redis.Set(ctx, key, ips[0], time.Hour*24*2)
+		databases.Redis.Set(ctx, key, m.getServer(), time.Hour*24*2)
 	}, nil)
 }
 
@@ -185,7 +167,8 @@ func (m *manager) setUserServer(uid int64) {
 func (m *manager) removeUserServer(uid int64) {
 	m.Do(func() {
 		ctx := context.Background()
-		databases.Redis.Del(ctx, m.getUserServerKey(uid))
+		key := m.getUserServerKey(uid)
+		databases.Redis.Del(ctx, key)
 	}, nil)
 }
 
@@ -205,24 +188,21 @@ func (m *manager) ReceiveMessage(cm *ConnMessage) {
 	m.ConnMessages <- cm
 }
 
-// websocket 重复链接
-func (m *manager) publishMoreThanOne(user contract.User) {
+// NoticeRepeatConnect 重复链接
+func (m *manager) NoticeRepeatConnect(user contract.User, newUuid string) {
 	m.Do(func() {
-		oldChannel := m.getUserServer(user.GetPrimaryKey())
-		if oldChannel != "" {
-			_ = m.publish(oldChannel, &mq.Payload{
-				Types: mq.TypeMoreThanOne,
-				Data:  user.GetPrimaryKey(),
-			})
+		oldServer := m.getUserServer(user.GetPrimaryKey())
+		if oldServer != "" {
+			rpcClient.NoticeRepeatConnect(user.GetPrimaryKey(), m.GetTypes(), newUuid, oldServer)
 		}
 	}, func() {
-		m.noticeMoreThanOne(user)
+		m.NoticeLocalRepeatConnect(user, newUuid)
 	})
 }
 
-func (m *manager) noticeMoreThanOne(user contract.User) {
+func (m *manager) NoticeLocalRepeatConnect(user contract.User, newUuid string) {
 	oldConn, ok := m.GetConn(user)
-	if ok && oldConn.GetUuid() != m.GetUserUuid(user) {
+	if ok && oldConn.GetUuid() != newUuid {
 		m.SendAction(NewMoreThanOne(), oldConn)
 	}
 }
@@ -230,7 +210,7 @@ func (m *manager) noticeMoreThanOne(user contract.User) {
 // GetOnlineUserIds 获取groupId对应的在线userIds
 func (m *manager) GetOnlineUserIds(gid int64) []int64 {
 	if m.isCluster() {
-		return client.ConnectionIds(gid, m.types)
+		return rpcClient.ConnectionIds(gid, m.types)
 	} else {
 		return m.GetLocalOnlineUserIds(gid)
 	}
@@ -256,7 +236,7 @@ func (m *manager) GetLocalOnlineTotal(gid int64) int64 {
 // GetOnlineTotal 获取groupId对应在线客户端数量
 func (m *manager) GetOnlineTotal(gid int64) int64 {
 	if m.isCluster() {
-		return client.ConnectionTotal(gid, m.types)
+		return rpcClient.ConnectionTotal(gid, m.types)
 	}
 	return m.GetLocalOnlineTotal(gid)
 }
@@ -266,12 +246,16 @@ func (m *manager) IsOnline(user contract.User) bool {
 	if m.isCluster() {
 		server := m.getUserServer(user.GetPrimaryKey())
 		if server != "" {
-			return client.ConnectionOnline(user.GetPrimaryKey(), m.GetTypes(), server)
+			return rpcClient.ConnectionOnline(user.GetPrimaryKey(), m.GetTypes(), server)
 		}
 		return false
 	} else {
-		return m.ConnExist(user)
+		return m.IsLocalOnline(user)
 	}
+}
+
+func (m *manager) IsLocalOnline(user contract.User) bool {
+	return m.ConnExist(user)
 }
 
 // SendAction 给客户端发送消息
@@ -347,9 +331,8 @@ func (m *manager) Unregister(conn Conn) {
 // 集群模式下，如果不在本机则投递一个消息
 func (m *manager) Register(conn Conn) {
 	timer := time.After(1 * time.Second)
-	m.publishMoreThanOne(conn.GetUser())
+	m.NoticeRepeatConnect(conn.GetUser(), conn.GetUuid())
 	m.AddConn(conn)
-	m.SetUserUuid(conn.GetUser(), conn.GetUuid())
 	m.setUserServer(conn.GetUserId())
 	conn.run()
 	<-timer

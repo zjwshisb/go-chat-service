@@ -9,9 +9,18 @@ import (
 	"ws/app/rpc/response"
 )
 
+func NoticeRepeatConnect(id int64, types string, newUuid string, server string) {
+	d, _ := client.NewPeer2PeerDiscovery(server, "")
+	c := client.NewXClient("Connection", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+	defer c.Close()
+	req := &request.RepeatConnectRequest{Types: types, Id: id, NewUuid: newUuid}
+	resp := &response.NilResponse{}
+	_ = c.Call(context.Background(), "RepeatConnect", req, resp)
+}
+
 func ConnectionOnline(id int64, types string, server string) bool {
 	d, _ := client.NewPeer2PeerDiscovery(server, "")
-	c := client.NewXClient("Status", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+	c := client.NewXClient("Connection", client.Failtry, client.RandomSelect, d, client.DefaultOption)
 	defer c.Close()
 	req := &request.OnlineRequest{Types: types, Id: id}
 	resp := &response.OnlineResponse{}
@@ -23,7 +32,7 @@ func ConnectionOnline(id int64, types string, server string) bool {
 }
 
 func ConnectionTotal(groupId int64, types string) int64 {
-	d := NewClient("Status")
+	d := NewClient("Connection")
 	services := d.GetServices()
 	var total int64
 	result := make(chan int64, len(services))
@@ -33,11 +42,11 @@ func ConnectionTotal(groupId int64, types string) int64 {
 		ser := service
 		go func() {
 			d, _ := client.NewPeer2PeerDiscovery(ser.Key, "")
-			c := client.NewXClient("Status", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+			c := client.NewXClient("Connection", client.Failtry, client.RandomSelect, d, client.DefaultOption)
 			defer c.Close()
 			req := &request.NormalRequest{GroupId: groupId, Types: types}
 			resp := &response.CountResponse{}
-			err := c.Call(context.Background(), "Total", req, resp)
+			err := c.Call(context.Background(), "Count", req, resp)
 			if err == nil {
 				result <- resp.Data
 			}
@@ -53,7 +62,7 @@ func ConnectionTotal(groupId int64, types string) int64 {
 }
 
 func ConnectionIds(groupId int64, types string) []int64 {
-	d := NewClient("Status")
+	d := NewClient("Connection")
 	services := d.GetServices()
 	ids := make([]int64, 0)
 	result := make(chan []int64, len(services))
@@ -63,7 +72,7 @@ func ConnectionIds(groupId int64, types string) []int64 {
 		wg.Add(1)
 		go func() {
 			d, _ := client.NewPeer2PeerDiscovery(ser.Key, "")
-			c := client.NewXClient("Status", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+			c := client.NewXClient("Connection", client.Failtry, client.RandomSelect, d, client.DefaultOption)
 			defer c.Close()
 			req := &request.IdsRequest{GroupId: groupId, Types: types}
 			resp := &response.IdsResponse{}
@@ -85,7 +94,7 @@ func ConnectionIds(groupId int64, types string) []int64 {
 }
 
 func ConnectionAllCount(types string) int64 {
-	d := NewClient("Status")
+	d := NewClient("Connection")
 	services := d.GetServices()
 	var total int64
 	result := make(chan int64, len(services))
@@ -95,11 +104,11 @@ func ConnectionAllCount(types string) int64 {
 		ser := service
 		go func() {
 			d, _ := client.NewPeer2PeerDiscovery(ser.Key, "")
-			c := client.NewXClient("Status", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+			c := client.NewXClient("Connection", client.Failtry, client.RandomSelect, d, client.DefaultOption)
 			defer c.Close()
-			req := &request.NormalRequest{Types: types}
+			req := &request.TypeRequest{Types: types}
 			resp := &response.CountResponse{}
-			err := c.Call(context.Background(), "AllTotal", req, resp)
+			err := c.Call(context.Background(), "AllCount", req, resp)
 			if err == nil {
 				result <- resp.Data
 			}

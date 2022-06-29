@@ -12,6 +12,6 @@ func SendMessage(id int64, server string) {
 	c := client.NewXClient("Message", client.Failtry, client.RandomSelect, d, client.DefaultOption)
 	defer c.Close()
 	req := &request.SendMessageRequest{Id: id}
-	resp := &response.OnlineResponse{}
+	resp := &response.NilResponse{}
 	c.Call(context.Background(), "Send", req, resp)
 }

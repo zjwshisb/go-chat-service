@@ -33,8 +33,9 @@ func addRegistryPlugin(s *server.Server) {
 func Serve(c chan os.Signal) *server.Server {
 	s := server.NewServer()
 	addRegistryPlugin(s)
-	err := s.RegisterName("Status", new(service.Status), "")
+	err := s.RegisterName("Connection", new(service.Connection), "")
 	err = s.RegisterName("Message", new(service.Message), "")
+	err = s.RegisterName("Admin", new(service.Admin), "")
 	if err != nil {
 		log.Fatal(err)
 	}
