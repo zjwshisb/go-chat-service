@@ -17,7 +17,7 @@ func Index(c *gin.Context) {
 	if isCluster {
 		adminCount = client.ConnectionAllCount("admin")
 		userCount = client.ConnectionAllCount("user")
-		d := client.NewClient("Connection")
+		d := client.NewDiscovery("Connection")
 		services := d.GetServices()
 		for _, s := range services {
 			if serverStr != "" {

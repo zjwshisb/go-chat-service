@@ -11,34 +11,34 @@ import (
 	"ws/app/databases"
 )
 
-
 const (
 	// 客服 => {value: userId, source: limitTime}[] sorted sets
 	adminChatUserKey = "admin:%d:chat-user"
 	// 客服 => {uid: lastTime} hashes
 	adminUserLastChatKey = "admin:%d:chat-user:last-time"
 )
+
 var (
-	AdminService = &adminService{}
+	AdminService             = &adminService{}
 	DefaultSessionTime int64 = 24 * 60 * 60
 )
-
 
 type adminService struct {
 }
 
 // 用户cache key， score为有效时间
-func (adminService *adminService) getUserCacheKey(adminId int64) string  {
+func (adminService *adminService) getUserCacheKey(adminId int64) string {
 	return fmt.Sprintf(adminChatUserKey, adminId)
 }
 
 // AddUser 接入user
-func (adminService *adminService) AddUser(admin contract.User, user contract.User) error  {
+func (adminService *adminService) AddUser(admin contract.User, user contract.User) error {
 	ctx := context.Background()
 	_ = UserService.SetAdmin(user.GetPrimaryKey(), admin.GetPrimaryKey())
 	m := &redis.Z{Member: user.GetPrimaryKey(), Score: float64(time.Now().Unix() + DefaultSessionTime)}
-	_ = databases.Redis.ZAdd(ctx, AdminService.getUserCacheKey(admin.GetPrimaryKey()),  m)
+	_ = databases.Redis.ZAdd(ctx, AdminService.getUserCacheKey(admin.GetPrimaryKey()), m)
 	err := ManualService.Remove(user.GetPrimaryKey(), user.GetGroupId())
+	adminService.UpdateUser(admin.GetPrimaryKey(), user.GetPrimaryKey())
 	return err
 }
 
@@ -55,7 +55,7 @@ func (adminService *adminService) UpdateUser(adminId int64, uid int64) error {
 }
 
 // RemoveUser 移除user
-func (adminService *adminService) RemoveUser(adminId int64, uid int64) error  {
+func (adminService *adminService) RemoveUser(adminId int64, uid int64) error {
 	ctx := context.Background()
 	_ = UserService.RemoveAdmin(uid)
 	_ = adminService.RemoveLastChatTime(adminId, uid)
@@ -70,10 +70,10 @@ func (adminService *adminService) IsUserValid(adminId int64, uid int64) bool {
 }
 
 // IsUserExist user是否存在
-func (adminService *adminService) IsUserExist(adminId int64, uid int64) bool  {
+func (adminService *adminService) IsUserExist(adminId int64, uid int64) bool {
 	ctx := context.Background()
-	exist := databases.Redis.ZScore(ctx, adminService.getUserCacheKey(adminId), strconv.FormatInt(uid , 10))
-	if exist.Err() == redis.Nil  {
+	exist := databases.Redis.ZScore(ctx, adminService.getUserCacheKey(adminId), strconv.FormatInt(uid, 10))
+	if exist.Err() == redis.Nil {
 		return false
 	}
 	return true
@@ -95,37 +95,37 @@ func (adminService *adminService) RemoveLastChatTime(adminId int64, uid int64) e
 }
 
 // UpdateLastChatTime 更新最后聊天时间
-func (adminService *adminService) UpdateLastChatTime(adminId int64, uid int64) error  {
+func (adminService *adminService) UpdateLastChatTime(adminId int64, uid int64) error {
 	ctx := context.Background()
 	cmd := databases.Redis.HSet(ctx, fmt.Sprintf(adminUserLastChatKey, adminId), uid, time.Now().Unix())
 	return cmd.Err()
 }
 
 // GetActiveCount 获取有效的用户数量
-func (adminService *adminService) GetActiveCount(adminId int64) int  {
+func (adminService *adminService) GetActiveCount(adminId int64) int {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRangeByScore(ctx, adminService.getUserCacheKey(adminId), &redis.ZRangeBy{
-		Min:    strconv.FormatInt(time.Now().Unix(), 10),
-		Max:    "+inf",
+		Min: strconv.FormatInt(time.Now().Unix(), 10),
+		Max: "+inf",
 	})
 	return len(cmd.Val())
 }
 
 // UpdateLimitTime 更新有效期
 func (adminService *adminService) UpdateLimitTime(adminId int64, uid int64, duration int64) error {
-	if !adminService.IsUserExist(adminId, uid)  {
+	if !adminService.IsUserExist(adminId, uid) {
 		return errors.New("user not valid")
 	}
 	ctx := context.Background()
 	m := &redis.Z{Member: uid, Score: float64(time.Now().Unix() + duration)}
-	cmd1 := databases.Redis.ZAdd(ctx, AdminService.getUserCacheKey(adminId),  m)
+	cmd1 := databases.Redis.ZAdd(ctx, AdminService.getUserCacheKey(adminId), m)
 	return cmd1.Err()
 }
 
 // GetLimitTime 获取有效期
 func (adminService *adminService) GetLimitTime(adminId int64, uid int64) int64 {
 	ctx := context.Background()
-	cmd := databases.Redis.ZScore(ctx, adminService.getUserCacheKey(adminId), strconv.FormatInt(uid , 10))
+	cmd := databases.Redis.ZScore(ctx, adminService.getUserCacheKey(adminId), strconv.FormatInt(uid, 10))
 	if cmd.Err() == redis.Nil {
 		return 0
 	}
@@ -134,11 +134,11 @@ func (adminService *adminService) GetLimitTime(adminId int64, uid int64) int64 {
 }
 
 // GetUsersWithLimitTime 获取所有user以及对应的有效期
-func (adminService *adminService) GetUsersWithLimitTime(adminId int64) ([]int64, []int64)  {
+func (adminService *adminService) GetUsersWithLimitTime(adminId int64) ([]int64, []int64) {
 	ctx := context.Background()
 	cmd := databases.Redis.ZRevRangeWithScores(ctx, adminService.getUserCacheKey(adminId), 0, -1)
 	uids := make([]int64, 0, len(cmd.Val()))
-	times :=  make([]int64, 0, len(cmd.Val()))
+	times := make([]int64, 0, len(cmd.Val()))
 	for _, item := range cmd.Val() {
 		id, err := strconv.ParseInt(item.Member.(string), 10, 64)
 		if err == nil {

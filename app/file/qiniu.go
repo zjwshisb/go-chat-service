@@ -2,17 +2,17 @@ package file
 
 import (
 	"context"
+	"github.com/duke-git/lancet/v2/random"
 	"github.com/qiniu/go-sdk/v7/auth/qbox"
 	"github.com/qiniu/go-sdk/v7/storage"
 	"github.com/spf13/viper"
 	"mime/multipart"
-	"ws/app/util"
 )
 
 type qiniu struct {
-	ak string
-	sk string
-	bucket string
+	ak      string
+	sk      string
+	bucket  string
 	BaseUrl string
 }
 
@@ -40,7 +40,7 @@ func (qiniu *qiniu) Save(file *multipart.FileHeader, relativePath string) (*File
 	mac := qbox.NewMac(qiniu.ak, qiniu.sk)
 	upToken := policy.UploadToken(mac)
 	ret := storage.PutRet{}
-	key :=  relativePath + "/" + util.RandomStr(32)
+	key := relativePath + "/" + random.RandString(32)
 	f, err := file.Open()
 	defer func() {
 		_ = f.Close()
@@ -55,7 +55,7 @@ func (qiniu *qiniu) Save(file *multipart.FileHeader, relativePath string) (*File
 	}
 	return &File{
 		FullUrl: qiniu.Url(key),
-		Path: key,
+		Path:    key,
 		Storage: StorageQiniu,
 	}, nil
 }

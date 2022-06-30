@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"github.com/duke-git/lancet/v2/netutil"
 	"github.com/silenceper/wechat/v2/miniprogram/subscribe"
 	"github.com/spf13/viper"
 	"strconv"
@@ -11,7 +12,6 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 	rpcClient "ws/app/rpc/client"
-	"ws/app/util"
 	"ws/app/wechat"
 )
 
@@ -27,7 +27,7 @@ func SetupUser() {
 	UserManager = &userManager{
 		manager{
 			shardCount:   10,
-			ipAddr:       util.GetIPs()[0] + ":" + viper.GetString("Rpc.Port"),
+			ipAddr:       netutil.GetIps()[0] + ":" + viper.GetString("Rpc.Port"),
 			ConnMessages: make(chan *ConnMessage, 100),
 			types:        TypeUser,
 		},

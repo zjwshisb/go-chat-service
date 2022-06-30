@@ -32,7 +32,7 @@ func ConnectionOnline(id int64, types string, server string) bool {
 }
 
 func ConnectionTotal(groupId int64, types string) int64 {
-	d := NewClient("Connection")
+	d := NewDiscovery("Connection")
 	services := d.GetServices()
 	var total int64
 	result := make(chan int64, len(services))
@@ -62,7 +62,7 @@ func ConnectionTotal(groupId int64, types string) int64 {
 }
 
 func ConnectionIds(groupId int64, types string) []int64 {
-	d := NewClient("Connection")
+	d := NewDiscovery("Connection")
 	services := d.GetServices()
 	ids := make([]int64, 0)
 	result := make(chan []int64, len(services))
@@ -94,7 +94,7 @@ func ConnectionIds(groupId int64, types string) []int64 {
 }
 
 func ConnectionAllCount(types string) int64 {
-	d := NewClient("Connection")
+	d := NewDiscovery("Connection")
 	services := d.GetServices()
 	var total int64
 	result := make(chan int64, len(services))

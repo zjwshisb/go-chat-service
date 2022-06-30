@@ -1,6 +1,9 @@
 package user
 
 import (
+	"github.com/duke-git/lancet/v2/random"
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"strconv"
 	"time"
 	"ws/app/chat"
@@ -10,10 +13,6 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
-	"ws/app/util"
-
-	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 )
 
 func ReadAll(c *gin.Context) {
@@ -103,7 +102,7 @@ func GetHistoryMessage(c *gin.Context) {
 
 func GetReqId(c *gin.Context) {
 	responses.RespSuccess(c, gin.H{
-		"reqId": util.RandomStr(20),
+		"reqId": random.RandString(20),
 	})
 }
 

@@ -1,9 +1,9 @@
 package repositories
 
 import (
+	"github.com/duke-git/lancet/v2/random"
 	"time"
 	"ws/app/models"
-	"ws/app/util"
 )
 
 type messageRepo struct {
@@ -31,6 +31,6 @@ func (repo *messageRepo) NewNotice(session *models.ChatSession, content string) 
 		ReceivedAT: time.Now().Unix(),
 		Source:     models.SourceSystem,
 		SessionId:  session.Id,
-		ReqId:      util.RandomStr(20),
+		ReqId:      random.RandString(20),
 	}
 }

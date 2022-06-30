@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"fmt"
+	"github.com/duke-git/lancet/v2/netutil"
 	"github.com/spf13/viper"
 	"sort"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"ws/app/repositories"
 	"ws/app/resource"
 	rpcClient "ws/app/rpc/client"
-	"ws/app/util"
 )
 
 var AdminManager *adminManager
@@ -26,7 +26,7 @@ func SetupAdmin() {
 	AdminManager = &adminManager{
 		manager: manager{
 			shardCount:   10,
-			ipAddr:       util.GetIPs()[0] + ":" + viper.GetString("Rpc.Port"),
+			ipAddr:       netutil.GetIps()[0] + ":" + viper.GetString("Rpc.Port"),
 			ConnMessages: make(chan *ConnMessage, 100),
 			types:        TypeAdmin,
 		},

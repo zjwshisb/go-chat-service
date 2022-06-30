@@ -1,12 +1,12 @@
 package admin
 
 import (
+	"github.com/duke-git/lancet/v2/slice"
 	"ws/app/http/requests"
 	"ws/app/http/responses"
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
-	"ws/app/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -52,7 +52,7 @@ func (handler *SettingHandler) Index(c *gin.Context) {
 			Value: admin.GetGroupId(),
 		},
 	}, -1, []string{}, []string{})
-	resp := util.SliceMap(settings, func(s *models.ChatSetting) *resource.ChatSetting {
+	resp := slice.Map(settings, func(index int, s *models.ChatSetting) *resource.ChatSetting {
 		return s.ToJson()
 	})
 	responses.RespSuccess(c, resp)

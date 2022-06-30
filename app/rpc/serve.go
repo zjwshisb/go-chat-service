@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/duke-git/lancet/v2/netutil"
 	"github.com/rpcxio/rpcx-etcd/serverplugin"
 	"github.com/smallnest/rpcx/server"
 	"github.com/spf13/viper"
@@ -11,11 +12,10 @@ import (
 	"time"
 	mlog "ws/app/log"
 	"ws/app/rpc/service"
-	"ws/app/util"
 )
 
 func addRegistryPlugin(s *server.Server) {
-	ips := util.GetIPs()
+	ips := netutil.GetIps()
 
 	r := &serverplugin.EtcdV3RegisterPlugin{
 		ServiceAddress: "tcp@" + ips[0] + ":" + viper.GetString("Rpc.Port"),

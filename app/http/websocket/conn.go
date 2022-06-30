@@ -91,7 +91,7 @@ func (c *Client) close() {
 // 发送消息验证
 func (c *Client) validate(data map[string]interface{}) error {
 	if !c.limiter.Allow() {
-		c.send <- NewErrorMessage("发送过于频繁，请慢一些")
+		return errors.New("发送过于频繁，请慢一些")
 	}
 	content, exist := data["content"]
 	if exist {
@@ -160,7 +160,7 @@ func (c *Client) readMsg() {
 				if ok {
 					err = c.validate(data)
 					if err != nil {
-						c.send <- NewErrorMessage(err.Error())
+						c.Deliver(NewErrorMessage(err.Error()))
 					} else {
 						log.Log.WithField("a-type", "websocket").
 							WithField("b-type", c.manager.GetTypes()).

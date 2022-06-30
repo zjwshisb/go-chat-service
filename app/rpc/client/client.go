@@ -7,7 +7,7 @@ import (
 	"log"
 )
 
-func NewClient(servicePath string) xclient.ServiceDiscovery {
+func NewDiscovery(servicePath string) xclient.ServiceDiscovery {
 	var d xclient.ServiceDiscovery
 	var err error
 	if viper.GetBool("App.Cluster") {
@@ -21,6 +21,7 @@ func NewClient(servicePath string) xclient.ServiceDiscovery {
 		if err != nil {
 			log.Fatal(err)
 		}
+
 	} else {
 		d, _ = xclient.NewPeer2PeerDiscovery("127.0.0.1:"+viper.GetString("Rpc.Port"), "")
 	}

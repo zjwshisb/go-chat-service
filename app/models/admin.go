@@ -1,10 +1,10 @@
 package models
 
 import (
+	"github.com/duke-git/lancet/v2/random"
 	"time"
 	"ws/app/contract"
 	"ws/app/databases"
-	"ws/app/util"
 )
 
 type Admin struct {
@@ -86,7 +86,7 @@ func (admin *Admin) GetBreakMessage(uid int64, sessionId uint64) *Message {
 		Source:     SourceSystem,
 		SessionId:  sessionId,
 		GroupId:    admin.GetGroupId(),
-		ReqId:      util.RandomStr(20),
+		ReqId:      random.RandString(20),
 	}
 }
 

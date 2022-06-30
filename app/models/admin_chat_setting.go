@@ -1,8 +1,8 @@
 package models
 
 import (
+	"github.com/duke-git/lancet/v2/random"
 	"time"
-	"ws/app/util"
 )
 
 type AdminChatSetting struct {
@@ -28,7 +28,7 @@ func (setting *AdminChatSetting) GetOfflineMsg(uid int64, sessionId uint64, grou
 		ReceivedAT: time.Now().Unix(),
 		Source:     SourceAdmin,
 		SessionId:  sessionId,
-		ReqId:      util.RandomStr(20),
+		ReqId:      random.RandString(20),
 		IsRead:     false,
 		GroupId:    groupId,
 	}

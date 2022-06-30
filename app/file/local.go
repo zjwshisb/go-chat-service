@@ -1,10 +1,10 @@
 package file
 
 import (
+	"github.com/duke-git/lancet/v2/random"
 	"mime/multipart"
 	"os"
 	"path"
-	"ws/app/util"
 	"ws/config"
 
 	"github.com/duke-git/lancet/v2/fileutil"
@@ -54,7 +54,7 @@ func (local *local) Save(file *multipart.FileHeader, relativePath string) (*File
 	if err != nil {
 		return nil, err
 	}
-	filename := util.RandomStr(30) + ext
+	filename := random.RandString(32) + ext
 	var fullPath string
 	var relativeName string
 	if relativePath != "" {

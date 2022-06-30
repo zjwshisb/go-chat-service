@@ -1,12 +1,12 @@
 package models
 
 import (
+	"github.com/duke-git/lancet/v2/random"
 	"gorm.io/gorm"
 	"strings"
 	"time"
 	"ws/app/databases"
 	"ws/app/resource"
-	"ws/app/util"
 )
 
 const (
@@ -171,7 +171,7 @@ func (rule *AutoRule) GetReplyMessage(uid int64) (message *Message) {
 			ReceivedAT: time.Now().Unix(),
 			SendAt:     0,
 			Source:     SourceSystem,
-			ReqId:      util.RandomStr(20),
+			ReqId:      random.RandString(20),
 			IsRead:     true,
 		}
 	}

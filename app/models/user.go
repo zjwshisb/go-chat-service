@@ -3,11 +3,11 @@ package models
 import (
 	"context"
 	"fmt"
+	"github.com/duke-git/lancet/v2/random"
 	"strconv"
 	"time"
 	"ws/app/contract"
 	"ws/app/databases"
-	"ws/app/util"
 )
 
 type User struct {
@@ -50,7 +50,7 @@ func (user *User) GetMpOpenId() string {
 }
 
 func (user *User) Login() (token string) {
-	token = util.RandomStr(32)
+	token = random.RandString(32)
 	databases.Db.Model(user).Update("api_token", token)
 	return
 }

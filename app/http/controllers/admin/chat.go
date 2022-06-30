@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"github.com/duke-git/lancet/v2/random"
+	"github.com/duke-git/lancet/v2/slice"
 	"strconv"
 	"time"
 	"ws/app/chat"
@@ -11,7 +13,6 @@ import (
 	"ws/app/models"
 	"ws/app/repositories"
 	"ws/app/resource"
-	"ws/app/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -125,7 +126,7 @@ func (handle *ChatHandler) GetHistoryMessage(c *gin.Context) {
 // GetReqId 获取reqId
 func (handle *ChatHandler) GetReqId(c *gin.Context) {
 	responses.RespSuccess(c, gin.H{
-		"reqId": util.RandomStr(20),
+		"reqId": random.RandString(20),
 	})
 }
 
@@ -352,6 +353,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 	chatUser.LastChatTime = time.Now().Unix()
 	chatUser.Online = websocket.UserManager.IsOnline(user)
 	noticeMessage := repositories.MessageRepo.NewNotice(session, admin.GetChatName()+"为您服务")
+
 	repositories.MessageRepo.Save(noticeMessage)
 	websocket.UserManager.DeliveryMessage(noticeMessage, false)
 	for index, m := range messages {
@@ -484,7 +486,7 @@ func (handle *ChatHandler) TransferMessages(c *gin.Context) {
 			Value: transfer.SessionId,
 		},
 	}, -1, []string{"Admin", "User"}, []string{"id desc"})
-	res := util.SliceMap(messages, func(s *models.Message) *resource.Message {
+	res := slice.Map(messages, func(index int, s *models.Message) *resource.Message {
 		return s.ToJson()
 	})
 	responses.RespSuccess(c, res)

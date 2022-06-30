@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"github.com/duke-git/lancet/v2/slice"
 	"sort"
 	"ws/app/chat"
 	"ws/app/databases"
@@ -9,7 +10,6 @@ import (
 	"ws/app/http/websocket"
 	"ws/app/models"
 	"ws/app/repositories"
-	"ws/app/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-module/carbon"
@@ -28,7 +28,7 @@ func (handler *DashboardHandler) GetOnlineAdmins(c *gin.Context) {
 			Value: ids,
 		},
 	}, -1, []string{}, []string{})
-	res := util.SliceMap(users, func(s *models.Admin) gin.H {
+	res := slice.Map(users, func(index int, s *models.Admin) gin.H {
 		return gin.H{
 			"username": s.Username,
 			"id":       s.ID,
@@ -46,7 +46,7 @@ func (handler *DashboardHandler) GetOnlineUsers(c *gin.Context) {
 			Value: ids,
 		},
 	}, -1, []string{}, []string{})
-	res := util.SliceMap(users, func(s *models.User) gin.H {
+	res := slice.Map(users, func(index int, s *models.User) gin.H {
 		return gin.H{
 			"username": s.Username,
 		}
