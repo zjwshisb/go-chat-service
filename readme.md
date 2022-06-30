@@ -1,8 +1,8 @@
 # gochat客服系统
 
 ### 介绍
-基于golang，ant-design-pro，Taro实现的在线客服IM系统，通过websocket实现消息接受发送，支持集群部署。
-集群模式下通过发布订阅(redis|rabbitmq)进行消息通信;通过rpc进行状态查询(用户是否在线，连接数等等)
+基于golang，ant-design-pro，Taro实现的在线客服IM系统，通过websocket实现消息接受发送，支持集群部署。 
+集群模式各服务通过rpc进行通信
 文件存储支持本地/七牛。
 - [客服前端代码](https://github.com/zjwshisb/service-frontend)
 - [用户端前端代码](https://github.com/zjwshisb/service-user) 
@@ -10,7 +10,6 @@
 依赖
 - mysql
 - redis
-- rabbitmq(可选)
 - etcd(集群模式下需要)
 
 ### 开始

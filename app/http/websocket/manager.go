@@ -10,7 +10,6 @@ import (
 	"ws/app/contract"
 	"ws/app/databases"
 	"ws/app/models"
-	"ws/app/mq"
 	rpcClient "ws/app/rpc/client"
 )
 
@@ -137,12 +136,6 @@ func (m *manager) getSpread(gid int64) *Shard {
 
 func (m *manager) isCluster() bool {
 	return viper.GetBool("App.Cluster")
-}
-
-// 发布消息
-func (m *manager) publish(channel string, payload *mq.Payload) error {
-	err := mq.Publish(channel, payload)
-	return err
 }
 
 func (m *manager) getServer() string {

@@ -3,7 +3,6 @@ App:
   Workdir: ./
   # local,production,test
   Env: local
-  Mq: redis
   Cluster: false
   Secret: 3123dhwahduwad
 Rpc:
@@ -35,8 +34,3 @@ Wechat:
   MiniProgramAppId:
   MiniProgramAppSecret:
   SubscribeTemplateIdOne:
-RabbitMq:
-  User: admin
-  Password: admin
-  Host: localhost
-  Port: 5672

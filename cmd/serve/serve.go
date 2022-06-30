@@ -15,7 +15,6 @@ import (
 	_ "ws/app/http/requests"
 	"ws/app/http/websocket"
 	mylog "ws/app/log"
-	"ws/app/mq"
 	"ws/app/rpc"
 	"ws/app/sys"
 	"ws/config"
@@ -53,7 +52,6 @@ func NewServeCommand() *cobra.Command {
 			databases.RedisSetup()
 			mylog.Setup()
 			file.Setup()
-			mq.Setup()
 			quit := make(chan os.Signal, 1)
 			signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 			htp := http.Serve(quit)
