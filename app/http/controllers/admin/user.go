@@ -42,7 +42,7 @@ func (User *UserHandler) UpdateSetting(c *gin.Context) {
 	setting.OfflineContent = form.OfflineContent
 	setting.Name = form.Name
 	repositories.AdminRepo.SaveSetting(setting)
-	websocket.AdminManager.PublishUpdateSetting(admin)
+	websocket.AdminManager.NoticeUpdateSetting(admin)
 	responses.RespSuccess(c, gin.H{})
 }
 
@@ -58,7 +58,7 @@ func (User *UserHandler) Avatar(c *gin.Context) {
 		admin := u.(*models.Admin)
 		setting := admin.GetSetting()
 		repositories.AdminRepo.UpdateSetting(setting, "avatar", form.Url)
-		websocket.AdminManager.PublishUpdateSetting(admin)
+		websocket.AdminManager.NoticeUserTransfer(admin)
 		responses.RespSuccess(c, gin.H{})
 	}
 }

@@ -65,6 +65,37 @@ func (userManager *userManager) DeliveryMessage(msg *models.Message, isRemote bo
 	userManager.handleOffline(msg)
 }
 
+// NoticeQueueLocation 等待人数
+func (userManager *userManager) NoticeQueueLocation(conn Conn) {
+	log.Log.WithField("type", "WEBSOCKET").
+		Infof("<user><notice><waiting-count><user-id:%d>", conn.GetGroupId())
+	uid := conn.GetUserId()
+	uTime := chat.ManualService.GetTime(uid, conn.GetGroupId())
+	count := chat.ManualService.GetCountByTime(conn.GetGroupId(), "-inf",
+		strconv.FormatFloat(uTime, 'f', 0, 64))
+	conn.Deliver(NewWaitingUserCount(count - 1))
+}
+
+func (userManager *userManager) BroadcastQueueLocation(gid int64) {
+	log.Log.WithField("type", "WEBSOCKET").
+		Infof("<user><publish><waiting-count><group-id:%d>", gid)
+	userManager.Do(func() {
+		rpcClient.BroadcastQueueLocation(gid)
+	}, func() {
+		userManager.BroadcastLocalQueueLocation(gid)
+	})
+}
+
+// BroadcastLocalQueueLocation 广播前面等待人数
+func (userManager *userManager) BroadcastLocalQueueLocation(gid int64) {
+	log.Log.WithField("type", "WEBSOCKET").
+		Infof("<user><broadcast><waiting-count><group-id:%d>", gid)
+	conns := userManager.GetAllConn(gid)
+	for _, conn := range conns {
+		userManager.NoticeQueueLocation(conn)
+	}
+}
+
 // 从conn接受消息并处理
 func (userManager *userManager) handleReceiveMessage() {
 	for {
@@ -72,36 +103,6 @@ func (userManager *userManager) handleReceiveMessage() {
 		go userManager.handleMessage(payload)
 	}
 }
-
-// 订阅远程消息
-//func (userManager *userManager) handleRemoteMessage() {
-//	sub := mq.Subscribe(userManager.GetSubscribeChannel())
-//	for {
-//		message := sub.ReceiveMessage()
-//		go func() {
-//			log.Log.WithField("a-type", "publish/subscribe").
-//				WithField("b-type", "subscribe").
-//				WithField("c-type", "user").
-//				Infof("<channel:%s><types:%s><data:%s>",
-//					userManager.GetSubscribeChannel(),
-//					message.Get("types"),
-//					message.Get("data"))
-//			switch message.Get("types").String() {
-//			case mq.TypeMessage:
-//				mid := message.Get("data").Int()
-//				msg := repositories.MessageRepo.FirstById(mid)
-//				if msg != nil {
-//					userManager.DeliveryMessage(msg, true)
-//				}
-//			case mq.TypeWaitingUserCount:
-//				gid := message.Get("data").Int()
-//				if gid > 0 {
-//					userManager.broadcastWaitingCount(gid)
-//				}
-//			}
-//		}()
-//	}
-//}
 
 // 处理离线逻辑
 func (userManager *userManager) handleOffline(msg *models.Message) {
@@ -146,7 +147,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 				msg.User = conn.GetUser().(*models.User)
 				msg.AdminId = chat.UserService.GetValidAdmin(conn.GetUserId())
 				// 发送回执
-				repositories.MessageRepo.Save(msg)
+				_ = repositories.MessageRepo.Save(msg)
 				conn.Deliver(NewReceiptAction(msg))
 				// 有对应的客服对象
 				if msg.AdminId > 0 {
@@ -176,7 +177,7 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 								}
 								repositories.MessageRepo.Save(msg)
 								AdminManager.BroadcastWaitingUser(conn.GetGroupId())
-								userManager.PublishWaitingCount(conn.GetGroupId())
+								userManager.BroadcastQueueLocation(conn.GetGroupId())
 							} else {
 								repositories.MessageRepo.Save(msg)
 								userManager.triggerMessageEvent(models.SceneNotAccepted, msg)
@@ -189,40 +190,6 @@ func (userManager *userManager) handleMessage(payload *ConnMessage) {
 	}
 }
 
-// PublishWaitingCount 广播等待人数
-func (userManager *userManager) PublishWaitingCount(groupId int64) {
-	log.Log.WithField("type", "WEBSOCKET").
-		Infof("<user><publish><waiting-count><group-id:%d>", groupId)
-	userManager.Do(func() {
-		//userManager.publishToAllChannel(&mq.Payload{
-		//	Types: mq.TypeWaitingUserCount,
-		//	Data:  groupId,
-		//})
-	}, func() {
-		userManager.broadcastWaitingCount(groupId)
-	})
-}
-
-// NoticeWaitingCount 推送前面等待人数
-func (userManager *userManager) NoticeWaitingCount(conn Conn) {
-	log.Log.WithField("type", "WEBSOCKET").
-		Infof("<user><notice><waiting-count><user-id:%d>", conn.GetGroupId())
-	uid := conn.GetUserId()
-	uTime := chat.ManualService.GetTime(uid, conn.GetGroupId())
-	count := chat.ManualService.GetCountByTime(conn.GetGroupId(), "-inf",
-		strconv.FormatFloat(uTime, 'f', 0, 64))
-	conn.Deliver(NewWaitingUserCount(count - 1))
-}
-
-// 广播前面等待人数
-func (userManager *userManager) broadcastWaitingCount(gid int64) {
-	log.Log.WithField("type", "WEBSOCKET").
-		Infof("<user><broadcast><waiting-count><group-id:%d>", gid)
-	conns := userManager.GetAllConn(gid)
-	for _, conn := range conns {
-		userManager.NoticeWaitingCount(conn)
-	}
-}
 func (userManager *userManager) unRegisterHook(conn Conn) {
 	AdminManager.NoticeUserOffline(conn.GetUser())
 }
@@ -233,7 +200,7 @@ func (userManager *userManager) unRegisterHook(conn Conn) {
 func (userManager *userManager) registerHook(conn Conn) {
 	AdminManager.NoticeUserOnline(conn.GetUser())
 	if chat.ManualService.IsIn(conn.GetUserId(), conn.GetGroupId()) {
-		userManager.NoticeWaitingCount(conn)
+		userManager.NoticeQueueLocation(conn)
 	} else if chat.UserService.GetValidAdmin(conn.GetUserId()) == 0 {
 		rule := repositories.AutoRuleRepo.GetEnterByGroup(conn.GetGroupId())
 		if rule != nil {
@@ -259,7 +226,7 @@ func (userManager *userManager) addToManual(user contract.User) *models.ChatSess
 				case models.ReplyTypeMessage:
 					msg := rule.GetReplyMessage(user.GetPrimaryKey())
 					if msg != nil {
-						repositories.MessageRepo.Save(msg)
+						_ = repositories.MessageRepo.Save(msg)
 						rule.AddCount()
 						userManager.DeliveryMessage(msg, false)
 						return nil
@@ -298,7 +265,7 @@ func (userManager *userManager) triggerMessageEvent(scene string, message *model
 					repositories.MessageRepo.Save(message)
 				}
 				AdminManager.BroadcastWaitingUser(message.GroupId)
-				userManager.PublishWaitingCount(message.GroupId)
+				userManager.BroadcastQueueLocation(message.GroupId)
 				AdminManager.BroadcastWaitingUser(message.GetUser().GetGroupId())
 			// 回复消息
 			case models.ReplyTypeMessage:

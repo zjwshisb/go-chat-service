@@ -323,23 +323,20 @@ func (m *adminManager) NoticeLocalUserTransfer(admin contract.User) {
 	}
 }
 
-// PublishUpdateSetting admin修改设置后通知conn 更新admin的设置信息
-func (m *adminManager) PublishUpdateSetting(admin contract.User) {
+// NoticeUpdateSetting admin修改设置后通知conn 更新admin的设置信息
+func (m *adminManager) NoticeUpdateSetting(admin contract.User) {
 	m.Do(func() {
-		//channel := m.getUserChannel(admin.GetPrimaryKey())
-		//if channel != "" {
-		//	_ = m.publish(channel, &mq.Payload{
-		//		Types: mq.TypeUpdateSetting,
-		//		Data:  admin.GetPrimaryKey(),
-		//	})
-		//}
+		server := m.getUserServer(admin.GetPrimaryKey())
+		if server != "" {
+			rpcClient.NoticeUpdateSetting(admin.GetPrimaryKey(), server)
+		}
 	}, func() {
-		m.updateSetting(admin)
+		m.UpdateSetting(admin)
 	})
 }
 
-// 更新设置
-func (m *adminManager) updateSetting(admin contract.User) {
+// UpdateSetting 更新设置
+func (m *adminManager) UpdateSetting(admin contract.User) {
 	conn, exist := m.GetConn(admin)
 	if exist {
 		u, ok := conn.GetUser().(*models.Admin)

@@ -34,11 +34,19 @@ func Serve(c chan os.Signal) *server.Server {
 	s := server.NewServer()
 	addRegistryPlugin(s)
 	err := s.RegisterName("Connection", new(service.Connection), "")
+	if err != nil {
+		log.Fatal(err)
+	}
 	err = s.RegisterName("Message", new(service.Message), "")
+	if err != nil {
+		log.Fatal(err)
+	}
 	err = s.RegisterName("Admin", new(service.Admin), "")
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = s.RegisterName("User", new(service.User), "")
+
 	go func() {
 		mlog.Log.WithField("a-type", "rpc").Info("start")
 		err := s.Serve("tcp", ":"+viper.GetString("Rpc.port"))

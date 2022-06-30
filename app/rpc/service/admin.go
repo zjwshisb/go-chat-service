@@ -11,6 +11,14 @@ import (
 type Admin struct {
 }
 
+func (admin *Admin) UpdateSetting(ctx context.Context, request *request.IdRequest, response *response.NilResponse) error {
+	u := repositories.AdminRepo.FirstById(request.Id)
+	if u != nil {
+		websocket.AdminManager.UpdateSetting(u)
+	}
+	return nil
+}
+
 func (admin *Admin) UserTransfer(ctx context.Context, request *request.IdRequest, response *response.NilResponse) error {
 	u := repositories.AdminRepo.FirstById(request.Id)
 	if admin != nil {

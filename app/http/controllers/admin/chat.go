@@ -359,7 +359,7 @@ func (handle *ChatHandler) AcceptUser(c *gin.Context) {
 		chatUser.Messages[index] = rm
 	}
 	go websocket.AdminManager.BroadcastWaitingUser(user.GetGroupId())
-	go websocket.UserManager.PublishWaitingCount(user.GetGroupId())
+	go websocket.UserManager.BroadcastQueueLocation(user.GetGroupId())
 	responses.RespSuccess(c, chatUser)
 }
 

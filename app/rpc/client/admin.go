@@ -23,6 +23,15 @@ func BroadcastOnlineAdmin(groupId int64) {
 	}
 }
 
+func NoticeUpdateSetting(id int64, server string) {
+	d, _ := client.NewPeer2PeerDiscovery(server, "")
+	c := client.NewXClient("Admin", client.Failtry, client.RandomSelect, d, client.DefaultOption)
+	defer c.Close()
+	req := &request.IdRequest{Id: id}
+	resp := &response.NilResponse{}
+	_ = c.Call(context.Background(), "UpdateSetting", req, resp)
+}
+
 func NoticeUserTransfer(id int64, server string) {
 	d, _ := client.NewPeer2PeerDiscovery(server, "")
 	c := client.NewXClient("Admin", client.Failtry, client.RandomSelect, d, client.DefaultOption)
