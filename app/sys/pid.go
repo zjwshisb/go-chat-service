@@ -3,33 +3,14 @@ package sys
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
+	"github.com/duke-git/lancet/v2/netutil"
 	"log"
-	"net"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"ws/config"
 )
-
-func getMacAddrs() (macAddrs []string) {
-	netInterfaces, err := net.Interfaces()
-	if err != nil {
-		fmt.Printf("fail to get net interfaces: %v", err)
-		return macAddrs
-	}
-
-	for _, netInterface := range netInterfaces {
-		macAddr := netInterface.HardwareAddr.String()
-		if len(macAddr) == 0 {
-			continue
-		}
-
-		macAddrs = append(macAddrs, macAddr)
-	}
-	return macAddrs
-}
 
 func IsRunning() bool {
 	pid := GetPid()
@@ -45,8 +26,8 @@ func IsRunning() bool {
 	}
 }
 func GetPidFile() string {
-	mac := getMacAddrs()
-	s := []byte(mac[0])
+	ips := netutil.GetIps()
+	s := []byte(ips[0])
 	h := md5.New()
 	h.Write(s)
 	return hex.EncodeToString(h.Sum(nil)) + ".pid"

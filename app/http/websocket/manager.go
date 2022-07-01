@@ -292,7 +292,7 @@ func (m *manager) GetAllConn(groupId int64) (conns []Conn) {
 func (m *manager) GetAllConnCount() int64 {
 	var count int64
 	for gid := range m.shard {
-		count += m.GetOnlineTotal(int64(gid))
+		count += m.GetLocalOnlineTotal(int64(gid))
 	}
 	return count
 }

@@ -1,6 +1,8 @@
 package routers
 
 import (
+	"embed"
+	"html/template"
 	"net/http"
 	"strings"
 	"ws/app/http/controllers/monitor"
@@ -21,6 +23,9 @@ var (
 	}
 )
 
+//go:embed templates/monitor.tmpl
+var f embed.FS
+
 func Setup() {
 	if strings.ToLower(config.GetEnv()) == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -39,8 +44,9 @@ func Setup() {
 	Router.GET("/", func(c *gin.Context) {
 		c.JSON(200, "hello world")
 	})
+	templ := template.Must(template.New("").ParseFS(f, "templates/*.tmpl"))
+	Router.SetHTMLTemplate(templ)
 	if config.GetEnv() == "local" {
-		Router.LoadHTMLGlob("templates/*")
 		Router.GET("/monitor", monitor.Index)
 	}
 	registerAdmin()

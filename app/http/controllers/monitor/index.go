@@ -21,7 +21,7 @@ func Index(c *gin.Context) {
 		services := d.GetServices()
 		for _, s := range services {
 			if serverStr != "" {
-				serverStr += "|"
+				serverStr += "</br>"
 			}
 			serverStr += s.Key
 		}
