@@ -1,0 +1,57 @@
+{{define "monitor.tmpl"}}
+<html>
+  <style>
+    .body{
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+    }
+    .table{
+      width: 700px;
+      border-right:1px solid #eaeaea;border-bottom:1px solid #eaeaea
+    }
+    .table td {
+      border-left:1px solid #eaeaee;border-top:1px solid #eaeaea;
+      padding: 3px 10px;
+    }
+    .table tr td:first-child{
+      width: 200px;
+    } 
+  </style>
+  <body class="body">
+    <table class="table">
+      <tr>
+        <td>
+          客服连接数
+        </td>
+        <td>
+          {{.admin}}
+        </td>
+      </tr>
+      <tr>
+        <td>
+          用户连接数
+        </td>
+        <td>
+          {{.user}}
+        </td>
+      </tr></div>
+      <tr>
+        <td>
+          集群
+        </td>
+        <td>
+          {{.isCluster}}
+        </td>
+      </tr>
+      <tr>
+        <td>
+          服务(集群模式下)
+        </td>
+        <td>
+          {{.server}}
+        </td>
+      </tr>
+    </body>
+</html>
+{{ end }}
