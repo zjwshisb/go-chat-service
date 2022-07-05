@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
-	"github.com/spf13/viper"
 	"sync"
 	"time"
 	"ws/app/contract"
 	"ws/app/databases"
 	"ws/app/models"
 	rpcClient "ws/app/rpc/client"
+	"ws/config"
 )
 
 // ConnContainer 管理相关方法
@@ -135,7 +135,7 @@ func (m *manager) getSpread(gid int64) *Shard {
 }
 
 func (m *manager) isCluster() bool {
-	return viper.GetBool("App.Cluster")
+	return config.IsCluster()
 }
 
 func (m *manager) getServer() string {

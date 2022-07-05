@@ -2,18 +2,19 @@ package responses
 
 import (
 	"net/http"
+	"ws/app/repositories"
 
 	"github.com/gin-gonic/gin"
 )
 
-func RespSuccess(c *gin.Context, data interface{}) {
+func RespSuccess(c *gin.Context, data any) {
 	c.JSON(http.StatusOK, gin.H{
 		"data":    data,
 		"success": true,
 		"code":    0,
 	})
 }
-func RespPagination(c *gin.Context, p interface{}) {
+func RespPagination[T any](c *gin.Context, p *repositories.Pagination[T]) {
 	c.JSON(http.StatusOK, p)
 }
 func RespValidateFail(c *gin.Context, msg interface{}) {

@@ -65,10 +65,11 @@ func (local *local) Save(file *multipart.FileHeader, relativePath string) (*File
 		relativeName = filename
 	}
 	fullName := fullPath + "/" + filename
-
-	err = os.MkdirAll(fullPath, os.ModePerm)
-	if err != nil {
-		return nil, err
+	if !fileutil.IsExist(fullPath) {
+		err = os.MkdirAll(fullPath, os.ModePerm)
+		if err != nil {
+			return nil, err
+		}
 	}
 	saveFile, err := os.Create(fullName)
 	defer func() {
