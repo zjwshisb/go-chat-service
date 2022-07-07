@@ -52,10 +52,11 @@ func (admin *Admin) GetSetting() *AdminChatSetting {
 		databases.Db.Model(admin).Association("Setting").Find(setting)
 		if setting.Id == 0 {
 			setting = &AdminChatSetting{
-				AdminId:   admin.GetPrimaryKey(),
-				Name:      admin.GetUsername(),
-				CreatedAt: time.Time{},
-				UpdatedAt: time.Time{},
+				AdminId:    admin.GetPrimaryKey(),
+				Name:       admin.GetUsername(),
+				CreatedAt:  time.Now(),
+				UpdatedAt:  time.Now(),
+				LastOnline: time.Now(),
 			}
 			databases.Db.Save(setting)
 		}

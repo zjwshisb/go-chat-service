@@ -15,7 +15,7 @@ func RedisSetup() {
 		DB:   viper.GetInt("Redis.Db"),
 	}
 	if viper.GetString("Redis.Auth") != "" {
-		options.Password = ""
+		options.Password = viper.GetString("Redis.Auth")
 	}
 	Redis = redis.NewClient(options)
 	cmd := Redis.Ping(context.Background())
