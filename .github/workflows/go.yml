@@ -22,7 +22,7 @@ jobs:
         go-version: '1.20'
 
     - name: Build
-      run: go build -v ./...
+      run: go build -v  && ls -al
 
     - name: scp
       uses: appleboy/scp-action@v0.1.7
