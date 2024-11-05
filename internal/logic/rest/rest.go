@@ -10,7 +10,7 @@ type RDao interface {
 	Table() string
 	Group() string
 	Ctx(ctx context.Context) *gdb.Model
-	Transaction(ctx context.Context, f func(ctx context.Context, tx *gdb.TX) error) (err error)
+	Transaction(ctx context.Context, f func(ctx context.Context, tx gdb.TX) error) (err error)
 }
 
 type Rest[C any] struct {

@@ -1,0 +1,38 @@
+qiniu:
+  ak: ""
+  sk: ""
+  url: ""
+  bucket: ""
+app:
+  ssoUrl: ""
+  saasUrl: ""
+  jwtSecret: ""
+wechat:
+  official:
+    chatTmpl: ""
+server:
+  address: ""
+  serverRoot: ""
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+database:
+  logger:
+    path: "./storage/sql"
+    level: "all"
+    stdout: true
+  default:
+    type: "mysql"
+    link: "root:123456@tcp(127.0.0.1:3306)/dev?loc=Local&parseTime=true"
+    debug: true
+redis:
+  # 单实例配置示例1
+  default:
+    address: 127.0.0.1:6379
+    pass:
+    db: 5
+gfcli:
+  gen:
+    dao:
+      - link:     "mysql:root:123456@tcp(127.0.0.1:3306)/dev"
+        jsonCase: "SnakeScreaming"
+
