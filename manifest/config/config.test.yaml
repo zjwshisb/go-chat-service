@@ -1,0 +1,32 @@
+qiniu:
+  ak: "tGVRrRRU95FqdcQDQN8s_6PwfMx89xjoGqRhORLC"
+  sk: "KYeKFt3Xak8cyUXk4XQMnsXB_6HANR4vlCerjcjA"
+  url: "http://timage.wiisong.com"
+  bucket: "wiisongtest"
+app:
+  ssoUrl: "http://testadmin.wiisong.com"
+  saasUrl: "http://test.wiisong.com"
+  jwtSecret: "1dnkjwandawn"
+wechat:
+  official:
+    chatTmpl: "TZMlem2YPA_J7XP9Mvok-xMSYq589YWwzIvzDYpNOZ0"
+server:
+  address: ":6060"
+  serverRoot: ""
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+database:
+  logger:
+    path: "./storage/sql"
+    level: "error"
+    stdout: false
+  default:
+    type: "mysql"
+    link: "test:test@tcp(127.0.0.1:3306)/test?loc=Local&parseTime=true"
+    debug: false
+redis:
+  # 单实例配置示例1
+  default:
+    address: 127.0.0.1:6379
+    pass:
+    db: 5

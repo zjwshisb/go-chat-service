@@ -1,0 +1,32 @@
+qiniu:
+  ak: "VmWjG4pn8o08vAfPkIAGeIPGBwE20RZjjtEClETG"
+  sk: "xCNEHudh64eLUjUxt6q7qQPN9pk2om9wcg7IXl5_"
+  url: "https://image.wiisong.com"
+  bucket: "wsproduct"
+app:
+  ssoUrl: "https://user.wiisong.com"
+  saasUrl: "https://www.wiisong.com"
+  jwtSecret: "1dnkjwandawn"
+wechat:
+  official:
+    chatTmpl: "TZMlem2YPA_J7XP9Mvok-xMSYq589YWwzIvzDYpNOZ0"
+server:
+  address: ":9090"
+  serverRoot: ""
+  openapiPath: "/api.json"
+  swaggerPath: "/api/swagger"
+database:
+  logger:
+    path: "./storage/sql"
+    level: "error"
+    stdout: false
+  default:
+    type: "mysql"
+    link: "product:Product89911513@tcp(rm-wz92514q322mp0szn.mysql.rds.aliyuncs.com:3306)/saasproduct?loc=Local&parseTime=true"
+    debug: true
+redis:
+  # 单实例配置示例1
+  default:
+    address: "r-wz9w4uqom5ba3210vc.redis.rds.aliyuncs.com:6379"
+    pass: "Weisong123456"
+    db: 5

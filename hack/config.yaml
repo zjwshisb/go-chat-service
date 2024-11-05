@@ -1,0 +1,36 @@
+# CLI tool, only in development environment.
+# https://goframe.org/pages/viewpage.action?pageId=3673173
+database:
+  default:
+    type: "mysql"
+    link: "zjw:zjw123456@tcp(47.115.162.231:3306)/saas_dev"
+gfcli:
+  gen:
+    dao:
+    - link: "mysql:zjw:zjw123456@tcp(47.115.162.231:3306)/saas_dev"
+      tables: "customer_chat_auto_messages,
+      customer_chat_auto_rule_scenes,
+      customer_chat_auto_rules,
+      customer_chat_messages,
+      customer_chat_sessions,
+      customer_chat_settings,
+      customer_chat_transfers,
+      customer_settings,
+      customer_admins,
+      customer_admin_wechat,
+      customer_admin_chat_settings,
+      users,
+      weapp_subscribe_messages,
+      sms_templates,
+      customers,
+      students,
+      schools,
+      user_apps,
+      refund_orders,
+      meal_orders,
+      customer_kitchens,
+      "
+      jsonCase: "CamelLower"
+      stdTime: true
+
+
