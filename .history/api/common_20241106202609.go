@@ -1,9 +1,15 @@
-package backend
+package api
 
 import (
+	"gf-chat/internal/model"
+
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 )
+
+type NilRes []string
+
+type OptionRes []model.Option
 
 type ImageReq struct {
 	g.Meta `path:"/images" tags:"后台图片上传" mine:"multipart/form-data" method:"post" summary:"上传图片"`

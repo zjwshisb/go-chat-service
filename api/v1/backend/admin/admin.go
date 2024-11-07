@@ -1,4 +1,4 @@
-package backend
+package admin
 
 import (
 	"gf-chat/internal/model"
@@ -7,32 +7,37 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
-type AdminDetailReq struct {
+type DetailReq struct {
 	g.Meta `path:"/admins/:id" tags:"后台管理员" method:"get" summary:"获取管理员详情"`
 	Month  string `json:"month" v:"required" p:"month"`
 }
 
-type AdminDetailRes struct {
+type DetailRes struct {
 	Chart []*model.ChartLine     `json:"chart"`
 	Admin *model.AdminDetailInfo `json:"admin"`
 }
 
-type AdminIndexReq struct {
+type ListReq struct {
 	g.Meta   `path:"/admins" tags:"后台管理员" method:"get" summary:"获取管理员列表"`
 	PageSize int `d:"20" json:"pageSize" v:"max:100"`
 	Current  int `d:"1" dc:"页码" json:"current"`
 }
+type ListRes struct {
+	Total int        `json:"total"`
+	Items []ListItem `json:"items"`
+}
 
-type AdminListItem struct {
+type StoreReq struct {
+	g.Meta   `path:"/admins" tags:"后台管理员" method:"get" summary:"获取管理员列表"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type ListItem struct {
 	Id            uint        `json:"id"`
 	Username      string      `json:"username"`
 	Avatar        string      `json:"avatar"`
 	Online        bool        `json:"online"`
 	AcceptedCount uint        `json:"accepted_count"`
 	LastOnline    *gtime.Time `json:"last_online"`
-}
-
-type AdminIndexRes struct {
-	Total int             `json:"total"`
-	Items []AdminListItem `json:"items"`
 }
