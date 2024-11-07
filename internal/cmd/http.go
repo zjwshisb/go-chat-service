@@ -43,7 +43,7 @@ var (
 					group.Middleware(middleware.Cors, middleware.HandlerResponse).
 						Group("/", func(group *ghttp.RouterGroup) {
 							group.Bind(
-								backend.CLogin,
+								backend.CUser.Login,
 							)
 							group.Middleware(middleware.AdminAuth).Group("/", func(group *ghttp.RouterGroup) {
 								group.Bind(
@@ -51,7 +51,7 @@ var (
 									backend.CDashboard,
 									backend.CSession,
 									backend.CAdmin,
-									backend.CMe,
+									backend.CUser,
 									backend.CAutoMessage,
 									backend.CImage,
 									backend.CAutoRule,

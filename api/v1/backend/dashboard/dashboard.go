@@ -1,7 +1,7 @@
 package dashboard
 
 import (
-	"gf-chat/internal/model/chat"
+	"gf-chat/internal/model"
 
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -17,7 +17,7 @@ type OnlineAdminReq struct {
 	g.Meta `path:"/dashboard/online-admins" tags:"dashboard" method:"get" summary:"获取在线客服列表"`
 }
 
-type OnlineUserRes []chat.SimpleUser
+type OnlineUserRes []model.ChatSimpleUser
 
 type OnlineRes struct {
 	UserCount        uint `json:"user_count"`

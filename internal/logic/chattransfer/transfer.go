@@ -7,10 +7,8 @@ import (
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/chat"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
-	"gf-chat/internal/model/relation"
 	"gf-chat/internal/service"
 
 	"github.com/gogf/gf/v2/errors/gcode"
@@ -32,7 +30,7 @@ const (
 type sChatTransfer struct {
 }
 
-func (s *sChatTransfer) Paginate(ctx context.Context, w *do.CustomerChatTransfers, p model.QueryInput) (res []*relation.CustomerChatTransfer, total uint) {
+func (s *sChatTransfer) Paginate(ctx context.Context, w *do.CustomerChatTransfers, p model.QueryInput) (res []*model.CustomerChatTransfer, total uint) {
 	query := dao.CustomerChatTransfers.Ctx(ctx).Where(w)
 	if p.WithTotal {
 		i, _ := query.Clone().Count()
@@ -48,31 +46,24 @@ func (s *sChatTransfer) Paginate(ctx context.Context, w *do.CustomerChatTransfer
 	return
 }
 
-func (s *sChatTransfer) FirstEntity(w any) *entity.CustomerChatTransfers {
-	item := &entity.CustomerChatTransfers{}
-	err := dao.CustomerChatTransfers.Ctx(gctx.New()).Where(w).Scan(&item)
-	if err == sql.ErrNoRows {
-		return nil
+func (s *sChatTransfer) First(w any, with ...any) (item *model.CustomerChatTransfer, err error) {
+	err = dao.CustomerChatTransfers.Ctx(gctx.New()).Where(w).With(with...).Scan(&item)
+	if err != nil {
+		return
 	}
-	return item
+	if item == nil {
+		err = sql.ErrNoRows
+	}
+	return
 }
 
-func (s *sChatTransfer) FirstRelation(w any) *relation.CustomerChatTransfer {
-	item := &relation.CustomerChatTransfer{}
-	err := dao.CustomerChatTransfers.Ctx(gctx.New()).Where(w).WithAll().Scan(&item)
-	if err == sql.ErrNoRows {
-		return nil
-	}
-	return item
-}
-
-func (s *sChatTransfer) GetRelations(w any) []*relation.CustomerChatTransfer {
-	res := make([]*relation.CustomerChatTransfer, 0)
-	dao.CustomerChatTransfers.Ctx(gctx.New()).Where(w).WithAll().Scan(&res)
+func (s *sChatTransfer) All(w any, with ...any) []*model.CustomerChatTransfer {
+	res := make([]*model.CustomerChatTransfer, 0)
+	dao.CustomerChatTransfers.Ctx(gctx.New()).With(with...).Where(w).Scan(&res)
 	return res
 }
 
-func (s *sChatTransfer) RelationToChat(relation *relation.CustomerChatTransfer) chat.Transfer {
+func (s *sChatTransfer) ToChatTransfer(relation *model.CustomerChatTransfer) model.ChatTransfer {
 	formName := ""
 	toName := ""
 	username := ""
@@ -85,7 +76,7 @@ func (s *sChatTransfer) RelationToChat(relation *relation.CustomerChatTransfer) 
 	if relation.User != nil {
 		username = relation.User.Username
 	}
-	return chat.Transfer{
+	return model.ChatTransfer{
 		Id:            relation.Id,
 		FromSessionId: relation.FromSessionId,
 		ToSessionId:   relation.ToSessionId,
@@ -101,7 +92,7 @@ func (s *sChatTransfer) RelationToChat(relation *relation.CustomerChatTransfer) 
 }
 
 // Cancel 取消待接入的转接
-func (s *sChatTransfer) Cancel(transfer *relation.CustomerChatTransfer) error {
+func (s *sChatTransfer) Cancel(transfer *model.CustomerChatTransfer) error {
 	if transfer.ToSession != nil {
 		transfer.ToSession.CanceledAt = gtime.New()
 		dao.CustomerChatSessions.Ctx(gctx.New()).Save(transfer.ToSession)
@@ -113,7 +104,7 @@ func (s *sChatTransfer) Cancel(transfer *relation.CustomerChatTransfer) error {
 	return nil
 }
 
-func (s *sChatTransfer) Accept(transfer *entity.CustomerChatTransfers) error {
+func (s *sChatTransfer) Accept(transfer *model.CustomerChatTransfer) error {
 	transfer.AcceptedAt = gtime.New()
 	dao.CustomerChatTransfers.Ctx(gctx.New()).Save(transfer)
 	service.Chat().NoticeTransfer(transfer.CustomerId, transfer.ToAdminId)
@@ -121,8 +112,11 @@ func (s *sChatTransfer) Accept(transfer *entity.CustomerChatTransfers) error {
 }
 
 // Create 创建转接
-func (s *sChatTransfer) Create(fromAdminId, toId, uid uint, remark string) error {
-	session := service.ChatSession().ActiveOne(uid, fromAdminId, nil)
+func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint, remark string) error {
+	session, err := service.ChatSession().ActiveOne(ctx, uid, fromAdminId, nil)
+	if err != nil {
+		return err
+	}
 	if session == nil {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "用户已失效，无法转接")
 	}
@@ -134,7 +128,7 @@ func (s *sChatTransfer) Create(fromAdminId, toId, uid uint, remark string) error
 		AdminId:    toId,
 		Type:       consts.ChatSessionTypeTransfer,
 	}
-	service.ChatSession().SaveEntity(newSession)
+	service.ChatSession().SaveEntity(ctx, newSession)
 	transfer := &entity.CustomerChatTransfers{
 		UserId:        uid,
 		FromSessionId: session.Id,
@@ -144,7 +138,7 @@ func (s *sChatTransfer) Create(fromAdminId, toId, uid uint, remark string) error
 		ToAdminId:     toId,
 		Remark:        remark,
 	}
-	dao.CustomerChatTransfers.Ctx(gctx.New()).Save(transfer)
+	dao.CustomerChatTransfers.Ctx(ctx).Save(transfer)
 	s.addUser(session.CustomerId, uid, toId)
 	service.Chat().NoticeTransfer(session.CustomerId, toId)
 	return nil

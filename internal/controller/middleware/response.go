@@ -22,7 +22,7 @@ type SuccessResponse struct {
 type FailResponse struct {
 	Code    int    `json:"code"    dc:"Error code"`
 	Success bool   `json:"success" dc:"Is Success"`
-	Message string `json:"message" dc: "错误消息"`
+	Message string `json:"message" dc:"错误消息"`
 }
 
 // MiddlewareHandlerResponse is the default middleware handling handler response object and its error.

@@ -6,10 +6,9 @@ import (
 	"errors"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
-	"gf-chat/internal/model/chat"
+	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
-	"gf-chat/internal/model/relation"
 	"gf-chat/internal/service"
 	"strings"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gorilla/websocket"
 )
 
 var adminM *adminManager
@@ -65,9 +65,8 @@ func (s sChat) NoticeTransfer(customer, admin uint) {
 	s.admin.noticeUserTransfer(customer, admin)
 }
 
-func (s sChat) Accept(admin entity.CustomerAdmins, sessionId uint) (*chat.User, error) {
-	session := &relation.CustomerChatSessions{}
-	ctx := gctx.New()
+func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (*model.ChatUser, error) {
+	session := &model.CustomerChatSession{}
 	err := dao.CustomerChatSessions.Ctx(ctx).
 		Where("customer_id", admin.CustomerId).WithAll().
 		WherePri(sessionId).
@@ -82,7 +81,7 @@ func (s sChat) Accept(admin entity.CustomerAdmins, sessionId uint) (*chat.User, 
 		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "该用户已接入")
 	}
 	if session.Type == consts.ChatSessionTypeTransfer {
-		transfer := service.ChatTransfer().FirstEntity(do.CustomerChatTransfers{
+		transfer, _ := service.ChatTransfer().First(do.CustomerChatTransfers{
 			ToSessionId: session.Id,
 			AcceptedAt:  nil,
 			CanceledAt:  nil,
@@ -111,14 +110,14 @@ func (s sChat) Accept(admin entity.CustomerAdmins, sessionId uint) (*chat.User, 
 	if exist {
 		// 服务提醒
 		platform = userConn.GetPlatform()
+		chatName, _ := service.Admin().GetChatName(ctx, &admin)
 		notice := service.ChatMessage().NewNotice(&session.CustomerChatSessions,
-			service.Admin().GetChatName(&admin)+"为您服务")
+			chatName+"为您服务")
 		service.ChatMessage().SaveOne(notice)
 		relationNotice := service.ChatMessage().EntityToRelation(notice)
 		s.user.SendAction(service.Action().NewReceiveAction(relationNotice), userConn)
 		// 欢迎语
-		adminRelation := service.Admin().EntityToRelation(&admin)
-		welcomeMsg := service.ChatMessage().NewWelcome(adminRelation)
+		welcomeMsg := service.ChatMessage().NewWelcome(&admin)
 		if welcomeMsg != nil {
 			welcomeMsg.UserId = session.UserId
 			welcomeMsg.SessionId = session.Id
@@ -127,21 +126,21 @@ func (s sChat) Accept(admin entity.CustomerAdmins, sessionId uint) (*chat.User, 
 			s.user.SendAction(action, userConn)
 		}
 	}
-	lastMessage := &relation.CustomerChatMessages{}
+	lastMessage := &model.CustomerChatMessage{}
 	err = dao.CustomerChatMessages.Ctx(ctx).
 		Where("user_id", session.UserId).
 		OrderDesc("id").
 		WithAll().
 		Where("source in (?)", []int{consts.MessageSourceUser, consts.MessageSourceAdmin}).
 		Scan(lastMessage)
-	var lastMsg *chat.Message
+	var lastMsg *model.ChatMessage
 	if err != sql.ErrNoRows {
 		v := service.ChatMessage().RelationToChat(*lastMessage)
 		lastMsg = &v
 	}
 	service.ChatRelation().AddUser(admin.Id, session.UserId)
 	service.ChatManual().Remove(session.UserId, session.CustomerId)
-	user := &chat.User{
+	user := &model.ChatUser{
 		Id:           session.User.Id,
 		Username:     session.User.Username,
 		LastChatTime: gtime.Now(),
@@ -156,7 +155,7 @@ func (s sChat) Accept(admin entity.CustomerAdmins, sessionId uint) (*chat.User, 
 
 }
 
-func (s sChat) Register(ctx context.Context, u any, conn *ghttp.WebSocket) error {
+func (s sChat) Register(ctx context.Context, u any, conn *websocket.Conn) error {
 	request := ghttp.RequestFromCtx(ctx)
 	userAgent := strings.ToLower(request.UserAgent())
 	wechatAgent := []string{"micromessenger", "wechatdevtools"}
@@ -169,8 +168,8 @@ func (s sChat) Register(ctx context.Context, u any, conn *ghttp.WebSocket) error
 	}
 	platform := ""
 	switch u.(type) {
-	case *relation.CustomerAdmins:
-		uu, _ := u.(*relation.CustomerAdmins)
+	case *model.CustomerAdmin:
+		uu, _ := u.(*model.CustomerAdmin)
 		e := &admin{
 			uu,
 		}
@@ -211,8 +210,8 @@ func (s sChat) BroadcastWaitingUser(customerId uint) {
 	s.admin.broadcastWaitingUser(customerId)
 }
 
-func (s sChat) GetOnlineCount(customerId uint) chat.OnlineCount {
-	return chat.OnlineCount{
+func (s sChat) GetOnlineCount(customerId uint) model.ChatOnlineCount {
+	return model.ChatOnlineCount{
 		Admin:   s.admin.GetOnlineTotal(customerId),
 		User:    s.user.GetOnlineTotal(customerId),
 		Waiting: service.ChatManual().GetTotalCount(customerId),
@@ -246,7 +245,7 @@ func (s sChat) NoticeAdminRead(customerId, uid uint, msgIds []uint) {
 	s.user.NoticeRead(customerId, uid, msgIds)
 }
 
-func (s sChat) Transfer(fromAdmin *entity.CustomerAdmins, toId uint, userId uint, remark string) error {
+func (s sChat) Transfer(fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) error {
 	user := &entity.Users{}
 	ctx := gctx.New()
 	err := dao.Users.Ctx(ctx).
@@ -255,12 +254,12 @@ func (s sChat) Transfer(fromAdmin *entity.CustomerAdmins, toId uint, userId uint
 	if err == sql.ErrNoRows {
 		return gerror.NewCode(gcode.CodeNotFound)
 	}
-	toAdmin := &entity.CustomerAdmins{}
+	var toAdmin *model.CustomerAdmin
 	err = dao.CustomerAdmins.Ctx(ctx).Where("customer_id", fromAdmin.CustomerId).
 		Where("id", toId).
 		Where("is_chat", 1).
-		Scan(toAdmin)
-	if err == sql.ErrNoRows {
+		Scan(&toAdmin)
+	if toAdmin == nil {
 		return gerror.NewCode(gcode.CodeNotFound)
 	}
 	isValid := service.ChatRelation().IsUserValid(fromAdmin.Id, user.Id)
@@ -270,11 +269,11 @@ func (s sChat) Transfer(fromAdmin *entity.CustomerAdmins, toId uint, userId uint
 	return service.ChatTransfer().Create(fromAdmin.Id, toId, userId, remark)
 }
 
-func (s sChat) GetOnlineAdmin(customerId uint) []chat.SimpleUser {
+func (s sChat) GetOnlineAdmin(customerId uint) []model.ChatSimpleUser {
 	conns := s.admin.GetAllConn(customerId)
-	res := make([]chat.SimpleUser, len(conns))
+	res := make([]model.ChatSimpleUser, len(conns))
 	for index, c := range conns {
-		res[index] = chat.SimpleUser{
+		res[index] = model.ChatSimpleUser{
 			Id:       c.GetUserId(),
 			Username: c.GetUser().GetUsername(),
 		}
@@ -282,11 +281,11 @@ func (s sChat) GetOnlineAdmin(customerId uint) []chat.SimpleUser {
 	return res
 }
 
-func (s sChat) GetOnlineUser(customerId uint) []chat.SimpleUser {
+func (s sChat) GetOnlineUser(customerId uint) []model.ChatSimpleUser {
 	conns := s.user.GetAllConn(customerId)
-	res := make([]chat.SimpleUser, len(conns))
+	res := make([]model.ChatSimpleUser, len(conns))
 	for index, c := range conns {
-		res[index] = chat.SimpleUser{
+		res[index] = model.ChatSimpleUser{
 			Id:       c.GetUserId(),
 			Username: c.GetUser().GetUsername(),
 		}

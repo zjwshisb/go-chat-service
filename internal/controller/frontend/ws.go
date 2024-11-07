@@ -6,9 +6,22 @@ import (
 	baseApi "gf-chat/api"
 	"gf-chat/api/v1/frontend"
 	"gf-chat/internal/service"
+	"net/http"
+
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gorilla/websocket"
+)
+
+var (
+	update = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
 )
 
 var CWs = &cWs{}
@@ -34,7 +47,7 @@ func (c cWs) Image(ctx context.Context, req *frontend.ChatImageReq) (res *fronte
 
 func (c cWs) Connect(ctx context.Context, req *frontend.ChatConnectReq) (res *baseApi.NilRes, err error) {
 	request := ghttp.RequestFromCtx(ctx)
-	conn, err := request.WebSocket()
+	conn, err := update.Upgrade(request.Response.Writer, request.Request, nil)
 	if err != nil {
 		request.Exit()
 		return

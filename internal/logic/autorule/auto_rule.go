@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model/do"
-	"gf-chat/internal/model/relation"
 	"strings"
 
 	"github.com/gogf/gf/v2/os/gctx"
@@ -42,16 +41,18 @@ func (s *sAutoRule) Paginate(ctx context.Context, where *do.CustomerChatAutoRule
 	return
 }
 
-func (s *sAutoRule) First(ctx context.Context, w do.CustomerChatAutoRules) *entity.CustomerChatAutoRules {
-	var rule = &entity.CustomerChatAutoRules{}
-	err := dao.CustomerChatAutoRules.Ctx(ctx).Where(w).Scan(rule)
-	if err == sql.ErrNoRows {
-		return nil
+func (s *sAutoRule) First(ctx context.Context, w do.CustomerChatAutoRules) (rule *entity.CustomerChatAutoRules, err error) {
+	err = dao.CustomerChatAutoRules.Ctx(ctx).Where(w).Scan(&rule)
+	if err != nil {
+		return
 	}
-	return rule
+	if rule == nil {
+		err = sql.ErrNoRows
+	}
+	return
 }
 
-func (s *sAutoRule) GetActiveByCustomer(customerId uint) (items []*relation.CustomerChatAutoRules) {
+func (s *sAutoRule) GetActiveByCustomer(customerId uint) (items []*model.CustomerChatAutoRule) {
 	dao.CustomerChatAutoRules.Ctx(gctx.New()).Where(
 		do.CustomerChatAutoRules{
 			CustomerId: customerId,
@@ -63,12 +64,12 @@ func (s *sAutoRule) GetActiveByCustomer(customerId uint) (items []*relation.Cust
 	return
 }
 
-func (s *sAutoRule) Increment(rule *relation.CustomerChatAutoRules) error {
+func (s *sAutoRule) Increment(rule *model.CustomerChatAutoRule) error {
 	_, err := dao.CustomerChatAutoRules.Ctx(gctx.New()).WherePri(rule.Id).Increment("count", 1)
 	return err
 }
 
-func (s *sAutoRule) GetMessage(rule *relation.CustomerChatAutoRules) *entity.CustomerChatAutoMessages {
+func (s *sAutoRule) GetMessage(rule *model.CustomerChatAutoRule) *entity.CustomerChatAutoMessages {
 	if rule.MessageId > 0 {
 		message := &entity.CustomerChatAutoMessages{}
 		err := dao.CustomerChatAutoMessages.Ctx(gctx.New()).Where("id", rule.MessageId).
@@ -90,7 +91,7 @@ func (s *sAutoRule) sceneInclude(scenes []*entity.CustomerChatAutoRuleScenes, ma
 	return false
 }
 
-func (s *sAutoRule) IsMatch(rule *relation.CustomerChatAutoRules, scene string, message string) bool {
+func (s *sAutoRule) IsMatch(rule *model.CustomerChatAutoRule, scene string, message string) bool {
 	switch rule.MatchType {
 	case consts.AutoRuleMatchTypeAll:
 		if rule.Match == message {
@@ -104,28 +105,30 @@ func (s *sAutoRule) IsMatch(rule *relation.CustomerChatAutoRules, scene string, 
 	return false
 }
 
-func (s *sAutoRule) GetEnterRule(customerId uint) *relation.CustomerChatAutoRules {
+func (s *sAutoRule) GetEnterRule(customerId uint) (*model.CustomerChatAutoRule, error) {
 	return s.GetSystemOne(customerId, consts.AutoRuleMatchEnter)
 }
 
-func (s *sAutoRule) GetEnterRuleMessage(customerId uint) *entity.CustomerChatAutoMessages {
-	rule := s.GetEnterRule(customerId)
-	if rule == nil {
-		return nil
+func (s *sAutoRule) GetEnterRuleMessage(customerId uint) (*entity.CustomerChatAutoMessages, error) {
+	rule, err := s.GetEnterRule(customerId)
+	if err != nil {
+		return nil, err
 	}
-	return s.GetMessage(rule)
+	return s.GetMessage(rule), nil
 }
 
 // GetSystemOne 获取系统规则
-func (s *sAutoRule) GetSystemOne(customerId uint, match string) *relation.CustomerChatAutoRules {
-	m := &relation.CustomerChatAutoRules{}
-	err := dao.CustomerChatAutoRules.Ctx(gctx.New()).Where(do.CustomerChatAutoRules{
+func (s *sAutoRule) GetSystemOne(customerId uint, match string) (rule *model.CustomerChatAutoRule, err error) {
+	err = dao.CustomerChatAutoRules.Ctx(gctx.New()).Where(do.CustomerChatAutoRules{
 		CustomerId: customerId,
 		Match:      match,
 		IsSystem:   1,
-	}).Scan(m)
+	}).Scan(&rule)
 	if err != nil {
-		return nil
+		return
 	}
-	return m
+	if rule == nil {
+		err = sql.ErrNoRows
+	}
+	return
 }

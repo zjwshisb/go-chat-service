@@ -4,10 +4,9 @@ import (
 	"database/sql"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
-	"gf-chat/internal/model/chat"
+	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
-	"gf-chat/internal/model/relation"
 	"gf-chat/internal/service"
 	"time"
 
@@ -37,7 +36,7 @@ func (s *sChatMessage) First(w do.CustomerChatMessages) *entity.CustomerChatMess
 	return message
 }
 
-func (s *sChatMessage) SaveRelationOne(msg *relation.CustomerChatMessages) uint {
+func (s *sChatMessage) SaveRelationOne(msg *model.CustomerChatMessage) uint {
 	result, err := dao.CustomerChatMessages.Ctx(gctx.New()).Save(msg)
 	id, err := result.LastInsertId()
 	if err != nil {
@@ -46,8 +45,8 @@ func (s *sChatMessage) SaveRelationOne(msg *relation.CustomerChatMessages) uint 
 	msg.Id = uint(id)
 	return msg.Id
 }
-func (s *sChatMessage) EntityToRelation(msg *entity.CustomerChatMessages) *relation.CustomerChatMessages {
-	return &relation.CustomerChatMessages{
+func (s *sChatMessage) EntityToRelation(msg *entity.CustomerChatMessages) *model.CustomerChatMessage {
+	return &model.CustomerChatMessage{
 		CustomerChatMessages: *msg,
 		Admin:                nil,
 		User:                 nil,
@@ -72,7 +71,7 @@ func (s *sChatMessage) ChangeToRead(msgId []uint) (sql.Result, error) {
 	return query.Update()
 }
 
-func (s *sChatMessage) GetAdminName(model relation.CustomerChatMessages) string {
+func (s *sChatMessage) GetAdminName(model model.CustomerChatMessage) string {
 	switch model.Source {
 	case consts.MessageSourceAdmin:
 		if model.Admin.Setting != nil && model.Admin.Setting.Name != "" {
@@ -84,28 +83,28 @@ func (s *sChatMessage) GetAdminName(model relation.CustomerChatMessages) string 
 	}
 	return ""
 }
-func (s *sChatMessage) RelationToChat(model relation.CustomerChatMessages) chat.Message {
+func (s *sChatMessage) RelationToChat(message model.CustomerChatMessage) model.ChatMessage {
 	username := ""
-	if model.User != nil {
-		username = model.User.Username
+	if message.User != nil {
+		username = message.User.Username
 	}
-	return chat.Message{
-		Id:         model.Id,
-		UserId:     model.UserId,
-		AdminId:    model.AdminId,
-		AdminName:  s.GetAdminName(model),
-		Type:       model.Type,
-		Content:    model.Content,
-		ReceivedAT: model.ReceivedAt,
-		Source:     model.Source,
-		ReqId:      model.ReqId,
+	return model.ChatMessage{
+		Id:         message.Id,
+		UserId:     message.UserId,
+		AdminId:    message.AdminId,
+		AdminName:  s.GetAdminName(message),
+		Type:       message.Type,
+		Content:    message.Content,
+		ReceivedAT: message.ReceivedAt,
+		Source:     message.Source,
+		ReqId:      message.ReqId,
 		IsSuccess:  true,
-		IsRead:     model.ReadAt != nil,
-		Avatar:     s.GetAvatar(model),
+		IsRead:     message.ReadAt != nil,
+		Avatar:     s.GetAvatar(message),
 		Username:   username,
 	}
 }
-func (s *sChatMessage) GetAvatar(model relation.CustomerChatMessages) string {
+func (s *sChatMessage) GetAvatar(model model.CustomerChatMessage) string {
 	switch model.Source {
 	case consts.MessageSourceAdmin:
 		if model.Admin != nil &&
@@ -123,15 +122,15 @@ func (s *sChatMessage) GetAvatar(model relation.CustomerChatMessages) string {
 	return ""
 }
 
-func (s *sChatMessage) GetModels(lastId uint, w any, size uint) []*relation.CustomerChatMessages {
-	res := make([]*relation.CustomerChatMessages, 0, 0)
+func (s *sChatMessage) GetModels(lastId uint, w any, size uint) []*model.CustomerChatMessage {
+	res := make([]*model.CustomerChatMessage, 0)
 	ctx := gctx.New()
 	query := dao.CustomerChatMessages.Ctx(ctx).With(
-		relation.CustomerChatMessages{}.Admin,
+		model.CustomerChatMessage{}.Admin,
 		// todo
 		// 多层关联会用N+1问题
 		// relation.CustomerAdmins{}.Setting,
-		relation.CustomerChatMessages{}.User,
+		model.CustomerChatMessage{}.User,
 	).Where(w).OrderDesc("id")
 	if size > 0 {
 		query = query.Limit(int(size))
@@ -140,7 +139,7 @@ func (s *sChatMessage) GetModels(lastId uint, w any, size uint) []*relation.Cust
 		query = query.Where("id < ?", lastId)
 	}
 	query.Scan(&res)
-	adminMaps := make(map[uint]*relation.CustomerAdmins)
+	adminMaps := make(map[uint]*model.CustomerAdmin)
 	for _, message := range res {
 		if message.Admin != nil {
 			if _, ok := adminMaps[message.Admin.Id]; !ok {
@@ -182,9 +181,9 @@ func (s *sChatMessage) NewNotice(session *entity.CustomerChatSessions, content s
 		Source:     consts.MessageSourceSystem,
 	}
 }
-func (s *sChatMessage) NewOffline(admin *relation.CustomerAdmins) *relation.CustomerChatMessages {
+func (s *sChatMessage) NewOffline(admin *model.CustomerAdmin) *model.CustomerChatMessage {
 	if admin.Setting != nil && admin.Setting.OfflineContent != "" {
-		return &relation.CustomerChatMessages{
+		return &model.CustomerChatMessage{
 			CustomerChatMessages: entity.CustomerChatMessages{
 				UserId:     0,
 				AdminId:    admin.Id,
@@ -202,9 +201,9 @@ func (s *sChatMessage) NewOffline(admin *relation.CustomerAdmins) *relation.Cust
 	return nil
 }
 
-func (s *sChatMessage) NewWelcome(admin *relation.CustomerAdmins) *relation.CustomerChatMessages {
+func (s *sChatMessage) NewWelcome(admin *model.CustomerAdmin) *model.CustomerChatMessage {
 	if admin.Setting != nil && admin.Setting.WelcomeContent != "" {
-		return &relation.CustomerChatMessages{
+		return &model.CustomerChatMessage{
 			CustomerChatMessages: entity.CustomerChatMessages{
 				UserId:     0,
 				AdminId:    admin.Id,

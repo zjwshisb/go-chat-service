@@ -5,7 +5,6 @@ import (
 	"gf-chat/api/v1/backend/admin"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
-	"gf-chat/internal/model/relation"
 	"gf-chat/internal/service"
 
 	"github.com/duke-git/lancet/v2/slice"
@@ -26,7 +25,7 @@ func (cAdmin cAdmin) Index(ctx context.Context, req *admin.ListReq) (res *admin.
 		Size:      req.PageSize,
 		WithTotal: true,
 	})
-	item := slice.Map(admins, func(index int, item *relation.CustomerAdmins) admin.ListItem {
+	item := slice.Map(admins, func(index int, item *model.CustomerAdmin) admin.ListItem {
 		online := service.Chat().IsOnline(item.CustomerId, item.Id, "admin")
 		var lastOnline *gtime.Time
 		if item.Setting != nil && item.Setting.LastOnline.Year() != 1 {

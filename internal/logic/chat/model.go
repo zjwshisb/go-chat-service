@@ -2,13 +2,13 @@ package chat
 
 import (
 	"gf-chat/internal/contract"
+	"gf-chat/internal/model"
 	"gf-chat/internal/model/entity"
-	"gf-chat/internal/model/relation"
 )
 
 type chatConnMessage struct {
 	Conn iWsConn
-	Msg  *relation.CustomerChatMessages
+	Msg  *model.CustomerChatMessage
 }
 
 type user struct {
@@ -40,7 +40,7 @@ func (u user) AccessTo(user contract.IChatUser) bool {
 }
 
 type admin struct {
-	Entity *relation.CustomerAdmins
+	Entity *model.CustomerAdmin
 }
 
 func (u admin) GetUser() any {

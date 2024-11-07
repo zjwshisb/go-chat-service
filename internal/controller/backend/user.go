@@ -4,16 +4,23 @@ import (
 	"context"
 	baseApi "gf-chat/api"
 	"gf-chat/api/v1/backend/user"
+	api "gf-chat/api/v1/backend/user"
 	"gf-chat/internal/dao"
+	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+
+	"github.com/gogf/gf/v2/errors/gcode"
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/util/gconv"
+	"golang.org/x/crypto/bcrypt"
 )
 
-var CMe = &cMe{}
+var CUser = &cUser{}
 
-type cMe struct {
+type cUser struct {
 }
 
-func (c *cMe) Index(ctx context.Context, req *user.InfoReq) (res *user.InfoRes, err error) {
+func (c *cUser) Index(ctx context.Context, req *user.InfoReq) (res *user.InfoRes, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	res = &user.InfoRes{
 		Id:         admin.Id,
@@ -23,8 +30,11 @@ func (c *cMe) Index(ctx context.Context, req *user.InfoReq) (res *user.InfoRes, 
 	return
 }
 
-func (c *cMe) UpdateSetting(ctx context.Context, req *user.UpdateSettingReq) (res *baseApi.NilRes, err error) {
-	setting := service.Admin().GetSetting(service.AdminCtx().GetAdmin(ctx).Id)
+func (c *cUser) UpdateSetting(ctx context.Context, req *user.UpdateSettingReq) (res *baseApi.NilRes, err error) {
+	setting, err := service.Admin().GetSetting(ctx, service.AdminCtx().GetAdmin(ctx))
+	if err != nil {
+		return nil, err
+	}
 	setting.Name = req.Name
 	setting.Background = req.Background.Path
 	setting.Avatar = req.Avatar.Path
@@ -40,9 +50,12 @@ func (c *cMe) UpdateSetting(ctx context.Context, req *user.UpdateSettingReq) (re
 	return &baseApi.NilRes{}, nil
 }
 
-func (c *cMe) GetSetting(ctx context.Context, req *user.SettingReq) (res *user.SettingRes, err error) {
+func (c *cUser) GetSetting(ctx context.Context, req *user.SettingReq) (res *user.SettingRes, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
-	setting := service.Admin().GetSetting(admin.Id)
+	setting, err := service.Admin().GetSetting(ctx, service.AdminCtx().GetAdmin(ctx))
+	if err != nil {
+		return nil, err
+	}
 	avatar := service.Qiniu().Form(setting.Avatar)
 	if avatar == nil {
 		avatar = service.ChatSetting().DefaultAvatarForm(admin.CustomerId)
@@ -55,4 +68,21 @@ func (c *cMe) GetSetting(ctx context.Context, req *user.SettingReq) (res *user.S
 		Name:           setting.Name,
 		Avatar:         avatar,
 	}, nil
+}
+
+func (user *cUser) Login(ctx context.Context, r *user.LoginReq) (res *user.LoginRes, err error) {
+	admin, err := service.Admin().First(ctx, do.CustomerAdmins{Username: r.Username})
+	if admin == nil {
+		return nil, gerror.NewCode(gcode.CodeValidationFailed, "账号或密码错误")
+	}
+	err = service.Admin().IsValid(admin)
+	if err != nil {
+		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, err.Error())
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(r.Password))
+	if err != nil {
+		return nil, gerror.NewCode(gcode.CodeValidationFailed, "账号或密码错误")
+	}
+	token, _ := service.Jwt().CreateToken(gconv.String(admin.Id), "")
+	return &api.LoginRes{Token: token}, nil
 }

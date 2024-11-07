@@ -6,7 +6,6 @@ import (
 	api "gf-chat/api/v1/backend/session"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/chat"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
@@ -47,11 +46,14 @@ func (c cSession) Index(ctx context.Context, req *api.ListReq) (*api.ListRes, er
 		w["user_id"] = uids
 	}
 	if req.AdminName != "" {
-		admins := service.Admin().GetAdmins(ctx, do.CustomerAdmins{
+		admins, err := service.Admin().All(ctx, do.CustomerAdmins{
 			Username:   req.AdminName,
 			CustomerId: customerId,
 		})
-		adminIds := slice.Map(admins, func(index int, item *entity.CustomerAdmins) uint {
+		if err != nil {
+			return nil, err
+		}
+		adminIds := slice.Map(admins, func(index int, item *model.CustomerAdmin) uint {
 			return item.Id
 		})
 		w["admin_id"] = adminIds
@@ -75,7 +77,7 @@ func (c cSession) Index(ctx context.Context, req *api.ListReq) (*api.ListRes, er
 		Page:      req.Current,
 		WithTotal: true,
 	})
-	res := make([]chat.Session, len(session), len(session))
+	res := make([]model.ChatSession, len(session), len(session))
 	for index, s := range session {
 		res[index] = service.ChatSession().RelationToChat(s)
 	}
@@ -131,7 +133,7 @@ func (c cSession) Detail(ctx context.Context, req *api.DetailReq) (res *api.Deta
 		SessionId: session.Id,
 		Source:    []int{consts.MessageSourceAdmin, consts.MessageSourceUser},
 	}, 0)
-	message := make([]chat.Message, len(relations), len(relations))
+	message := make([]model.ChatMessage, len(relations), len(relations))
 	for index, i := range relations {
 		message[index] = service.ChatMessage().RelationToChat(*i)
 	}

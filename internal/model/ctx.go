@@ -7,6 +7,11 @@ import (
 )
 
 type AdminCtx struct {
-	Entity *entity.CustomerAdmins
+	Entity *CustomerAdmin
+	Data   g.Map
+}
+
+type UserCtx struct {
+	Entity *entity.Users
 	Data   g.Map
 }

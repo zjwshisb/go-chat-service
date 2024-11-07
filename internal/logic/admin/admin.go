@@ -8,10 +8,10 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
-	"gf-chat/internal/model/relation"
 	"gf-chat/internal/service"
 	"strconv"
 
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/golang-module/carbon/v2"
@@ -24,14 +24,17 @@ func init() {
 type sAdmin struct {
 }
 
-func (s *sAdmin) GetAdmins(ctx g.Ctx, w any) (items []*entity.CustomerAdmins) {
-	err := dao.CustomerAdmins.Ctx(ctx).Where(w).Scan(&items)
-	if err == sql.ErrNoRows {
-		return
+func (s *sAdmin) All(ctx g.Ctx, w do.CustomerAdmins, with ...any) (items []*model.CustomerAdmin, err error) {
+	err = dao.CustomerAdmins.Ctx(ctx).Where(w).Scan(&items)
+	if err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = make([]*model.CustomerAdmin, 0)
 	}
 	return
 }
-func (s *sAdmin) Paginate(ctx context.Context, where *do.CustomerAdmins, p model.QueryInput) (items []*relation.CustomerAdmins, total int) {
+func (s *sAdmin) Paginate(ctx context.Context, where *do.CustomerAdmins, p model.QueryInput) (items []*model.CustomerAdmin, total int) {
 	query := dao.CustomerAdmins.Ctx(ctx)
 	if where != nil {
 		query = query.Where(where)
@@ -50,7 +53,7 @@ func (s *sAdmin) Paginate(ctx context.Context, where *do.CustomerAdmins, p model
 	return
 }
 
-func (s *sAdmin) IsValid(admin *entity.CustomerAdmins) error {
+func (s *sAdmin) IsValid(admin *model.CustomerAdmin) error {
 	if admin == nil {
 		return errors.New("没有权限登录")
 	}
@@ -58,62 +61,48 @@ func (s *sAdmin) IsValid(admin *entity.CustomerAdmins) error {
 	return nil
 }
 
-func (s *sAdmin) EntityToRelation(admin *entity.CustomerAdmins) *relation.CustomerAdmins {
-	setting := s.GetSetting(admin.Id)
-	return &relation.CustomerAdmins{
-		CustomerAdmins: *admin,
-		Setting:        setting,
+func (s *sAdmin) GetSetting(ctx context.Context, admin *model.CustomerAdmin) (*entity.CustomerAdminChatSettings, error) {
+	if admin.Setting != nil {
+		return admin.Setting, nil
 	}
-}
-
-func (s *sAdmin) GetSetting(adminId uint) *entity.CustomerAdminChatSettings {
-	setting := &entity.CustomerAdminChatSettings{}
-	ctx := gctx.New()
-	err := dao.CustomerAdminChatSettings.Ctx(ctx).Where("admin_id", adminId).Scan(setting)
-	if err == sql.ErrNoRows {
-		setting.AdminId = adminId
-		result, _ := dao.CustomerAdminChatSettings.Ctx(ctx).Save(setting)
-		id, _ := result.LastInsertId()
-		setting.Id = uint(id)
-		return setting
-	}
-	return setting
-}
-
-func (s *sAdmin) GetAvatar(model *relation.CustomerAdmins) string {
-	if model.Setting != nil && model.Setting.Avatar != "" {
-		return service.Qiniu().Url(model.Setting.Avatar)
-	} else {
-		return ""
-	}
-}
-
-func (s *sAdmin) GetChatName(model *entity.CustomerAdmins) string {
-	setting := s.GetSetting(model.Id)
-	if setting != nil && setting.Name != "" {
-		return setting.Name
-	}
-	return model.Username
-}
-
-func (s *sAdmin) First(id uint) (admin *entity.CustomerAdmins) {
-	admin = &entity.CustomerAdmins{}
-	err := dao.CustomerAdmins.Ctx(gctx.New()).WherePri(id).Scan(admin)
+	err := dao.CustomerAdminChatSettings.Ctx(ctx).Where("admin_id", admin.Id).Scan(&admin.Setting)
 	if err != nil {
-		return nil
+		return nil, err
+	}
+	if admin.Setting == nil {
+		err = gerror.New("no setting")
+	}
+	return admin.Setting, nil
+}
+
+func (s *sAdmin) GetAvatar(model *model.CustomerAdmin) (string, error) {
+	if model.Setting != nil && model.Setting.Avatar != "" {
+		return service.Qiniu().Url(model.Setting.Avatar), nil
+	} else {
+		return "", gerror.New("no avatar")
+	}
+}
+
+func (s *sAdmin) GetChatName(ctx context.Context, model *model.CustomerAdmin) (string, error) {
+	setting, err := s.GetSetting(ctx, model)
+	if err != nil {
+		return "", nil
+	}
+	if setting != nil && setting.Name != "" {
+		return setting.Name, nil
+	}
+	return model.Username, nil
+}
+
+func (s *sAdmin) First(ctx context.Context, where do.CustomerAdmins) (admin *model.CustomerAdmin, err error) {
+	err = dao.CustomerAdmins.Ctx(ctx).Where(where).Scan(&admin)
+	if err != nil {
+		return
+	}
+	if admin == nil {
+		err = sql.ErrNoRows
 	}
 	return
-}
-func (s *sAdmin) FirstRelation(id uint) *relation.CustomerAdmins {
-	admin := s.First(id)
-	if admin != nil {
-		setting := s.GetSetting(admin.Id)
-		return &relation.CustomerAdmins{
-			CustomerAdmins: *admin,
-			Setting:        setting,
-		}
-	}
-	return nil
 }
 
 func (s *sAdmin) GetWechat(adminId uint) *entity.CustomerAdminWechat {
@@ -123,14 +112,6 @@ func (s *sAdmin) GetWechat(adminId uint) *entity.CustomerAdminWechat {
 		return nil
 	}
 	return wechat
-}
-
-func (s *sAdmin) GetChatAll(customerId uint) []*relation.CustomerAdmins {
-	admins := make([]*relation.CustomerAdmins, 0)
-	_ = dao.CustomerAdmins.Ctx(gctx.New()).Where(do.CustomerAdmins{
-		CustomerId: customerId,
-	}).WithAll().Scan(&admins)
-	return admins
 }
 
 func (s *sAdmin) GetDetail(ctx context.Context, id any, month string) ([]*model.ChartLine, *model.AdminDetailInfo, error) {
@@ -147,7 +128,7 @@ func (s *sAdmin) GetDetail(ctx context.Context, id any, month string) ([]*model.
 	firstDate := date.StartOfMonth()
 	lastDate := date.EndOfMonth()
 	firstDateUnix := firstDate.Timestamp()
-	sessions := make([]*entity.CustomerChatSessions, 0, 0)
+	sessions := make([]*entity.CustomerChatSessions, 0)
 
 	err = dao.CustomerChatSessions.Ctx(ctx).Where(g.Map{
 		"accepted_at>=": firstDateUnix,

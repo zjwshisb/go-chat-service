@@ -7,8 +7,6 @@ import (
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model/do"
 
-	"github.com/gogf/gf/v2/errors/gcode"
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 
 	baseApi "gf-chat/api"
@@ -48,15 +46,12 @@ func (c *cAutoMessage) Index(ctx context.Context, req *automessage.ListReq) (res
 
 func (c *cAutoMessage) Form(ctx context.Context, req *automessage.FormReq) (res *automessage.FormRes, err error) {
 	id := g.RequestFromCtx(ctx).GetRouter("id").Val()
-	message := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
+	message, err := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Id:         id,
 	})
-	if message == nil {
-		return nil, gerror.NewCode(gcode.CodeNotFound)
-	}
 	if err != nil {
-		return nil, err
+		return
 	}
 	res = &automessage.FormRes{
 		Name:    message.Name,
@@ -84,12 +79,12 @@ func (c *cAutoMessage) Form(ctx context.Context, req *automessage.FormReq) (res 
 
 func (c *cAutoMessage) Update(ctx context.Context, req *automessage.UpdateReq) (res *baseApi.NilRes, err error) {
 	id := g.RequestFromCtx(ctx).GetRouter("id").Val()
-	message := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
+	message, err := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Id:         id,
 	})
-	if message == nil {
-		return nil, gerror.NewCode(gcode.CodeNotFound)
+	if err != nil {
+		return
 	}
 	service.AutoMessage().Update(ctx, message, req)
 	return &baseApi.NilRes{}, nil
@@ -97,12 +92,12 @@ func (c *cAutoMessage) Update(ctx context.Context, req *automessage.UpdateReq) (
 
 func (c *cAutoMessage) Delete(ctx context.Context, req *automessage.DeleteReq) (res *baseApi.NilRes, err error) {
 	id := g.RequestFromCtx(ctx).GetRouter("id").Val()
-	message := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
+	message, err := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Id:         id,
 	})
-	if message == nil {
-		return nil, gerror.NewCode(gcode.CodeNotFound)
+	if err != nil {
+		return
 	}
 	dao.CustomerChatAutoMessages.Ctx(ctx).Where("id", message.Id).Delete()
 	return &baseApi.NilRes{}, nil

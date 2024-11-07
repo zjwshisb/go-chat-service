@@ -9,7 +9,7 @@ require (
 	github.com/gogf/gf/v2 v2.7.4
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/golang-module/carbon/v2 v2.1.8
-	github.com/gorilla/websocket v1.5.1
+	github.com/gorilla/websocket v1.5.3
 	github.com/qiniu/go-sdk/v7 v7.13.0
 	golang.org/x/crypto v0.22.0
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858

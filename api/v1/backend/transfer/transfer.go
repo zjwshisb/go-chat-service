@@ -1,7 +1,7 @@
 package transfer
 
 import (
-	"gf-chat/internal/model/chat"
+	"gf-chat/internal/model"
 
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -33,6 +33,6 @@ type ListItem struct {
 }
 
 type ListRes struct {
-	Total uint            `json:"total"`
-	Items []chat.Transfer `json:"items"`
+	Total uint                 `json:"total"`
+	Items []model.ChatTransfer `json:"items"`
 }

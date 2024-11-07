@@ -5,15 +5,13 @@ import (
 	"gf-chat/internal/consts"
 	"gf-chat/internal/contract"
 	"gf-chat/internal/dao"
-	"gf-chat/internal/model/chat"
-	"gf-chat/internal/model/relation"
+	"gf-chat/internal/model"
 	"gf-chat/internal/service"
 	"sync"
 	"time"
 	"unicode/utf8"
 
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gorilla/websocket"
@@ -21,9 +19,9 @@ import (
 )
 
 type client struct {
-	Conn        *ghttp.WebSocket
-	CloseSignal chan interface{}  // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
-	Send        chan *chat.Action // 发送的消息chan
+	Conn        *websocket.Conn
+	CloseSignal chan interface{}       // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
+	Send        chan *model.ChatAction // 发送的消息chan
 	sync.Once
 	Manager  connManager
 	User     contract.IChatUser
@@ -188,7 +186,7 @@ func (c *client) ReadMsg() {
 }
 
 // Deliver 投递消息
-func (c *client) Deliver(act *chat.Action) {
+func (c *client) Deliver(act *model.ChatAction) {
 	c.Send <- act
 }
 
@@ -209,7 +207,7 @@ func (c *client) SendMsg() {
 					case consts.ActionOtherLogin:
 						c.Close()
 					case consts.ActionReceiveMessage:
-						msg, ok := act.Data.(*relation.CustomerChatMessages)
+						msg, ok := act.Data.(*model.CustomerChatMessage)
 						if ok {
 							dao.CustomerChatMessages.Ctx(gctx.New()).WherePri(msg.Id).
 								Data("send_at", time.Now().Unix()).Update()

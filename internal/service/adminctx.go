@@ -8,35 +8,39 @@ package service
 import (
 	"context"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/entity"
 
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 )
 
 type (
-	IUserCtx interface {
+	IAdminCtx interface {
 		// Init 初始化上下文对象指针到上下文对象中，以便后续的请求流程中可以修改。
-		Init(r *ghttp.Request, customCtx *model.UserCtx)
+		Init(r *ghttp.Request, customCtx *model.AdminCtx)
 		// Get 获得上下文变量，如果没有设置，那么返回nil
-		Get(ctx context.Context) *model.UserCtx
+		Get(ctx context.Context) *model.AdminCtx
 		// GetCustomerId 获取客户id
 		GetCustomerId(ctx context.Context) uint
-		// GetUser 获取admin实体
-		GetUser(ctx context.Context) *entity.Users
+		// GetAdmin 获取admin实体
+		GetAdmin(ctx context.Context) *model.CustomerAdmin
+		// SetUser 将上下文信息设置到上下文请求中
+		SetUser(ctx context.Context, Admin *model.CustomerAdmin)
+		// SetData 将上下文信息设置到上下文请求中
+		SetData(ctx context.Context, data g.Map)
 	}
 )
 
 var (
-	localUserCtx IUserCtx
+	localAdminCtx IAdminCtx
 )
 
-func UserCtx() IUserCtx {
-	if localUserCtx == nil {
-		panic("implement not found for interface IUserCtx, forgot register?")
+func AdminCtx() IAdminCtx {
+	if localAdminCtx == nil {
+		panic("implement not found for interface IAdminCtx, forgot register?")
 	}
-	return localUserCtx
+	return localAdminCtx
 }
 
-func RegisterUserCtx(i IUserCtx) {
-	localUserCtx = i
+func RegisterAdminCtx(i IAdminCtx) {
+	localAdminCtx = i
 }

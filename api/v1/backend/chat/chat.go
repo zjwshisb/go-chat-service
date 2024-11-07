@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"gf-chat/internal/model/chat"
+	"gf-chat/internal/model"
 
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -61,18 +61,18 @@ type UserListReq struct {
 	g.Meta `path:"/ws/chat-users" tags:"后台客服面板" method:"get" summary:"获取客户对应用户列表"`
 }
 
-type UserSessionRes []chat.Session
+type UserSessionRes []model.ChatSession
 
 type ReqIdRes struct {
 	ReqId string `json:"req_id"`
 }
 
-type MessageRes []chat.Message
+type MessageRes []model.ChatMessage
 
-type UserListRes []chat.User
+type UserListRes []model.ChatUser
 
 type AcceptRes struct {
-	chat.User
+	User model.ChatUser
 }
 
 type SimpleStudent struct {

@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"gf-chat/internal/model/chat"
+	"gf-chat/internal/model"
 
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -17,8 +17,8 @@ type ListReq struct {
 }
 
 type ListRes struct {
-	Items []chat.Session `json:"items"`
-	Total int            `json:"total"`
+	Items []model.ChatSession `json:"items"`
+	Total int                 `json:"total"`
 }
 
 type CancelReq struct {
@@ -34,7 +34,7 @@ type DetailReq struct {
 }
 
 type DetailRes struct {
-	Messages []chat.Message `json:"messages"`
-	Session  chat.Session   `json:"session"`
-	Total    int            `json:"total"`
+	Messages []model.ChatMessage `json:"messages"`
+	Session  model.ChatSession   `json:"session"`
+	Total    int                 `json:"total"`
 }

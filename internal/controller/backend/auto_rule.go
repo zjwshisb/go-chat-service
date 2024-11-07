@@ -25,12 +25,15 @@ var CAutoRule = &cAutoRule{}
 type cAutoRule struct {
 }
 
-func (c cAutoRule) Delete(ctx context.Context, req *api.DeleteReq) (*baseApi.NilRes, error) {
+func (c cAutoRule) Delete(ctx context.Context, req *api.DeleteReq) (resp *baseApi.NilRes, err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
-	rule := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
+	rule, err := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
 		Id:         id,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	})
+	if err != nil {
+		return
+	}
 	if rule == nil {
 		return nil, gerror.NewCode(gcode.CodeNotFound)
 	}
@@ -54,7 +57,7 @@ func (c cAutoRule) Message(ctx context.Context, req *api.OptionMessageReq) (res 
 	return
 }
 func (c cAutoRule) Form(ctx context.Context, req *api.FormReq) (res *api.FormRes, err error) {
-	rule := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
+	rule, err := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
 		IsSystem:   0,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id").Val(),
@@ -83,7 +86,7 @@ func (c cAutoRule) Form(ctx context.Context, req *api.FormReq) (res *api.FormRes
 }
 
 func (c cAutoRule) Update(ctx context.Context, req *api.UpdateReq) (res *baseApi.NilRes, err error) {
-	rule := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
+	rule, err := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
 		IsSystem:   0,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id").Val(),

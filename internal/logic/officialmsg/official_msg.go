@@ -10,7 +10,6 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/model/official"
-	"gf-chat/internal/model/relation"
 	"gf-chat/internal/service"
 	"time"
 
@@ -28,7 +27,7 @@ func init() {
 type sOfficialMsg struct {
 }
 
-func (s sOfficialMsg) getOpenId(admin *relation.CustomerAdmins) string {
+func (s sOfficialMsg) getOpenId(admin *model.CustomerAdmin) string {
 	wechat := entity.CustomerAdminWechat{}
 	err := dao.CustomerAdminWechat.Ctx(gctx.New()).Where("admin_id", admin.Id).Scan(&wechat)
 	if err == sql.ErrNoRows {
@@ -58,7 +57,7 @@ func (s sOfficialMsg) getUrl(ctx context.Context) string {
 	return url.String() + "/service/official-message"
 }
 
-func (s sOfficialMsg) Chat(admin *relation.CustomerAdmins, offline official.Offline) error {
+func (s sOfficialMsg) Chat(admin *model.CustomerAdmin, offline official.Offline) error {
 	openId := s.getOpenId(admin)
 	ctx := gctx.New()
 	tmpl, err := g.Cfg().Get(ctx, "wechat.official.chatTmpl")

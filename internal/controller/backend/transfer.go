@@ -5,10 +5,8 @@ import (
 	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend/transfer"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/chat"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
-	"gf-chat/internal/model/relation"
 	"gf-chat/internal/service"
 
 	"github.com/duke-git/lancet/v2/slice"
@@ -21,7 +19,7 @@ type cTransfer struct {
 
 func (c cTransfer) Cancel(ctx context.Context, req *api.CancelReq) (*baseApi.NilRes, error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
-	transfer := service.ChatTransfer().FirstRelation(do.CustomerChatTransfers{
+	transfer, _ := service.ChatTransfer().First(do.CustomerChatTransfers{
 		CustomerId: admin.CustomerId,
 		CanceledAt: nil,
 		AcceptedAt: nil,
@@ -51,21 +49,27 @@ func (c cTransfer) Index(ctx context.Context, req *api.ListReq) (res *api.ListRe
 		w.UserId = uids
 	}
 	if req.ToAdminName != "" {
-		admins := service.Admin().GetAdmins(ctx, do.CustomerAdmins{
+		admins, err := service.Admin().All(ctx, do.CustomerAdmins{
 			Username:   req.ToAdminName,
 			CustomerId: customerId,
 		})
-		adminIds := slice.Map(admins, func(index int, item *entity.CustomerAdmins) uint {
+		if err != nil {
+			return nil, err
+		}
+		adminIds := slice.Map(admins, func(index int, item *model.CustomerAdmin) uint {
 			return item.Id
 		})
 		w.ToAdminId = adminIds
 	}
 	if req.FromAdminName != "" {
-		admins := service.Admin().GetAdmins(ctx, do.CustomerAdmins{
+		admins, err := service.Admin().All(ctx, do.CustomerAdmins{
 			Username:   req.FromAdminName,
 			CustomerId: customerId,
 		})
-		adminIds := slice.Map(admins, func(index int, item *entity.CustomerAdmins) uint {
+		if err != nil {
+			return nil, err
+		}
+		adminIds := slice.Map(admins, func(index int, item *model.CustomerAdmin) uint {
 			return item.Id
 		})
 		w.FromAdminId = adminIds
@@ -75,8 +79,8 @@ func (c cTransfer) Index(ctx context.Context, req *api.ListReq) (res *api.ListRe
 		Page:      req.Current,
 		WithTotal: true,
 	})
-	items := slice.Map(transfers, func(index int, item *relation.CustomerChatTransfer) chat.Transfer {
-		return service.ChatTransfer().RelationToChat(item)
+	items := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) model.ChatTransfer {
+		return service.ChatTransfer().ToChatTransfer(item)
 	})
 	return &api.ListRes{
 		Total: total,

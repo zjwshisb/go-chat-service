@@ -2,22 +2,21 @@ package chat
 
 import (
 	"gf-chat/internal/contract"
-	"gf-chat/internal/model/chat"
-	"gf-chat/internal/model/relation"
+	"gf-chat/internal/model"
 	"gf-chat/internal/service"
 	"sync"
 	"time"
 
-	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/util/guid"
+	"github.com/gorilla/websocket"
 	"golang.org/x/time/rate"
 )
 
 type MessageHandle interface {
 	handleReceiveMessage()
 	handleMessage(cm *chatConnMessage)
-	handleOffline(msg *relation.CustomerChatMessages)
-	DeliveryMessage(msg *relation.CustomerChatMessages)
+	handleOffline(msg *model.CustomerChatMessage)
+	DeliveryMessage(msg *model.CustomerChatMessage)
 }
 
 type ManagerHook = func(conn iWsConn)
@@ -136,7 +135,7 @@ func (m *manager) IsLocalOnline(customerId uint, uid uint) bool {
 }
 
 // SendAction 给客户端发送消息
-func (m *manager) SendAction(a *chat.Action, clients ...iWsConn) {
+func (m *manager) SendAction(a *model.ChatAction, clients ...iWsConn) {
 	for _, c := range clients {
 		c.Deliver(a)
 	}
@@ -206,11 +205,11 @@ func (m *manager) Unregister(conn iWsConn) {
 // Register 客户端注册
 // 先处理是否重复连接
 // 集群模式下，如果不在本机则投递一个消息
-func (m *manager) Register(conn *ghttp.WebSocket, user contract.IChatUser, platform string) {
+func (m *manager) Register(conn *websocket.Conn, user contract.IChatUser, platform string) {
 	client := &client{
 		Conn:        conn,
 		CloseSignal: make(chan interface{}),
-		Send:        make(chan *chat.Action, 100),
+		Send:        make(chan *model.ChatAction, 100),
 		Once:        sync.Once{},
 		Manager:     m,
 		User:        user,
@@ -255,7 +254,7 @@ func (m *manager) Ping() {
 }
 
 func (m *manager) Run() {
-	m.shard = make([]*Shard, m.ShardCount, m.ShardCount)
+	m.shard = make([]*Shard, m.ShardCount)
 	var i uint
 	for i = 0; i < m.ShardCount; i++ {
 		m.shard[i] = &Shard{

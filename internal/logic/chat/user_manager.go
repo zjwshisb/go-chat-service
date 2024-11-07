@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/contract"
+	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
-	"gf-chat/internal/model/relation"
 	"gf-chat/internal/service"
 	"strconv"
 	"time"
@@ -28,7 +28,7 @@ func (s *userManager) run() {
 // 查询user是否在本机上，是则直接投递
 // 查询user当前server，如果存在则投递到该channel上
 // 最后则说明user不在线，处理相关逻辑
-func (s *userManager) DeliveryMessage(message *relation.CustomerChatMessages) {
+func (s *userManager) DeliveryMessage(message *model.CustomerChatMessage) {
 	userConn, exist := s.GetConn(message.CustomerId, message.UserId)
 	switch message.Type {
 	case consts.MessageTypeRate:
@@ -74,7 +74,7 @@ func (s *userManager) handleReceiveMessage() {
 }
 
 // 处理离线逻辑
-func (s *userManager) handleOffline(msg *relation.CustomerChatMessages) {
+func (s *userManager) handleOffline(msg *model.CustomerChatMessage) {
 	_ = service.SubscribeMsg().Send(gctx.New(), msg.CustomerId, msg.UserId)
 }
 
@@ -145,7 +145,7 @@ func (s *userManager) triggerEnterEvent(conn iWsConn) {
 	cacheKey := fmt.Sprintf("welcome:%d", conn.GetUserId())
 	val, _ := gcache.Get(ctx, cacheKey)
 	if val.String() == "" {
-		rule := service.AutoRule().GetEnterRule(conn.GetCustomerId())
+		rule, _ := service.AutoRule().GetEnterRule(conn.GetCustomerId())
 		if rule == nil {
 			return
 		}
@@ -182,10 +182,11 @@ func (s *userManager) registerHook(conn iWsConn) {
 
 // 加入人工列表
 func (s *userManager) addToManual(user contract.IChatUser) *entity.CustomerChatSessions {
+	ctx := gctx.New()
 	if !service.ChatManual().IsIn(user.GetPrimaryKey(), user.GetCustomerId()) {
 		onlineServerCount := adminM.GetOnlineTotal(user.GetCustomerId())
 		if onlineServerCount == 0 { // 如果没有在线客服
-			rule := service.AutoRule().GetSystemOne(user.GetCustomerId(), consts.AutoRuleMatchAdminAllOffLine)
+			rule, _ := service.AutoRule().GetSystemOne(user.GetCustomerId(), consts.AutoRuleMatchAdminAllOffLine)
 			if rule != nil {
 				switch rule.ReplyType {
 				case consts.AutoRuleReplyTypeMessage:
@@ -207,10 +208,14 @@ func (s *userManager) addToManual(user contract.IChatUser) *entity.CustomerChatS
 			}
 		}
 		_ = service.ChatManual().Add(user.GetPrimaryKey(), user.GetCustomerId())
-		session := service.ChatSession().ActiveNormalOne(user.GetPrimaryKey(), 0)
+		session, _ := service.ChatSession().ActiveNormalOne(ctx, user.GetPrimaryKey(), 0)
+
 		if session == nil {
-			session = service.ChatSession().
-				Create(user.GetPrimaryKey(), user.GetCustomerId(), consts.ChatSessionTypeNormal)
+			entity := service.ChatSession().
+				Create(ctx, user.GetPrimaryKey(), user.GetCustomerId(), consts.ChatSessionTypeNormal)
+			session = &model.CustomerChatSession{
+				CustomerChatSessions: *entity,
+			}
 		}
 		message := service.ChatMessage().NewNotice(session, "正在为你转接人工客服")
 		service.ChatMessage().SaveOne(message)
@@ -219,7 +224,9 @@ func (s *userManager) addToManual(user contract.IChatUser) *entity.CustomerChatS
 		// 没有客服在线则发送公众号消息
 		go func() {
 			if onlineServerCount == 0 {
-				admins := service.Admin().GetChatAll(user.GetCustomerId())
+				admins, _ := service.Admin().All(gctx.New(), do.CustomerAdmins{
+					CustomerId: user.GetCustomerId(),
+				})
 				for _, admin := range admins {
 					adminM.sendWaiting(admin, user)
 				}
@@ -232,7 +239,7 @@ func (s *userManager) addToManual(user contract.IChatUser) *entity.CustomerChatS
 }
 
 // 触发事件
-func (s *userManager) triggerMessageEvent(scene string, message *relation.CustomerChatMessages, user contract.IChatUser) {
+func (s *userManager) triggerMessageEvent(scene string, message *model.CustomerChatMessage, user contract.IChatUser) {
 	rules := service.AutoRule().GetActiveByCustomer(message.CustomerId)
 	for _, rule := range rules {
 		isMatch := service.AutoRule().IsMatch(rule, scene, message.Content)

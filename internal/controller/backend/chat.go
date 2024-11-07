@@ -7,10 +7,9 @@ import (
 	chatapi "gf-chat/api/v1/backend/chat"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
-	"gf-chat/internal/model/chat"
+	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
-	"gf-chat/internal/model/relation"
 	"gf-chat/internal/service"
 	"time"
 
@@ -30,7 +29,7 @@ type cChat struct {
 
 func (c cChat) AcceptUser(ctx context.Context, req *chatapi.AcceptReq) (res *chatapi.AcceptRes, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
-	user, err := service.Chat().Accept(*admin, req.Sid)
+	user, err := service.Chat().Accept(ctx, *admin, req.Sid)
 	if err != nil {
 		return nil, err
 	}
@@ -59,11 +58,14 @@ func (c cChat) Read(ctx context.Context, req *chatapi.ReadReq) (res *baseApi.Nil
 
 func (c cChat) CancelTransfer(ctx context.Context, req *chatapi.CancelTransferReq) (res *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
-	transfer := service.ChatTransfer().FirstRelation(do.CustomerChatTransfers{
+	transfer, err := service.ChatTransfer().First(do.CustomerChatTransfers{
 		ToAdminId:  admin.Id,
 		CanceledAt: nil,
 		AcceptedAt: nil,
 	})
+	if err != nil {
+		return
+	}
 	if transfer != nil {
 		_ = service.ChatTransfer().Cancel(transfer)
 	}
@@ -137,7 +139,7 @@ func (c cChat) User(ctx context.Context, req *chatapi.UserListReq) (res *chatapi
 		Where("source in (?)", sources).
 		Where("admin_id", admin.Id).
 		Group("user_id").Scan(&lastRes)
-	lastMessages := make([]relation.CustomerChatMessages, 0)
+	lastMessages := make([]model.CustomerChatMessage, 0)
 	lastMessageIds := slice.Map(lastRes, func(index int, item maxChatIds) int {
 		return item.Id
 	})
@@ -170,7 +172,7 @@ func (c cChat) User(ctx context.Context, req *chatapi.UserListReq) (res *chatapi
 		count = count + 1
 		user, exist := userMap[id]
 		if exist {
-			cu := chat.User{
+			cu := model.ChatUser{
 				Id:          user.Id,
 				Username:    user.Username,
 				Disabled:    disabled,
@@ -180,7 +182,7 @@ func (c cChat) User(ctx context.Context, req *chatapi.UserListReq) (res *chatapi
 				Online:      service.Chat().IsOnline(user.CustomerId, user.Id, "user"),
 				Platform:    service.Chat().GetPlatform(user.CustomerId, user.Id, "user"),
 			}
-			lastMsg, exist := slice.Find(lastMessages, func(index int, item relation.CustomerChatMessages) bool {
+			lastMsg, exist := slice.Find(lastMessages, func(index int, item model.CustomerChatMessage) bool {
 				return item.UserId == user.Id
 			})
 			if exist {

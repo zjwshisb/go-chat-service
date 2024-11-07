@@ -20,13 +20,15 @@ func init() {
 type sAutoMessage struct {
 }
 
-func (s *sAutoMessage) First(ctx context.Context, w any) *entity.CustomerChatAutoMessages {
-	msg := &entity.CustomerChatAutoMessages{}
-	err := dao.CustomerChatAutoMessages.Ctx(ctx).Where(w).Scan(msg)
-	if err == sql.ErrNoRows {
-		return nil
+func (s *sAutoMessage) First(ctx context.Context, w any) (msg *entity.CustomerChatAutoMessages, err error) {
+	err = dao.CustomerChatAutoMessages.Ctx(ctx).Where(w).Scan(&msg)
+	if err != nil {
+		return
 	}
-	return msg
+	if msg == nil {
+		err = sql.ErrNoRows
+	}
+	return
 }
 func (s *sAutoMessage) Paginate(ctx context.Context, w *do.CustomerChatAutoMessages, p model.QueryInput) (items []*entity.CustomerChatAutoMessages, total int) {
 	query := dao.CustomerChatAutoMessages.Ctx(ctx)

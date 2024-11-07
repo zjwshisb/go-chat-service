@@ -3,7 +3,6 @@ package adminctx
 import (
 	"context"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -50,7 +49,7 @@ func (s *sAdminCtx) GetCustomerId(ctx context.Context) uint {
 }
 
 // GetAdmin 获取admin实体
-func (s *sAdminCtx) GetAdmin(ctx context.Context) *entity.CustomerAdmins {
+func (s *sAdminCtx) GetAdmin(ctx context.Context) *model.CustomerAdmin {
 	adminCtx := s.Get(ctx)
 	if adminCtx != nil {
 		return adminCtx.Entity
@@ -59,7 +58,7 @@ func (s *sAdminCtx) GetAdmin(ctx context.Context) *entity.CustomerAdmins {
 }
 
 // SetUser 将上下文信息设置到上下文请求中
-func (s *sAdminCtx) SetUser(ctx context.Context, Admin *entity.CustomerAdmins) {
+func (s *sAdminCtx) SetUser(ctx context.Context, Admin *model.CustomerAdmin) {
 	s.Get(ctx).Entity = Admin
 }
 

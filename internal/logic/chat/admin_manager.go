@@ -4,11 +4,10 @@ import (
 	"gf-chat/internal/consts"
 	"gf-chat/internal/contract"
 	"gf-chat/internal/dao"
-	"gf-chat/internal/model/chat"
+	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/model/official"
-	"gf-chat/internal/model/relation"
 	"gf-chat/internal/service"
 	"sort"
 	"time"
@@ -34,7 +33,7 @@ func (m *adminManager) run() {
 // 投递消息
 // 查询admin是否在线，是则直接投递
 // 最后则说明admin不在线，处理离线逻辑
-func (m *adminManager) deliveryMessage(msg *relation.CustomerChatMessages) {
+func (m *adminManager) deliveryMessage(msg *model.CustomerChatMessage) {
 	adminConn, exist := m.GetConn(msg.CustomerId, msg.AdminId)
 	if exist { // admin在线
 		adminConn.Deliver(service.Action().NewReceiveAction(msg))
@@ -51,7 +50,7 @@ func (m *adminManager) handleReceiveMessage() {
 	}
 }
 
-func (m *adminManager) sendWaiting(admin *relation.CustomerAdmins, user contract.IChatUser) {
+func (m *adminManager) sendWaiting(admin *model.CustomerAdmin, user contract.IChatUser) {
 	offline := official.Offline{
 		First:    "有新的用户咨询待接入",
 		Remark:   "点击卡片查看详情",
@@ -63,7 +62,7 @@ func (m *adminManager) sendWaiting(admin *relation.CustomerAdmins, user contract
 }
 
 // 发送公众号提醒
-func (m *adminManager) sendOffline(admin *relation.CustomerAdmins, msg *relation.CustomerChatMessages) {
+func (m *adminManager) sendOffline(admin *model.CustomerAdmin, msg *model.CustomerChatMessage) {
 	tags := ""
 	offline := official.Offline{
 		First:    "发来了一条信息",
@@ -77,9 +76,9 @@ func (m *adminManager) sendOffline(admin *relation.CustomerAdmins, msg *relation
 }
 
 // 处理离线消息
-func (m *adminManager) handleOffline(msg *relation.CustomerChatMessages) {
+func (m *adminManager) handleOffline(msg *model.CustomerChatMessage) {
 	userM.triggerMessageEvent(consts.AutoRuleSceneAdminOffline, msg, &user{Entity: msg.User})
-	admin := service.Admin().FirstRelation(msg.AdminId)
+	admin, _ := service.Admin().First(gctx.New(), do.CustomerAdmins{Id: msg.AdminId})
 	if admin != nil {
 		// 离线消息
 		message := service.ChatMessage().NewOffline(admin)
@@ -144,29 +143,29 @@ func (m *adminManager) broadcastWaitingUser(customerId uint) {
 
 func (m *adminManager) broadcastLocalWaitingUser(customerId uint) {
 	sessions := service.ChatSession().GetUnAcceptModel(customerId)
-	sessionIds := slice.Map(sessions, func(index int, item *relation.CustomerChatSessions) uint {
+	sessionIds := slice.Map(sessions, func(index int, item *model.CustomerChatSession) uint {
 		return item.Id
 	})
-	userMap := make(map[uint]*chat.WaitingUser)
+	userMap := make(map[uint]*model.ChatWaitingUser)
 	messages := make([]entity.CustomerChatMessages, 0)
 	_ = dao.CustomerChatMessages.Ctx(gctx.New()).Where("session_id in (?)", sessionIds).
 		Where("source", consts.MessageSourceUser).
 		Order("id").
 		Scan(&messages)
 	for _, session := range sessions {
-		userMap[session.UserId] = &chat.WaitingUser{
+		userMap[session.UserId] = &model.ChatWaitingUser{
 			Username:     session.User.Username,
 			Avatar:       "",
 			UserId:       session.User.Id,
 			MessageCount: 0,
 			Description:  "",
-			Messages:     make([]chat.SimpleMessage, 0),
+			Messages:     make([]model.ChatSimpleMessage, 0),
 			LastTime:     session.QueriedAt,
 			SessionId:    session.Id,
 		}
 	}
 	for _, m := range messages {
-		userMap[m.UserId].Messages = append(userMap[m.UserId].Messages, chat.SimpleMessage{
+		userMap[m.UserId].Messages = append(userMap[m.UserId].Messages, model.ChatSimpleMessage{
 			Type:    m.Type,
 			Time:    m.ReceivedAt,
 			Content: m.Content,
@@ -188,16 +187,19 @@ func (m *adminManager) broadcastOnlineAdmins(gid uint) {
 }
 
 func (m *adminManager) broadcastLocalOnlineAdmins(customerId uint) {
-	admins := service.Admin().GetChatAll(customerId)
-	data := make([]chat.CustomerAdmin, 0, len(admins))
+	admins, _ := service.Admin().All(gctx.New(), do.CustomerAdmins{
+		CustomerId: customerId,
+	})
+	data := make([]model.ChatCustomerAdmin, 0, len(admins))
 	for _, c := range admins {
 		conn, online := m.GetConn(customerId, c.Id)
 		platform := ""
 		if online {
 			platform = conn.GetPlatform()
 		}
-		data = append(data, chat.CustomerAdmin{
-			Avatar:        service.Admin().GetAvatar(c),
+		avatar, _ := service.Admin().GetAvatar(c)
+		data = append(data, model.ChatCustomerAdmin{
+			Avatar:        avatar,
 			Username:      c.Username,
 			Online:        online,
 			Id:            c.Id,
@@ -223,7 +225,7 @@ func (m *adminManager) noticeUserOffline(user contract.IChatUser) {
 
 func (m *adminManager) noticeLocalUserOffline(uid uint) {
 	adminId := service.ChatRelation().GetUserValidAdmin(uid)
-	admin := service.Admin().First(adminId)
+	admin, _ := service.Admin().First(gctx.New(), do.CustomerAdmins{Id: adminId})
 	if admin != nil {
 		conn, exist := m.GetConn(admin.CustomerId, admin.Id)
 		if exist {
@@ -238,7 +240,7 @@ func (m *adminManager) noticeUserOnline(conn iWsConn) {
 
 func (m *adminManager) noticeLocalUserOnline(uid uint, platform string) {
 	adminId := service.ChatRelation().GetUserValidAdmin(uid)
-	admin := service.Admin().First(adminId)
+	admin, _ := service.Admin().First(gctx.New(), do.CustomerAdmins{Id: adminId})
 	if admin != nil {
 		conn, exist := m.GetConn(admin.CustomerId, admin.Id)
 		if exist {
@@ -266,13 +268,18 @@ func (m *adminManager) noticeUserTransfer(customerId, adminId uint) {
 func (m *adminManager) noticeLocalUserTransfer(customerId, adminId uint) {
 	client, exist := m.GetConn(customerId, adminId)
 	if exist {
-		transfers := service.ChatTransfer().GetRelations(do.CustomerChatTransfers{
+		transfers := service.ChatTransfer().All(do.CustomerChatTransfers{
 			ToAdminId:  adminId,
 			AcceptedAt: nil,
 			CanceledAt: nil,
-		})
-		data := slice.Map(transfers, func(index int, item *relation.CustomerChatTransfer) chat.Transfer {
-			return service.ChatTransfer().RelationToChat(item)
+		}, model.CustomerChatTransfer{}.FormAdmin,
+			model.CustomerChatTransfer{}.ToAdmin,
+			model.CustomerChatTransfer{}.FormAdmin,
+			model.CustomerChatTransfer{}.ToSession,
+			model.CustomerChatTransfer{}.User,
+		)
+		data := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) model.ChatTransfer {
+			return service.ChatTransfer().ToChatTransfer(item)
 		})
 		client.Deliver(service.Action().NewUserTransfer(data))
 	}
