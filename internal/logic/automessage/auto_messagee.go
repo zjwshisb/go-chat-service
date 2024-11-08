@@ -35,12 +35,12 @@ func (s *sAutoMessage) Paginate(ctx context.Context, w *do.CustomerChatAutoMessa
 	if w != nil {
 		query = query.Where(w)
 	}
-	if p.WithTotal {
-		total, _ = query.Clone().Count()
-		if total == 0 {
-			return
-		}
-	}
+	// if p.WithTotal {
+	// 	total, _ = query.Clone().Count()
+	// 	if total == 0 {
+	// 		return
+	// 	}
+	// }
 	err := query.Page(p.GetPage(), p.GetSize()).Scan(&items)
 	if err == sql.ErrNoRows {
 		return
@@ -50,23 +50,17 @@ func (s *sAutoMessage) Paginate(ctx context.Context, w *do.CustomerChatAutoMessa
 	}
 	return
 }
-func (s *sAutoMessage) GetList(ctx context.Context, w *do.CustomerChatAutoMessages, p *model.QueryInput) (items []*entity.CustomerChatAutoMessages, total int) {
-	query := dao.CustomerChatAutoMessages.Ctx(ctx)
-	if w != nil {
-		query = query.Where(w)
+
+func (s *sAutoMessage) All(ctx context.Context, w do.CustomerChatAutoMessages) (items []*entity.CustomerChatAutoMessages, err error) {
+	err = dao.CustomerChatAutoMessages.Ctx(ctx).Where(w).Scan(&items)
+	if items == nil {
+		err = sql.ErrNoRows
 	}
-	if p != nil {
-		total, _ = query.Clone().Count()
-		query = query.Page(p.GetPage(), p.GetSize())
-	}
-	err := query.Scan(&items)
-	if err == sql.ErrNoRows {
-		return
-	}
-	if total == 0 {
-		total = len(items)
+	if err != nil {
+		items = make([]*entity.CustomerChatAutoMessages, 0)
 	}
 	return
+
 }
 
 func (s *sAutoMessage) EntityToListItem(i entity.CustomerChatAutoMessages) model.AutoMessageListItem {
@@ -92,7 +86,7 @@ func (s *sAutoMessage) EntityToListItem(i entity.CustomerChatAutoMessages) model
 	return l
 }
 
-func (s *sAutoMessage) Update(ctx context.Context, message *entity.CustomerChatAutoMessages, req *automessage.UpdateReq) (id int64, err error) {
+func (s *sAutoMessage) Update(ctx context.Context, message *entity.CustomerChatAutoMessages, req *automessage.UpdateReq) (count int64, err error) {
 	message.Name = req.Name
 	switch message.Type {
 	case consts.MessageTypeNavigate:
@@ -107,6 +101,9 @@ func (s *sAutoMessage) Update(ctx context.Context, message *entity.CustomerChatA
 		message.Content = req.Content
 	}
 	result, err := dao.CustomerChatAutoMessages.Ctx(ctx).Save(message)
+	if err != nil {
+		return
+	}
 	return result.RowsAffected()
 }
 
@@ -130,30 +127,41 @@ func (s *sAutoMessage) Save(ctx context.Context, req *automessage.StoreReq) (id 
 		item.Content = req.Content
 	}
 	result, err := dao.CustomerChatAutoMessages.Ctx(ctx).Insert(&item)
+	if err != nil {
+		return
+	}
 	return result.LastInsertId()
 }
 
-func (s *sAutoMessage) ToChatMessage(auto *entity.CustomerChatAutoMessages) *entity.CustomerChatMessages {
+func (s *sAutoMessage) ToChatMessage(auto *entity.CustomerChatAutoMessages) (msg *model.CustomerChatMessage, err error) {
 	content := auto.Content
 	if auto.Type == consts.MessageTypeImage {
 		content = service.Qiniu().Url(content)
 	}
 	if auto.Type == consts.MessageTypeNavigate {
 		m := make(map[string]string)
-		_ = json.Unmarshal([]byte(auto.Content), &m)
+		err = json.Unmarshal([]byte(auto.Content), &m)
+		if err != nil {
+			return
+		}
 		m["content"] = service.Qiniu().Url(m["content"])
-		newT, _ := json.Marshal(m)
+		newT, err := json.Marshal(m)
+		if err != nil {
+			return nil, err
+		}
 		content = string(newT)
 	}
 
-	return &entity.CustomerChatMessages{
-		UserId:     0,
-		AdminId:    0,
-		Type:       auto.Type,
-		Content:    content,
-		CustomerId: auto.CustomerId,
-		Source:     consts.MessageSourceSystem,
-		SessionId:  0,
-		ReqId:      service.ChatMessage().GenReqId(),
-	}
+	return &model.CustomerChatMessage{
+		CustomerChatMessages: entity.CustomerChatMessages{
+			UserId:     0,
+			AdminId:    0,
+			Type:       auto.Type,
+			Content:    content,
+			CustomerId: auto.CustomerId,
+			Source:     consts.MessageSourceSystem,
+			SessionId:  0,
+			ReqId:      service.ChatMessage().GenReqId(),
+		},
+	}, err
 }

@@ -43,9 +43,12 @@ func (c cAutoRule) Delete(ctx context.Context, req *api.DeleteReq) (resp *baseAp
 }
 
 func (c cAutoRule) Message(ctx context.Context, req *api.OptionMessageReq) (res *baseApi.OptionRes, err error) {
-	items, _ := service.AutoMessage().GetList(ctx, &do.CustomerChatAutoMessages{
+	items, err := service.AutoMessage().All(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
-	}, nil)
+	})
+	if err != nil {
+		return
+	}
 	r := baseApi.OptionRes{}
 	slice.ForEach(items, func(index int, item *entity.CustomerChatAutoMessages) {
 		r = append(r, model.Option{
@@ -119,6 +122,9 @@ func (c cAutoRule) Update(ctx context.Context, req *api.UpdateReq) (res *baseApi
 		}
 		return nil
 	})
+	if err != nil {
+		return
+	}
 	return &baseApi.NilRes{}, nil
 }
 
@@ -163,23 +169,26 @@ func (c cAutoRule) Store(ctx context.Context, req *api.StoreReq) (res *baseApi.N
 }
 
 func (c cAutoRule) Index(ctx context.Context, req *api.ListReq) (res *api.ListRes, err error) {
-	entities, total := service.AutoRule().Paginate(ctx, &do.CustomerChatAutoRules{
+	paginator, err := service.AutoRule().Paginate(ctx, &do.CustomerChatAutoRules{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		IsSystem:   0,
 	}, model.QueryInput{
 		Size: req.PageSize,
 		Page: req.Current,
-	})
-	items := make([]api.ListItem, len(entities))
+	}, nil, nil)
+	if err != nil {
+		return
+	}
+	items := make([]api.ListItem, len(paginator.Items))
 
 	var messages []entity.CustomerChatAutoMessages
-	messageIds := slice.Map(entities, func(index int, item *entity.CustomerChatAutoRules) uint {
+	messageIds := slice.Map(paginator.Items, func(index int, item model.CustomerChatAutoRule) uint {
 		return item.MessageId
 	})
 
 	_ = dao.CustomerChatAutoMessages.Ctx(ctx).
 		WhereIn("id", messageIds).Scan(&messages)
-	for index, i := range entities {
+	for index, i := range paginator.Items {
 		items[index] = api.ListItem{
 			Id:        i.Id,
 			Name:      i.Name,
@@ -203,6 +212,6 @@ func (c cAutoRule) Index(ctx context.Context, req *api.ListReq) (res *api.ListRe
 
 	return &api.ListRes{
 		Items: items,
-		Total: total,
+		Total: paginator.Total,
 	}, nil
 }

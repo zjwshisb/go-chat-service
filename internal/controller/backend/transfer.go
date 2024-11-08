@@ -52,7 +52,7 @@ func (c cTransfer) Index(ctx context.Context, req *api.ListReq) (res *api.ListRe
 		admins, err := service.Admin().All(ctx, do.CustomerAdmins{
 			Username:   req.ToAdminName,
 			CustomerId: customerId,
-		})
+		}, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -65,7 +65,7 @@ func (c cTransfer) Index(ctx context.Context, req *api.ListReq) (res *api.ListRe
 		admins, err := service.Admin().All(ctx, do.CustomerAdmins{
 			Username:   req.FromAdminName,
 			CustomerId: customerId,
-		})
+		}, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -75,9 +75,8 @@ func (c cTransfer) Index(ctx context.Context, req *api.ListReq) (res *api.ListRe
 		w.FromAdminId = adminIds
 	}
 	transfers, total := service.ChatTransfer().Paginate(ctx, &w, model.QueryInput{
-		Size:      req.PageSize,
-		Page:      req.Current,
-		WithTotal: true,
+		Size: req.PageSize,
+		Page: req.Current,
 	})
 	items := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) model.ChatTransfer {
 		return service.ChatTransfer().ToChatTransfer(item)

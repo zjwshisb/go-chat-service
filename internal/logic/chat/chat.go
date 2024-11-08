@@ -111,17 +111,16 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		// 服务提醒
 		platform = userConn.GetPlatform()
 		chatName, _ := service.Admin().GetChatName(ctx, &admin)
-		notice := service.ChatMessage().NewNotice(&session.CustomerChatSessions,
+		notice := service.ChatMessage().NewNotice(session,
 			chatName+"为您服务")
-		service.ChatMessage().SaveOne(notice)
-		relationNotice := service.ChatMessage().EntityToRelation(notice)
-		s.user.SendAction(service.Action().NewReceiveAction(relationNotice), userConn)
+		_ = service.ChatMessage().SaveWithUpdate(ctx, notice)
+		s.user.SendAction(service.Action().NewReceiveAction(notice), userConn)
 		// 欢迎语
 		welcomeMsg := service.ChatMessage().NewWelcome(&admin)
 		if welcomeMsg != nil {
 			welcomeMsg.UserId = session.UserId
 			welcomeMsg.SessionId = session.Id
-			service.ChatMessage().SaveRelationOne(welcomeMsg)
+			_ = service.ChatMessage().SaveWithUpdate(ctx, welcomeMsg)
 			action := service.Action().NewReceiveAction(welcomeMsg)
 			s.user.SendAction(action, userConn)
 		}
@@ -233,7 +232,7 @@ func (s sChat) GetPlatform(customerId, uid uint, t string) string {
 	return ""
 }
 
-func (s sChat) NoticeRate(msg *entity.CustomerChatMessages) {
+func (s sChat) NoticeRate(msg *model.CustomerChatMessage) {
 	s.admin.noticeRate(msg)
 }
 
@@ -266,7 +265,7 @@ func (s sChat) Transfer(fromAdmin *model.CustomerAdmin, toId uint, userId uint, 
 	if !isValid {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "用户已失效，无法转接")
 	}
-	return service.ChatTransfer().Create(fromAdmin.Id, toId, userId, remark)
+	return service.ChatTransfer().Create(ctx, fromAdmin.Id, toId, userId, remark)
 }
 
 func (s sChat) GetOnlineAdmin(customerId uint) []model.ChatSimpleUser {

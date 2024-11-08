@@ -32,13 +32,13 @@ type sChatTransfer struct {
 
 func (s *sChatTransfer) Paginate(ctx context.Context, w *do.CustomerChatTransfers, p model.QueryInput) (res []*model.CustomerChatTransfer, total uint) {
 	query := dao.CustomerChatTransfers.Ctx(ctx).Where(w)
-	if p.WithTotal {
-		i, _ := query.Clone().Count()
-		total = uint(i)
-		if total == 0 {
-			return
-		}
-	}
+	// if p.WithTotal {
+	// 	i, _ := query.Clone().Count()
+	// 	total = uint(i)
+	// 	if total == 0 {
+	// 		return
+	// 	}
+	// }
 	err := query.WithAll().Page(p.GetPage(), p.GetSize()).OrderDesc("id").Scan(&res)
 	if err == sql.ErrNoRows {
 		return
@@ -120,15 +120,18 @@ func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint,
 	if session == nil {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "用户已失效，无法转接")
 	}
-	service.ChatSession().Close(session, true, true)
-	newSession := &entity.CustomerChatSessions{
-		UserId:     uid,
-		QueriedAt:  gtime.New(),
-		CustomerId: session.CustomerId,
-		AdminId:    toId,
-		Type:       consts.ChatSessionTypeTransfer,
+	service.ChatSession().Close(ctx, session, true, false)
+	newSession := &model.CustomerChatSession{
+		CustomerChatSessions: entity.CustomerChatSessions{
+			QueriedAt:  gtime.New(),
+			CustomerId: session.CustomerId,
+			AdminId:    toId,
+			Type:       consts.ChatSessionTypeTransfer,
+			UserId:     uid,
+		},
 	}
-	service.ChatSession().SaveEntity(ctx, newSession)
+
+	service.ChatSession().Insert(ctx, newSession)
 	transfer := &entity.CustomerChatTransfers{
 		UserId:        uid,
 		FromSessionId: session.Id,

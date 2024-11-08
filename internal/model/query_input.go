@@ -1,9 +1,8 @@
 package model
 
 type QueryInput struct {
-	Size      int
-	Page      int
-	WithTotal bool
+	Size int
+	Page int
 }
 
 func (p *QueryInput) GetPage() int {

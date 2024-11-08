@@ -5,7 +5,6 @@ import (
 	"errors"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"time"
 
@@ -157,7 +156,7 @@ func (s sAction) NewReadAction(msgIds []uint) *model.ChatAction {
 		Action: consts.ActionRead,
 	}
 }
-func (s sAction) NewRateAction(message *entity.CustomerChatMessages) *model.ChatAction {
+func (s sAction) NewRateAction(message *model.CustomerChatMessage) *model.ChatAction {
 	data := make(map[string]interface{})
 	data["msg_id"] = message.Id
 	data["rate"] = message.Content

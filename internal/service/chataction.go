@@ -7,7 +7,6 @@ package service
 
 import (
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/entity"
 )
 
 type (
@@ -29,7 +28,7 @@ type (
 		NewUserTransfer(i interface{}) *model.ChatAction
 		NewErrorMessage(msg string) *model.ChatAction
 		NewReadAction(msgIds []uint) *model.ChatAction
-		NewRateAction(message *entity.CustomerChatMessages) *model.ChatAction
+		NewRateAction(message *model.CustomerChatMessage) *model.ChatAction
 	}
 )
 

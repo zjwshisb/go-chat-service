@@ -13,6 +13,7 @@ import (
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gtime"
 )
@@ -22,7 +23,7 @@ var CSession = &cSession{}
 type cSession struct {
 }
 
-func (c cSession) Index(ctx context.Context, req *api.ListReq) (*api.ListRes, error) {
+func (c cSession) Index(ctx context.Context, req *api.ListReq) (resp *api.ListRes, err error) {
 	w := make(map[string]any)
 	customerId := service.AdminCtx().GetCustomerId(ctx)
 	w["customer_id"] = customerId
@@ -49,7 +50,7 @@ func (c cSession) Index(ctx context.Context, req *api.ListReq) (*api.ListRes, er
 		admins, err := service.Admin().All(ctx, do.CustomerAdmins{
 			Username:   req.AdminName,
 			CustomerId: customerId,
-		})
+		}, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -72,68 +73,73 @@ func (c cSession) Index(ctx context.Context, req *api.ListReq) (*api.ListRes, er
 			w["broke_at>"] = 0
 		}
 	}
-	session, total := service.ChatSession().Paginate(ctx, w, model.QueryInput{
-		Size:      req.PageSize,
-		Page:      req.Current,
-		WithTotal: true,
-	})
-	res := make([]model.ChatSession, len(session), len(session))
-	for index, s := range session {
-		res[index] = service.ChatSession().RelationToChat(s)
+	paginator, err := service.ChatSession().Paginate(ctx, w, model.QueryInput{
+		Size: req.PageSize,
+		Page: req.Current,
+	}, g.Array{
+		model.CustomerChatSession{}.User,
+		model.CustomerChatSession{}.Admin,
+	}, nil)
+	if err != nil {
+		return
+	}
+	res := make([]model.ChatSession, len(paginator.Items))
+	for index, s := range paginator.Items {
+		res[index] = service.ChatSession().RelationToChat(&s)
 	}
 	r := &api.ListRes{
 		Items: res,
-		Total: total,
+		Total: paginator.Total,
 	}
 	return r, nil
 }
 
-func (c cSession) Cancel(ctx context.Context, req *api.CancelReq) (*baseApi.NilRes, error) {
+func (c cSession) Cancel(ctx context.Context, req *api.CancelReq) (resp *baseApi.NilRes, err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
-	session := service.ChatSession().First(ctx, do.CustomerChatSessions{
+	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		Id:         id,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	})
-	if session == nil {
-		return nil, gerror.NewCode(gcode.CodeNotFound)
-	}
-	err := service.ChatSession().Cancel(session)
 	if err != nil {
-		return nil, err
+		return
 	}
-	return &baseApi.NilRes{}, nil
+	err = service.ChatSession().Cancel(ctx, session)
+	if err != nil {
+		return
+	}
+	return &baseApi.NilRes{}, err
 }
 
-func (c cSession) Close(ctx context.Context, req *api.CloseReq) (*baseApi.NilRes, error) {
+func (c cSession) Close(ctx context.Context, req *api.CloseReq) (resp *baseApi.NilRes, err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
-	session := service.ChatSession().First(ctx, do.CustomerChatSessions{
+	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Id:         id,
 	})
-	if session == nil {
-		return nil, gerror.NewCode(gcode.CodeNotFound)
+	if err != nil {
+		return
 	}
 	if session.BrokenAt != nil {
 		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "该会话已关闭")
 	}
-	service.ChatSession().Close(session, false, true)
+	service.ChatSession().Close(ctx, session, false, true)
 	return &baseApi.NilRes{}, nil
 }
 
 func (c cSession) Detail(ctx context.Context, req *api.DetailReq) (res *api.DetailRes, err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
-	session := service.ChatSession().FirstRelation(ctx, do.CustomerChatSessions{
+	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		Id:         id,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	})
-	if session == nil {
-		return nil, gerror.NewCode(gcode.CodeNotFound)
+	if err != nil {
+		return
 	}
 	relations := service.ChatMessage().GetModels(0, do.CustomerChatMessages{
 		SessionId: session.Id,
 		Source:    []int{consts.MessageSourceAdmin, consts.MessageSourceUser},
 	}, 0)
-	message := make([]model.ChatMessage, len(relations), len(relations))
+	message := make([]model.ChatMessage, len(relations))
 	for index, i := range relations {
 		message[index] = service.ChatMessage().RelationToChat(*i)
 	}

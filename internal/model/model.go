@@ -5,7 +5,7 @@ import (
 )
 
 type CustomerChatAutoRule struct {
-	*entity.CustomerChatAutoRules
+	entity.CustomerChatAutoRules
 	Scenes []*entity.CustomerChatAutoRuleScenes `orm:"with:rule_id=id"`
 }
 

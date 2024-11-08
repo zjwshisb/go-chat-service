@@ -6,11 +6,11 @@ import (
 	"gf-chat/internal/contract"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"strconv"
 	"time"
 
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/os/gcache"
 	"github.com/gogf/gf/v2/os/gctx"
 )
@@ -30,11 +30,12 @@ func (s *userManager) run() {
 // 最后则说明user不在线，处理相关逻辑
 func (s *userManager) DeliveryMessage(message *model.CustomerChatMessage) {
 	userConn, exist := s.GetConn(message.CustomerId, message.UserId)
+	ctx := gctx.New()
 	switch message.Type {
 	case consts.MessageTypeRate:
-		session := service.ChatSession().First(gctx.New(), do.CustomerChatSessions{Id: message.SessionId})
+		session, _ := service.ChatSession().First(ctx, do.CustomerChatSessions{Id: message.SessionId})
 		if session != nil {
-			service.ChatSession().Close(session, false, true)
+			service.ChatSession().Close(ctx, session, false, true)
 		}
 	}
 	if exist {
@@ -80,24 +81,25 @@ func (s *userManager) handleOffline(msg *model.CustomerChatMessage) {
 
 // 处理消息
 func (s *userManager) handleMessage(payload *chatConnMessage) {
+	ctx := gctx.New()
 	msg := payload.Msg
 	conn := payload.Conn
 	msg.Source = consts.MessageSourceUser
 	msg.UserId = conn.GetUserId()
 	msg.AdminId = service.ChatRelation().GetUserValidAdmin(msg.UserId)
-	service.ChatMessage().SaveRelationOne(msg)
+	service.ChatMessage().Save(ctx, msg)
 	// 发送回执
 	conn.Deliver(service.Action().NewReceiptAction(msg))
 	// 有对应的客服对象
 	if msg.AdminId > 0 {
 		// 更新会话有效期
-		session := service.ChatSession().ActiveOne(msg.UserId, msg.AdminId, nil)
+		session, _ := service.ChatSession().ActiveOne(ctx, msg.UserId, msg.AdminId, nil)
 		if session == nil {
 			return
 		}
 		_ = service.ChatRelation().UpdateUser(msg.AdminId, msg.UserId)
 		msg.SessionId = session.Id
-		service.ChatMessage().SaveRelationOne(msg)
+		service.ChatMessage().Save(ctx, msg)
 		s.triggerMessageEvent(consts.AutoRuleSceneAdminOnline, msg, conn.GetUser())
 		adminM.deliveryMessage(msg)
 	} else {
@@ -108,29 +110,29 @@ func (s *userManager) handleMessage(payload *chatConnMessage) {
 			// 在代人工接入列表中
 			inManual := service.ChatManual().IsIn(conn.GetUserId(), conn.GetCustomerId())
 			if inManual {
-				session := service.ChatSession().ActiveNormalOne(msg.UserId, 0)
+				session, _ := service.ChatSession().ActiveNormalOne(ctx, msg.UserId, 0)
 				if session != nil {
 					msg.SessionId = session.Id
 				}
-				service.ChatMessage().SaveRelationOne(msg)
+				service.ChatMessage().Save(ctx, msg)
 				adminM.broadcastWaitingUser(conn.GetCustomerId())
 			} else {
 				// 不在代人工接入列表中
 				if service.ChatSetting().GetIsAutoTransferManual(conn.GetCustomerId()) { // 如果自动转人工
-					session := s.addToManual(conn.GetUser())
+					session, _ := s.addToManual(conn.GetUser())
 					if session != nil {
 						msg.SessionId = session.Id
 					}
-					service.ChatMessage().SaveRelationOne(msg)
+					service.ChatMessage().Save(ctx, msg)
 					adminM.broadcastWaitingUser(conn.GetCustomerId())
 					s.BroadcastQueueLocation(conn.GetCustomerId())
 				}
 			}
 		} else {
-			session := service.ChatSession().ActiveTransferOne(conn.GetUserId(), transferAdminId)
+			session, _ := service.ChatSession().ActiveTransferOne(ctx, conn.GetUserId(), transferAdminId)
 			if session != nil {
 				msg.SessionId = session.Id
-				service.ChatMessage().SaveRelationOne(msg)
+				service.ChatMessage().Save(ctx, msg)
 			}
 		}
 	}
@@ -153,13 +155,15 @@ func (s *userManager) triggerEnterEvent(conn iWsConn) {
 		if autoMsg == nil {
 			return
 		}
-		entityMessage := service.AutoMessage().ToChatMessage(autoMsg)
+		entityMessage, err := service.AutoMessage().ToChatMessage(autoMsg)
+		if err != nil {
+			return
+		}
 		entityMessage.UserId = conn.GetUserId()
-		relationMessage := service.ChatMessage().EntityToRelation(entityMessage)
-		service.ChatMessage().SaveRelationOne(relationMessage)
+		service.ChatMessage().Save(ctx, entityMessage)
 		rule.Count++
 		_ = service.AutoRule().Increment(rule)
-		conn.Deliver(service.Action().NewReceiveAction(relationMessage))
+		conn.Deliver(service.Action().NewReceiveAction(entityMessage))
 		_ = gcache.Set(ctx, cacheKey, 1, time.Minute*10)
 	}
 }
@@ -181,7 +185,7 @@ func (s *userManager) registerHook(conn iWsConn) {
 }
 
 // 加入人工列表
-func (s *userManager) addToManual(user contract.IChatUser) *entity.CustomerChatSessions {
+func (s *userManager) addToManual(user contract.IChatUser) (session *model.CustomerChatSession, err error) {
 	ctx := gctx.New()
 	if !service.ChatManual().IsIn(user.GetPrimaryKey(), user.GetCustomerId()) {
 		onlineServerCount := adminM.GetOnlineTotal(user.GetCustomerId())
@@ -191,18 +195,19 @@ func (s *userManager) addToManual(user contract.IChatUser) *entity.CustomerChatS
 				switch rule.ReplyType {
 				case consts.AutoRuleReplyTypeMessage:
 					autoMessage := service.AutoRule().GetMessage(rule)
-					if autoMessage != nil {
-						message := service.AutoMessage().ToChatMessage(autoMessage)
-						if message != nil {
-							service.ChatMessage().SaveOne(message)
-							service.AutoRule().Increment(rule)
-							message.UserId = user.GetPrimaryKey()
-							relationMessage := service.ChatMessage().EntityToRelation(message)
-							service.ChatMessage().SaveRelationOne(relationMessage)
-							s.DeliveryMessage(relationMessage)
-							return nil
-						}
+					if autoMessage == nil {
+						return nil, gerror.New("no message")
 					}
+					message, err := service.AutoMessage().ToChatMessage(autoMessage)
+					if err != nil {
+						return nil, err
+					}
+					service.ChatMessage().Save(ctx, message)
+					service.AutoRule().Increment(rule)
+					message.UserId = user.GetPrimaryKey()
+					service.ChatMessage().Save(ctx, message)
+					s.DeliveryMessage(message)
+					return nil, nil
 				default:
 				}
 			}
@@ -211,36 +216,35 @@ func (s *userManager) addToManual(user contract.IChatUser) *entity.CustomerChatS
 		session, _ := service.ChatSession().ActiveNormalOne(ctx, user.GetPrimaryKey(), 0)
 
 		if session == nil {
-			entity := service.ChatSession().
-				Create(ctx, user.GetPrimaryKey(), user.GetCustomerId(), consts.ChatSessionTypeNormal)
-			session = &model.CustomerChatSession{
-				CustomerChatSessions: *entity,
+			session, err = service.ChatSession().Create(ctx, user.GetPrimaryKey(), user.GetCustomerId(), consts.ChatSessionTypeNormal)
+			if err != nil {
+				return nil, err
 			}
 		}
 		message := service.ChatMessage().NewNotice(session, "正在为你转接人工客服")
-		service.ChatMessage().SaveOne(message)
-		relationMessage := service.ChatMessage().EntityToRelation(message)
-		s.DeliveryMessage(relationMessage)
+		service.ChatMessage().Save(ctx, message)
+		s.DeliveryMessage(message)
 		// 没有客服在线则发送公众号消息
 		go func() {
 			if onlineServerCount == 0 {
-				admins, _ := service.Admin().All(gctx.New(), do.CustomerAdmins{
+				admins, _ := service.Admin().All(ctx, do.CustomerAdmins{
 					CustomerId: user.GetCustomerId(),
-				})
+				}, nil, nil)
 				for _, admin := range admins {
 					adminM.sendWaiting(admin, user)
 				}
 			}
 		}()
-		return session
+		return session, nil
 	}
-	return nil
+	return nil, gerror.New("is in")
 
 }
 
 // 触发事件
 func (s *userManager) triggerMessageEvent(scene string, message *model.CustomerChatMessage, user contract.IChatUser) {
 	rules := service.AutoRule().GetActiveByCustomer(message.CustomerId)
+	ctx := gctx.New()
 	for _, rule := range rules {
 		isMatch := service.AutoRule().IsMatch(rule, scene, message.Content)
 		if isMatch {
@@ -249,10 +253,11 @@ func (s *userManager) triggerMessageEvent(scene string, message *model.CustomerC
 			case consts.AutoRuleReplyTypeTransfer:
 				transferId := service.ChatTransfer().GetUserTransferId(user.GetCustomerId(), user.GetPrimaryKey())
 				if transferId == 0 {
-					session := s.addToManual(user)
+					session, _ := s.addToManual(user)
+
 					if session != nil {
 						message.SessionId = session.Id
-						service.ChatMessage().SaveRelationOne(message)
+						service.ChatMessage().Save(ctx, message)
 					}
 					adminM.broadcastWaitingUser(message.CustomerId)
 					s.BroadcastQueueLocation(message.CustomerId)
@@ -265,16 +270,18 @@ func (s *userManager) triggerMessageEvent(scene string, message *model.CustomerC
 			case consts.AutoRuleReplyTypeMessage:
 				autoMessage := service.AutoRule().GetMessage(rule)
 				if autoMessage != nil {
-					msg := service.AutoMessage().ToChatMessage(autoMessage)
-					msg.UserId = message.UserId
-					msg.SessionId = message.SessionId
-					relationMsg := service.ChatMessage().EntityToRelation(msg)
-					service.ChatMessage().SaveRelationOne(relationMsg)
-					conn, exist := s.GetConn(user.GetCustomerId(), user.GetPrimaryKey())
-					if exist {
-						s.SendAction(service.Action().NewReceiveAction(relationMsg), conn)
+					msg, err := service.AutoMessage().ToChatMessage(autoMessage)
+					if err == nil {
+						msg.UserId = message.UserId
+						msg.SessionId = message.SessionId
+						service.ChatMessage().Save(ctx, msg)
+						conn, exist := s.GetConn(user.GetCustomerId(), user.GetPrimaryKey())
+						if exist {
+							s.SendAction(service.Action().NewReceiveAction(msg), conn)
+						}
+						service.AutoRule().Increment(rule)
 					}
-					service.AutoRule().Increment(rule)
+
 					return
 				}
 			}

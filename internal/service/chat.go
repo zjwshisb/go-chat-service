@@ -23,7 +23,7 @@ type (
 		BroadcastWaitingUser(customerId uint)
 		GetOnlineCount(customerId uint) model.ChatOnlineCount
 		GetPlatform(customerId uint, uid uint, t string) string
-		NoticeRate(msg *entity.CustomerChatMessages)
+		NoticeRate(msg *model.CustomerChatMessage)
 		NoticeUserRead(customerId uint, uid uint, msgIds []uint)
 		NoticeAdminRead(customerId uint, uid uint, msgIds []uint)
 		Transfer(fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) error

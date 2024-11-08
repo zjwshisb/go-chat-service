@@ -41,13 +41,13 @@ func (c cChat) AcceptUser(ctx context.Context, req *chatapi.AcceptReq) (res *cha
 
 func (c cChat) Read(ctx context.Context, req *chatapi.ReadReq) (res *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
-	message := service.ChatMessage().First(do.CustomerChatMessages{
+	message, err := service.ChatMessage().First(ctx, do.CustomerChatMessages{
 		Id:      req.MsgId,
 		AdminId: admin.Id,
 		Source:  consts.MessageSourceUser,
 	})
-	if message == nil {
-		return nil, gerror.NewCode(gcode.CodeNotFound)
+	if err != nil {
+		return
 	}
 	if message.SendAt == nil {
 		service.ChatMessage().ChangeToRead([]uint{message.Id})
@@ -84,13 +84,17 @@ func (c cChat) Transfer(ctx context.Context, req *chatapi.TransferReq) (res *bas
 func (c cChat) RemoveUser(ctx context.Context, req *chatapi.RemoveReq) (res *baseApi.NilRes, err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	admin := service.AdminCtx().GetAdmin(ctx)
-	session := service.ChatSession().ActiveOne(gconv.Uint(id), admin.Id, nil)
-	if session != nil {
-		if session.BrokenAt == nil {
-			service.ChatSession().Close(session, true, false)
+	session, err := service.ChatSession().ActiveOne(ctx, gconv.Uint(id), admin.Id, nil)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return
+
 		}
-	} else {
 		service.ChatRelation().RemoveUser(admin.Id, gconv.Uint(id))
+
+	}
+	if session.BrokenAt == nil {
+		service.ChatSession().Close(ctx, session, true, false)
 	}
 	return &baseApi.NilRes{}, err
 }
@@ -100,15 +104,14 @@ func (c cChat) RemoveInvalidUser(ctx context.Context, req *chatapi.RemoveAllReq)
 	ids := service.ChatRelation().GetInvalidUsers(admin.Id)
 	resIds := make([]uint, 0, len(ids))
 	for _, id := range ids {
-		session := &entity.CustomerChatSessions{}
-		err := dao.CustomerChatSessions.Ctx(ctx).
-			Where("admin_id", admin.Id).
-			Where("user_id", id).
-			OrderDesc("id").Scan(session)
-		if err == sql.ErrNoRows {
+		session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
+			AdminId: admin.Id,
+			UserId:  id,
+		})
+		if err != nil {
 			continue
 		}
-		service.ChatSession().Close(session, true, false)
+		service.ChatSession().Close(ctx, session, true, false)
 		resIds = append(resIds, id)
 	}
 	return &chatapi.RemoveAllRes{Ids: resIds}, nil
@@ -133,12 +136,15 @@ func (c cChat) User(ctx context.Context, req *chatapi.UserListReq) (res *chatapi
 	lastRes := make([]maxChatIds, 0)
 	sources := []int{consts.MessageSourceAdmin, consts.MessageSourceUser}
 	err = dao.CustomerChatMessages.Ctx(ctx).
-		FieldMax("id", "id").
+		FieldMax("id").
 		Fields("user_id").
 		Where("user_id in (?)", ids).
 		Where("source in (?)", sources).
 		Where("admin_id", admin.Id).
 		Group("user_id").Scan(&lastRes)
+	if err != nil {
+		return
+	}
 	lastMessages := make([]model.CustomerChatMessage, 0)
 	lastMessageIds := slice.Map(lastRes, func(index int, item maxChatIds) int {
 		return item.Id
@@ -246,11 +252,17 @@ func (c cChat) ReqId(ctx context.Context, req *chatapi.ReqIdReq) (res *chatapi.R
 
 func (c cChat) Sessions(ctx context.Context, req *chatapi.UserSessionReq) (res *chatapi.UserSessionRes, err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
-	sessions := service.ChatSession().Get(ctx, map[string]any{
+	sessions, err := service.ChatSession().All(ctx, map[string]any{
 		"user_id":     id,
 		"customer_id": service.AdminCtx().GetCustomerId(ctx),
 		"admin_id>":   0,
-	})
+	}, g.Array{
+		model.CustomerChatSession{}.User,
+		model.CustomerChatSession{}.Admin,
+	}, nil)
+	if err != nil {
+		return
+	}
 	r := chatapi.UserSessionRes{}
 	for _, s := range sessions {
 		r = append(r, service.ChatSession().RelationToChat(s))

@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	"database/sql"
 	baseApi "gf-chat/api"
 	"gf-chat/api/v1/backend/user"
 	api "gf-chat/api/v1/backend/user"
@@ -72,8 +73,11 @@ func (c *cUser) GetSetting(ctx context.Context, req *user.SettingReq) (res *user
 
 func (user *cUser) Login(ctx context.Context, r *user.LoginReq) (res *user.LoginRes, err error) {
 	admin, err := service.Admin().First(ctx, do.CustomerAdmins{Username: r.Username})
-	if admin == nil {
-		return nil, gerror.NewCode(gcode.CodeValidationFailed, "账号或密码错误")
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, gerror.NewCode(gcode.CodeValidationFailed, "账号或密码错误")
+		}
+		return
 	}
 	err = service.Admin().IsValid(admin)
 	if err != nil {

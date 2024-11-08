@@ -16,16 +16,18 @@ type cSystemRule struct {
 }
 
 func (c cSystemRule) Index(ctx context.Context, req *api.ListReq) (res *api.ListRes, err error) {
-	rules, _ := service.AutoRule().Paginate(ctx, &do.CustomerChatAutoRules{
+	paginator, err := service.AutoRule().Paginate(ctx, &do.CustomerChatAutoRules{
 		IsSystem:   1,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	}, model.QueryInput{
-		Size:      100,
-		Page:      1,
-		WithTotal: false,
-	})
+		Size: 100,
+		Page: 1,
+	}, nil, nil)
+	if err != nil {
+		return
+	}
 	rr := api.ListRes{}
-	for _, item := range rules {
+	for _, item := range paginator.Items {
 		rr = append(rr, api.ListItem{
 			Name:      item.Name,
 			MessageId: item.MessageId,

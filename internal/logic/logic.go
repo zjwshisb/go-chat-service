@@ -21,7 +21,6 @@ import (
 	_ "gf-chat/internal/logic/jwt"
 	_ "gf-chat/internal/logic/officialmsg"
 	_ "gf-chat/internal/logic/qiniu"
-	_ "gf-chat/internal/logic/rest"
 	_ "gf-chat/internal/logic/sso"
 	_ "gf-chat/internal/logic/subscribemsg"
 	_ "gf-chat/internal/logic/user"

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
 	"net/http"
@@ -31,7 +30,7 @@ func AdminAuth(r *ghttp.Request) {
 		r.Response.WriteStatus(http.StatusUnauthorized)
 		return
 	}
-	uidStr, sessionId, err := service.Jwt().ParseToken(token)
+	uidStr, err := service.Jwt().ParseToken(token)
 	if err != nil {
 		r.Response.WriteStatus(http.StatusUnauthorized)
 		return
@@ -41,17 +40,9 @@ func AdminAuth(r *ghttp.Request) {
 		r.Response.WriteStatus(http.StatusUnauthorized)
 		return
 	}
-	if sessionId != "" {
-		ok := service.Sso().Check(r.Context(), sessionId, uid)
-		if !ok {
-			r.Response.WriteStatus(http.StatusUnauthorized)
-			return
-		}
-	}
+	admin, err := service.Admin().Find(r.GetCtx(), uid)
 
-	var admin *model.CustomerAdmin
-	dao.CustomerAdmins.Ctx(r.GetCtx()).WherePri(uid).Scan(&admin)
-	if admin == nil {
+	if err != nil {
 		r.Response.WriteStatus(http.StatusUnauthorized)
 		return
 	}

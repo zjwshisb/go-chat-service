@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"gf-chat/internal/service"
+
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/golang-jwt/jwt/v4"
@@ -25,8 +26,7 @@ func getSecret() []byte {
 
 func (Jwt *sJwt) CreateToken(uid string, sessionId string) (token string, err error) {
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"uid":       uid,
-		"sessionId": sessionId,
+		"uid": uid,
 	})
 	token, err = at.SignedString(getSecret())
 	if err != nil {
@@ -35,14 +35,13 @@ func (Jwt *sJwt) CreateToken(uid string, sessionId string) (token string, err er
 	return token, nil
 }
 
-func (Jwt *sJwt) ParseToken(token string) (uid string, sessionId string, err error) {
+func (Jwt *sJwt) ParseToken(token string) (uid string, err error) {
 	claim, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return getSecret(), nil
 	})
 	if err != nil {
-		return "", "", err
+		return
 	}
 	return claim.Claims.(jwt.MapClaims)["uid"].(string),
-		claim.Claims.(jwt.MapClaims)["sessionId"].(string),
 		nil
 }

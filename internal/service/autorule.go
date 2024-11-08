@@ -1,21 +1,14 @@
-// ================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
-// You can delete these comments if you wish manually maintain this interface file.
-// ================================================================================
-
 package service
 
 import (
-	"context"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
+	"gf-chat/internal/trait"
 )
 
 type (
 	IAutoRule interface {
-		Paginate(ctx context.Context, where *do.CustomerChatAutoRules, p model.QueryInput) (items []*entity.CustomerChatAutoRules, total int)
-		First(ctx context.Context, w do.CustomerChatAutoRules) (rule *entity.CustomerChatAutoRules, err error)
+		trait.ICurd[model.CustomerChatAutoRule]
 		GetActiveByCustomer(customerId uint) (items []*model.CustomerChatAutoRule)
 		Increment(rule *model.CustomerChatAutoRule) error
 		GetMessage(rule *model.CustomerChatAutoRule) *entity.CustomerChatAutoMessages

@@ -1,13 +1,14 @@
 package chatmessage
 
 import (
+	"context"
 	"database/sql"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
+	"gf-chat/internal/trait"
 	"time"
 
 	"github.com/gogf/gf/v2/os/gctx"
@@ -17,33 +18,42 @@ import (
 )
 
 func init() {
-	service.RegisterChatMessage(&sChatMessage{})
+	service.RegisterChatMessage(&sChatMessage{
+		Curd: trait.Curd[model.CustomerChatMessage]{
+			Dao: dao.CustomerChatMessages,
+		},
+	})
 }
 
 type sChatMessage struct {
+	trait.Curd[model.CustomerChatMessage]
 }
 
 func (s *sChatMessage) GenReqId() string {
 	return grand.S(20)
 }
 
-func (s *sChatMessage) First(w do.CustomerChatMessages) *entity.CustomerChatMessages {
-	message := &entity.CustomerChatMessages{}
-	err := dao.CustomerChatMessages.Ctx(gctx.New()).Where(w).Scan(message)
-	if err == sql.ErrNoRows {
-		return nil
-	}
-	return message
-}
+// func (s *sChatMessage) First(ctx context.Context, w do.CustomerChatMessages) (msg *model.CustomerChatMessage, err error) {
+// 	err = dao.CustomerChatMessages.Ctx(gctx.New()).Where(w).Scan(&msg)
+// 	if err != nil {
+// 		return
+// 	}
+// 	if msg == nil {
+// 		err = sql.ErrNoRows
+// 	}
+// 	return
+// }
 
-func (s *sChatMessage) SaveRelationOne(msg *model.CustomerChatMessage) uint {
-	result, err := dao.CustomerChatMessages.Ctx(gctx.New()).Save(msg)
-	id, err := result.LastInsertId()
+func (s *sChatMessage) SaveWithUpdate(ctx context.Context, msg *model.CustomerChatMessage) (err error) {
+	id, err := s.Save(ctx, msg)
 	if err != nil {
-		return 0
+		return
 	}
-	msg.Id = uint(id)
-	return msg.Id
+	if msg.Id == 0 {
+		msg.Id = uint(id)
+
+	}
+	return
 }
 func (s *sChatMessage) EntityToRelation(msg *entity.CustomerChatMessages) *model.CustomerChatMessage {
 	return &model.CustomerChatMessage{
@@ -51,16 +61,6 @@ func (s *sChatMessage) EntityToRelation(msg *entity.CustomerChatMessages) *model
 		Admin:                nil,
 		User:                 nil,
 	}
-}
-
-func (s *sChatMessage) SaveOne(msg *entity.CustomerChatMessages) uint {
-	result, err := dao.CustomerChatMessages.Ctx(gctx.New()).Save(msg)
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0
-	}
-	msg.Id = uint(id)
-	return msg.Id
 }
 
 func (s *sChatMessage) ChangeToRead(msgId []uint) (sql.Result, error) {
@@ -169,16 +169,18 @@ func (s *sChatMessage) GetModels(lastId uint, w any, size uint) []*model.Custome
 	return res
 }
 
-func (s *sChatMessage) NewNotice(session *entity.CustomerChatSessions, content string) *entity.CustomerChatMessages {
-	return &entity.CustomerChatMessages{
-		UserId:     session.UserId,
-		AdminId:    session.AdminId,
-		Type:       consts.MessageTypeNotice,
-		Content:    content,
-		CustomerId: session.CustomerId,
-		SessionId:  session.Id,
-		ReqId:      s.GenReqId(),
-		Source:     consts.MessageSourceSystem,
+func (s *sChatMessage) NewNotice(session *model.CustomerChatSession, content string) *model.CustomerChatMessage {
+	return &model.CustomerChatMessage{
+		CustomerChatMessages: entity.CustomerChatMessages{
+			UserId:     session.UserId,
+			AdminId:    session.AdminId,
+			Type:       consts.MessageTypeNotice,
+			Content:    content,
+			CustomerId: session.CustomerId,
+			SessionId:  session.Id,
+			ReqId:      s.GenReqId(),
+			Source:     consts.MessageSourceSystem,
+		},
 	}
 }
 func (s *sChatMessage) NewOffline(admin *model.CustomerAdmin) *model.CustomerChatMessage {

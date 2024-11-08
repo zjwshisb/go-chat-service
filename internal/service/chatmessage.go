@@ -6,25 +6,25 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/do"
+	"gf-chat/internal/trait"
 	"gf-chat/internal/model/entity"
 )
 
 type (
 	IChatMessage interface {
+		trait.ICurd[model.CustomerChatMessage]
 		GenReqId() string
-		First(w do.CustomerChatMessages) *entity.CustomerChatMessages
-		SaveRelationOne(msg *model.CustomerChatMessage) uint
+		SaveWithUpdate(ctx context.Context, msg *model.CustomerChatMessage) (err error)
 		EntityToRelation(msg *entity.CustomerChatMessages) *model.CustomerChatMessage
-		SaveOne(msg *entity.CustomerChatMessages) uint
 		ChangeToRead(msgId []uint) (sql.Result, error)
 		GetAdminName(model model.CustomerChatMessage) string
 		RelationToChat(message model.CustomerChatMessage) model.ChatMessage
 		GetAvatar(model model.CustomerChatMessage) string
 		GetModels(lastId uint, w any, size uint) []*model.CustomerChatMessage
-		NewNotice(session *entity.CustomerChatSessions, content string) *entity.CustomerChatMessages
+		NewNotice(session *model.CustomerChatSession, content string) *model.CustomerChatMessage
 		NewOffline(admin *model.CustomerAdmin) *model.CustomerChatMessage
 		NewWelcome(admin *model.CustomerAdmin) *model.CustomerChatMessage
 	}

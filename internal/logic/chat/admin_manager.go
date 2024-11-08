@@ -14,6 +14,7 @@ import (
 
 	"github.com/duke-git/lancet/v2/maputil"
 	"github.com/duke-git/lancet/v2/slice"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 )
@@ -78,30 +79,32 @@ func (m *adminManager) sendOffline(admin *model.CustomerAdmin, msg *model.Custom
 // 处理离线消息
 func (m *adminManager) handleOffline(msg *model.CustomerChatMessage) {
 	userM.triggerMessageEvent(consts.AutoRuleSceneAdminOffline, msg, &user{Entity: msg.User})
-	admin, _ := service.Admin().First(gctx.New(), do.CustomerAdmins{Id: msg.AdminId})
-	if admin != nil {
-		// 离线消息
-		message := service.ChatMessage().NewOffline(admin)
-		if message != nil {
-			message.UserId = msg.UserId
-			message.SessionId = msg.SessionId
-			service.ChatMessage().SaveRelationOne(message)
-			userM.DeliveryMessage(message)
-		}
-		m.sendOffline(admin, msg)
+	ctx := gctx.New()
+	admin, err := service.Admin().First(ctx, do.CustomerAdmins{Id: msg.AdminId})
+	if err != nil {
+		return
 	}
+	message := service.ChatMessage().NewOffline(admin)
+	if message != nil {
+		message.UserId = msg.UserId
+		message.SessionId = msg.SessionId
+		_ = service.ChatMessage().SaveWithUpdate(ctx, message)
+		userM.DeliveryMessage(message)
+	}
+	m.sendOffline(admin, msg)
 }
 
 // 处理消息
 func (m *adminManager) handleMessage(payload *chatConnMessage) {
 	msg := payload.Msg
 	conn := payload.Conn
+	ctx := gctx.New()
 	if msg.UserId > 0 {
 		if !service.ChatRelation().IsUserValid(conn.GetUserId(), msg.UserId) {
 			conn.Deliver(service.Action().NewErrorMessage("该用户已失效，无法发送消息"))
 			return
 		}
-		session := service.ChatSession().ActiveOne(msg.UserId, conn.GetUserId(), nil)
+		session, _ := service.ChatSession().ActiveOne(ctx, msg.UserId, conn.GetUserId(), nil)
 		if session == nil {
 			conn.Deliver(service.Action().NewErrorMessage("无效的用户"))
 			return
@@ -110,7 +113,7 @@ func (m *adminManager) handleMessage(payload *chatConnMessage) {
 		msg.Source = consts.MessageSourceAdmin
 		msg.ReceivedAt = gtime.New()
 		msg.SessionId = session.Id
-		service.ChatMessage().SaveRelationOne(msg)
+		_ = service.ChatMessage().SaveWithUpdate(ctx, msg)
 		_ = service.ChatRelation().UpdateUser(msg.AdminId, msg.UserId)
 		// 服务器回执d
 		conn.Deliver(service.Action().NewReceiptAction(msg))
@@ -142,7 +145,8 @@ func (m *adminManager) broadcastWaitingUser(customerId uint) {
 }
 
 func (m *adminManager) broadcastLocalWaitingUser(customerId uint) {
-	sessions := service.ChatSession().GetUnAcceptModel(customerId)
+	ctx := gctx.New()
+	sessions, _ := service.ChatSession().GetUnAcceptModel(ctx, customerId)
 	sessionIds := slice.Map(sessions, func(index int, item *model.CustomerChatSession) uint {
 		return item.Id
 	})
@@ -189,7 +193,7 @@ func (m *adminManager) broadcastOnlineAdmins(gid uint) {
 func (m *adminManager) broadcastLocalOnlineAdmins(customerId uint) {
 	admins, _ := service.Admin().All(gctx.New(), do.CustomerAdmins{
 		CustomerId: customerId,
-	})
+	}, g.Slice{}, "id")
 	data := make([]model.ChatCustomerAdmin, 0, len(admins))
 	for _, c := range admins {
 		conn, online := m.GetConn(customerId, c.Id)
@@ -211,7 +215,7 @@ func (m *adminManager) broadcastLocalOnlineAdmins(customerId uint) {
 	m.SendAction(service.Action().NewAdminsAction(data), conns...)
 }
 
-func (m *adminManager) noticeRate(message *entity.CustomerChatMessages) {
+func (m *adminManager) noticeRate(message *model.CustomerChatMessage) {
 	action := service.Action().NewRateAction(message)
 	conn, exist := m.GetConn(message.CustomerId, message.AdminId)
 	if exist {

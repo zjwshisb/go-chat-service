@@ -17,11 +17,11 @@ type (
 	IAutoMessage interface {
 		First(ctx context.Context, w any) (msg *entity.CustomerChatAutoMessages, err error)
 		Paginate(ctx context.Context, w *do.CustomerChatAutoMessages, p model.QueryInput) (items []*entity.CustomerChatAutoMessages, total int)
-		GetList(ctx context.Context, w *do.CustomerChatAutoMessages, p *model.QueryInput) (items []*entity.CustomerChatAutoMessages, total int)
+		All(ctx context.Context, w do.CustomerChatAutoMessages) (items []*entity.CustomerChatAutoMessages, err error)
 		EntityToListItem(i entity.CustomerChatAutoMessages) model.AutoMessageListItem
-		Update(ctx context.Context, message *entity.CustomerChatAutoMessages, req *automessage.UpdateReq) (id int64, err error)
+		Update(ctx context.Context, message *entity.CustomerChatAutoMessages, req *automessage.UpdateReq) (count int64, err error)
 		Save(ctx context.Context, req *automessage.StoreReq) (id int64, err error)
-		ToChatMessage(auto *entity.CustomerChatAutoMessages) *entity.CustomerChatMessages
+		ToChatMessage(auto *entity.CustomerChatAutoMessages) (msg *model.CustomerChatMessage, err error)
 	}
 )
 
