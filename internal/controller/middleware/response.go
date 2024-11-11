@@ -3,6 +3,7 @@ package middleware
 import (
 	"database/sql"
 	"fmt"
+	"gf-chat/api"
 	"net/http"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -13,17 +14,6 @@ import (
 )
 
 // SuccessResponse
-type SuccessResponse struct {
-	Code    int         `json:"code"    dc:"Error code"`
-	Data    interface{} `json:"data"    dc:"Result data for certain request according API definition"`
-	Success bool        `json:"success" dc:"Is Success"`
-}
-
-type FailResponse struct {
-	Code    int    `json:"code"    dc:"Error code"`
-	Success bool   `json:"success" dc:"Is Success"`
-	Message string `json:"message" dc:"错误消息"`
-}
 
 // MiddlewareHandlerResponse is the default middleware handling handler response object and its error.
 func HandlerResponse(r *ghttp.Request) {
@@ -71,11 +61,7 @@ func HandlerResponse(r *ghttp.Request) {
 		if code == gcode.CodeBusinessValidationFailed {
 
 		}
-		r.Response.WriteJson(FailResponse{
-			Code:    code.Code(),
-			Message: msg,
-			Success: false,
-		})
+		r.Response.WriteJson(api.NewFailResp(msg, code.Code()))
 		return
 	} else if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
 		msg = http.StatusText(r.Response.Status)
@@ -93,9 +79,6 @@ func HandlerResponse(r *ghttp.Request) {
 	} else {
 		code = gcode.CodeOK
 	}
-	r.Response.WriteJson(SuccessResponse{
-		Code:    code.Code(),
-		Data:    res,
-		Success: true,
-	})
+	r.Response.WriteJson(res)
+
 }

@@ -33,17 +33,6 @@ func (s *sChatMessage) GenReqId() string {
 	return grand.S(20)
 }
 
-// func (s *sChatMessage) First(ctx context.Context, w do.CustomerChatMessages) (msg *model.CustomerChatMessage, err error) {
-// 	err = dao.CustomerChatMessages.Ctx(gctx.New()).Where(w).Scan(&msg)
-// 	if err != nil {
-// 		return
-// 	}
-// 	if msg == nil {
-// 		err = sql.ErrNoRows
-// 	}
-// 	return
-// }
-
 func (s *sChatMessage) SaveWithUpdate(ctx context.Context, msg *model.CustomerChatMessage) (err error) {
 	id, err := s.Save(ctx, msg)
 	if err != nil {

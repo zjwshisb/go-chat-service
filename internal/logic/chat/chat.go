@@ -81,7 +81,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "该用户已接入")
 	}
 	if session.Type == consts.ChatSessionTypeTransfer {
-		transfer, _ := service.ChatTransfer().First(do.CustomerChatTransfers{
+		transfer, _ := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
 			ToSessionId: session.Id,
 			AcceptedAt:  nil,
 			CanceledAt:  nil,
@@ -137,7 +137,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		v := service.ChatMessage().RelationToChat(*lastMessage)
 		lastMsg = &v
 	}
-	service.ChatRelation().AddUser(admin.Id, session.UserId)
+	service.ChatRelation().AddUser(ctx, admin.Id, session.UserId)
 	service.ChatManual().Remove(session.UserId, session.CustomerId)
 	user := &model.ChatUser{
 		Id:           session.User.Id,
@@ -261,7 +261,7 @@ func (s sChat) Transfer(fromAdmin *model.CustomerAdmin, toId uint, userId uint, 
 	if toAdmin == nil {
 		return gerror.NewCode(gcode.CodeNotFound)
 	}
-	isValid := service.ChatRelation().IsUserValid(fromAdmin.Id, user.Id)
+	isValid := service.ChatRelation().IsUserValid(ctx, fromAdmin.Id, user.Id)
 	if !isValid {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "用户已失效，无法转接")
 	}

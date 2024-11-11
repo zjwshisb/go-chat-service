@@ -8,3 +8,6 @@ type IChatUser interface {
 	GetCustomerId() uint
 	AccessTo(user IChatUser) bool
 }
+
+type IDao interface {
+}

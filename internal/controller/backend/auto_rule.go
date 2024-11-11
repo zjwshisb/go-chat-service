@@ -39,34 +39,33 @@ func (c cAutoRule) Delete(ctx context.Context, req *api.DeleteReq) (resp *baseAp
 	}
 	_, _ = dao.CustomerChatAutoRules.Ctx(ctx).
 		WherePri("id", id).Delete()
-	return &baseApi.NilRes{}, nil
+	return baseApi.NewNilResp(), nil
 }
 
 func (c cAutoRule) Message(ctx context.Context, req *api.OptionMessageReq) (res *baseApi.OptionRes, err error) {
 	items, err := service.AutoMessage().All(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
-	})
+	}, nil, nil)
 	if err != nil {
 		return
 	}
-	r := baseApi.OptionRes{}
-	slice.ForEach(items, func(index int, item *entity.CustomerChatAutoMessages) {
-		r = append(r, model.Option{
-			Value: item.Id,
+	options := slice.Map(items, func(index int, item *model.CustomerChatAutoMessage) model.Option {
+		return model.Option{
 			Label: item.Name,
-		})
+			Value: item.Id,
+		}
 	})
-	res = &r
-	return
+	return baseApi.NewOptionResp(options), nil
 }
-func (c cAutoRule) Form(ctx context.Context, req *api.FormReq) (res *api.FormRes, err error) {
+
+func (c cAutoRule) Form(ctx context.Context, req *api.FormReq) (res *baseApi.NormalRes[api.FormRes], err error) {
 	rule, err := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
 		IsSystem:   0,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id").Val(),
 	})
-	if rule == nil {
-		return nil, gerror.NewCode(gcode.CodeNotFound)
+	if err != nil {
+		return
 	}
 	scenes := make([]entity.CustomerChatAutoRuleScenes, 0)
 	dao.CustomerChatAutoRuleScenes.Ctx(ctx).Where(do.CustomerChatAutoRuleScenes{
@@ -75,7 +74,7 @@ func (c cAutoRule) Form(ctx context.Context, req *api.FormReq) (res *api.FormRes
 	sceneStr := slice.Map(scenes, func(index int, item entity.CustomerChatAutoRuleScenes) string {
 		return item.Name
 	})
-	res = &api.FormRes{
+	res = baseApi.NewResp(api.FormRes{
 		IsOpen:    gconv.Bool(rule.IsOpen),
 		Match:     rule.Match,
 		MatchType: rule.MatchType,
@@ -84,7 +83,7 @@ func (c cAutoRule) Form(ctx context.Context, req *api.FormReq) (res *api.FormRes
 		ReplyType: rule.ReplyType,
 		Scenes:    sceneStr,
 		Sort:      rule.Sort,
-	}
+	})
 	return
 }
 
@@ -94,8 +93,8 @@ func (c cAutoRule) Update(ctx context.Context, req *api.UpdateReq) (res *baseApi
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id").Val(),
 	})
-	if rule == nil {
-		return nil, err
+	if err != nil {
+		return
 	}
 	err = dao.CustomerChatAutoRules.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		rule.Name = req.Name
@@ -125,7 +124,7 @@ func (c cAutoRule) Update(ctx context.Context, req *api.UpdateReq) (res *baseApi
 	if err != nil {
 		return
 	}
-	return &baseApi.NilRes{}, nil
+	return baseApi.NewNilResp(), nil
 }
 
 func (c cAutoRule) Store(ctx context.Context, req *api.StoreReq) (res *baseApi.NilRes, err error) {
@@ -165,10 +164,10 @@ func (c cAutoRule) Store(ctx context.Context, req *api.StoreReq) (res *baseApi.N
 		}
 		return nil
 	})
-	return &baseApi.NilRes{}, err
+	return baseApi.NewNilResp(), err
 }
 
-func (c cAutoRule) Index(ctx context.Context, req *api.ListReq) (res *api.ListRes, err error) {
+func (c cAutoRule) Index(ctx context.Context, req *api.ListReq) (res *baseApi.ListRes[api.ListItem], err error) {
 	paginator, err := service.AutoRule().Paginate(ctx, &do.CustomerChatAutoRules{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		IsSystem:   0,
@@ -179,15 +178,17 @@ func (c cAutoRule) Index(ctx context.Context, req *api.ListReq) (res *api.ListRe
 	if err != nil {
 		return
 	}
-	items := make([]api.ListItem, len(paginator.Items))
-
-	var messages []entity.CustomerChatAutoMessages
 	messageIds := slice.Map(paginator.Items, func(index int, item model.CustomerChatAutoRule) uint {
 		return item.MessageId
 	})
 
-	_ = dao.CustomerChatAutoMessages.Ctx(ctx).
-		WhereIn("id", messageIds).Scan(&messages)
+	items := make([]api.ListItem, len(paginator.Items))
+	messages, err := service.AutoMessage().All(ctx, do.CustomerChatAutoMessages{
+		Id: messageIds,
+	}, nil, nil)
+	if err != nil {
+		return
+	}
 	for index, i := range paginator.Items {
 		items[index] = api.ListItem{
 			Id:        i.Id,
@@ -200,7 +201,7 @@ func (c cAutoRule) Index(ctx context.Context, req *api.ListReq) (res *api.ListRe
 			Count:     uint(i.Count),
 		}
 		if i.MessageId != 0 {
-			m, exit := slice.Find(messages, func(index int, item entity.CustomerChatAutoMessages) bool {
+			m, exit := slice.Find(messages, func(index int, item *model.CustomerChatAutoMessage) bool {
 				return item.Id == i.MessageId
 			})
 			if exit {
@@ -209,9 +210,5 @@ func (c cAutoRule) Index(ctx context.Context, req *api.ListReq) (res *api.ListRe
 		}
 
 	}
-
-	return &api.ListRes{
-		Items: items,
-		Total: paginator.Total,
-	}, nil
+	return baseApi.NewListResp(items, paginator.Total), nil
 }

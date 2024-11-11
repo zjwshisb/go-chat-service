@@ -11,7 +11,7 @@ import (
 
 	baseApi "gf-chat/api"
 
-	"gf-chat/api/v1/backend/automessage"
+	api "gf-chat/api/v1/backend/automessage"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
 )
@@ -21,30 +21,27 @@ var CAutoMessage = &cAutoMessage{}
 type cAutoMessage struct {
 }
 
-func (c *cAutoMessage) Index(ctx context.Context, req *automessage.ListReq) (res *automessage.ListRes, err error) {
+func (c *cAutoMessage) Index(ctx context.Context, req *api.ListReq) (res *baseApi.ListRes[model.AutoMessageListItem], err error) {
 	w := do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	}
 	if req.Type != "" {
 		w.Type = req.Type
 	}
-	entities, total := service.AutoMessage().Paginate(ctx, &w,
+	p, err := service.AutoMessage().Paginate(ctx, &w,
 		model.QueryInput{
 			Page: req.Current,
 			Size: req.PageSize,
-		})
-	items := make([]model.AutoMessageListItem, len(entities))
-	for index, i := range entities {
-		items[index] = service.AutoMessage().EntityToListItem(*i)
+		}, nil, nil)
+	items := make([]model.AutoMessageListItem, len(p.Items))
+	for index, i := range p.Items {
+		items[index] = service.AutoMessage().EntityToListItem(&i)
 	}
-	res = &automessage.ListRes{
-		Items: items,
-		Total: total,
-	}
+	res = baseApi.NewListResp(items, p.Total)
 	return
 }
 
-func (c *cAutoMessage) Form(ctx context.Context, req *automessage.FormReq) (res *automessage.FormRes, err error) {
+func (c *cAutoMessage) Form(ctx context.Context, req *api.FormReq) (res *baseApi.NormalRes[api.FormRes], err error) {
 	id := g.RequestFromCtx(ctx).GetRouter("id").Val()
 	message, err := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -53,7 +50,7 @@ func (c *cAutoMessage) Form(ctx context.Context, req *automessage.FormReq) (res 
 	if err != nil {
 		return
 	}
-	res = &automessage.FormRes{
+	form := api.FormRes{
 		Name:    message.Name,
 		Type:    message.Type,
 		Content: "",
@@ -65,19 +62,19 @@ func (c *cAutoMessage) Form(ctx context.Context, req *automessage.FormReq) (res 
 		var data map[string]string
 		e := json.Unmarshal([]byte(message.Content), &data)
 		if e == nil {
-			res.Content = service.Qiniu().Form(data["content"])
-			res.Url = data["url"]
-			res.Title = data["title"]
+			form.Content = service.Qiniu().Form(data["content"])
+			form.Url = data["url"]
+			form.Title = data["title"]
 		}
 	case consts.MessageTypeImage:
-		res.Content = service.Qiniu().Form(message.Content)
+		form.Content = service.Qiniu().Form(message.Content)
 	default:
-		res.Content = message.Content
+		form.Content = message.Content
 	}
-	return
+	return baseApi.NewResp(form), nil
 }
 
-func (c *cAutoMessage) Update(ctx context.Context, req *automessage.UpdateReq) (res *baseApi.NilRes, err error) {
+func (c *cAutoMessage) Update(ctx context.Context, req *api.UpdateReq) (res *baseApi.NilRes, err error) {
 	id := g.RequestFromCtx(ctx).GetRouter("id").Val()
 	message, err := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -86,11 +83,11 @@ func (c *cAutoMessage) Update(ctx context.Context, req *automessage.UpdateReq) (
 	if err != nil {
 		return
 	}
-	service.AutoMessage().Update(ctx, message, req)
-	return &baseApi.NilRes{}, nil
+	service.AutoMessage().UpdateOne(ctx, message, req)
+	return baseApi.NewNilResp(), nil
 }
 
-func (c *cAutoMessage) Delete(ctx context.Context, req *automessage.DeleteReq) (res *baseApi.NilRes, err error) {
+func (c *cAutoMessage) Delete(ctx context.Context, req *api.DeleteReq) (res *baseApi.NilRes, err error) {
 	id := g.RequestFromCtx(ctx).GetRouter("id").Val()
 	message, err := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -100,10 +97,10 @@ func (c *cAutoMessage) Delete(ctx context.Context, req *automessage.DeleteReq) (
 		return
 	}
 	dao.CustomerChatAutoMessages.Ctx(ctx).Where("id", message.Id).Delete()
-	return &baseApi.NilRes{}, nil
+	return baseApi.NewNilResp(), nil
 }
 
-func (c *cAutoMessage) Store(ctx context.Context, req *automessage.StoreReq) (res *baseApi.NilRes, err error) {
-	service.AutoMessage().Save(ctx, req)
-	return &baseApi.NilRes{}, nil
+func (c *cAutoMessage) Store(ctx context.Context, req *api.StoreReq) (res *baseApi.NilRes, err error) {
+	service.AutoMessage().SaveOne(ctx, req)
+	return baseApi.NewNilResp(), nil
 }

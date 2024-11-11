@@ -3,7 +3,6 @@ package admin
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/golang-module/carbon/v2"
 )
 
@@ -30,12 +28,8 @@ type sAdmin struct {
 	trait.Curd[model.CustomerAdmin]
 }
 
-func (s *sAdmin) IsValid(admin *model.CustomerAdmin) error {
-	if admin == nil {
-		return errors.New("没有权限登录")
-	}
-
-	return nil
+func (s *sAdmin) CanAccess(admin *model.CustomerAdmin) bool {
+	return true
 }
 
 func (s *sAdmin) GetSetting(ctx context.Context, admin *model.CustomerAdmin) (*entity.CustomerAdminChatSettings, error) {
@@ -70,15 +64,6 @@ func (s *sAdmin) GetChatName(ctx context.Context, model *model.CustomerAdmin) (s
 		return setting.Name, nil
 	}
 	return model.Username, nil
-}
-
-func (s *sAdmin) GetWechat(adminId uint) *entity.CustomerAdminWechat {
-	wechat := &entity.CustomerAdminWechat{}
-	err := dao.CustomerAdminWechat.Ctx(gctx.New()).Where("admin_id", adminId).Scan(wechat)
-	if err == sql.ErrNoRows {
-		return nil
-	}
-	return wechat
 }
 
 func (s *sAdmin) GetDetail(ctx context.Context, id any, month string) ([]*model.ChartLine, *model.AdminDetailInfo, error) {
@@ -122,6 +107,6 @@ func (s *sAdmin) GetDetail(ctx context.Context, id any, month string) ([]*model.
 		Username:      admin.Username,
 		Online:        service.Chat().IsOnline(admin.CustomerId, admin.Id, "admin"),
 		Id:            admin.Id,
-		AcceptedCount: service.ChatRelation().GetActiveCount(admin.Id),
+		AcceptedCount: service.ChatRelation().GetActiveCount(ctx, admin.Id),
 	}, nil
 }

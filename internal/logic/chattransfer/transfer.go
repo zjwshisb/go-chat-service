@@ -2,14 +2,13 @@ package chattransfer
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
+	"gf-chat/internal/trait"
 
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -19,7 +18,11 @@ import (
 )
 
 func init() {
-	service.RegisterChatTransfer(&sChatTransfer{})
+	service.RegisterChatTransfer(&sChatTransfer{
+		Curd: trait.Curd[model.CustomerChatTransfer]{
+			Dao: dao.CustomerChatTransfers,
+		},
+	})
 }
 
 const (
@@ -28,39 +31,7 @@ const (
 )
 
 type sChatTransfer struct {
-}
-
-func (s *sChatTransfer) Paginate(ctx context.Context, w *do.CustomerChatTransfers, p model.QueryInput) (res []*model.CustomerChatTransfer, total uint) {
-	query := dao.CustomerChatTransfers.Ctx(ctx).Where(w)
-	// if p.WithTotal {
-	// 	i, _ := query.Clone().Count()
-	// 	total = uint(i)
-	// 	if total == 0 {
-	// 		return
-	// 	}
-	// }
-	err := query.WithAll().Page(p.GetPage(), p.GetSize()).OrderDesc("id").Scan(&res)
-	if err == sql.ErrNoRows {
-		return
-	}
-	return
-}
-
-func (s *sChatTransfer) First(w any, with ...any) (item *model.CustomerChatTransfer, err error) {
-	err = dao.CustomerChatTransfers.Ctx(gctx.New()).Where(w).With(with...).Scan(&item)
-	if err != nil {
-		return
-	}
-	if item == nil {
-		err = sql.ErrNoRows
-	}
-	return
-}
-
-func (s *sChatTransfer) All(w any, with ...any) []*model.CustomerChatTransfer {
-	res := make([]*model.CustomerChatTransfer, 0)
-	dao.CustomerChatTransfers.Ctx(gctx.New()).With(with...).Where(w).Scan(&res)
-	return res
+	trait.Curd[model.CustomerChatTransfer]
 }
 
 func (s *sChatTransfer) ToChatTransfer(relation *model.CustomerChatTransfer) model.ChatTransfer {

@@ -13,6 +13,7 @@ import (
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -24,14 +25,13 @@ var CChatSetting = &cChatSetting{}
 type cChatSetting struct {
 }
 
-func (c *cChatSetting) Index(ctx context.Context, req *api.ListReq) (res *api.ListRes, err error) {
+func (c *cChatSetting) Index(ctx context.Context, req *api.ListReq) (res *baseApi.ListRes[api.ListItem], err error) {
 	customerId := service.AdminCtx().GetCustomerId(ctx)
 	var items []entity.CustomerChatSettings
 	dao.CustomerChatSettings.Ctx(ctx).Where(do.CustomerChatSettings{
 		CustomerId: customerId,
 	}).Scan(&items)
-	r := api.ListRes{}
-	for _, i := range items {
+	settings := slice.Map(items, func(index int, i entity.CustomerChatSettings) api.ListItem {
 		var o = make([]model.Option, 0)
 		switch i.Name {
 		case consts.ChatSettingOfflineTmplId:
@@ -49,7 +49,7 @@ func (c *cChatSetting) Index(ctx context.Context, req *api.ListReq) (res *api.Li
 		if i.Type == "image" {
 			value = service.Qiniu().Form(i.Value)
 		}
-		r = append(r, api.ListItem{
+		return api.ListItem{
 			Id:          i.Id,
 			Name:        i.Name,
 			Value:       value,
@@ -57,10 +57,9 @@ func (c *cChatSetting) Index(ctx context.Context, req *api.ListReq) (res *api.Li
 			Title:       i.Title,
 			Type:        i.Type,
 			Description: i.Description,
-		})
-	}
-	res = &r
-	return res, err
+		}
+	})
+	return baseApi.NewListResp(settings, 0), nil
 }
 
 func (c *cChatSetting) Update(ctx context.Context, req *api.UpdateReq) (res *baseApi.NilRes, err error) {
@@ -92,5 +91,5 @@ func (c *cChatSetting) Update(ctx context.Context, req *api.UpdateReq) (res *bas
 	}
 	setting.Value = req.Value
 	dao.CustomerChatSettings.Ctx(ctx).Save(setting)
-	return &baseApi.NilRes{}, nil
+	return baseApi.NewNilResp(), nil
 }

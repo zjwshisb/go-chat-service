@@ -9,6 +9,10 @@ type CustomerChatAutoRule struct {
 	Scenes []*entity.CustomerChatAutoRuleScenes `orm:"with:rule_id=id"`
 }
 
+type CustomerChatAutoMessage struct {
+	entity.CustomerChatAutoMessages
+}
+
 type CustomerAdmin struct {
 	entity.CustomerAdmins
 	Setting *entity.CustomerAdminChatSettings `orm:"with:admin_id=id"`

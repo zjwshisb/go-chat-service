@@ -22,10 +22,6 @@ type ListReq struct {
 	PageSize int `d:"20" json:"pageSize" v:"max:100"`
 	Current  int `d:"1" dc:"页码" json:"current"`
 }
-type ListRes struct {
-	Total int        `json:"total"`
-	Items []ListItem `json:"items"`
-}
 
 type StoreReq struct {
 	g.Meta   `path:"/admins" tags:"后台管理员" method:"get" summary:"获取管理员列表"`

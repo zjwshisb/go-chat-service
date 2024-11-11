@@ -7,7 +7,7 @@ import (
 )
 
 type InfoReq struct {
-	g.Meta `path:"/me" tags:"管理员" method:"get" summary:"获取管理员信息"`
+	g.Meta `path:"/user/info" tags:"管理员" method:"get" summary:"获取管理员信息"`
 }
 
 type InfoRes struct {
@@ -17,11 +17,11 @@ type InfoRes struct {
 }
 
 type SettingReq struct {
-	g.Meta `path:"/me/settings" tags:"管理员" method:"get" summary:"获取管理员设置"`
+	g.Meta `path:"/user/settings" tags:"管理员" method:"get" summary:"获取管理员设置"`
 }
 
 type UpdateSettingReq struct {
-	g.Meta         `path:"/me/settings" tags:"管理员" method:"put" summary:"更新管理员设置"`
+	g.Meta         `path:"/user/settings" tags:"管理员" method:"put" summary:"更新管理员设置"`
 	Background     model.ImageFiled `p:"background" json:"background"`
 	IsAutoAccept   bool             `p:"is_auto_accept" json:"is_auto_accept"`
 	WelcomeContent string           `p:"welcome_content" v:"max-length:512" json:"welcome_content"`
@@ -40,7 +40,7 @@ type SettingRes struct {
 }
 
 type LoginReq struct {
-	g.Meta   `path:"/login/password" tags:"后台登录" method:"post" summary:"账号密码登录"`
+	g.Meta   `path:"/login" tags:"后台登录" method:"post" summary:"账号密码登录"`
 	Username string `v:"required" json:"username"`
 	Password string `v:"required" json:"password"`
 }

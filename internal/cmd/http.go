@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"gf-chat/internal/controller"
 	"gf-chat/internal/controller/backend"
 	"gf-chat/internal/controller/frontend"
 	"gf-chat/internal/controller/middleware"
@@ -47,7 +46,6 @@ var (
 							)
 							group.Middleware(middleware.AdminAuth).Group("/", func(group *ghttp.RouterGroup) {
 								group.Bind(
-									controller.Hello,
 									backend.CDashboard,
 									backend.CSession,
 									backend.CAdmin,
@@ -57,10 +55,10 @@ var (
 									backend.CImage,
 									backend.CAutoRule,
 									backend.CSystemRule,
-									backend.CChatSetting,
-									backend.CTransfer,
-									backend.CWs,
-									backend.CChat,
+									// backend.CChatSetting,
+									// backend.CTransfer,
+								// backend.CWs,
+								// backend.CChat,
 								)
 							})
 						})

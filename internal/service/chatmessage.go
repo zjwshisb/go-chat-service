@@ -1,16 +1,11 @@
-// ================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
-// You can delete these comments if you wish manually maintain this interface file.
-// ================================================================================
-
 package service
 
 import (
 	"context"
 	"database/sql"
 	"gf-chat/internal/model"
-	"gf-chat/internal/trait"
 	"gf-chat/internal/model/entity"
+	"gf-chat/internal/trait"
 )
 
 type (

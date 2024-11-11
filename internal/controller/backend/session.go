@@ -95,9 +95,8 @@ func (c cSession) Index(ctx context.Context, req *api.ListReq) (resp *api.ListRe
 }
 
 func (c cSession) Cancel(ctx context.Context, req *api.CancelReq) (resp *baseApi.NilRes, err error) {
-	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
-		Id:         id,
+		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id"),
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	})
 	if err != nil {
@@ -107,14 +106,13 @@ func (c cSession) Cancel(ctx context.Context, req *api.CancelReq) (resp *baseApi
 	if err != nil {
 		return
 	}
-	return &baseApi.NilRes{}, err
+	return baseApi.NewNilResp(), nil
 }
 
 func (c cSession) Close(ctx context.Context, req *api.CloseReq) (resp *baseApi.NilRes, err error) {
-	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
-		Id:         id,
+		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id"),
 	})
 	if err != nil {
 		return
@@ -123,13 +121,12 @@ func (c cSession) Close(ctx context.Context, req *api.CloseReq) (resp *baseApi.N
 		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "该会话已关闭")
 	}
 	service.ChatSession().Close(ctx, session, false, true)
-	return &baseApi.NilRes{}, nil
+	return baseApi.NewNilResp(), nil
 }
 
 func (c cSession) Detail(ctx context.Context, req *api.DetailReq) (res *api.DetailRes, err error) {
-	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
-		Id:         id,
+		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id"),
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	})
 	if err != nil {

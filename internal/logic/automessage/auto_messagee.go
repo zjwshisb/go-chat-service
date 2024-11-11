@@ -2,68 +2,29 @@ package automessage
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"gf-chat/api/v1/backend/automessage"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
+	"gf-chat/internal/trait"
 )
 
 func init() {
-	service.RegisterAutoMessage(&sAutoMessage{})
+	service.RegisterAutoMessage(&sAutoMessage{
+		Curd: trait.Curd[model.CustomerChatAutoMessage]{
+			Dao: dao.CustomerChatAutoMessages,
+		},
+	})
 }
 
 type sAutoMessage struct {
+	trait.Curd[model.CustomerChatAutoMessage]
 }
 
-func (s *sAutoMessage) First(ctx context.Context, w any) (msg *entity.CustomerChatAutoMessages, err error) {
-	err = dao.CustomerChatAutoMessages.Ctx(ctx).Where(w).Scan(&msg)
-	if err != nil {
-		return
-	}
-	if msg == nil {
-		err = sql.ErrNoRows
-	}
-	return
-}
-func (s *sAutoMessage) Paginate(ctx context.Context, w *do.CustomerChatAutoMessages, p model.QueryInput) (items []*entity.CustomerChatAutoMessages, total int) {
-	query := dao.CustomerChatAutoMessages.Ctx(ctx)
-	if w != nil {
-		query = query.Where(w)
-	}
-	// if p.WithTotal {
-	// 	total, _ = query.Clone().Count()
-	// 	if total == 0 {
-	// 		return
-	// 	}
-	// }
-	err := query.Page(p.GetPage(), p.GetSize()).Scan(&items)
-	if err == sql.ErrNoRows {
-		return
-	}
-	if total == 0 {
-		total = len(items)
-	}
-	return
-}
-
-func (s *sAutoMessage) All(ctx context.Context, w do.CustomerChatAutoMessages) (items []*entity.CustomerChatAutoMessages, err error) {
-	err = dao.CustomerChatAutoMessages.Ctx(ctx).Where(w).Scan(&items)
-	if items == nil {
-		err = sql.ErrNoRows
-	}
-	if err != nil {
-		items = make([]*entity.CustomerChatAutoMessages, 0)
-	}
-	return
-
-}
-
-func (s *sAutoMessage) EntityToListItem(i entity.CustomerChatAutoMessages) model.AutoMessageListItem {
+func (s *sAutoMessage) EntityToListItem(i *model.CustomerChatAutoMessage) model.AutoMessageListItem {
 	l := model.AutoMessageListItem{
 		Id:         i.Id,
 		Name:       i.Name,
@@ -86,7 +47,7 @@ func (s *sAutoMessage) EntityToListItem(i entity.CustomerChatAutoMessages) model
 	return l
 }
 
-func (s *sAutoMessage) Update(ctx context.Context, message *entity.CustomerChatAutoMessages, req *automessage.UpdateReq) (count int64, err error) {
+func (s *sAutoMessage) UpdateOne(ctx context.Context, message *model.CustomerChatAutoMessage, req *automessage.UpdateReq) (count int64, err error) {
 	message.Name = req.Name
 	switch message.Type {
 	case consts.MessageTypeNavigate:
@@ -107,7 +68,7 @@ func (s *sAutoMessage) Update(ctx context.Context, message *entity.CustomerChatA
 	return result.RowsAffected()
 }
 
-func (s *sAutoMessage) Save(ctx context.Context, req *automessage.StoreReq) (id int64, err error) {
+func (s *sAutoMessage) SaveOne(ctx context.Context, req *automessage.StoreReq) (id int64, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	item := entity.CustomerChatAutoMessages{
 		Name:       req.Name,

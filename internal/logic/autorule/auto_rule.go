@@ -27,36 +27,6 @@ type sAutoRule struct {
 	trait.Curd[model.CustomerChatAutoRule]
 }
 
-// func (s *sAutoRule) Paginate(ctx context.Context, where *do.CustomerChatAutoRules, p model.QueryInput) (items []*entity.CustomerChatAutoRules, total int) {
-// 	query := dao.CustomerChatAutoRules.Ctx(ctx)
-// 	if where != nil {
-// 		query = query.Where(where)
-// 	}
-// 	if p.WithTotal {
-// 		total, _ = query.Clone().Count()
-// 		if total == 0 {
-// 			return
-// 		}
-// 		query = query.Page(p.GetPage(), p.GetSize())
-// 	}
-// 	err := query.Page(p.GetPage(), p.GetSize()).Unscoped().Scan(&items)
-// 	if err == sql.ErrNoRows {
-// 		return
-// 	}
-// 	return
-// }
-
-// func (s *sAutoRule) First(ctx context.Context, w do.CustomerChatAutoRules) (rule *entity.CustomerChatAutoRules, err error) {
-// 	err = dao.CustomerChatAutoRules.Ctx(ctx).Where(w).Scan(&rule)
-// 	if err != nil {
-// 		return
-// 	}
-// 	if rule == nil {
-// 		err = sql.ErrNoRows
-// 	}
-// 	return
-// }
-
 func (s *sAutoRule) GetActiveByCustomer(customerId uint) (items []*model.CustomerChatAutoRule) {
 	dao.CustomerChatAutoRules.Ctx(gctx.New()).Where(
 		do.CustomerChatAutoRules{

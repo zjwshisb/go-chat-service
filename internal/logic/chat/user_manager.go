@@ -86,7 +86,7 @@ func (s *userManager) handleMessage(payload *chatConnMessage) {
 	conn := payload.Conn
 	msg.Source = consts.MessageSourceUser
 	msg.UserId = conn.GetUserId()
-	msg.AdminId = service.ChatRelation().GetUserValidAdmin(msg.UserId)
+	msg.AdminId = service.ChatRelation().GetUserValidAdmin(ctx, msg.UserId)
 	service.ChatMessage().Save(ctx, msg)
 	// 发送回执
 	conn.Deliver(service.Action().NewReceiptAction(msg))
@@ -97,7 +97,7 @@ func (s *userManager) handleMessage(payload *chatConnMessage) {
 		if session == nil {
 			return
 		}
-		_ = service.ChatRelation().UpdateUser(msg.AdminId, msg.UserId)
+		_ = service.ChatRelation().UpdateUser(ctx, msg.AdminId, msg.UserId)
 		msg.SessionId = session.Id
 		service.ChatMessage().Save(ctx, msg)
 		s.triggerMessageEvent(consts.AutoRuleSceneAdminOnline, msg, conn.GetUser())
@@ -140,10 +140,11 @@ func (s *userManager) handleMessage(payload *chatConnMessage) {
 
 // 触发进入事件，只有没有对应客服的情况下触发，10分钟内多触发一次
 func (s *userManager) triggerEnterEvent(conn iWsConn) {
-	if service.ChatRelation().GetUserValidAdmin(conn.GetUserId()) > 0 {
+	ctx := gctx.New()
+	if service.ChatRelation().GetUserValidAdmin(ctx, conn.GetUserId()) > 0 {
 		return
 	}
-	ctx := gctx.New()
+
 	cacheKey := fmt.Sprintf("welcome:%d", conn.GetUserId())
 	val, _ := gcache.Get(ctx, cacheKey)
 	if val.String() == "" {

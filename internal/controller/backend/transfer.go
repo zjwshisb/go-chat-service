@@ -17,20 +17,21 @@ var CTransfer = &cTransfer{}
 type cTransfer struct {
 }
 
-func (c cTransfer) Cancel(ctx context.Context, req *api.CancelReq) (*baseApi.NilRes, error) {
+func (c cTransfer) Cancel(ctx context.Context, req *api.CancelReq) (resp *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
-	transfer, _ := service.ChatTransfer().First(do.CustomerChatTransfers{
+	transfer, err := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
 		CustomerId: admin.CustomerId,
 		CanceledAt: nil,
 		AcceptedAt: nil,
 	})
-	if transfer != nil {
-		service.ChatTransfer().Cancel(transfer)
+	if err != nil {
+		return
 	}
+	service.ChatTransfer().Cancel(transfer)
 	return &baseApi.NilRes{}, nil
 }
 
-func (c cTransfer) Index(ctx context.Context, req *api.ListReq) (res *api.ListRes, err error) {
+func (c cTransfer) Index(ctx context.Context, req *api.ListReq) (res *baseApi.ListRes[model.ChatTransfer], err error) {
 	customerId := service.AdminCtx().GetCustomerId(ctx)
 	w := do.CustomerChatTransfers{
 		CustomerId: customerId,
@@ -74,16 +75,15 @@ func (c cTransfer) Index(ctx context.Context, req *api.ListReq) (res *api.ListRe
 		})
 		w.FromAdminId = adminIds
 	}
-	transfers, total := service.ChatTransfer().Paginate(ctx, &w, model.QueryInput{
+	p, err := service.ChatTransfer().Paginate(ctx, &w, model.QueryInput{
 		Size: req.PageSize,
 		Page: req.Current,
+	}, nil, nil)
+	if err != nil {
+		return
+	}
+	items := slice.Map(p.Items, func(index int, item model.CustomerChatTransfer) model.ChatTransfer {
+		return service.ChatTransfer().ToChatTransfer(&item)
 	})
-	items := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) model.ChatTransfer {
-		return service.ChatTransfer().ToChatTransfer(item)
-	})
-	return &api.ListRes{
-		Total: total,
-		Items: items,
-	}, nil
-
+	return baseApi.NewListResp(items, p.Total), nil
 }

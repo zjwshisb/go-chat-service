@@ -100,7 +100,7 @@ func (m *adminManager) handleMessage(payload *chatConnMessage) {
 	conn := payload.Conn
 	ctx := gctx.New()
 	if msg.UserId > 0 {
-		if !service.ChatRelation().IsUserValid(conn.GetUserId(), msg.UserId) {
+		if !service.ChatRelation().IsUserValid(gctx.New(), conn.GetUserId(), msg.UserId) {
 			conn.Deliver(service.Action().NewErrorMessage("该用户已失效，无法发送消息"))
 			return
 		}
@@ -114,7 +114,7 @@ func (m *adminManager) handleMessage(payload *chatConnMessage) {
 		msg.ReceivedAt = gtime.New()
 		msg.SessionId = session.Id
 		_ = service.ChatMessage().SaveWithUpdate(ctx, msg)
-		_ = service.ChatRelation().UpdateUser(msg.AdminId, msg.UserId)
+		_ = service.ChatRelation().UpdateUser(gctx.New(), msg.AdminId, msg.UserId)
 		// 服务器回执d
 		conn.Deliver(service.Action().NewReceiptAction(msg))
 		userM.DeliveryMessage(msg)
@@ -207,7 +207,7 @@ func (m *adminManager) broadcastLocalOnlineAdmins(customerId uint) {
 			Username:      c.Username,
 			Online:        online,
 			Id:            c.Id,
-			AcceptedCount: service.ChatRelation().GetActiveCount(c.Id),
+			AcceptedCount: service.ChatRelation().GetActiveCount(gctx.New(), c.Id),
 			Platform:      platform,
 		})
 	}
@@ -228,7 +228,7 @@ func (m *adminManager) noticeUserOffline(user contract.IChatUser) {
 }
 
 func (m *adminManager) noticeLocalUserOffline(uid uint) {
-	adminId := service.ChatRelation().GetUserValidAdmin(uid)
+	adminId := service.ChatRelation().GetUserValidAdmin(gctx.New(), uid)
 	admin, _ := service.Admin().First(gctx.New(), do.CustomerAdmins{Id: adminId})
 	if admin != nil {
 		conn, exist := m.GetConn(admin.CustomerId, admin.Id)
@@ -243,7 +243,7 @@ func (m *adminManager) noticeUserOnline(conn iWsConn) {
 }
 
 func (m *adminManager) noticeLocalUserOnline(uid uint, platform string) {
-	adminId := service.ChatRelation().GetUserValidAdmin(uid)
+	adminId := service.ChatRelation().GetUserValidAdmin(gctx.New(), uid)
 	admin, _ := service.Admin().First(gctx.New(), do.CustomerAdmins{Id: adminId})
 	if admin != nil {
 		conn, exist := m.GetConn(admin.CustomerId, admin.Id)
@@ -272,16 +272,16 @@ func (m *adminManager) noticeUserTransfer(customerId, adminId uint) {
 func (m *adminManager) noticeLocalUserTransfer(customerId, adminId uint) {
 	client, exist := m.GetConn(customerId, adminId)
 	if exist {
-		transfers := service.ChatTransfer().All(do.CustomerChatTransfers{
+		transfers, _ := service.ChatTransfer().All(gctx.New(), do.CustomerChatTransfers{
 			ToAdminId:  adminId,
 			AcceptedAt: nil,
 			CanceledAt: nil,
-		}, model.CustomerChatTransfer{}.FormAdmin,
+		}, g.Slice{model.CustomerChatTransfer{}.FormAdmin,
 			model.CustomerChatTransfer{}.ToAdmin,
 			model.CustomerChatTransfer{}.FormAdmin,
 			model.CustomerChatTransfer{}.ToSession,
 			model.CustomerChatTransfer{}.User,
-		)
+		}, nil)
 		data := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) model.ChatTransfer {
 			return service.ChatTransfer().ToChatTransfer(item)
 		})

@@ -46,8 +46,8 @@ func AdminAuth(r *ghttp.Request) {
 		r.Response.WriteStatus(http.StatusUnauthorized)
 		return
 	}
-	err = service.Admin().IsValid(admin)
-	if err != nil {
+	canAccess = service.Admin().CanAccess(admin)
+	if !canAccess {
 		r.Response.WriteStatus(http.StatusForbidden, g.MapStrStr{
 			"message": err.Error(),
 		})

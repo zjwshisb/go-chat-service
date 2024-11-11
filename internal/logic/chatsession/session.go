@@ -75,10 +75,10 @@ func (s *sChatSession) Close(ctx context.Context, session *model.CustomerChatSes
 		dao.CustomerChatSessions.Ctx(ctx).Save(session)
 	}
 	if isRemoveUser {
-		service.ChatRelation().RemoveUser(session.AdminId, session.UserId)
+		service.ChatRelation().RemoveUser(ctx, session.AdminId, session.UserId)
 	} else {
 		if updateTime {
-			service.ChatRelation().UpdateLimitTime(session.AdminId, session.UserId, 0)
+			service.ChatRelation().UpdateLimitTime(ctx, session.AdminId, session.UserId, 0)
 		}
 	}
 }

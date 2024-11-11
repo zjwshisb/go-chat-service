@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	baseApi "gf-chat/api"
 	"gf-chat/api/v1/backend/user"
-	api "gf-chat/api/v1/backend/user"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
@@ -21,13 +20,13 @@ var CUser = &cUser{}
 type cUser struct {
 }
 
-func (c *cUser) Index(ctx context.Context, req *user.InfoReq) (res *user.InfoRes, err error) {
+func (c *cUser) Index(ctx context.Context, req *user.InfoReq) (res *baseApi.NormalRes[user.InfoRes], err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
-	res = &user.InfoRes{
+	res = baseApi.NewResp(user.InfoRes{
 		Id:         admin.Id,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Username:   admin.Username,
-	}
+	})
 	return
 }
 
@@ -71,7 +70,7 @@ func (c *cUser) GetSetting(ctx context.Context, req *user.SettingReq) (res *user
 	}, nil
 }
 
-func (user *cUser) Login(ctx context.Context, r *user.LoginReq) (res *user.LoginRes, err error) {
+func (c *cUser) Login(ctx context.Context, r *user.LoginReq) (res *baseApi.NormalRes[user.LoginRes], err error) {
 	admin, err := service.Admin().First(ctx, do.CustomerAdmins{Username: r.Username})
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -79,14 +78,17 @@ func (user *cUser) Login(ctx context.Context, r *user.LoginReq) (res *user.Login
 		}
 		return
 	}
-	err = service.Admin().IsValid(admin)
-	if err != nil {
-		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, err.Error())
-	}
 	err = bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(r.Password))
 	if err != nil {
 		return nil, gerror.NewCode(gcode.CodeValidationFailed, "账号或密码错误")
 	}
+	canAccess := service.Admin().CanAccess(admin)
+	if !canAccess {
+		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, err.Error())
+	}
+
 	token, _ := service.Jwt().CreateToken(gconv.String(admin.Id), "")
-	return &api.LoginRes{Token: token}, nil
+	return baseApi.NewResp(user.LoginRes{
+		Token: token,
+	}), nil
 }
