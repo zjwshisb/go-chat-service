@@ -253,13 +253,12 @@ func (s sChat) Transfer(fromAdmin *model.CustomerAdmin, toId uint, userId uint, 
 	if err == sql.ErrNoRows {
 		return gerror.NewCode(gcode.CodeNotFound)
 	}
-	var toAdmin *model.CustomerAdmin
-	err = dao.CustomerAdmins.Ctx(ctx).Where("customer_id", fromAdmin.CustomerId).
-		Where("id", toId).
-		Where("is_chat", 1).
-		Scan(&toAdmin)
-	if toAdmin == nil {
-		return gerror.NewCode(gcode.CodeNotFound)
+	_, err = service.Admin().First(ctx, do.CustomerAdmins{
+		CustomerId: fromAdmin.CustomerId,
+		Id:         toId,
+	})
+	if err != nil {
+		return err
 	}
 	isValid := service.ChatRelation().IsUserValid(ctx, fromAdmin.Id, user.Id)
 	if !isValid {

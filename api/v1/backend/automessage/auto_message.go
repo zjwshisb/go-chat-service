@@ -36,6 +36,10 @@ type DeleteReq struct {
 	g.Meta `path:"/auto-messages/:id" tags:"后台快捷回复" method:"delete" summary:"删除快捷回复"`
 }
 
+type OptionReq struct {
+	g.Meta `path:"/options/auto-messages" tags:"后台快捷回复" method:"get" summary:"获取快捷回复选项"`
+}
+
 type ListRes struct {
 	Total int                         `json:"total"`
 	Items []model.AutoMessageListItem `json:"items"`

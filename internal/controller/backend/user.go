@@ -50,7 +50,7 @@ func (c *cUser) UpdateSetting(ctx context.Context, req *user.UpdateSettingReq) (
 	return &baseApi.NilRes{}, nil
 }
 
-func (c *cUser) GetSetting(ctx context.Context, req *user.SettingReq) (res *user.SettingRes, err error) {
+func (c *cUser) GetSetting(ctx context.Context, req *user.SettingReq) (res *baseApi.NormalRes[user.SettingRes], err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	setting, err := service.Admin().GetSetting(ctx, service.AdminCtx().GetAdmin(ctx))
 	if err != nil {
@@ -60,14 +60,14 @@ func (c *cUser) GetSetting(ctx context.Context, req *user.SettingReq) (res *user
 	if avatar == nil {
 		avatar = service.ChatSetting().DefaultAvatarForm(admin.CustomerId)
 	}
-	return &user.SettingRes{
+	return baseApi.NewResp(user.SettingRes{
 		Background:     service.Qiniu().Form(setting.Background),
 		IsAutoAccept:   setting.IsAutoAccept == 1,
 		WelcomeContent: setting.WelcomeContent,
 		OfflineContent: setting.OfflineContent,
 		Name:           setting.Name,
 		Avatar:         avatar,
-	}, nil
+	}), nil
 }
 
 func (c *cUser) Login(ctx context.Context, r *user.LoginReq) (res *baseApi.NormalRes[user.LoginRes], err error) {
@@ -84,7 +84,7 @@ func (c *cUser) Login(ctx context.Context, r *user.LoginReq) (res *baseApi.Norma
 	}
 	canAccess := service.Admin().CanAccess(admin)
 	if !canAccess {
-		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, err.Error())
+		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "账号已禁用")
 	}
 
 	token, _ := service.Jwt().CreateToken(gconv.String(admin.Id), "")

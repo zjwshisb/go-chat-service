@@ -7,6 +7,7 @@ import (
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model/do"
 
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/frame/g"
 
 	baseApi "gf-chat/api"
@@ -103,4 +104,20 @@ func (c *cAutoMessage) Delete(ctx context.Context, req *api.DeleteReq) (res *bas
 func (c *cAutoMessage) Store(ctx context.Context, req *api.StoreReq) (res *baseApi.NilRes, err error) {
 	service.AutoMessage().SaveOne(ctx, req)
 	return baseApi.NewNilResp(), nil
+}
+
+func (c *cAutoMessage) Option(ctx context.Context, req *api.OptionReq) (res *baseApi.OptionRes, err error) {
+	items, err := service.AutoMessage().All(ctx, do.CustomerChatAutoMessages{
+		CustomerId: service.AdminCtx().GetCustomerId(ctx),
+	}, nil, nil)
+	if err != nil {
+		return
+	}
+	options := slice.Map(items, func(index int, item *model.CustomerChatAutoMessage) model.Option {
+		return model.Option{
+			Label: item.Name,
+			Value: item.Id,
+		}
+	})
+	return baseApi.NewOptionResp(options), nil
 }

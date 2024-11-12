@@ -7,10 +7,8 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
-	"gf-chat/internal/model/official"
 	"gf-chat/internal/service"
 	"sort"
-	"time"
 
 	"github.com/duke-git/lancet/v2/maputil"
 	"github.com/duke-git/lancet/v2/slice"
@@ -52,28 +50,11 @@ func (m *adminManager) handleReceiveMessage() {
 }
 
 func (m *adminManager) sendWaiting(admin *model.CustomerAdmin, user contract.IChatUser) {
-	offline := official.Offline{
-		First:    "有新的用户咨询待接入",
-		Remark:   "点击卡片查看详情",
-		Keyword1: user.GetUsername(),
-		Keyword3: "网页",
-		Keyword4: time.Now().Format("2006-01-02 15:04:05"),
-	}
-	service.OfficialMsg().Chat(admin, offline)
+
 }
 
-// 发送公众号提醒
 func (m *adminManager) sendOffline(admin *model.CustomerAdmin, msg *model.CustomerChatMessage) {
-	tags := ""
-	offline := official.Offline{
-		First:    "发来了一条信息",
-		Remark:   "点击卡片查看详情",
-		Keyword1: msg.User.Username,
-		Keyword2: tags,
-		Keyword3: "网页",
-		Keyword4: time.Now().Format("2006-01-02 15:04:05"),
-	}
-	service.OfficialMsg().Chat(admin, offline)
+
 }
 
 // 处理离线消息
@@ -193,7 +174,9 @@ func (m *adminManager) broadcastOnlineAdmins(gid uint) {
 func (m *adminManager) broadcastLocalOnlineAdmins(customerId uint) {
 	admins, _ := service.Admin().All(gctx.New(), do.CustomerAdmins{
 		CustomerId: customerId,
-	}, g.Slice{}, "id")
+	}, g.Slice{
+		model.CustomerAdmin{}.Setting,
+	}, nil)
 	data := make([]model.ChatCustomerAdmin, 0, len(admins))
 	for _, c := range admins {
 		conn, online := m.GetConn(customerId, c.Id)
@@ -201,7 +184,7 @@ func (m *adminManager) broadcastLocalOnlineAdmins(customerId uint) {
 		if online {
 			platform = conn.GetPlatform()
 		}
-		avatar, _ := service.Admin().GetAvatar(c)
+		avatar, _ := service.Admin().GetAvatar(gctx.New(), c)
 		data = append(data, model.ChatCustomerAdmin{
 			Avatar:        avatar,
 			Username:      c.Username,
@@ -292,7 +275,6 @@ func (m *adminManager) noticeLocalUserTransfer(customerId, adminId uint) {
 // NoticeUpdateSetting admin修改设置后通知conn 更新admin的设置信息
 func (m *adminManager) noticeUpdateSetting(customerId uint, setting *entity.CustomerAdminChatSettings) {
 	m.updateSetting(customerId, setting)
-
 }
 
 // UpdateSetting 更新设置

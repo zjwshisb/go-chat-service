@@ -76,7 +76,7 @@ func (s *userManager) handleReceiveMessage() {
 
 // 处理离线逻辑
 func (s *userManager) handleOffline(msg *model.CustomerChatMessage) {
-	_ = service.SubscribeMsg().Send(gctx.New(), msg.CustomerId, msg.UserId)
+	// todo
 }
 
 // 处理消息

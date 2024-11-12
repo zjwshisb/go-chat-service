@@ -11,7 +11,6 @@ import (
 	"gf-chat/internal/trait"
 	"strconv"
 
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/golang-module/carbon/v2"
 )
@@ -41,17 +40,37 @@ func (s *sAdmin) GetSetting(ctx context.Context, admin *model.CustomerAdmin) (*e
 		return nil, err
 	}
 	if admin.Setting == nil {
-		err = gerror.New("no setting")
+		setting := &entity.CustomerAdminChatSettings{
+			AdminId:        admin.Id,
+			Name:           admin.Username,
+			IsAutoAccept:   0,
+			WelcomeContent: "",
+			Avatar:         "",
+		}
+		result, err := dao.CustomerAdminChatSettings.Ctx(ctx).Save(*setting)
+		if err != nil {
+			return nil, err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return nil, err
+		}
+		setting.Id = uint(id)
+		admin.Setting = setting
 		return nil, err
 	}
 	return admin.Setting, nil
 }
 
-func (s *sAdmin) GetAvatar(model *model.CustomerAdmin) (string, error) {
-	if model.Setting != nil && model.Setting.Avatar != "" {
+func (s *sAdmin) GetAvatar(ctx context.Context, model *model.CustomerAdmin) (string, error) {
+	setting, err := s.GetSetting(ctx, model)
+	if err != nil {
+		return "", err
+	}
+	if setting.Avatar != "" {
 		return service.Qiniu().Url(model.Setting.Avatar), nil
 	} else {
-		return "", gerror.New("no avatar")
+		return "", nil
 	}
 }
 

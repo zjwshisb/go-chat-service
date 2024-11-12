@@ -15,7 +15,7 @@ var CSystemRule = &cSystemRule{}
 type cSystemRule struct {
 }
 
-func (c cSystemRule) Index(ctx context.Context, req *api.ListReq) (res *api.ListRes, err error) {
+func (c cSystemRule) Index(ctx context.Context, req *api.ListReq) (res *baseApi.NormalRes[api.ListRes], err error) {
 	paginator, err := service.AutoRule().Paginate(ctx, &do.CustomerChatAutoRules{
 		IsSystem:   1,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -34,21 +34,26 @@ func (c cSystemRule) Index(ctx context.Context, req *api.ListReq) (res *api.List
 			Id:        item.Id,
 		})
 	}
-	res = &rr
-	return
+	return baseApi.NewResp(rr), nil
 }
 
 func (c cSystemRule) Update(ctx context.Context, req *api.UpdateReq) (res *baseApi.NilRes, err error) {
-	dao.CustomerChatAutoRules.Ctx(ctx).Where(do.CustomerChatAutoRules{
+	_, err = dao.CustomerChatAutoRules.Ctx(ctx).Where(do.CustomerChatAutoRules{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		IsSystem:   1,
 	}).Data("message_id", 0).Update()
+	if err != nil {
+		return
+	}
 	for sId, newId := range req.Data {
-		dao.CustomerChatAutoRules.Ctx(ctx).Where(do.CustomerChatAutoRules{
+		_, err = dao.CustomerChatAutoRules.Ctx(ctx).Where(do.CustomerChatAutoRules{
 			CustomerId: service.AdminCtx().GetCustomerId(ctx),
 			IsSystem:   1,
 			Id:         sId,
 		}).Data("message_id", newId).Update()
+		if err != nil {
+			return
+		}
 	}
-	return &baseApi.NilRes{}, nil
+	return baseApi.NewNilResp(), nil
 }

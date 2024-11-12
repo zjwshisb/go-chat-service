@@ -15,7 +15,7 @@ type ListRes[T any] struct {
 type NilRes = NormalRes[any]
 
 type OptionRes struct {
-	NormalRes[[]model.Option] `json:"success" dc:"Is Success"`
+	NormalRes[[]model.Option]
 }
 
 type NormalRes[T any] struct {

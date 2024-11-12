@@ -54,10 +54,6 @@ type FormRes struct {
 	Sort      uint     `json:"sort"`
 }
 
-type OptionMessageReq struct {
-	g.Meta `path:"/auto-rules/options/messages" tags:"后台自动回复规则" method:"get" summary:"获取自动回复表单消息选项"`
-}
-
 type ListItem struct {
 	Id         uint                      `json:"id"`
 	Name       string                    `json:"name"`

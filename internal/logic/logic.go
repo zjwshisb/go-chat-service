@@ -18,11 +18,10 @@ import (
 	_ "gf-chat/internal/logic/chatsession"
 	_ "gf-chat/internal/logic/chatsetting"
 	_ "gf-chat/internal/logic/chattransfer"
+	_ "gf-chat/internal/logic/file"
 	_ "gf-chat/internal/logic/jwt"
-	_ "gf-chat/internal/logic/officialmsg"
 	_ "gf-chat/internal/logic/qiniu"
-	_ "gf-chat/internal/logic/sso"
-	_ "gf-chat/internal/logic/subscribemsg"
+	_ "gf-chat/internal/logic/setup"
 	_ "gf-chat/internal/logic/user"
 	_ "gf-chat/internal/logic/userCtx"
 )

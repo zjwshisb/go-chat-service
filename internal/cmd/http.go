@@ -7,7 +7,6 @@ import (
 	"gf-chat/internal/controller/middleware"
 	"gf-chat/internal/cron"
 	_ "gf-chat/internal/rule"
-
 	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -25,7 +24,6 @@ var (
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			s := g.Server()
-			s.SetPort(8080)
 			s.BindHandler("/", func(r *ghttp.Request) {
 				r.Response.WriteStatus(200, "hello word")
 			})
@@ -51,14 +49,15 @@ var (
 									backend.CAdmin,
 									backend.CUser.Index,
 									backend.CUser.UpdateSetting,
+									backend.CUser.GetSetting,
 									backend.CAutoMessage,
 									backend.CImage,
 									backend.CAutoRule,
 									backend.CSystemRule,
-									// backend.CChatSetting,
-									// backend.CTransfer,
-								// backend.CWs,
-								// backend.CChat,
+									backend.CChatSetting,
+									backend.CTransfer,
+									// backend.CWs,
+									// backend.CChat,
 								)
 							})
 						})

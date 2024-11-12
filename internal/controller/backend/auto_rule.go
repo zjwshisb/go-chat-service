@@ -42,22 +42,6 @@ func (c cAutoRule) Delete(ctx context.Context, req *api.DeleteReq) (resp *baseAp
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cAutoRule) Message(ctx context.Context, req *api.OptionMessageReq) (res *baseApi.OptionRes, err error) {
-	items, err := service.AutoMessage().All(ctx, do.CustomerChatAutoMessages{
-		CustomerId: service.AdminCtx().GetCustomerId(ctx),
-	}, nil, nil)
-	if err != nil {
-		return
-	}
-	options := slice.Map(items, func(index int, item *model.CustomerChatAutoMessage) model.Option {
-		return model.Option{
-			Label: item.Name,
-			Value: item.Id,
-		}
-	})
-	return baseApi.NewOptionResp(options), nil
-}
-
 func (c cAutoRule) Form(ctx context.Context, req *api.FormReq) (res *baseApi.NormalRes[api.FormRes], err error) {
 	rule, err := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
 		IsSystem:   0,

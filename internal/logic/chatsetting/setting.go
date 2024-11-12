@@ -19,14 +19,6 @@ func init() {
 type sChatSetting struct {
 }
 
-func (s *sChatSetting) GetSubscribeId(customerId uint) string {
-	setting := s.First(customerId, consts.ChatSettingOfflineTmplId)
-	if setting != nil {
-		return setting.Value
-	}
-	return ""
-}
-
 func (s *sChatSetting) First(customerId uint, name string) *entity.CustomerChatSettings {
 	setting := &entity.CustomerChatSettings{}
 	err := dao.CustomerChatSettings.Ctx(gctx.New()).Where("customer_id", customerId).
@@ -54,14 +46,6 @@ func (s *sChatSetting) GetAvatar(customerId uint) string {
 	setting := s.First(customerId, consts.ChatSettingSystemAvatar)
 	if setting != nil {
 		return service.Qiniu().Url(setting.Value)
-	}
-	return ""
-}
-
-func (s *sChatSetting) GetSmsCode(customerId uint) string {
-	setting := s.First(customerId, consts.ChatSettingOfflineSmsId)
-	if setting != nil {
-		return setting.Value
 	}
 	return ""
 }

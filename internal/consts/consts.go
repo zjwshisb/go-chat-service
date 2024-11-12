@@ -64,8 +64,6 @@ const (
 	ChatSettingMinuteToBreak  = "minute-to-break"
 	ChatSettingSystemName     = "system-name"
 	ChatSettingSystemAvatar   = "system-avatar"
-	ChatSettingOfflineTmplId  = "weapp-offline-tmpl"
-	ChatSettingOfflineSmsId   = "sms-offline-tmpl"
 	ChatSettingShowQueue      = "show-queue"
 	ChatSettingShowRead       = "show-read"
 )

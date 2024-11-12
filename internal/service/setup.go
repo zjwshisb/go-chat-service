@@ -6,27 +6,26 @@
 package service
 
 import (
-	"context"
+	"github.com/gogf/gf/v2/os/gctx"
 )
 
 type (
-	ISso interface {
-		Check(ctx context.Context, sessionId string, uid int) bool
-		Auth(ctx context.Context, ticket string) (uid int, sessionId string, err error)
+	ISetup interface {
+		Setup(ctx gctx.Ctx, customerId uint)
 	}
 )
 
 var (
-	localSso ISso
+	localSetup ISetup
 )
 
-func Sso() ISso {
-	if localSso == nil {
-		panic("implement not found for interface ISso, forgot register?")
+func Setup() ISetup {
+	if localSetup == nil {
+		panic("implement not found for interface ISetup, forgot register?")
 	}
-	return localSso
+	return localSetup
 }
 
-func RegisterSso(i ISso) {
-	localSso = i
+func RegisterSetup(i ISetup) {
+	localSetup = i
 }

@@ -5,12 +5,16 @@ import (
 	_ "gf-chat/internal/cron"
 	_ "gf-chat/internal/logic"
 	_ "gf-chat/internal/packed"
+	"log"
 
 	_ "github.com/gogf/gf/contrib/nosql/redis/v2"
 	"github.com/gogf/gf/v2/os/gctx"
 )
 
 func main() {
-	cmd.Main.AddCommand(cmd.Http, cmd.Init, cmd.Migrate)
+	err := cmd.Main.AddCommand(cmd.Http, cmd.Init, cmd.Migrate)
+	if err != nil {
+		log.Fatal(err)
+	}
 	cmd.Main.Run(gctx.New())
 }

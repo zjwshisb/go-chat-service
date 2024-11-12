@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend/chatsetting"
-	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -14,10 +13,7 @@ import (
 	"gf-chat/internal/service"
 
 	"github.com/duke-git/lancet/v2/slice"
-	"github.com/gogf/gf/v2/errors/gcode"
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/util/gconv"
 )
 
 var CChatSetting = &cChatSetting{}
@@ -33,17 +29,7 @@ func (c *cChatSetting) Index(ctx context.Context, req *api.ListReq) (res *baseAp
 	}).Scan(&items)
 	settings := slice.Map(items, func(index int, i entity.CustomerChatSettings) api.ListItem {
 		var o = make([]model.Option, 0)
-		switch i.Name {
-		case consts.ChatSettingOfflineTmplId:
-			for _, s := range service.SubscribeMsg().GetEntities(customerId) {
-				o = append(o, model.Option{
-					Value: gconv.String(s.Id),
-					Label: s.Title,
-				})
-			}
-		default:
-			_ = json.Unmarshal([]byte(i.Options), &o)
-		}
+		json.Unmarshal([]byte(i.Options), &o)
 		var value any
 		value = i.Value
 		if i.Type == "image" {
@@ -72,22 +58,6 @@ func (c *cChatSetting) Update(ctx context.Context, req *api.UpdateReq) (res *bas
 	}).Scan(setting)
 	if err == sql.ErrNoRows {
 		return nil, err
-	}
-	switch setting.Name {
-	case consts.ChatSettingOfflineTmplId:
-		tmpl := service.SubscribeMsg().First(do.WeappSubscribeMessages{
-			Id:         req.Value,
-			CustomerId: customerId,
-		})
-		if tmpl == nil {
-			return nil, gerror.NewCode(gcode.CodeNotFound)
-		}
-		err = service.SubscribeMsg().CheckChatTmpl(*tmpl)
-		if err != nil {
-			return nil, gerror.NewCode(gcode.CodeValidationFailed, err.Error())
-		}
-	case consts.ChatSettingOfflineSmsId:
-
 	}
 	setting.Value = req.Value
 	dao.CustomerChatSettings.Ctx(ctx).Save(setting)

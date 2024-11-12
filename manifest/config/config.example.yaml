@@ -1,15 +1,13 @@
-qiniu:
-  ak: ""
-  sk: ""
-  url: ""
-  bucket: ""
+storage:
+  default: 'local'
+  qiniu:
+    ak: ""
+    sk: ""
+    url: ""
+    bucket: ""
+  local:
 app:
-  ssoUrl: ""
-  saasUrl: ""
   jwtSecret: ""
-wechat:
-  official:
-    chatTmpl: ""
 server:
   address: ""
   serverRoot: ""

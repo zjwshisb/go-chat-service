@@ -1,8 +1,6 @@
 package model
 
-import (
-	"github.com/gogf/gf/v2/os/gtime"
-)
+import "github.com/gogf/gf/v2/os/gtime"
 
 type AutoMessageListItem struct {
 	Id         uint        `json:"id"`

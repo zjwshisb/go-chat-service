@@ -12,12 +12,10 @@ import (
 
 type (
 	IChatSetting interface {
-		GetSubscribeId(customerId uint) string
 		First(customerId uint, name string) *entity.CustomerChatSettings
 		DefaultAvatarForm(customerId uint) *model.ImageFiled
 		GetName(customerId uint) string
 		GetAvatar(customerId uint) string
-		GetSmsCode(customerId uint) string
 		// GetIsAutoTransferManual 是否自动转接人工客服
 		GetIsAutoTransferManual(customerId uint) bool
 	}
