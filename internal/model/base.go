@@ -28,10 +28,6 @@ func (p *QueryInput) GetPage() int {
 	return p.Page
 }
 
-func (p *QueryInput) GetOffSet() int {
-	return (p.GetPage() - 1) * p.GetSize()
-}
-
 func (p *QueryInput) GetSize() int {
 	if p.Size <= 0 || p.Size >= 200 {
 		p.Size = 20

@@ -1,7 +1,6 @@
 package chat
 
 import (
-	"gf-chat/internal/contract"
 	"gf-chat/internal/model"
 	"github.com/gorilla/websocket"
 )
@@ -13,7 +12,7 @@ type iWsConn interface {
 	Run()
 	Deliver(action *model.ChatAction)
 	GetUserId() uint
-	GetUser() contract.IChatUser
+	GetUser() IChatUser
 	GetUuid() string
 	GetPlatform() string
 	GetCustomerId() uint
@@ -24,13 +23,13 @@ type iWsConn interface {
 type connContainer interface {
 	AddConn(conn iWsConn)
 	GetConn(customerId uint, uid uint) (iWsConn, bool)
-	NoticeRepeatConnect(user contract.IChatUser, newUid string)
+	NoticeRepeatConnect(user IChatUser, newUid string)
 	GetAllConn(customerId uint) []iWsConn
 	GetOnlineTotal(customerId uint) uint
 	ConnExist(customerId uint, uid uint) bool
-	Register(conn *websocket.Conn, user contract.IChatUser, platform string)
+	Register(conn *websocket.Conn, user IChatUser, platform string)
 	Unregister(connect iWsConn)
-	RemoveConn(user contract.IChatUser)
+	RemoveConn(user IChatUser)
 	IsOnline(customerId uint, uid uint) bool
 	IsLocalOnline(customerId uint, uid uint) bool
 	GetOnlineUserIds(gid uint) []uint

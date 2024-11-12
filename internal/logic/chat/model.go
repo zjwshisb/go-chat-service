@@ -1,10 +1,18 @@
 package chat
 
 import (
-	"gf-chat/internal/contract"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/entity"
 )
+
+type IChatUser interface {
+	GetUser() any
+	GetPrimaryKey() uint
+	GetUsername() string
+	GetAvatarUrl() string
+	GetCustomerId() uint
+	AccessTo(user IChatUser) bool
+}
 
 type chatConnMessage struct {
 	Conn iWsConn
@@ -35,7 +43,7 @@ func (u user) GetUsername() string {
 	return u.Entity.Username
 }
 
-func (u user) AccessTo(user contract.IChatUser) bool {
+func (u user) AccessTo(user IChatUser) bool {
 	return true
 }
 
@@ -63,6 +71,6 @@ func (u admin) GetUsername() string {
 	return u.Entity.Username
 }
 
-func (u admin) AccessTo(user contract.IChatUser) bool {
+func (u admin) AccessTo(user IChatUser) bool {
 	return true
 }

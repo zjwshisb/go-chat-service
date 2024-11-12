@@ -3,7 +3,6 @@ package chat
 import (
 	"errors"
 	"gf-chat/internal/consts"
-	"gf-chat/internal/contract"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
@@ -24,7 +23,7 @@ type client struct {
 	Send        chan *model.ChatAction // 发送的消息chan
 	sync.Once
 	Manager  connManager
-	User     contract.IChatUser
+	User     IChatUser
 	Uuid     string
 	Created  int64
 	Limiter  *rate.Limiter
@@ -48,7 +47,7 @@ func (c *client) GetPlatform() string {
 	return c.Platform
 }
 
-func (c *client) GetUser() contract.IChatUser {
+func (c *client) GetUser() IChatUser {
 	return c.User
 }
 
@@ -95,7 +94,7 @@ func (c *client) validate(data map[string]interface{}) error {
 		idStr, ok := reqId.(string)
 		if ok {
 			length := len(idStr)
-			if length <= 0 && length > 20 {
+			if length <= 0 || length > 20 {
 				return errors.New("消息不合法")
 			}
 		} else {
@@ -209,7 +208,7 @@ func (c *client) SendMsg() {
 					case consts.ActionReceiveMessage:
 						msg, ok := act.Data.(*model.CustomerChatMessage)
 						if ok {
-							dao.CustomerChatMessages.Ctx(gctx.New()).WherePri(msg.Id).
+							_, _ = dao.CustomerChatMessages.Ctx(gctx.New()).WherePri(msg.Id).
 								Data("send_at", time.Now().Unix()).Update()
 						}
 					default:

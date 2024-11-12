@@ -2,7 +2,6 @@ package chat
 
 import (
 	"gf-chat/internal/consts"
-	"gf-chat/internal/contract"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -49,7 +48,7 @@ func (m *adminManager) handleReceiveMessage() {
 	}
 }
 
-func (m *adminManager) sendWaiting(admin *model.CustomerAdmin, user contract.IChatUser) {
+func (m *adminManager) sendWaiting(admin *model.CustomerAdmin, user IChatUser) {
 
 }
 
@@ -206,7 +205,7 @@ func (m *adminManager) noticeRate(message *model.CustomerChatMessage) {
 	}
 }
 
-func (m *adminManager) noticeUserOffline(user contract.IChatUser) {
+func (m *adminManager) noticeUserOffline(user IChatUser) {
 	m.noticeLocalUserOffline(user.GetPrimaryKey())
 }
 
@@ -236,12 +235,12 @@ func (m *adminManager) noticeLocalUserOnline(uid uint, platform string) {
 	}
 }
 
-//func (m *adminManager) noticeRepeatConnect(admin contract.IChatUser) {
+//func (m *adminManager) noticeRepeatConnect(admin IChatUser) {
 //	m.noticeLocalRepeatConnect(admin)
 //}
 //
 //
-//func (m *adminManager) noticeLocalRepeatConnect(admin contract.IChatUser) {
+//func (m *adminManager) noticeLocalRepeatConnect(admin IChatUser) {
 //	conn, exist := m.GetConn(admin.GetCustomerId(), admin.GetPrimaryKey())
 //	if exist && conn.GetUuid() != m.GetUserUuid(admin) {
 //		m.SendAction(NewOtherLogin(), conn)

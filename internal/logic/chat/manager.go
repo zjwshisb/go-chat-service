@@ -1,7 +1,6 @@
 package chat
 
 import (
-	"gf-chat/internal/contract"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
 	"sync"
@@ -86,11 +85,11 @@ func (m *manager) ReceiveMessage(cm *chatConnMessage) {
 }
 
 // NoticeRepeatConnect 重复链接
-func (m *manager) NoticeRepeatConnect(user contract.IChatUser, newUuid string) {
+func (m *manager) NoticeRepeatConnect(user IChatUser, newUuid string) {
 	m.NoticeLocalRepeatConnect(user, newUuid)
 }
 
-func (m *manager) NoticeLocalRepeatConnect(user contract.IChatUser, newUuid string) {
+func (m *manager) NoticeLocalRepeatConnect(user IChatUser, newUuid string) {
 	oldConn, ok := m.GetConn(user.GetCustomerId(), user.GetPrimaryKey())
 	if ok && oldConn.GetUuid() != newUuid {
 		m.SendAction(service.Action().NewMoreThanOne(), oldConn)
@@ -161,7 +160,7 @@ func (m *manager) AddConn(conn iWsConn) {
 }
 
 // RemoveConn 移除客户端
-func (m *manager) RemoveConn(user contract.IChatUser) {
+func (m *manager) RemoveConn(user IChatUser) {
 	s := m.getSpread(user.GetCustomerId())
 	s.remove(user.GetPrimaryKey())
 }
@@ -205,7 +204,7 @@ func (m *manager) Unregister(conn iWsConn) {
 // Register 客户端注册
 // 先处理是否重复连接
 // 集群模式下，如果不在本机则投递一个消息
-func (m *manager) Register(conn *websocket.Conn, user contract.IChatUser, platform string) {
+func (m *manager) Register(conn *websocket.Conn, user IChatUser, platform string) {
 	client := &client{
 		Conn:        conn,
 		CloseSignal: make(chan interface{}),

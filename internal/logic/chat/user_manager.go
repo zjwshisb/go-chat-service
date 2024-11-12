@@ -3,7 +3,6 @@ package chat
 import (
 	"fmt"
 	"gf-chat/internal/consts"
-	"gf-chat/internal/contract"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
@@ -186,7 +185,7 @@ func (s *userManager) registerHook(conn iWsConn) {
 }
 
 // 加入人工列表
-func (s *userManager) addToManual(user contract.IChatUser) (session *model.CustomerChatSession, err error) {
+func (s *userManager) addToManual(user IChatUser) (session *model.CustomerChatSession, err error) {
 	ctx := gctx.New()
 	if !service.ChatManual().IsIn(user.GetPrimaryKey(), user.GetCustomerId()) {
 		onlineServerCount := adminM.GetOnlineTotal(user.GetCustomerId())
@@ -243,7 +242,7 @@ func (s *userManager) addToManual(user contract.IChatUser) (session *model.Custo
 }
 
 // 触发事件
-func (s *userManager) triggerMessageEvent(scene string, message *model.CustomerChatMessage, user contract.IChatUser) {
+func (s *userManager) triggerMessageEvent(scene string, message *model.CustomerChatMessage, user IChatUser) {
 	rules := service.AutoRule().GetActiveByCustomer(message.CustomerId)
 	ctx := gctx.New()
 	for _, rule := range rules {
@@ -258,12 +257,12 @@ func (s *userManager) triggerMessageEvent(scene string, message *model.CustomerC
 
 					if session != nil {
 						message.SessionId = session.Id
-						service.ChatMessage().Save(ctx, message)
+						_, _ = service.ChatMessage().Save(ctx, message)
 					}
 					adminM.broadcastWaitingUser(message.CustomerId)
 					s.BroadcastQueueLocation(message.CustomerId)
 					adminM.broadcastWaitingUser(user.GetCustomerId())
-					service.AutoRule().Increment(rule)
+					_ = service.AutoRule().Increment(rule)
 					return
 				}
 
@@ -275,12 +274,12 @@ func (s *userManager) triggerMessageEvent(scene string, message *model.CustomerC
 					if err == nil {
 						msg.UserId = message.UserId
 						msg.SessionId = message.SessionId
-						service.ChatMessage().Save(ctx, msg)
+						_, _ = service.ChatMessage().Save(ctx, msg)
 						conn, exist := s.GetConn(user.GetCustomerId(), user.GetPrimaryKey())
 						if exist {
 							s.SendAction(service.Action().NewReceiveAction(msg), conn)
 						}
-						service.AutoRule().Increment(rule)
+						_ = service.AutoRule().Increment(rule)
 					}
 
 					return
