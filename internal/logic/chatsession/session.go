@@ -22,7 +22,7 @@ func init() {
 func new() *sChatSession {
 	return &sChatSession{
 		trait.Curd[model.CustomerChatSession]{
-			Dao: dao.CustomerChatSessions,
+			Dao: &dao.CustomerChatSessions,
 		},
 	}
 }

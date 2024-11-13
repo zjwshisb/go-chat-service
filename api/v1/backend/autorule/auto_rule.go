@@ -1,8 +1,7 @@
 package autorule
 
 import (
-	"gf-chat/internal/model"
-
+	api "gf-chat/api/v1/backend/automessage"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
@@ -55,21 +54,21 @@ type FormRes struct {
 }
 
 type ListItem struct {
-	Id         uint                      `json:"id"`
-	Name       string                    `json:"name"`
-	Match      string                    `json:"match"`
-	MatchType  string                    `json:"match_type"`
-	ReplyType  string                    `json:"reply_type"`
-	MessageId  uint                      `json:"message_id"`
-	Key        string                    `gorm:"key" json:"key"`
-	Sort       uint                      `json:"sort"`
-	IsOpen     bool                      `json:"is_open"`
-	Count      uint                      `json:"count"`
-	CreatedAt  *gtime.Time               `json:"created_at"`
-	UpdatedAt  *gtime.Time               `json:"updated_at"`
-	EventLabel string                    `json:"event_label"`
-	Scenes     []string                  `json:"scenes"`
-	Message    model.AutoMessageListItem `json:"message"`
+	Id         uint         `json:"id"`
+	Name       string       `json:"name"`
+	Match      string       `json:"match"`
+	MatchType  string       `json:"match_type"`
+	ReplyType  string       `json:"reply_type"`
+	MessageId  uint         `json:"message_id"`
+	Key        string       `gorm:"key" json:"key"`
+	Sort       uint         `json:"sort"`
+	IsOpen     bool         `json:"is_open"`
+	Count      uint         `json:"count"`
+	CreatedAt  *gtime.Time  `json:"created_at"`
+	UpdatedAt  *gtime.Time  `json:"updated_at"`
+	EventLabel string       `json:"event_label"`
+	Scenes     []string     `json:"scenes"`
+	Message    api.ListItem `json:"message"`
 }
 
 type ListRes struct {

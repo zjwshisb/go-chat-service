@@ -18,7 +18,7 @@ import (
 func init() {
 	service.RegisterAutoRule(&sAutoRule{
 		Curd: trait.Curd[model.CustomerChatAutoRule]{
-			Dao: dao.CustomerChatAutoRules,
+			Dao: &dao.CustomerChatAutoRules,
 		},
 	})
 }

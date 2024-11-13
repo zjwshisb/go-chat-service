@@ -67,3 +67,8 @@ const (
 	ChatSettingShowQueue      = "show-queue"
 	ChatSettingShowRead       = "show-read"
 )
+
+const (
+	StorageQiniu = "qiniu"
+	StorageLocal = "local"
+)

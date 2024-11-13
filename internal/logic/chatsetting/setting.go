@@ -32,7 +32,7 @@ func (s *sChatSetting) First(customerId uint, name string) *entity.CustomerChatS
 func (s *sChatSetting) DefaultAvatarForm(customerId uint) *model.ImageFiled {
 	setting := s.First(customerId, consts.ChatSettingSystemAvatar)
 	if setting != nil {
-		return service.Qiniu().Form(setting.Value)
+		//return service.Qiniu().Form(setting.Value)
 	}
 	return nil
 }
@@ -45,7 +45,7 @@ func (s *sChatSetting) GetName(customerId uint) string {
 func (s *sChatSetting) GetAvatar(customerId uint) string {
 	setting := s.First(customerId, consts.ChatSettingSystemAvatar)
 	if setting != nil {
-		return service.Qiniu().Url(setting.Value)
+		//return service.Qiniu().Url(setting.Value)
 	}
 	return ""
 }

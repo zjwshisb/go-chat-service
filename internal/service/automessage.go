@@ -11,7 +11,6 @@ import (
 type (
 	IAutoMessage interface {
 		trait.ICurd[model.CustomerChatAutoMessage]
-		EntityToListItem(i *model.CustomerChatAutoMessage) model.AutoMessageListItem
 		UpdateOne(ctx context.Context, message *model.CustomerChatAutoMessage, req *automessage.UpdateReq) (count int64, err error)
 		SaveOne(ctx context.Context, req *automessage.StoreReq) (id int64, err error)
 		ToChatMessage(auto *entity.CustomerChatAutoMessages) (msg *model.CustomerChatMessage, err error)

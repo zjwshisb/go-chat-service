@@ -1,7 +1,7 @@
 package automessage
 
 import (
-	"gf-chat/internal/model"
+	"github.com/gogf/gf/v2/os/gtime"
 
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -40,9 +40,16 @@ type OptionReq struct {
 	g.Meta `path:"/options/auto-messages" tags:"后台快捷回复" method:"get" summary:"获取快捷回复选项"`
 }
 
-type ListRes struct {
-	Total int                         `json:"total"`
-	Items []model.AutoMessageListItem `json:"items"`
+type ListItem struct {
+	Id         uint        `json:"id"`
+	Name       string      `json:"name"`
+	Type       string      `json:"type"`
+	Content    string      `json:"content"`
+	Url        string      `json:"url"`
+	Title      string      `json:"title"`
+	CreatedAt  *gtime.Time `json:"created_at"`
+	UpdatedAt  *gtime.Time `json:"updated_at"`
+	RulesCount uint        `json:"rules_count"`
 }
 
 type FormRes struct {

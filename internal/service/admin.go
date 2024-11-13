@@ -15,7 +15,6 @@ type (
 		GetSetting(ctx g.Ctx, admin *model.CustomerAdmin) (*entity.CustomerAdminChatSettings, error)
 		GetAvatar(ctx g.Ctx, model *model.CustomerAdmin) (string, error)
 		GetChatName(ctx g.Ctx, model *model.CustomerAdmin) (string, error)
-		GetDetail(ctx g.Ctx, id any, month string) ([]*model.ChartLine, *model.AdminDetailInfo, error)
 	}
 )
 

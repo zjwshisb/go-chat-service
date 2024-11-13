@@ -185,11 +185,11 @@ func (c cAutoRule) Index(ctx context.Context, req *api.ListReq) (res *baseApi.Li
 			Count:     uint(i.Count),
 		}
 		if i.MessageId != 0 {
-			m, exit := slice.Find(messages, func(index int, item *model.CustomerChatAutoMessage) bool {
+			_, exit := slice.Find(messages, func(index int, item *model.CustomerChatAutoMessage) bool {
 				return item.Id == i.MessageId
 			})
 			if exit {
-				items[index].Message = service.AutoMessage().EntityToListItem(*m)
+				//items[index].Message = service.AutoMessage().EntityToListItem(*m)
 			}
 		}
 

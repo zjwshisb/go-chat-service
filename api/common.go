@@ -30,6 +30,13 @@ type FailRes struct {
 	Message string `json:"message" dc:"错误消息"`
 }
 
+type File struct {
+	Id       uint   `json:"id"`
+	Path     uint   `json:"path"`
+	Url      string `json:"url"`
+	ThumbUrl string `json:"thumb_url"`
+}
+
 type ImageReq struct {
 	g.Meta `path:"/images" tags:"后台图片上传" mine:"multipart/form-data" method:"post" summary:"上传图片"`
 	Path   string            `json:"path" p:"path" v:"required" dc:"文件存储路径"`

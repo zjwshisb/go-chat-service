@@ -20,7 +20,7 @@ import (
 func init() {
 	service.RegisterChatMessage(&sChatMessage{
 		Curd: trait.Curd[model.CustomerChatMessage]{
-			Dao: dao.CustomerChatMessages,
+			Dao: &dao.CustomerChatMessages,
 		},
 	})
 }
@@ -99,7 +99,7 @@ func (s *sChatMessage) GetAvatar(model model.CustomerChatMessage) string {
 		if model.Admin != nil &&
 			model.Admin.Setting != nil &&
 			model.Admin.Setting.Avatar != "" {
-			return service.Qiniu().Url(model.Admin.Setting.Avatar)
+			//return service.Qiniu().Url(model.Admin.Setting.Avatar)
 		} else {
 			return service.ChatSetting().GetAvatar(model.CustomerId)
 		}

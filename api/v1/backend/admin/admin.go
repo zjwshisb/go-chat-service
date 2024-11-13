@@ -1,8 +1,6 @@
 package admin
 
 import (
-	"gf-chat/internal/model"
-
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
@@ -13,8 +11,6 @@ type DetailReq struct {
 }
 
 type DetailRes struct {
-	Chart []*model.ChartLine     `json:"chart"`
-	Admin *model.AdminDetailInfo `json:"admin"`
 }
 
 type ListReq struct {

@@ -34,8 +34,3 @@ func (p *QueryInput) GetSize() int {
 	}
 	return p.Size
 }
-
-type SaveFileOutput struct {
-	Url  string
-	Path string
-}

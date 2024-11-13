@@ -22,7 +22,7 @@ var CAutoMessage = &cAutoMessage{}
 type cAutoMessage struct {
 }
 
-func (c *cAutoMessage) Index(ctx context.Context, req *api.ListReq) (res *baseApi.ListRes[model.AutoMessageListItem], err error) {
+func (c *cAutoMessage) Index(ctx context.Context, req *api.ListReq) (res *baseApi.ListRes[api.ListItem], err error) {
 	w := do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	}
@@ -34,9 +34,28 @@ func (c *cAutoMessage) Index(ctx context.Context, req *api.ListReq) (res *baseAp
 			Page: req.Current,
 			Size: req.PageSize,
 		}, nil, nil)
-	items := make([]model.AutoMessageListItem, len(p.Items))
+	items := make([]api.ListItem, len(p.Items))
 	for index, i := range p.Items {
-		items[index] = service.AutoMessage().EntityToListItem(&i)
+		item := api.ListItem{
+			Id:         i.Id,
+			Name:       i.Name,
+			Type:       i.Type,
+			Content:    i.Content,
+			CreatedAt:  i.CreatedAt,
+			UpdatedAt:  i.UpdatedAt,
+			RulesCount: 0,
+		}
+		if i.Type == consts.MessageTypeImage {
+			//l.Content = service.Qiniu().Url(i.Content)
+		}
+		if i.Type == consts.MessageTypeNavigate {
+			m := make(map[string]string)
+			_ = json.Unmarshal([]byte(i.Content), &m)
+			item.Title = m["title"]
+			item.Content = m["content"]
+			item.Url = m["url"]
+		}
+		items[index] = item
 	}
 	res = baseApi.NewListResp(items, p.Total)
 	return
@@ -63,12 +82,12 @@ func (c *cAutoMessage) Form(ctx context.Context, req *api.FormReq) (res *baseApi
 		var data map[string]string
 		e := json.Unmarshal([]byte(message.Content), &data)
 		if e == nil {
-			form.Content = service.Qiniu().Form(data["content"])
+			//form.Content = service.Qiniu().Form(data["content"])
 			form.Url = data["url"]
 			form.Title = data["title"]
 		}
 	case consts.MessageTypeImage:
-		form.Content = service.Qiniu().Form(message.Content)
+		//form.Content = service.Qiniu().Form(message.Content)
 	default:
 		form.Content = message.Content
 	}

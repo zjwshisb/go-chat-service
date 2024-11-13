@@ -20,7 +20,7 @@ import (
 func init() {
 	service.RegisterChatTransfer(&sChatTransfer{
 		Curd: trait.Curd[model.CustomerChatTransfer]{
-			Dao: dao.CustomerChatTransfers,
+			Dao: &dao.CustomerChatTransfers,
 		},
 	})
 }

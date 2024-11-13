@@ -1,8 +1,7 @@
-package file
+package storage
 
 import (
 	"context"
-	"gf-chat/internal/model"
 	"github.com/duke-git/lancet/v2/random"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -11,28 +10,20 @@ import (
 	"github.com/qiniu/go-sdk/v7/storage"
 )
 
-type QiniuAdapter struct {
+type qiniuAdapter struct {
 	ak     string
 	sk     string
 	bucket string
 	url    string
 }
 
-var (
-	qiniu *QiniuAdapter
-)
-
-func init() {
-	qiniu = newQiniu()
-}
-
-func newQiniu() *QiniuAdapter {
+func newQiniu() *qiniuAdapter {
 	ctx := gctx.New()
 	ak, _ := g.Cfg().Get(ctx, "storage.qiniu.ak")
 	sk, _ := g.Cfg().Get(ctx, "storage.qiniu.sk")
 	bucket, _ := g.Cfg().Get(ctx, "storage.qiniu.bucket")
 	baseUrl, _ := g.Cfg().Get(ctx, "storage.qiniu.url")
-	return &QiniuAdapter{
+	return &qiniuAdapter{
 		ak:     ak.String(),
 		sk:     sk.String(),
 		bucket: bucket.String(),
@@ -40,7 +31,7 @@ func newQiniu() *QiniuAdapter {
 	}
 }
 
-func (s *QiniuAdapter) Url(path string) string {
+func (s *qiniuAdapter) Url(path string) string {
 	if len(path) >= 1 {
 		first := path[0:1]
 		if first == "/" {
@@ -50,14 +41,12 @@ func (s *QiniuAdapter) Url(path string) string {
 	}
 	return ""
 }
-func (s *QiniuAdapter) Save(ctx context.Context, file *ghttp.UploadFile, relativePath string) (*model.SaveFileOutput, error) {
-	cfg := &storage.Config{}
+func (s *qiniuAdapter) SaveUpload(ctx context.Context, file *ghttp.UploadFile, relativePath string) (string, error) {
+	formUploader := storage.NewFormUploader(&storage.Config{})
 	policy := storage.PutPolicy{
 		Scope: s.bucket,
 	}
-	formUploader := storage.NewFormUploader(cfg)
-	mac := qbox.NewMac(s.ak, s.sk)
-	upToken := policy.UploadToken(mac)
+	upToken := policy.UploadToken(qbox.NewMac(s.ak, s.sk))
 	ret := storage.PutRet{}
 	key := relativePath + "/" + random.RandString(32)
 	f, err := file.Open()
@@ -65,15 +54,13 @@ func (s *QiniuAdapter) Save(ctx context.Context, file *ghttp.UploadFile, relativ
 		_ = f.Close()
 	}()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	err = formUploader.Put(ctx, &ret, upToken, key,
 		f, file.Size, nil)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return &model.SaveFileOutput{
-		Url:  s.Url(key),
-		Path: key,
-	}, nil
+	return key, nil
+
 }

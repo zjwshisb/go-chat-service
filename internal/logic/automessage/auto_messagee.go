@@ -15,36 +15,13 @@ import (
 func init() {
 	service.RegisterAutoMessage(&sAutoMessage{
 		Curd: trait.Curd[model.CustomerChatAutoMessage]{
-			Dao: dao.CustomerChatAutoMessages,
+			Dao: &dao.CustomerChatAutoMessages,
 		},
 	})
 }
 
 type sAutoMessage struct {
 	trait.Curd[model.CustomerChatAutoMessage]
-}
-
-func (s *sAutoMessage) EntityToListItem(i *model.CustomerChatAutoMessage) model.AutoMessageListItem {
-	l := model.AutoMessageListItem{
-		Id:         i.Id,
-		Name:       i.Name,
-		Type:       i.Type,
-		Content:    i.Content,
-		CreatedAt:  i.CreatedAt,
-		UpdatedAt:  i.UpdatedAt,
-		RulesCount: 0,
-	}
-	if i.Type == consts.MessageTypeImage {
-		l.Content = service.Qiniu().Url(i.Content)
-	}
-	if i.Type == consts.MessageTypeNavigate {
-		m := make(map[string]string)
-		_ = json.Unmarshal([]byte(i.Content), &m)
-		l.Title = m["title"]
-		l.Content = service.Qiniu().Url(m["content"])
-		l.Url = m["url"]
-	}
-	return l
 }
 
 func (s *sAutoMessage) UpdateOne(ctx context.Context, message *model.CustomerChatAutoMessage, req *automessage.UpdateReq) (count int64, err error) {
@@ -97,7 +74,7 @@ func (s *sAutoMessage) SaveOne(ctx context.Context, req *automessage.StoreReq) (
 func (s *sAutoMessage) ToChatMessage(auto *entity.CustomerChatAutoMessages) (msg *model.CustomerChatMessage, err error) {
 	content := auto.Content
 	if auto.Type == consts.MessageTypeImage {
-		content = service.Qiniu().Url(content)
+		//content = service.Qiniu().Url(content)
 	}
 	if auto.Type == consts.MessageTypeNavigate {
 		m := make(map[string]string)
@@ -105,7 +82,7 @@ func (s *sAutoMessage) ToChatMessage(auto *entity.CustomerChatAutoMessages) (msg
 		if err != nil {
 			return
 		}
-		m["content"] = service.Qiniu().Url(m["content"])
+		//m["content"] = service.Qiniu().Url(m["content"])
 		newT, err := json.Marshal(m)
 		if err != nil {
 			return nil, err

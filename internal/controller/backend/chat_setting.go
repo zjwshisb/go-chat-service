@@ -33,7 +33,7 @@ func (c *cChatSetting) Index(ctx context.Context, req *api.ListReq) (res *baseAp
 		var value any
 		value = i.Value
 		if i.Type == "image" {
-			value = service.Qiniu().Form(i.Value)
+			//value = service.Qiniu().Form(i.Value)
 		}
 		return api.ListItem{
 			Id:          i.Id,

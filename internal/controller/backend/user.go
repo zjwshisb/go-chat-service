@@ -56,12 +56,12 @@ func (c *cUser) GetSetting(ctx context.Context, req *user.SettingReq) (res *base
 	if err != nil {
 		return nil, err
 	}
-	avatar := service.Qiniu().Form(setting.Avatar)
-	if avatar == nil {
-		avatar = service.ChatSetting().DefaultAvatarForm(admin.CustomerId)
-	}
+	//avatar := service.Qiniu().Form(setting.Avatar)
+	//if avatar == nil {
+	avatar := service.ChatSetting().DefaultAvatarForm(admin.CustomerId)
+	//}
 	return baseApi.NewResp(user.SettingRes{
-		Background:     service.Qiniu().Form(setting.Background),
+		//Background:     service.Qiniu().Form(setting.Background),
 		IsAutoAccept:   setting.IsAutoAccept == 1,
 		WelcomeContent: setting.WelcomeContent,
 		OfflineContent: setting.OfflineContent,
