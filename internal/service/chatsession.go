@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
 	"gf-chat/internal/trait"
 )
@@ -12,7 +13,7 @@ type (
 		Cancel(ctx context.Context, session *model.CustomerChatSession) error
 		// Close 关闭会话
 		Close(ctx context.Context, session *model.CustomerChatSession, isRemoveUser bool, updateTime bool)
-		RelationToChat(session *model.CustomerChatSession) model.ChatSession
+		RelationToChat(session *model.CustomerChatSession) api.ChatSession
 		GetUnAcceptModel(ctx context.Context, customerId uint) (res []*model.CustomerChatSession, err error)
 		ActiveTransferOne(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error)
 		ActiveNormalOne(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error)

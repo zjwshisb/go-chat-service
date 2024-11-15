@@ -3,7 +3,7 @@ package automessage
 import (
 	"context"
 	"encoding/json"
-	"gf-chat/api/v1/backend/automessage"
+	"gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
@@ -24,7 +24,7 @@ type sAutoMessage struct {
 	trait.Curd[model.CustomerChatAutoMessage]
 }
 
-func (s *sAutoMessage) UpdateOne(ctx context.Context, message *model.CustomerChatAutoMessage, req *automessage.UpdateReq) (count int64, err error) {
+func (s *sAutoMessage) UpdateOne(ctx context.Context, message *model.CustomerChatAutoMessage, req *backend.AutoMessageUpdateReq) (count int64, err error) {
 	message.Name = req.Name
 	switch message.Type {
 	case consts.MessageTypeNavigate:
@@ -45,7 +45,7 @@ func (s *sAutoMessage) UpdateOne(ctx context.Context, message *model.CustomerCha
 	return result.RowsAffected()
 }
 
-func (s *sAutoMessage) SaveOne(ctx context.Context, req *automessage.StoreReq) (id int64, err error) {
+func (s *sAutoMessage) SaveOne(ctx context.Context, req *backend.AdminStoreReq) (id int64, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	item := entity.CustomerChatAutoMessages{
 		Name:       req.Name,

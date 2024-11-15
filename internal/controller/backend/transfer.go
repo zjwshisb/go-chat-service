@@ -3,7 +3,7 @@ package backend
 import (
 	"context"
 	baseApi "gf-chat/api"
-	api "gf-chat/api/v1/backend/transfer"
+	chatApi "gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
@@ -17,7 +17,7 @@ var CTransfer = &cTransfer{}
 type cTransfer struct {
 }
 
-func (c cTransfer) Cancel(ctx context.Context, req *api.CancelReq) (resp *baseApi.NilRes, err error) {
+func (c cTransfer) Cancel(ctx context.Context, req *chatApi.TransferCancelReq) (resp *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	transfer, err := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
 		CustomerId: admin.CustomerId,
@@ -31,7 +31,7 @@ func (c cTransfer) Cancel(ctx context.Context, req *api.CancelReq) (resp *baseAp
 	return &baseApi.NilRes{}, nil
 }
 
-func (c cTransfer) Index(ctx context.Context, req *api.ListReq) (res *baseApi.ListRes[model.ChatTransfer], err error) {
+func (c cTransfer) Index(ctx context.Context, req *chatApi.TransferListReq) (res *baseApi.ListRes[chatApi.ChatTransfer], err error) {
 	customerId := service.AdminCtx().GetCustomerId(ctx)
 	w := do.CustomerChatTransfers{
 		CustomerId: customerId,
@@ -82,7 +82,7 @@ func (c cTransfer) Index(ctx context.Context, req *api.ListReq) (res *baseApi.Li
 	if err != nil {
 		return
 	}
-	items := slice.Map(p.Items, func(index int, item model.CustomerChatTransfer) model.ChatTransfer {
+	items := slice.Map(p.Items, func(index int, item model.CustomerChatTransfer) chatApi.ChatTransfer {
 		return service.ChatTransfer().ToChatTransfer(&item)
 	})
 	return baseApi.NewListResp(items, p.Total), nil

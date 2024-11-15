@@ -3,6 +3,7 @@ package chatmessage
 import (
 	"context"
 	"database/sql"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
@@ -72,12 +73,12 @@ func (s *sChatMessage) GetAdminName(model model.CustomerChatMessage) string {
 	}
 	return ""
 }
-func (s *sChatMessage) RelationToChat(message model.CustomerChatMessage) model.ChatMessage {
+func (s *sChatMessage) RelationToChat(message model.CustomerChatMessage) api.ChatMessage {
 	username := ""
 	if message.User != nil {
 		username = message.User.Username
 	}
-	return model.ChatMessage{
+	return api.ChatMessage{
 		Id:         message.Id,
 		UserId:     message.UserId,
 		AdminId:    message.AdminId,

@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	baseApi "gf-chat/api"
-	api "gf-chat/api/v1/backend/chat"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
@@ -27,7 +27,7 @@ var CChat = &cChat{}
 type cChat struct {
 }
 
-func (c cChat) AcceptUser(ctx context.Context, req *api.AcceptReq) (res *baseApi.NormalRes[api.AcceptRes], err error) {
+func (c cChat) AcceptUser(ctx context.Context, req *api.AcceptUserReq) (res *baseApi.NormalRes[api.AcceptRes], err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	user, err := service.Chat().Accept(ctx, *admin, req.Sid)
 	if err != nil {
@@ -40,7 +40,7 @@ func (c cChat) AcceptUser(ctx context.Context, req *api.AcceptReq) (res *baseApi
 	return
 }
 
-func (c cChat) Read(ctx context.Context, req *api.ReadReq) (res *baseApi.NilRes, err error) {
+func (c cChat) Read(ctx context.Context, req *api.MessageReadReq) (res *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	message, err := service.ChatMessage().First(ctx, do.CustomerChatMessages{
 		Id:      req.MsgId,
@@ -74,7 +74,7 @@ func (c cChat) CancelTransfer(ctx context.Context, req *api.CancelTransferReq) (
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cChat) Transfer(ctx context.Context, req *api.TransferReq) (res *baseApi.NilRes, err error) {
+func (c cChat) Transfer(ctx context.Context, req *api.StoreTransferReq) (res *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	err = service.Chat().Transfer(admin, req.ToId, req.UserId, req.Remark)
 	if err != nil {
@@ -83,7 +83,7 @@ func (c cChat) Transfer(ctx context.Context, req *api.TransferReq) (res *baseApi
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cChat) RemoveUser(ctx context.Context, req *api.RemoveReq) (res *baseApi.NilRes, err error) {
+func (c cChat) RemoveUser(ctx context.Context, req *api.RemoveUserReq) (res *baseApi.NilRes, err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	admin := service.AdminCtx().GetAdmin(ctx)
 	session, err := service.ChatSession().ActiveOne(ctx, gconv.Uint(id), admin.Id, nil)
@@ -99,7 +99,7 @@ func (c cChat) RemoveUser(ctx context.Context, req *api.RemoveReq) (res *baseApi
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cChat) RemoveInvalidUser(ctx context.Context, req *api.RemoveAllReq) (res *baseApi.NormalRes[api.RemoveAllRes], err error) {
+func (c cChat) RemoveInvalidUser(ctx context.Context, req *api.RemoveAllUserReq) (res *baseApi.NormalRes[api.RemoveAllUserRes], err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	ids := service.ChatRelation().GetInvalidUsers(ctx, admin.Id)
 	resIds := make([]uint, 0, len(ids))
@@ -114,7 +114,7 @@ func (c cChat) RemoveInvalidUser(ctx context.Context, req *api.RemoveAllReq) (re
 		service.ChatSession().Close(ctx, session, true, false)
 		resIds = append(resIds, id)
 	}
-	res = baseApi.NewResp(api.RemoveAllRes{Ids: resIds})
+	res = baseApi.NewResp(api.RemoveAllUserRes{Ids: resIds})
 	return
 }
 
@@ -179,7 +179,7 @@ func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.Nor
 		count = count + 1
 		user, exist := userMap[id]
 		if exist {
-			cu := model.ChatUser{
+			cu := api.ChatUser{
 				Id:          user.Id,
 				Username:    user.Username,
 				Disabled:    disabled,
@@ -209,7 +209,7 @@ func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.Nor
 	res = baseApi.NewResp(items)
 	return
 }
-func (c cChat) UserInfo(ctx context.Context, req *api.UserInfoReq) (res *baseApi.NormalRes[api.UserInfoRes], err error) {
+func (c cChat) UserInfo(ctx context.Context, req *api.GetUserChatInfoReq) (res *baseApi.NormalRes[api.UserInfoRes], err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	admin := service.AdminCtx().GetAdmin(ctx)
 	user := service.User().First(do.Users{
@@ -225,7 +225,7 @@ func (c cChat) UserInfo(ctx context.Context, req *api.UserInfoReq) (res *baseApi
 	return
 }
 
-func (c cChat) Message(ctx context.Context, req *api.MessageReq) (res *baseApi.NormalRes[api.MessageRes], err error) {
+func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseApi.NormalRes[api.MessageRes], err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	r := api.MessageRes{}
 	models := service.ChatMessage().GetModels(req.Mid, g.Map{
@@ -253,7 +253,7 @@ func (c cChat) ReqId(ctx context.Context, req *api.ReqIdReq) (res *baseApi.Norma
 	return
 }
 
-func (c cChat) Sessions(ctx context.Context, req *api.UserSessionReq) (res *baseApi.NormalRes[api.UserSessionRes], err error) {
+func (c cChat) Sessions(ctx context.Context, req *api.GetUserSessionReq) (res *baseApi.NormalRes[api.UserSessionRes], err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	sessions, err := service.ChatSession().All(ctx, map[string]any{
 		"user_id":     id,

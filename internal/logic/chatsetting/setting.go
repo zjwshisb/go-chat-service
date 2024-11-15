@@ -2,9 +2,9 @@ package chatsetting
 
 import (
 	"database/sql"
+	"gf-chat/api"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
-	"gf-chat/internal/model"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 
@@ -29,7 +29,7 @@ func (s *sChatSetting) First(customerId uint, name string) *entity.CustomerChatS
 	return setting
 }
 
-func (s *sChatSetting) DefaultAvatarForm(customerId uint) *model.ImageFiled {
+func (s *sChatSetting) DefaultAvatarForm(customerId uint) *api.File {
 	setting := s.First(customerId, consts.ChatSettingSystemAvatar)
 	if setting != nil {
 		//return service.Qiniu().Form(setting.Value)

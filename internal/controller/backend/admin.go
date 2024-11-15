@@ -3,13 +3,12 @@ package backend
 import (
 	"context"
 	baseApi "gf-chat/api"
-	adminApi "gf-chat/api/v1/backend/admin"
+	adminApi "gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
 
 	"github.com/duke-git/lancet/v2/slice"
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
@@ -18,7 +17,7 @@ var CAdmin = cAdmin{}
 type cAdmin struct {
 }
 
-func (cAdmin cAdmin) Index(ctx context.Context, req *adminApi.ListReq) (res *baseApi.ListRes[adminApi.ListItem], err error) {
+func (cAdmin cAdmin) Index(ctx context.Context, req *adminApi.AdminListReq) (res *baseApi.ListRes[adminApi.AdminListItem], err error) {
 	p, err := service.Admin().Paginate(ctx, &do.CustomerAdmins{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	}, model.QueryInput{
@@ -28,13 +27,13 @@ func (cAdmin cAdmin) Index(ctx context.Context, req *adminApi.ListReq) (res *bas
 	if err != nil {
 		return
 	}
-	item := slice.Map(p.Items, func(index int, item model.CustomerAdmin) adminApi.ListItem {
+	item := slice.Map(p.Items, func(index int, item model.CustomerAdmin) adminApi.AdminListItem {
 		online := service.Chat().IsOnline(item.CustomerId, item.Id, "admin")
 		var lastOnline *gtime.Time
 		if item.Setting != nil && item.Setting.LastOnline.Year() != 1 {
 			lastOnline = item.Setting.LastOnline
 		}
-		return adminApi.ListItem{
+		return adminApi.AdminListItem{
 			Id:            item.Id,
 			Username:      item.Username,
 			Online:        online,
@@ -46,15 +45,7 @@ func (cAdmin cAdmin) Index(ctx context.Context, req *adminApi.ListReq) (res *bas
 	return
 }
 
-func (cAdmin cAdmin) Show(ctx context.Context, req *adminApi.DetailReq) (res *baseApi.NormalRes[adminApi.DetailRes], err error) {
-	id := g.RequestFromCtx(ctx).GetRouter("id").Val()
-	chart, model, err := service.Admin().GetDetail(ctx, id, req.Month)
-	if err != nil {
-		return
-	}
-	res = baseApi.NewResp(adminApi.DetailRes{
-		Chart: chart,
-		Admin: model,
-	})
+func (cAdmin cAdmin) Show(ctx context.Context, req *adminApi.AdminDetailReq) (res *baseApi.NormalRes[adminApi.AdminDetailRes], err error) {
+
 	return
 }

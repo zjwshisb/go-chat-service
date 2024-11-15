@@ -3,7 +3,7 @@ package backend
 import (
 	"context"
 	baseApi "gf-chat/api"
-	api "gf-chat/api/v1/backend/autorule"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
@@ -25,7 +25,7 @@ var CAutoRule = &cAutoRule{}
 type cAutoRule struct {
 }
 
-func (c cAutoRule) Delete(ctx context.Context, req *api.DeleteReq) (resp *baseApi.NilRes, err error) {
+func (c cAutoRule) Delete(ctx context.Context, req *api.AutoRuleDeleteReq) (resp *baseApi.NilRes, err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	rule, err := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
 		Id:         id,
@@ -42,7 +42,7 @@ func (c cAutoRule) Delete(ctx context.Context, req *api.DeleteReq) (resp *baseAp
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cAutoRule) Form(ctx context.Context, req *api.FormReq) (res *baseApi.NormalRes[api.FormRes], err error) {
+func (c cAutoRule) Form(ctx context.Context, req *api.AutoRuleFormReq) (res *baseApi.NormalRes[api.AutoRuleFormRes], err error) {
 	rule, err := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
 		IsSystem:   0,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -58,7 +58,7 @@ func (c cAutoRule) Form(ctx context.Context, req *api.FormReq) (res *baseApi.Nor
 	sceneStr := slice.Map(scenes, func(index int, item entity.CustomerChatAutoRuleScenes) string {
 		return item.Name
 	})
-	res = baseApi.NewResp(api.FormRes{
+	res = baseApi.NewResp(api.AutoRuleFormRes{
 		IsOpen:    gconv.Bool(rule.IsOpen),
 		Match:     rule.Match,
 		MatchType: rule.MatchType,
@@ -71,7 +71,7 @@ func (c cAutoRule) Form(ctx context.Context, req *api.FormReq) (res *baseApi.Nor
 	return
 }
 
-func (c cAutoRule) Update(ctx context.Context, req *api.UpdateReq) (res *baseApi.NilRes, err error) {
+func (c cAutoRule) Update(ctx context.Context, req *api.AutoRuleUpdateReq) (res *baseApi.NilRes, err error) {
 	rule, err := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
 		IsSystem:   0,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -111,7 +111,7 @@ func (c cAutoRule) Update(ctx context.Context, req *api.UpdateReq) (res *baseApi
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cAutoRule) Store(ctx context.Context, req *api.StoreReq) (res *baseApi.NilRes, err error) {
+func (c cAutoRule) Store(ctx context.Context, req *api.AutoRuleStoreReq) (res *baseApi.NilRes, err error) {
 	err = dao.CustomerChatAutoRules.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		open := 0
 		if req.IsOpen {
@@ -151,7 +151,7 @@ func (c cAutoRule) Store(ctx context.Context, req *api.StoreReq) (res *baseApi.N
 	return baseApi.NewNilResp(), err
 }
 
-func (c cAutoRule) Index(ctx context.Context, req *api.ListReq) (res *baseApi.ListRes[api.ListItem], err error) {
+func (c cAutoRule) Index(ctx context.Context, req *api.AutoRuleListReq) (res *baseApi.ListRes[api.AutoRuleListItem], err error) {
 	paginator, err := service.AutoRule().Paginate(ctx, &do.CustomerChatAutoRules{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		IsSystem:   0,
@@ -166,7 +166,7 @@ func (c cAutoRule) Index(ctx context.Context, req *api.ListReq) (res *baseApi.Li
 		return item.MessageId
 	})
 
-	items := make([]api.ListItem, len(paginator.Items))
+	items := make([]api.AutoRuleListItem, len(paginator.Items))
 	messages, err := service.AutoMessage().All(ctx, do.CustomerChatAutoMessages{
 		Id: messageIds,
 	}, nil, nil)
@@ -174,7 +174,7 @@ func (c cAutoRule) Index(ctx context.Context, req *api.ListReq) (res *baseApi.Li
 		return
 	}
 	for index, i := range paginator.Items {
-		items[index] = api.ListItem{
+		items[index] = api.AutoRuleListItem{
 			Id:        i.Id,
 			Name:      i.Name,
 			Match:     i.Match,

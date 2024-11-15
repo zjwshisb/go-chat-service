@@ -2,6 +2,7 @@ package chat
 
 import (
 	"errors"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
@@ -19,8 +20,8 @@ import (
 
 type client struct {
 	Conn        *websocket.Conn
-	CloseSignal chan interface{}       // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
-	Send        chan *model.ChatAction // 发送的消息chan
+	CloseSignal chan interface{}     // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
+	Send        chan *api.ChatAction // 发送的消息chan
 	sync.Once
 	Manager  connManager
 	User     IChatUser

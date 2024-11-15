@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"gf-chat/internal/consts"
+	"gf-chat/internal/model/entity"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gctx"
@@ -10,7 +11,8 @@ import (
 
 type Adapter interface {
 	Url(path string) string
-	SaveUpload(ctx context.Context, file *ghttp.UploadFile, relativePath string) (string, error)
+	ThumbUrl(path string) string
+	SaveUpload(ctx context.Context, file *ghttp.UploadFile, relativePath string) (*entity.CustomerChatFiles, error)
 }
 
 func Disk(storages ...string) Adapter {

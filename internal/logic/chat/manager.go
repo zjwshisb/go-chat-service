@@ -1,6 +1,7 @@
 package chat
 
 import (
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
 	"sync"
@@ -134,7 +135,7 @@ func (m *manager) IsLocalOnline(customerId uint, uid uint) bool {
 }
 
 // SendAction 给客户端发送消息
-func (m *manager) SendAction(a *model.ChatAction, clients ...iWsConn) {
+func (m *manager) SendAction(a *api.ChatAction, clients ...iWsConn) {
 	for _, c := range clients {
 		c.Deliver(a)
 	}
@@ -208,7 +209,7 @@ func (m *manager) Register(conn *websocket.Conn, user IChatUser, platform string
 	client := &client{
 		Conn:        conn,
 		CloseSignal: make(chan interface{}),
-		Send:        make(chan *model.ChatAction, 100),
+		Send:        make(chan *api.ChatAction, 100),
 		Once:        sync.Once{},
 		Manager:     m,
 		User:        user,

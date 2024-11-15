@@ -1,12 +1,10 @@
-package transfer
+package backend
 
 import (
-	"gf-chat/internal/model"
-
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-type ListReq struct {
+type TransferListReq struct {
 	g.Meta        `path:"/transfers" tags:"后台转接记录" method:"get" summary:"获取转接记录列表"`
 	PageSize      int    `d:"20" json:"pageSize" v:"max:100" json:"pageSize"`
 	Current       int    `d:"1" dc:"页码" json:"current"`
@@ -15,11 +13,11 @@ type ListReq struct {
 	ToAdminName   string `dc:"转接给客服名称"`
 }
 
-type CancelReq struct {
+type TransferCancelReq struct {
 	g.Meta `path:"/transfers/:id/cancel" tags:"后台转接记录" method:"post" summary:"取消转接记录"`
 }
 
-type ListItem struct {
+type TransferListItem struct {
 	Id            int64  `json:"id"`
 	SessionId     uint64 `json:"session_id"`
 	UserId        int    `json:"user_id"`
@@ -30,9 +28,4 @@ type ListItem struct {
 	CreatedAt     int64  `json:"created_at"`
 	AcceptedAt    int64  `json:"accepted_at"`
 	CanceledAt    int64  `json:"canceled_at"`
-}
-
-type ListRes struct {
-	Total uint                 `json:"total"`
-	Items []model.ChatTransfer `json:"items"`
 }

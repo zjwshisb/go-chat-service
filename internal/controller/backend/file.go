@@ -8,12 +8,12 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-var CImage = &cImage{}
+var CImage = &cFile{}
 
-type cImage struct {
+type cFile struct {
 }
 
-func (c cImage) Store(ctx context.Context, req *api.ImageReq) (res *baseApi.NormalRes[baseApi.ImageRes], err error) {
+func (c cFile) Store(ctx context.Context, req *api.FileReq) (res *baseApi.NormalRes[baseApi.FileRes], err error) {
 	file := req.File
 	name, err := storage.Disk().SaveUpload(ctx, file, "test")
 	if err != nil {

@@ -6,29 +6,30 @@
 package service
 
 import (
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
 )
 
 type (
 	IAction interface {
-		GetMessage(action *model.ChatAction) (message *model.CustomerChatMessage, err error)
-		UnMarshalAction(b []byte) (action *model.ChatAction, err error)
-		MarshalAction(action *model.ChatAction) (b []byte, err error)
-		String(action *model.ChatAction) string
-		NewReceiveAction(msg *model.CustomerChatMessage) *model.ChatAction
-		NewReceiptAction(msg *model.CustomerChatMessage) (act *model.ChatAction)
-		NewAdminsAction(d any) (act *model.ChatAction)
-		NewUserOnline(uid uint, platform string) *model.ChatAction
-		NewUserOffline(uid uint) *model.ChatAction
-		NewMoreThanOne() *model.ChatAction
-		NewOtherLogin() *model.ChatAction
-		NewPing() *model.ChatAction
-		NewWaitingUsers(i interface{}) *model.ChatAction
-		NewWaitingUserCount(count uint) *model.ChatAction
-		NewUserTransfer(i interface{}) *model.ChatAction
-		NewErrorMessage(msg string) *model.ChatAction
-		NewReadAction(msgIds []uint) *model.ChatAction
-		NewRateAction(message *model.CustomerChatMessage) *model.ChatAction
+		GetMessage(action *api.ChatAction) (message *model.CustomerChatMessage, err error)
+		UnMarshalAction(b []byte) (action *api.ChatAction, err error)
+		MarshalAction(action *api.ChatAction) (b []byte, err error)
+		String(action *api.ChatAction) string
+		NewReceiveAction(msg *model.CustomerChatMessage) *api.ChatAction
+		NewReceiptAction(msg *model.CustomerChatMessage) (act *api.ChatAction)
+		NewAdminsAction(d any) (act *api.ChatAction)
+		NewUserOnline(uid uint, platform string) *api.ChatAction
+		NewUserOffline(uid uint) *api.ChatAction
+		NewMoreThanOne() *api.ChatAction
+		NewOtherLogin() *api.ChatAction
+		NewPing() *api.ChatAction
+		NewWaitingUsers(i interface{}) *api.ChatAction
+		NewWaitingUserCount(count uint) *api.ChatAction
+		NewUserTransfer(i interface{}) *api.ChatAction
+		NewErrorMessage(msg string) *api.ChatAction
+		NewReadAction(msgIds []uint) *api.ChatAction
+		NewRateAction(message *model.CustomerChatMessage) *api.ChatAction
 	}
 )
 

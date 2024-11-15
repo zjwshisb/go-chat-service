@@ -6,16 +6,6 @@ type Paginator[I any] struct {
 	IsSimple bool
 }
 
-type ImageFiled struct {
-	Url  string `json:"url"`
-	Path string `json:"path"`
-}
-
-type Option struct {
-	Value any    `json:"value"`
-	Label string `json:"label"`
-}
-
 type QueryInput struct {
 	Size int
 	Page int

@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"encoding/json"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model/do"
@@ -12,7 +13,6 @@ import (
 
 	baseApi "gf-chat/api"
 
-	api "gf-chat/api/v1/backend/automessage"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
 )
@@ -22,7 +22,7 @@ var CAutoMessage = &cAutoMessage{}
 type cAutoMessage struct {
 }
 
-func (c *cAutoMessage) Index(ctx context.Context, req *api.ListReq) (res *baseApi.ListRes[api.ListItem], err error) {
+func (c *cAutoMessage) Index(ctx context.Context, req *api.AdminListReq) (res *baseApi.ListRes[api.AdminListItem], err error) {
 	w := do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	}
@@ -34,9 +34,9 @@ func (c *cAutoMessage) Index(ctx context.Context, req *api.ListReq) (res *baseAp
 			Page: req.Current,
 			Size: req.PageSize,
 		}, nil, nil)
-	items := make([]api.ListItem, len(p.Items))
+	items := make([]api.AdminListItem, len(p.Items))
 	for index, i := range p.Items {
-		item := api.ListItem{
+		item := api.AdminListItem{
 			Id:         i.Id,
 			Name:       i.Name,
 			Type:       i.Type,
@@ -61,7 +61,7 @@ func (c *cAutoMessage) Index(ctx context.Context, req *api.ListReq) (res *baseAp
 	return
 }
 
-func (c *cAutoMessage) Form(ctx context.Context, req *api.FormReq) (res *baseApi.NormalRes[api.FormRes], err error) {
+func (c *cAutoMessage) Form(ctx context.Context, req *api.AutoMessageFormReq) (res *baseApi.NormalRes[api.AutoMessageFormRes], err error) {
 	id := g.RequestFromCtx(ctx).GetRouter("id").Val()
 	message, err := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -70,7 +70,7 @@ func (c *cAutoMessage) Form(ctx context.Context, req *api.FormReq) (res *baseApi
 	if err != nil {
 		return
 	}
-	form := api.FormRes{
+	form := api.AutoMessageFormRes{
 		Name:    message.Name,
 		Type:    message.Type,
 		Content: "",
@@ -94,7 +94,7 @@ func (c *cAutoMessage) Form(ctx context.Context, req *api.FormReq) (res *baseApi
 	return baseApi.NewResp(form), nil
 }
 
-func (c *cAutoMessage) Update(ctx context.Context, req *api.UpdateReq) (res *baseApi.NilRes, err error) {
+func (c *cAutoMessage) Update(ctx context.Context, req *api.AutoMessageUpdateReq) (res *baseApi.NilRes, err error) {
 	id := g.RequestFromCtx(ctx).GetRouter("id").Val()
 	message, err := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -107,7 +107,7 @@ func (c *cAutoMessage) Update(ctx context.Context, req *api.UpdateReq) (res *bas
 	return baseApi.NewNilResp(), nil
 }
 
-func (c *cAutoMessage) Delete(ctx context.Context, req *api.DeleteReq) (res *baseApi.NilRes, err error) {
+func (c *cAutoMessage) Delete(ctx context.Context, req *api.AutoMessageDeleteReq) (res *baseApi.NilRes, err error) {
 	id := g.RequestFromCtx(ctx).GetRouter("id").Val()
 	message, err := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -120,20 +120,20 @@ func (c *cAutoMessage) Delete(ctx context.Context, req *api.DeleteReq) (res *bas
 	return baseApi.NewNilResp(), nil
 }
 
-func (c *cAutoMessage) Store(ctx context.Context, req *api.StoreReq) (res *baseApi.NilRes, err error) {
+func (c *cAutoMessage) Store(ctx context.Context, req *api.AdminStoreReq) (res *baseApi.NilRes, err error) {
 	service.AutoMessage().SaveOne(ctx, req)
 	return baseApi.NewNilResp(), nil
 }
 
-func (c *cAutoMessage) Option(ctx context.Context, req *api.OptionReq) (res *baseApi.OptionRes, err error) {
+func (c *cAutoMessage) Option(ctx context.Context, req *api.AutoMessageOptionReq) (res *baseApi.OptionRes, err error) {
 	items, err := service.AutoMessage().All(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	}, nil, nil)
 	if err != nil {
 		return
 	}
-	options := slice.Map(items, func(index int, item *model.CustomerChatAutoMessage) model.Option {
-		return model.Option{
+	options := slice.Map(items, func(index int, item *model.CustomerChatAutoMessage) baseApi.Option {
+		return baseApi.Option{
 			Label: item.Name,
 			Value: item.Id,
 		}

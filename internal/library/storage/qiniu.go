@@ -2,12 +2,16 @@ package storage
 
 import (
 	"context"
+	"gf-chat/internal/consts"
+	"gf-chat/internal/model/entity"
 	"github.com/duke-git/lancet/v2/random"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/gogf/gf/v2/os/gfile"
 	"github.com/qiniu/go-sdk/v7/auth/qbox"
 	"github.com/qiniu/go-sdk/v7/storage"
+	"strings"
 )
 
 type qiniuAdapter struct {
@@ -41,26 +45,37 @@ func (s *qiniuAdapter) Url(path string) string {
 	}
 	return ""
 }
-func (s *qiniuAdapter) SaveUpload(ctx context.Context, file *ghttp.UploadFile, relativePath string) (string, error) {
+func (s *qiniuAdapter) ThumbUrl(path string) string {
+	return s.Url(path)
+}
+func (s *qiniuAdapter) SaveUpload(ctx context.Context, file *ghttp.UploadFile, relativePath string) (*entity.CustomerChatFiles, error) {
 	formUploader := storage.NewFormUploader(&storage.Config{})
 	policy := storage.PutPolicy{
 		Scope: s.bucket,
 	}
 	upToken := policy.UploadToken(qbox.NewMac(s.ak, s.sk))
 	ret := storage.PutRet{}
-	key := relativePath + "/" + random.RandString(32)
+
 	f, err := file.Open()
+	if err != nil {
+		return nil, err
+	}
 	defer func() {
 		_ = f.Close()
 	}()
-	if err != nil {
-		return "", err
+	if !strings.HasSuffix(relativePath, pathSeparator) {
+		relativePath = relativePath + pathSeparator
 	}
-	err = formUploader.Put(ctx, &ret, upToken, key,
+	ext := gfile.Ext(file.Filename)
+	path := relativePath + random.RandString(32) + "." + ext
+	err = formUploader.Put(ctx, &ret, upToken, path,
 		f, file.Size, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return key, nil
+	return &entity.CustomerChatFiles{
+		Path: path,
+		Disk: consts.StorageQiniu,
+	}, nil
 
 }

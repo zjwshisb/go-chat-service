@@ -1,19 +1,19 @@
 package chat
 
 import (
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
-	"sort"
-
 	"github.com/duke-git/lancet/v2/maputil"
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
+	"sort"
 )
 
 const TypeAdmin = "admin"
@@ -130,26 +130,26 @@ func (m *adminManager) broadcastLocalWaitingUser(customerId uint) {
 	sessionIds := slice.Map(sessions, func(index int, item *model.CustomerChatSession) uint {
 		return item.Id
 	})
-	userMap := make(map[uint]*model.ChatWaitingUser)
+	userMap := make(map[uint]*api.ChatWaitingUser)
 	messages := make([]entity.CustomerChatMessages, 0)
 	_ = dao.CustomerChatMessages.Ctx(gctx.New()).Where("session_id in (?)", sessionIds).
 		Where("source", consts.MessageSourceUser).
 		Order("id").
 		Scan(&messages)
 	for _, session := range sessions {
-		userMap[session.UserId] = &model.ChatWaitingUser{
+		userMap[session.UserId] = &api.ChatWaitingUser{
 			Username:     session.User.Username,
 			Avatar:       "",
 			UserId:       session.User.Id,
 			MessageCount: 0,
 			Description:  "",
-			Messages:     make([]model.ChatSimpleMessage, 0),
+			Messages:     make([]api.ChatSimpleMessage, 0),
 			LastTime:     session.QueriedAt,
 			SessionId:    session.Id,
 		}
 	}
 	for _, m := range messages {
-		userMap[m.UserId].Messages = append(userMap[m.UserId].Messages, model.ChatSimpleMessage{
+		userMap[m.UserId].Messages = append(userMap[m.UserId].Messages, api.ChatSimpleMessage{
 			Type:    m.Type,
 			Time:    m.ReceivedAt,
 			Content: m.Content,
@@ -176,7 +176,7 @@ func (m *adminManager) broadcastLocalOnlineAdmins(customerId uint) {
 	}, g.Slice{
 		model.CustomerAdmin{}.Setting,
 	}, nil)
-	data := make([]model.ChatCustomerAdmin, 0, len(admins))
+	data := make([]api.ChatCustomerAdmin, 0, len(admins))
 	for _, c := range admins {
 		conn, online := m.GetConn(customerId, c.Id)
 		platform := ""
@@ -184,7 +184,7 @@ func (m *adminManager) broadcastLocalOnlineAdmins(customerId uint) {
 			platform = conn.GetPlatform()
 		}
 		avatar, _ := service.Admin().GetAvatar(gctx.New(), c)
-		data = append(data, model.ChatCustomerAdmin{
+		data = append(data, api.ChatCustomerAdmin{
 			Avatar:        avatar,
 			Username:      c.Username,
 			Online:        online,
@@ -264,7 +264,7 @@ func (m *adminManager) noticeLocalUserTransfer(customerId, adminId uint) {
 			model.CustomerChatTransfer{}.ToSession,
 			model.CustomerChatTransfer{}.User,
 		}, nil)
-		data := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) model.ChatTransfer {
+		data := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) api.ChatTransfer {
 			return service.ChatTransfer().ToChatTransfer(item)
 		})
 		client.Deliver(service.Action().NewUserTransfer(data))

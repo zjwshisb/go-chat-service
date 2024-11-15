@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"gf-chat/api"
 	"net/http"
@@ -32,7 +33,7 @@ func HandlerResponse(r *ghttp.Request) {
 	)
 	if err != nil {
 		msg = err.Error()
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			r.Response.WriteStatus(http.StatusNotFound, g.MapStrStr{
 				"message": "not found",
 			})

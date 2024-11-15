@@ -1,8 +1,6 @@
 package api
 
 import (
-	"gf-chat/internal/model"
-
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 )
@@ -15,7 +13,12 @@ type ListRes[T any] struct {
 type NilRes = NormalRes[any]
 
 type OptionRes struct {
-	NormalRes[[]model.Option]
+	NormalRes[[]Option]
+}
+
+type Option struct {
+	Value any    `json:"value"`
+	Label string `json:"label"`
 }
 
 type NormalRes[T any] struct {
@@ -35,22 +38,24 @@ type File struct {
 	Path     uint   `json:"path"`
 	Url      string `json:"url"`
 	ThumbUrl string `json:"thumb_url"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
 }
 
-type ImageReq struct {
+type FileReq struct {
 	g.Meta `path:"/images" tags:"后台图片上传" mine:"multipart/form-data" method:"post" summary:"上传图片"`
 	Path   string            `json:"path" p:"path" v:"required" dc:"文件存储路径"`
 	File   *ghttp.UploadFile `json:"file" p:"file" type:"file" v:"image" dc:"文件"`
 }
 
-type ImageRes struct {
+type FileRes struct {
 	Url  string `json:"url"`
 	Path string `json:"path"`
 }
 
-func NewOptionResp(options []model.Option) *OptionRes {
+func NewOptionResp(options []Option) *OptionRes {
 	return &OptionRes{
-		NormalRes: NormalRes[[]model.Option]{
+		NormalRes: NormalRes[[]Option]{
 			Code:    0,
 			Success: true,
 			Data:    options,

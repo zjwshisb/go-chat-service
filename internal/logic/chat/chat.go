@@ -4,14 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
-	"strings"
-
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -19,6 +18,7 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gorilla/websocket"
+	"strings"
 )
 
 var adminM *adminManager
@@ -65,7 +65,7 @@ func (s sChat) NoticeTransfer(customer, admin uint) {
 	s.admin.noticeUserTransfer(customer, admin)
 }
 
-func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (*model.ChatUser, error) {
+func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (*api.ChatUser, error) {
 	session := &model.CustomerChatSession{}
 	err := dao.CustomerChatSessions.Ctx(ctx).
 		Where("customer_id", admin.CustomerId).WithAll().
@@ -132,14 +132,14 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		WithAll().
 		Where("source in (?)", []int{consts.MessageSourceUser, consts.MessageSourceAdmin}).
 		Scan(lastMessage)
-	var lastMsg *model.ChatMessage
+	var lastMsg *api.ChatMessage
 	if err != sql.ErrNoRows {
 		v := service.ChatMessage().RelationToChat(*lastMessage)
 		lastMsg = &v
 	}
 	service.ChatRelation().AddUser(ctx, admin.Id, session.UserId)
 	service.ChatManual().Remove(session.UserId, session.CustomerId)
-	user := &model.ChatUser{
+	user := &api.ChatUser{
 		Id:           session.User.Id,
 		Username:     session.User.Username,
 		LastChatTime: gtime.Now(),
@@ -209,8 +209,8 @@ func (s sChat) BroadcastWaitingUser(customerId uint) {
 	s.admin.broadcastWaitingUser(customerId)
 }
 
-func (s sChat) GetOnlineCount(customerId uint) model.ChatOnlineCount {
-	return model.ChatOnlineCount{
+func (s sChat) GetOnlineCount(customerId uint) api.ChatOnlineCount {
+	return api.ChatOnlineCount{
 		Admin:   s.admin.GetOnlineTotal(customerId),
 		User:    s.user.GetOnlineTotal(customerId),
 		Waiting: service.ChatManual().GetTotalCount(customerId),
@@ -267,11 +267,11 @@ func (s sChat) Transfer(fromAdmin *model.CustomerAdmin, toId uint, userId uint, 
 	return service.ChatTransfer().Create(ctx, fromAdmin.Id, toId, userId, remark)
 }
 
-func (s sChat) GetOnlineAdmin(customerId uint) []model.ChatSimpleUser {
+func (s sChat) GetOnlineAdmin(customerId uint) []api.ChatSimpleUser {
 	conns := s.admin.GetAllConn(customerId)
-	res := make([]model.ChatSimpleUser, len(conns))
+	res := make([]api.ChatSimpleUser, len(conns))
 	for index, c := range conns {
-		res[index] = model.ChatSimpleUser{
+		res[index] = api.ChatSimpleUser{
 			Id:       c.GetUserId(),
 			Username: c.GetUser().GetUsername(),
 		}
@@ -279,11 +279,11 @@ func (s sChat) GetOnlineAdmin(customerId uint) []model.ChatSimpleUser {
 	return res
 }
 
-func (s sChat) GetOnlineUser(customerId uint) []model.ChatSimpleUser {
+func (s sChat) GetOnlineUser(customerId uint) []api.ChatSimpleUser {
 	conns := s.user.GetAllConn(customerId)
-	res := make([]model.ChatSimpleUser, len(conns))
+	res := make([]api.ChatSimpleUser, len(conns))
 	for index, c := range conns {
-		res[index] = model.ChatSimpleUser{
+		res[index] = api.ChatSimpleUser{
 			Id:       c.GetUserId(),
 			Username: c.GetUser().GetUsername(),
 		}

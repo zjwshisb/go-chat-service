@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
@@ -83,7 +84,7 @@ func (s *sChatSession) Close(ctx context.Context, session *model.CustomerChatSes
 	}
 }
 
-func (s *sChatSession) RelationToChat(session *model.CustomerChatSession) model.ChatSession {
+func (s *sChatSession) RelationToChat(session *model.CustomerChatSession) api.ChatSession {
 	adminName := ""
 	if session.Admin != nil {
 		adminName = session.Admin.Username
@@ -118,7 +119,7 @@ func (s *sChatSession) RelationToChat(session *model.CustomerChatSession) model.
 		typeLabel = "转接"
 	}
 
-	return model.ChatSession{
+	return api.ChatSession{
 		Id:          session.Id,
 		UserId:      session.UserId,
 		QueriedAt:   session.QueriedAt,

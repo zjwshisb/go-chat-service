@@ -3,7 +3,7 @@ package backend
 import (
 	"context"
 	baseApi "gf-chat/api"
-	api "gf-chat/api/v1/backend/session"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -23,7 +23,7 @@ var CSession = &cSession{}
 type cSession struct {
 }
 
-func (c cSession) Index(ctx context.Context, req *api.ListReq) (resp *api.ListRes, err error) {
+func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *api.SessionListRes, err error) {
 	w := make(map[string]any)
 	customerId := service.AdminCtx().GetCustomerId(ctx)
 	w["customer_id"] = customerId
@@ -83,18 +83,18 @@ func (c cSession) Index(ctx context.Context, req *api.ListReq) (resp *api.ListRe
 	if err != nil {
 		return
 	}
-	res := make([]model.ChatSession, len(paginator.Items))
+	res := make([]api.ChatSession, len(paginator.Items))
 	for index, s := range paginator.Items {
 		res[index] = service.ChatSession().RelationToChat(&s)
 	}
-	r := &api.ListRes{
+	r := &api.SessionListRes{
 		Items: res,
 		Total: paginator.Total,
 	}
 	return r, nil
 }
 
-func (c cSession) Cancel(ctx context.Context, req *api.CancelReq) (resp *baseApi.NilRes, err error) {
+func (c cSession) Cancel(ctx context.Context, req *api.SessionCancelReq) (resp *baseApi.NilRes, err error) {
 	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id"),
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -109,7 +109,7 @@ func (c cSession) Cancel(ctx context.Context, req *api.CancelReq) (resp *baseApi
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cSession) Close(ctx context.Context, req *api.CloseReq) (resp *baseApi.NilRes, err error) {
+func (c cSession) Close(ctx context.Context, req *api.SessionCloseReq) (resp *baseApi.NilRes, err error) {
 	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id"),
@@ -124,7 +124,7 @@ func (c cSession) Close(ctx context.Context, req *api.CloseReq) (resp *baseApi.N
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cSession) Detail(ctx context.Context, req *api.DetailReq) (res *api.DetailRes, err error) {
+func (c cSession) Detail(ctx context.Context, req *api.SessionDetailReq) (res *api.SessionDetailRes, err error) {
 	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id"),
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -140,7 +140,7 @@ func (c cSession) Detail(ctx context.Context, req *api.DetailReq) (res *api.Deta
 	for index, i := range relations {
 		message[index] = service.ChatMessage().RelationToChat(*i)
 	}
-	return &api.DetailRes{
+	return &api.SessionDetailRes{
 		Messages: message,
 		Session:  service.ChatSession().RelationToChat(session),
 		Total:    len(message),

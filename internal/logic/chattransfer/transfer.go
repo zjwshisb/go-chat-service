@@ -3,6 +3,7 @@ package chattransfer
 import (
 	"context"
 	"fmt"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
@@ -34,7 +35,7 @@ type sChatTransfer struct {
 	trait.Curd[model.CustomerChatTransfer]
 }
 
-func (s *sChatTransfer) ToChatTransfer(relation *model.CustomerChatTransfer) model.ChatTransfer {
+func (s *sChatTransfer) ToChatTransfer(relation *model.CustomerChatTransfer) api.ChatTransfer {
 	formName := ""
 	toName := ""
 	username := ""
@@ -47,7 +48,7 @@ func (s *sChatTransfer) ToChatTransfer(relation *model.CustomerChatTransfer) mod
 	if relation.User != nil {
 		username = relation.User.Username
 	}
-	return model.ChatTransfer{
+	return api.ChatTransfer{
 		Id:            relation.Id,
 		FromSessionId: relation.FromSessionId,
 		ToSessionId:   relation.ToSessionId,

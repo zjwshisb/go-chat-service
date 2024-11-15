@@ -1,7 +1,7 @@
 package chat
 
 import (
-	"gf-chat/internal/model"
+	api "gf-chat/api/v1/backend"
 	"github.com/gorilla/websocket"
 )
 
@@ -10,7 +10,7 @@ type iWsConn interface {
 	SendMsg()
 	Close()
 	Run()
-	Deliver(action *model.ChatAction)
+	Deliver(action *api.ChatAction)
 	GetUserId() uint
 	GetUser() IChatUser
 	GetUuid() string
@@ -40,7 +40,7 @@ type connManager interface {
 	Run()
 	Destroy()
 	Ping()
-	SendAction(act *model.ChatAction, conn ...iWsConn)
+	SendAction(act *api.ChatAction, conn ...iWsConn)
 	ReceiveMessage(cm *chatConnMessage)
 	GetTypes() string
 	NoticeRead(customerId uint, uid uint, msgIds []uint)
