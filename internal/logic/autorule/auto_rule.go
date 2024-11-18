@@ -1,13 +1,14 @@
 package autorule
 
 import (
+	"context"
 	"database/sql"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/trait"
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"strings"
-
-	"github.com/gogf/gf/v2/os/gctx"
 
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
@@ -27,34 +28,28 @@ type sAutoRule struct {
 	trait.Curd[model.CustomerChatAutoRule]
 }
 
-func (s *sAutoRule) GetActiveByCustomer(customerId uint) (items []*model.CustomerChatAutoRule) {
-	dao.CustomerChatAutoRules.Ctx(gctx.New()).Where(
-		do.CustomerChatAutoRules{
-			CustomerId: customerId,
-			IsSystem:   0,
-			IsOpen:     1,
-		}).Order("sort").
-		WithAll().
-		Scan(&items)
-	return
+func (s *sAutoRule) AllActive(ctx context.Context, customerId uint) ([]*model.CustomerChatAutoRule, error) {
+	return s.All(ctx, do.CustomerChatAutoRules{
+		CustomerId: customerId,
+		IsSystem:   0,
+		IsOpen:     1,
+	}, g.Slice{model.CustomerChatAutoRule{}.Scenes}, g.Slice{"sort"})
 }
 
-func (s *sAutoRule) Increment(rule *model.CustomerChatAutoRule) error {
-	_, err := dao.CustomerChatAutoRules.Ctx(gctx.New()).WherePri(rule.Id).Increment("count", 1)
+func (s *sAutoRule) Increment(ctx context.Context, rule *model.CustomerChatAutoRule) error {
+	_, err := dao.CustomerChatAutoRules.Ctx(ctx).WherePri(rule.Id).Increment("count", 1)
 	return err
 }
 
-func (s *sAutoRule) GetMessage(rule *model.CustomerChatAutoRule) *entity.CustomerChatAutoMessages {
+func (s *sAutoRule) GetMessage(ctx context.Context, rule *model.CustomerChatAutoRule) (msg *model.CustomerChatAutoMessage, err error) {
 	if rule.MessageId > 0 {
-		message := &entity.CustomerChatAutoMessages{}
-		err := dao.CustomerChatAutoMessages.Ctx(gctx.New()).Where("id", rule.MessageId).
-			Where("customer_id", rule.CustomerId).Scan(message)
-		if err == sql.ErrNoRows {
-			return nil
+		msg, err = service.AutoMessage().Find(ctx, rule.MessageId)
+		if err != nil {
+			return
 		}
-		return message
+		return
 	}
-	return nil
+	return nil, gerror.New("no message")
 }
 
 func (s *sAutoRule) sceneInclude(scenes []*entity.CustomerChatAutoRuleScenes, match string) bool {
@@ -80,21 +75,21 @@ func (s *sAutoRule) IsMatch(rule *model.CustomerChatAutoRule, scene string, mess
 	return false
 }
 
-func (s *sAutoRule) GetEnterRule(customerId uint) (*model.CustomerChatAutoRule, error) {
-	return s.GetSystemOne(customerId, consts.AutoRuleMatchEnter)
+func (s *sAutoRule) GetEnterRule(ctx context.Context, customerId uint) (*model.CustomerChatAutoRule, error) {
+	return s.GetSystemOne(ctx, customerId, consts.AutoRuleMatchEnter)
 }
 
-func (s *sAutoRule) GetEnterRuleMessage(customerId uint) (*entity.CustomerChatAutoMessages, error) {
-	rule, err := s.GetEnterRule(customerId)
+func (s *sAutoRule) GetEnterRuleMessage(ctx context.Context, customerId uint) (*model.CustomerChatAutoMessage, error) {
+	rule, err := s.GetEnterRule(ctx, customerId)
 	if err != nil {
 		return nil, err
 	}
-	return s.GetMessage(rule), nil
+	return s.GetMessage(ctx, rule)
 }
 
 // GetSystemOne 获取系统规则
-func (s *sAutoRule) GetSystemOne(customerId uint, match string) (rule *model.CustomerChatAutoRule, err error) {
-	err = dao.CustomerChatAutoRules.Ctx(gctx.New()).Where(do.CustomerChatAutoRules{
+func (s *sAutoRule) GetSystemOne(ctx context.Context, customerId uint, match string) (rule *model.CustomerChatAutoRule, err error) {
+	err = dao.CustomerChatAutoRules.Ctx(ctx).Where(do.CustomerChatAutoRules{
 		CustomerId: customerId,
 		Match:      match,
 		IsSystem:   1,

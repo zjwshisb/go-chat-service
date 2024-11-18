@@ -27,7 +27,10 @@ func (c cTransfer) Cancel(ctx context.Context, req *chatApi.TransferCancelReq) (
 	if err != nil {
 		return
 	}
-	service.ChatTransfer().Cancel(transfer)
+	err = service.ChatTransfer().Cancel(ctx, transfer)
+	if err != nil {
+		return
+	}
 	return &baseApi.NilRes{}, nil
 }
 
@@ -40,10 +43,13 @@ func (c cTransfer) Index(ctx context.Context, req *chatApi.TransferListReq) (res
 		uW := make(map[string]any)
 		uW["phone"] = req.Username
 		uW["customer_id"] = customerId
-		users := service.User().GetUsers(ctx, do.Users{
+		users, err := service.User().All(ctx, do.Users{
 			Username:   req.Username,
 			CustomerId: customerId,
-		})
+		}, nil, nil)
+		if err != nil {
+			return nil, err
+		}
 		uids := slice.Map(users, func(index int, item *entity.Users) uint {
 			return item.Id
 		})

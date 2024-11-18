@@ -1,60 +1,74 @@
 package chatsetting
 
 import (
-	"database/sql"
+	"context"
 	"gf-chat/api"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
+	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
+	"gf-chat/internal/trait"
 
-	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
 func init() {
-	service.RegisterChatSetting(&sChatSetting{})
+	service.RegisterChatSetting(&sChatSetting{
+		trait.Curd[entity.CustomerChatSettings]{
+			Dao: &dao.CustomerChatSettings,
+		},
+	})
 }
 
 type sChatSetting struct {
+	trait.Curd[entity.CustomerChatSettings]
 }
 
-func (s *sChatSetting) First(customerId uint, name string) *entity.CustomerChatSettings {
-	setting := &entity.CustomerChatSettings{}
-	err := dao.CustomerChatSettings.Ctx(gctx.New()).Where("customer_id", customerId).
-		Where("name", name).Scan(setting)
-	if err == sql.ErrNoRows {
-		return nil
+func (s *sChatSetting) DefaultAvatarForm(ctx context.Context, customerId uint) (file *api.File, error error) {
+	_, err := s.First(ctx, do.CustomerChatSettings{
+		CustomerId: customerId,
+		Type:       consts.ChatSettingSystemName,
+	})
+	if err != nil {
+		return
 	}
-	return setting
+	return nil, nil
 }
 
-func (s *sChatSetting) DefaultAvatarForm(customerId uint) *api.File {
-	setting := s.First(customerId, consts.ChatSettingSystemAvatar)
-	if setting != nil {
-		//return service.Qiniu().Form(setting.Value)
+func (s *sChatSetting) GetName(ctx context.Context, customerId uint) (name string, err error) {
+	setting, err := s.First(ctx, do.CustomerChatSettings{
+		CustomerId: customerId,
+		Type:       consts.ChatSettingSystemName,
+	})
+	if err != nil {
+		return
 	}
-	return nil
+	name = setting.Value
+	return
 }
 
-func (s *sChatSetting) GetName(customerId uint) string {
-	setting := s.First(customerId, consts.ChatSettingSystemName)
-	return setting.Value
-}
-
-func (s *sChatSetting) GetAvatar(customerId uint) string {
-	setting := s.First(customerId, consts.ChatSettingSystemAvatar)
-	if setting != nil {
-		//return service.Qiniu().Url(setting.Value)
+func (s *sChatSetting) GetAvatar(ctx context.Context, customerId uint) (name string, err error) {
+	setting, err := s.First(ctx, do.CustomerChatSettings{
+		CustomerId: customerId,
+		Type:       consts.ChatSettingSystemAvatar,
+	})
+	if err != nil {
+		return
 	}
-	return ""
+	name = setting.Value
+	return
 }
 
 // GetIsAutoTransferManual 是否自动转接人工客服
-func (s *sChatSetting) GetIsAutoTransferManual(customerId uint) bool {
-	setting := s.First(customerId, consts.ChatSettingIsAutoTransfer)
-	if setting != nil {
-		return gconv.Bool(gconv.Int(setting.Value))
+func (s *sChatSetting) GetIsAutoTransferManual(ctx context.Context, customerId uint) (b bool, err error) {
+	setting, err := s.First(ctx, do.CustomerChatSettings{
+		CustomerId: customerId,
+		Type:       consts.ChatSettingIsAutoTransfer,
+	})
+	if err != nil {
+		return
 	}
-	return true
+	b = gconv.Bool(gconv.Int(setting.Value))
+	return
 }

@@ -2,16 +2,15 @@ package chatmessage
 
 import (
 	"context"
-	"database/sql"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
+	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
-	"time"
-
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -45,44 +44,48 @@ func (s *sChatMessage) SaveWithUpdate(ctx context.Context, msg *model.CustomerCh
 	}
 	return
 }
-func (s *sChatMessage) EntityToRelation(msg *entity.CustomerChatMessages) *model.CustomerChatMessage {
-	return &model.CustomerChatMessage{
-		CustomerChatMessages: *msg,
-		Admin:                nil,
-		User:                 nil,
-	}
+
+func (s *sChatMessage) ToRead(ctx context.Context, id any) (int64, error) {
+	return s.Update(ctx, g.Map{
+		"read_at": nil,
+		"id":      id,
+	}, do.CustomerChatMessages{
+		ReadAt: gtime.Now(),
+	})
 }
 
-func (s *sChatMessage) ChangeToRead(msgId []uint) (sql.Result, error) {
-	ctx := gctx.New()
-	query := dao.CustomerChatMessages.Ctx(ctx).Data(map[string]int64{
-		"read_at": time.Now().Unix(),
-	}).WhereIn("id", msgId).Where("read_at", 0)
-	return query.Update()
-}
-
-func (s *sChatMessage) GetAdminName(model model.CustomerChatMessage) string {
+func (s *sChatMessage) GetAdminName(ctx context.Context, model model.CustomerChatMessage) (avatar string, err error) {
 	switch model.Source {
 	case consts.MessageSourceAdmin:
 		if model.Admin.Setting != nil && model.Admin.Setting.Name != "" {
-			return model.Admin.Setting.Name
+			return model.Admin.Setting.Name, nil
 		}
-		return service.ChatSetting().GetName(model.CustomerId)
+		avatar, err = service.ChatSetting().GetName(ctx, model.CustomerId)
+		return
 	case consts.MessageSourceSystem:
-		return service.ChatSetting().GetName(model.CustomerId)
+		avatar, err = service.ChatSetting().GetName(ctx, model.CustomerId)
+		return
 	}
-	return ""
+	return "", nil
 }
-func (s *sChatMessage) RelationToChat(message model.CustomerChatMessage) api.ChatMessage {
+func (s *sChatMessage) RelationToChat(ctx context.Context, message model.CustomerChatMessage) (msg api.ChatMessage, err error) {
 	username := ""
 	if message.User != nil {
 		username = message.User.Username
 	}
-	return api.ChatMessage{
+	avatar, err := s.GetAvatar(ctx, message)
+	if err != nil {
+		return
+	}
+	name, err := s.GetAdminName(ctx, message)
+	if err != nil {
+		return
+	}
+	msg = api.ChatMessage{
 		Id:         message.Id,
 		UserId:     message.UserId,
 		AdminId:    message.AdminId,
-		AdminName:  s.GetAdminName(message),
+		AdminName:  name,
 		Type:       message.Type,
 		Content:    message.Content,
 		ReceivedAT: message.ReceivedAt,
@@ -90,11 +93,12 @@ func (s *sChatMessage) RelationToChat(message model.CustomerChatMessage) api.Cha
 		ReqId:      message.ReqId,
 		IsSuccess:  true,
 		IsRead:     message.ReadAt != nil,
-		Avatar:     s.GetAvatar(message),
+		Avatar:     avatar,
 		Username:   username,
 	}
+	return
 }
-func (s *sChatMessage) GetAvatar(model model.CustomerChatMessage) string {
+func (s *sChatMessage) GetAvatar(ctx context.Context, model model.CustomerChatMessage) (avatar string, err error) {
 	switch model.Source {
 	case consts.MessageSourceAdmin:
 		if model.Admin != nil &&
@@ -102,14 +106,14 @@ func (s *sChatMessage) GetAvatar(model model.CustomerChatMessage) string {
 			model.Admin.Setting.Avatar != "" {
 			//return service.Qiniu().Url(model.Admin.Setting.Avatar)
 		} else {
-			return service.ChatSetting().GetAvatar(model.CustomerId)
+			return service.ChatSetting().GetAvatar(ctx, model.CustomerId)
 		}
 	case consts.MessageSourceSystem:
-		return service.ChatSetting().GetAvatar(model.CustomerId)
+		return service.ChatSetting().GetAvatar(ctx, model.CustomerId)
 	case consts.MessageSourceUser:
-		return ""
+		return "", nil
 	}
-	return ""
+	return "", nil
 }
 
 func (s *sChatMessage) GetModels(lastId uint, w any, size uint) []*model.CustomerChatMessage {

@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"gf-chat/internal/service"
 	"time"
@@ -37,7 +38,7 @@ func (s *sChatManual) IsIn(uid uint, customerId uint) bool {
 	ctx := context.Background()
 	val, err := g.Redis().Do(ctx, "zrank", s.getManualKey(customerId), uid)
 	// key在sort set 中不存在
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return false
 	}
 	// sort set 的key 不存在

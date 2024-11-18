@@ -7,6 +7,7 @@ import (
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model/do"
+	"gf-chat/internal/model/entity"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/frame/g"
@@ -22,7 +23,7 @@ var CAutoMessage = &cAutoMessage{}
 type cAutoMessage struct {
 }
 
-func (c *cAutoMessage) Index(ctx context.Context, req *api.AdminListReq) (res *baseApi.ListRes[api.AdminListItem], err error) {
+func (c *cAutoMessage) Index(ctx context.Context, req *api.AutoMessageListReq) (res *baseApi.ListRes[api.AutoMessageListItem], err error) {
 	w := do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	}
@@ -34,9 +35,12 @@ func (c *cAutoMessage) Index(ctx context.Context, req *api.AdminListReq) (res *b
 			Page: req.Current,
 			Size: req.PageSize,
 		}, nil, nil)
-	items := make([]api.AdminListItem, len(p.Items))
+	if err != nil {
+		return
+	}
+	items := make([]api.AutoMessageListItem, p.Total)
 	for index, i := range p.Items {
-		item := api.AdminListItem{
+		item := api.AutoMessageListItem{
 			Id:         i.Id,
 			Name:       i.Name,
 			Type:       i.Type,
@@ -103,7 +107,23 @@ func (c *cAutoMessage) Update(ctx context.Context, req *api.AutoMessageUpdateReq
 	if err != nil {
 		return
 	}
-	service.AutoMessage().UpdateOne(ctx, message, req)
+	message.Name = req.Name
+	switch message.Type {
+	case consts.MessageTypeNavigate:
+		content := map[string]string{
+			"title":   req.Title,
+			"url":     req.Url,
+			"content": req.Content,
+		}
+		contentJson, _ := json.Marshal(content)
+		message.Content = string(contentJson)
+	default:
+		message.Content = req.Content
+	}
+	_, err = dao.CustomerChatAutoMessages.Ctx(ctx).Save(message)
+	if err != nil {
+		return
+	}
 	return baseApi.NewNilResp(), nil
 }
 
@@ -116,12 +136,38 @@ func (c *cAutoMessage) Delete(ctx context.Context, req *api.AutoMessageDeleteReq
 	if err != nil {
 		return
 	}
-	dao.CustomerChatAutoMessages.Ctx(ctx).Where("id", message.Id).Delete()
+	_, err = dao.CustomerChatAutoMessages.Ctx(ctx).Where("id", message.Id).Delete()
+	if err != nil {
+		return
+	}
 	return baseApi.NewNilResp(), nil
 }
 
-func (c *cAutoMessage) Store(ctx context.Context, req *api.AdminStoreReq) (res *baseApi.NilRes, err error) {
-	service.AutoMessage().SaveOne(ctx, req)
+func (c *cAutoMessage) Store(ctx context.Context, req *api.AutoMessageStoreReq) (res *baseApi.NilRes, err error) {
+	admin := service.AdminCtx().GetAdmin(ctx)
+	item := entity.CustomerChatAutoMessages{
+		Name:       req.Name,
+		Type:       req.Type,
+		CustomerId: admin.CustomerId,
+	}
+	switch item.Type {
+	case consts.MessageTypeNavigate:
+		content := map[string]string{
+			"title":   req.Title,
+			"url":     req.Url,
+			"content": req.Content,
+		}
+		contentJson, _ := json.Marshal(content)
+		item.Content = string(contentJson)
+	default:
+		item.Content = req.Content
+	}
+	_, err = service.AutoMessage().Insert(ctx, &model.CustomerChatAutoMessage{
+		CustomerChatAutoMessages: item,
+	})
+	if err != nil {
+		return
+	}
 	return baseApi.NewNilResp(), nil
 }
 

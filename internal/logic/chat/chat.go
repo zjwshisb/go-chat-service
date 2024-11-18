@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
@@ -65,14 +64,14 @@ func (s sChat) NoticeTransfer(customer, admin uint) {
 	s.admin.noticeUserTransfer(customer, admin)
 }
 
-func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (*api.ChatUser, error) {
+func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (u *api.ChatUser, err error) {
 	session := &model.CustomerChatSession{}
-	err := dao.CustomerChatSessions.Ctx(ctx).
+	err = dao.CustomerChatSessions.Ctx(ctx).
 		Where("customer_id", admin.CustomerId).WithAll().
 		WherePri(sessionId).
 		Scan(session)
 	if err != nil {
-		return nil, gerror.NewCode(gcode.CodeNotFound)
+		return
 	}
 	if session.CanceledAt != nil {
 		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "该用户已被取消")
@@ -89,22 +88,30 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		if transfer == nil {
 			return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "该转接已被接入")
 		}
-		service.ChatTransfer().Accept(transfer)
+		err = service.ChatTransfer().Accept(ctx, transfer)
+		if err != nil {
+			return
+		}
 	}
 	session.AcceptedAt = gtime.New()
 	session.AdminId = admin.Id
-	dao.CustomerChatSessions.Ctx(ctx).Save(session)
+	_, err = service.ChatSession().Save(ctx, session)
+	if err != nil {
+		return
+	}
 	unRead, _ := dao.CustomerChatMessages.Ctx(ctx).
 		Where("session_id", session.Id).
 		Where("admin_id", 0).
 		Where("source", consts.MessageSourceUser).Count()
 	// 更新未发送的消息
-	dao.CustomerChatMessages.Ctx(ctx).Where("session_id", session.Id).
+	_, err = dao.CustomerChatMessages.Ctx(ctx).Where("session_id", session.Id).
 		Where("admin_id", 0).
 		Where("source", consts.MessageSourceUser).Data(g.Map{
 		"admin_id": admin.Id,
 	}).Update()
-
+	if err != nil {
+		return
+	}
 	userConn, exist := s.user.GetConn(session.CustomerId, session.UserId)
 	platform := ""
 	if exist {
@@ -114,31 +121,37 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		notice := service.ChatMessage().NewNotice(session,
 			chatName+"为您服务")
 		_ = service.ChatMessage().SaveWithUpdate(ctx, notice)
-		s.user.SendAction(service.Action().NewReceiveAction(notice), userConn)
+		s.user.SendAction(newReceiveAction(notice), userConn)
 		// 欢迎语
 		welcomeMsg := service.ChatMessage().NewWelcome(&admin)
 		if welcomeMsg != nil {
 			welcomeMsg.UserId = session.UserId
 			welcomeMsg.SessionId = session.Id
 			_ = service.ChatMessage().SaveWithUpdate(ctx, welcomeMsg)
-			action := service.Action().NewReceiveAction(welcomeMsg)
+			action := newReceiveAction(welcomeMsg)
 			s.user.SendAction(action, userConn)
 		}
 	}
-	lastMessage := &model.CustomerChatMessage{}
-	err = dao.CustomerChatMessages.Ctx(ctx).
-		Where("user_id", session.UserId).
-		OrderDesc("id").
-		WithAll().
-		Where("source in (?)", []int{consts.MessageSourceUser, consts.MessageSourceAdmin}).
-		Scan(lastMessage)
+	lastMessage, err := service.ChatMessage().First(ctx, do.CustomerChatMessages{
+		UserId: session.UserId,
+		Source: []int{consts.MessageSourceUser, consts.MessageSourceAdmin},
+	}, "order desc")
 	var lastMsg *api.ChatMessage
-	if err != sql.ErrNoRows {
-		v := service.ChatMessage().RelationToChat(*lastMessage)
+	if err == nil {
+		v, err := service.ChatMessage().RelationToChat(ctx, *lastMessage)
+		if err != nil {
+			return nil, err
+		}
 		lastMsg = &v
 	}
-	service.ChatRelation().AddUser(ctx, admin.Id, session.UserId)
-	service.ChatManual().Remove(session.UserId, session.CustomerId)
+	err = service.ChatRelation().AddUser(ctx, admin.Id, session.UserId)
+	if err != nil {
+		return
+	}
+	err = service.ChatManual().Remove(session.UserId, session.CustomerId)
+	if err != nil {
+		return
+	}
 	user := &api.ChatUser{
 		Id:           session.User.Id,
 		Username:     session.User.Username,
@@ -244,16 +257,16 @@ func (s sChat) NoticeAdminRead(customerId, uid uint, msgIds []uint) {
 	s.user.NoticeRead(customerId, uid, msgIds)
 }
 
-func (s sChat) Transfer(fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) error {
-	user := &entity.Users{}
+func (s sChat) Transfer(fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) (err error) {
 	ctx := gctx.New()
-	err := dao.Users.Ctx(ctx).
-		Where("customer_id", fromAdmin.CustomerId).
-		Where("id", userId).Scan(user)
-	if err == sql.ErrNoRows {
-		return gerror.NewCode(gcode.CodeNotFound)
+	user, err := service.User().First(ctx, do.Users{
+		CustomerId: fromAdmin.CustomerId,
+		Id:         userId,
+	})
+	if err != nil {
+		return
 	}
-	_, err = service.Admin().First(ctx, do.CustomerAdmins{
+	admin, err := service.Admin().First(ctx, do.CustomerAdmins{
 		CustomerId: fromAdmin.CustomerId,
 		Id:         toId,
 	})
@@ -264,7 +277,7 @@ func (s sChat) Transfer(fromAdmin *model.CustomerAdmin, toId uint, userId uint, 
 	if !isValid {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "用户已失效，无法转接")
 	}
-	return service.ChatTransfer().Create(ctx, fromAdmin.Id, toId, userId, remark)
+	return service.ChatTransfer().Create(ctx, fromAdmin.Id, admin.Id, userId, remark)
 }
 
 func (s sChat) GetOnlineAdmin(customerId uint) []api.ChatSimpleUser {

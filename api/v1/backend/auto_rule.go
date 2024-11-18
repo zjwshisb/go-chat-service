@@ -69,8 +69,3 @@ type AutoRuleListItem struct {
 	Scenes     []string      `json:"scenes"`
 	Message    AdminListItem `json:"message"`
 }
-
-type AutoRuleListRes struct {
-	Items []AutoRuleListItem `json:"items"`
-	Total int                `json:"total"`
-}

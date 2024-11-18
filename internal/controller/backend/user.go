@@ -2,7 +2,6 @@ package backend
 
 import (
 	"context"
-	"database/sql"
 	baseApi "gf-chat/api"
 	"gf-chat/api/v1/backend"
 	"gf-chat/internal/dao"
@@ -20,7 +19,7 @@ var CUser = &cUser{}
 type cUser struct {
 }
 
-func (c *cUser) Index(ctx context.Context, req *backend.GetCurrentUserReq) (res *baseApi.NormalRes[backend.CurrentUserRes], err error) {
+func (c *cUser) Index(ctx context.Context, req *backend.CurrentUserInfoReq) (res *baseApi.NormalRes[backend.CurrentUserRes], err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	res = baseApi.NewResp(backend.CurrentUserRes{
 		Id:         admin.Id,
@@ -73,9 +72,6 @@ func (c *cUser) GetSetting(ctx context.Context, req *backend.CurrentUserSettingR
 func (c *cUser) Login(ctx context.Context, r *backend.LoginReq) (res *baseApi.NormalRes[backend.LoginRes], err error) {
 	admin, err := service.Admin().First(ctx, do.CustomerAdmins{Username: r.Username})
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, gerror.NewCode(gcode.CodeValidationFailed, "账号或密码错误")
-		}
 		return
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(r.Password))
@@ -87,7 +83,7 @@ func (c *cUser) Login(ctx context.Context, r *backend.LoginReq) (res *baseApi.No
 		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "账号已禁用")
 	}
 
-	token, _ := service.Jwt().CreateToken(gconv.String(admin.Id), "")
+	token, _ := service.Jwt().CreateToken(gconv.String(admin.Id))
 	return baseApi.NewResp(backend.LoginRes{
 		Token: token,
 	}), nil

@@ -9,10 +9,10 @@ import (
 )
 
 func init() {
-	service.RegisterJwt(New())
+	service.RegisterJwt(newJwt())
 }
 
-func New() *sJwt {
+func newJwt() *sJwt {
 	return &sJwt{}
 }
 
@@ -24,13 +24,13 @@ func getSecret() []byte {
 	return s.Bytes()
 }
 
-func (Jwt *sJwt) CreateToken(uid string, sessionId string) (token string, err error) {
+func (Jwt *sJwt) CreateToken(uid string) (token string, err error) {
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"uid": uid,
 	})
 	token, err = at.SignedString(getSecret())
 	if err != nil {
-		return "", err
+		return
 	}
 	return token, nil
 }

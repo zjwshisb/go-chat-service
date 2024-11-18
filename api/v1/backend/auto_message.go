@@ -17,6 +17,14 @@ type AutoMessageFormReq struct {
 	g.Meta `path:"/auto-messages/:id/form" tags:"后台快捷回复" method:"get" summary:"获取编辑表单数据"`
 }
 
+type AutoMessageFormRes struct {
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Content any    `json:"content"`
+	Title   string `json:"title"`
+	Url     string `json:"url"`
+}
+
 type AutoMessageStoreReq struct {
 	g.Meta  `path:"/auto-messages" tags:"后台快捷回复" method:"post" summary:"新增快捷回复"`
 	Name    string `json:"name" p:"name" v:"required|max-length:32|unique:customer_chat_auto_messages,name#||已存在相同名字的消息"`
@@ -50,12 +58,4 @@ type AutoMessageListItem struct {
 	CreatedAt  *gtime.Time `json:"created_at"`
 	UpdatedAt  *gtime.Time `json:"updated_at"`
 	RulesCount uint        `json:"rules_count"`
-}
-
-type AutoMessageFormRes struct {
-	Name    string `json:"name"`
-	Type    string `json:"type"`
-	Content any    `json:"content"`
-	Title   string `json:"title"`
-	Url     string `json:"url"`
 }

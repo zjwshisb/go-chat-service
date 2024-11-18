@@ -10,6 +10,7 @@ import (
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
+	"github.com/gogf/gf/v2/frame/g"
 
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -55,7 +56,7 @@ type sChatSession struct {
 // 	return
 // }
 
-func (s *sChatSession) Cancel(ctx context.Context, session *model.CustomerChatSession) error {
+func (s *sChatSession) Cancel(ctx context.Context, session *model.CustomerChatSession) (err error) {
 	if session.AcceptedAt != nil {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "会话已接入，无法取消")
 	}
@@ -63,25 +64,35 @@ func (s *sChatSession) Cancel(ctx context.Context, session *model.CustomerChatSe
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "会话已取消，请勿重复取消")
 	}
 	session.CanceledAt = gtime.New()
-	dao.CustomerChatSessions.Ctx(ctx).Save(session)
-	service.ChatManual().Remove(session.UserId, session.CustomerId)
+	_, err = s.Save(ctx, session)
+	if err != nil {
+		return
+	}
+	err = service.ChatManual().Remove(session.UserId, session.CustomerId)
+	if err != nil {
+		return
+	}
 	service.Chat().BroadcastWaitingUser(session.CustomerId)
 	return nil
 }
 
 // Close 关闭会话
-func (s *sChatSession) Close(ctx context.Context, session *model.CustomerChatSession, isRemoveUser bool, updateTime bool) {
+func (s *sChatSession) Close(ctx context.Context, session *model.CustomerChatSession, isRemoveUser bool, updateTime bool) (err error) {
 	if session.BrokenAt != nil {
 		session.BrokenAt = gtime.New()
-		dao.CustomerChatSessions.Ctx(ctx).Save(session)
-	}
-	if isRemoveUser {
-		service.ChatRelation().RemoveUser(ctx, session.AdminId, session.UserId)
-	} else {
-		if updateTime {
-			service.ChatRelation().UpdateLimitTime(ctx, session.AdminId, session.UserId, 0)
+		_, err = s.Save(ctx, session)
+		if err != nil {
+			return
 		}
 	}
+	if isRemoveUser {
+		err = service.ChatRelation().RemoveUser(ctx, session.AdminId, session.UserId)
+	} else {
+		if updateTime {
+			err = service.ChatRelation().UpdateLimitTime(ctx, session.AdminId, session.UserId, 0)
+		}
+	}
+	return
 }
 
 func (s *sChatSession) RelationToChat(session *model.CustomerChatSession) api.ChatSession {
@@ -191,23 +202,23 @@ func (s *sChatSession) GetUnAcceptModel(ctx context.Context, customerId uint) (r
 	}
 	return
 }
-func (s *sChatSession) ActiveTransferOne(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error) {
-	return s.ActiveOne(ctx, uid, adminId, consts.ChatSessionTypeTransfer)
+func (s *sChatSession) FirstTransfer(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error) {
+	return s.FirstActive(ctx, uid, adminId, consts.ChatSessionTypeTransfer)
 }
 
-func (s *sChatSession) ActiveNormalOne(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error) {
-	return s.ActiveOne(ctx, uid, adminId, consts.ChatSessionTypeNormal)
+func (s *sChatSession) FirstNormal(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error) {
+	return s.FirstActive(ctx, uid, adminId, consts.ChatSessionTypeNormal)
 }
 
-func (s *sChatSession) ActiveOne(ctx context.Context, uid uint, adminId, t any) (*model.CustomerChatSession, error) {
-	w := do.CustomerChatSessions{
-		UserId:     uid,
-		AdminId:    adminId,
-		CanceledAt: nil,
-		BrokenAt:   nil,
+func (s *sChatSession) FirstActive(ctx context.Context, uid uint, adminId, t any) (*model.CustomerChatSession, error) {
+	w := g.Map{
+		"user_id":     uid,
+		"admin_id":    adminId,
+		"canceled_at": nil,
+		"broken_at":   nil,
 	}
 	if t != nil {
-		w.Type = t
+		w["type"] = t
 	}
 	return s.First(ctx, w)
 }

@@ -6,18 +6,20 @@
 package service
 
 import (
-	"gf-chat/internal/model"
+	"context"
+	"gf-chat/api"
 	"gf-chat/internal/model/entity"
+	"gf-chat/internal/trait"
 )
 
 type (
 	IChatSetting interface {
-		First(customerId uint, name string) *entity.CustomerChatSettings
-		DefaultAvatarForm(customerId uint) *model.ImageFiled
-		GetName(customerId uint) string
-		GetAvatar(customerId uint) string
+		trait.ICurd[entity.CustomerChatSettings]
+		DefaultAvatarForm(ctx context.Context, customerId uint) (file *api.File, error error)
+		GetName(ctx context.Context, customerId uint) (name string, err error)
+		GetAvatar(ctx context.Context, customerId uint) (name string, err error)
 		// GetIsAutoTransferManual 是否自动转接人工客服
-		GetIsAutoTransferManual(customerId uint) bool
+		GetIsAutoTransferManual(ctx context.Context, customerId uint) (b bool, err error)
 	}
 )
 

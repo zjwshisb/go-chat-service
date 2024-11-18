@@ -28,3 +28,7 @@ redis:
     address: 127.0.0.1:6379
     pass:
     db: 5
+logger:
+  path:    "./storage/log"
+  level:   "all"
+  stdout:  true

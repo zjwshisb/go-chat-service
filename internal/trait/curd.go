@@ -14,7 +14,7 @@ type ICurd[R any] interface {
 	Save(ctx ctx, data *R) (id int64, err error)
 	Find(ctx ctx, primaryKey any) (model *R, err error)
 	All(ctx ctx, where any, with []any, order any) (items []*R, err error)
-	First(ctx ctx, where any) (model *R, err error)
+	First(ctx ctx, where any, order ...string) (model *R, err error)
 	Paginate(ctx ctx, where any, p model.QueryInput, with []any, order any) (paginator *model.Paginator[R], err error)
 	Insert(ctx ctx, data *R) (id int64, err error)
 	Update(ctx ctx, where any, data any) (count int64, err error)
@@ -43,8 +43,8 @@ func (c Curd[R]) Find(ctx ctx, primaryKey any) (model *R, err error) {
 	return
 }
 
-func (c Curd[R]) First(ctx ctx, where any) (model *R, err error) {
-	err = c.Dao.Ctx(ctx).Where(where).Scan(&model)
+func (c Curd[R]) First(ctx ctx, where any, order ...string) (model *R, err error) {
+	err = c.Dao.Ctx(ctx).Where(where).Order(order).Scan(&model)
 	if err != nil {
 		return
 	}
@@ -84,7 +84,7 @@ func (c Curd[R]) Insert(ctx ctx, data *R) (id int64, err error) {
 }
 
 func (c Curd[R]) Update(ctx ctx, where any, data any) (count int64, err error) {
-	result, err := c.Dao.Ctx(ctx).Data(data).Update()
+	result, err := c.Dao.Ctx(ctx).Where(where).Data(data).Update()
 	if err != nil {
 		return
 	}

@@ -38,18 +38,21 @@ func (s *sChatRelation) getUserCacheKey(adminId uint) string {
 }
 
 // AddUser 接入user
-func (s *sChatRelation) AddUser(ctx gctx.Ctx, adminId uint, uid uint) error {
+func (s *sChatRelation) AddUser(ctx gctx.Ctx, adminId uint, uid uint) (err error) {
 	_ = s.SetUserAdmin(ctx, uid, adminId)
-	g.Redis().Do(ctx, "ZAdd", s.getUserCacheKey(adminId), time.Now().Unix()+DefaultSessionTime, uid)
-	err := s.UpdateUser(ctx, adminId, uid)
+	_, err = g.Redis().Do(ctx, "ZAdd", s.getUserCacheKey(adminId), time.Now().Unix()+DefaultSessionTime, uid)
+	if err != nil {
+		return
+	}
+	err = s.UpdateUser(ctx, adminId, uid)
 	return err
 }
 
 // UpdateUser 更新user
 // 更新limit time
 // 更新最后聊天时间
-func (s *sChatRelation) UpdateUser(ctx gctx.Ctx, adminId uint, uid uint) error {
-	err := s.UpdateLimitTime(ctx, adminId, uid, DefaultSessionTime)
+func (s *sChatRelation) UpdateUser(ctx gctx.Ctx, adminId uint, uid uint) (err error) {
+	err = s.UpdateLimitTime(ctx, adminId, uid, DefaultSessionTime)
 	if err != nil {
 		return err
 	}
@@ -58,10 +61,16 @@ func (s *sChatRelation) UpdateUser(ctx gctx.Ctx, adminId uint, uid uint) error {
 }
 
 // RemoveUser 移除user
-func (s *sChatRelation) RemoveUser(ctx gctx.Ctx, adminId uint, uid uint) error {
-	_ = s.RemoveUserAdmin(ctx, uid)
-	_ = s.RemoveLastChatTime(ctx, adminId, uid)
-	_, err := g.Redis().Do(ctx, "Zrem", s.getUserCacheKey(adminId), uid)
+func (s *sChatRelation) RemoveUser(ctx gctx.Ctx, adminId uint, uid uint) (err error) {
+	err = s.RemoveUserAdmin(ctx, uid)
+	if err != nil {
+		return err
+	}
+	err = s.RemoveLastChatTime(ctx, adminId, uid)
+	if err != nil {
+		return err
+	}
+	_, err = g.Redis().Do(ctx, "Zrem", s.getUserCacheKey(adminId), uid)
 	return err
 }
 
@@ -74,7 +83,7 @@ func (s *sChatRelation) IsUserValid(ctx gctx.Ctx, adminId uint, uid uint) bool {
 // IsUserExist user是否存在
 func (s *sChatRelation) IsUserExist(ctx gctx.Ctx, adminId uint, uid uint) bool {
 	_, err := g.Redis().Do(ctx, "ZScore", s.getUserCacheKey(adminId), uid)
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return false
 	}
 	return true
@@ -127,10 +136,8 @@ func (s *sChatRelation) GetInvalidUsers(ctx gctx.Ctx, adminId uint) []uint {
 }
 
 // GetUsersWithLimitTime 获取所有user以及对应的有效期
-func (s *sChatRelation) GetUsersWithLimitTime(ctx gctx.Ctx, adminId uint) ([]uint, []int64) {
+func (s *sChatRelation) GetUsersWithLimitTime(ctx gctx.Ctx, adminId uint) (uids []uint, times []int64) {
 	val, _ := g.Redis().Do(ctx, "ZREVRANGE", s.getUserCacheKey(adminId), 0, -1, "WITHSCORES")
-	uids := make([]uint, 0, len(val.Slice()))
-	times := make([]int64, 0, len(val.Slice()))
 	for index, item := range val.Slice() {
 		types := index % 2
 		switch types {
@@ -144,14 +151,14 @@ func (s *sChatRelation) GetUsersWithLimitTime(ctx gctx.Ctx, adminId uint) ([]uin
 }
 
 // SetUserAdmin SetAdmin 设置用户客服
-func (s *sChatRelation) SetUserAdmin(ctx gctx.Ctx, uid uint, adminId uint) error {
-	_, err := g.Redis().Do(ctx, "hset", user2AdminHashKey, uid, adminId)
-	return err
+func (s *sChatRelation) SetUserAdmin(ctx gctx.Ctx, uid uint, adminId uint) (err error) {
+	_, err = g.Redis().Do(ctx, "hset", user2AdminHashKey, uid, adminId)
+	return
 }
 
 // RemoveUserAdmin RemoveAdmin 移除用户客服
-func (s *sChatRelation) RemoveUserAdmin(ctx gctx.Ctx, uid uint) error {
-	_, err := g.Redis().Do(ctx, "hdel", user2AdminHashKey, uid)
+func (s *sChatRelation) RemoveUserAdmin(ctx gctx.Ctx, uid uint) (err error) {
+	_, err = g.Redis().Do(ctx, "hdel", user2AdminHashKey, uid)
 	return err
 }
 

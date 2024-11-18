@@ -7,7 +7,7 @@ package service
 
 type (
 	IJwt interface {
-		CreateToken(uid string, sessionId string) (token string, err error)
+		CreateToken(uid string) (token string, err error)
 		ParseToken(token string) (uid string, err error)
 	}
 )

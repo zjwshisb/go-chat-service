@@ -1,19 +1,14 @@
 package service
 
 import (
-	"context"
-	"gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/trait"
 )
 
 type (
 	IAutoMessage interface {
 		trait.ICurd[model.CustomerChatAutoMessage]
-		UpdateOne(ctx context.Context, message *model.CustomerChatAutoMessage, req *backend.AutoMessageUpdateReq) (count int64, err error)
-		SaveOne(ctx context.Context, req *backend.AdminStoreReq) (id int64, err error)
-		ToChatMessage(auto *entity.CustomerChatAutoMessages) (msg *model.CustomerChatMessage, err error)
+		ToChatMessage(auto *model.CustomerChatAutoMessage) (msg *model.CustomerChatMessage, err error)
 	}
 )
 

@@ -37,10 +37,13 @@ func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *api
 		uW := make(map[string]any)
 		uW["phone"] = req.Username
 		uW["customer_id"] = customerId
-		users := service.User().GetUsers(ctx, do.Users{
+		users, err := service.User().All(ctx, do.Users{
 			Username:   req.Username,
 			CustomerId: customerId,
-		})
+		}, nil, nil)
+		if err != nil {
+			return nil, err
+		}
 		uids := slice.Map(users, func(index int, item *entity.Users) uint {
 			return item.Id
 		})
@@ -120,7 +123,10 @@ func (c cSession) Close(ctx context.Context, req *api.SessionCloseReq) (resp *ba
 	if session.BrokenAt != nil {
 		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "该会话已关闭")
 	}
-	service.ChatSession().Close(ctx, session, false, true)
+	err = service.ChatSession().Close(ctx, session, false, true)
+	if err != nil {
+		return
+	}
 	return baseApi.NewNilResp(), nil
 }
 
@@ -136,9 +142,13 @@ func (c cSession) Detail(ctx context.Context, req *api.SessionDetailReq) (res *a
 		SessionId: session.Id,
 		Source:    []int{consts.MessageSourceAdmin, consts.MessageSourceUser},
 	}, 0)
-	message := make([]model.ChatMessage, len(relations))
+	message := make([]api.ChatMessage, len(relations))
 	for index, i := range relations {
-		message[index] = service.ChatMessage().RelationToChat(*i)
+		msg, err := service.ChatMessage().RelationToChat(ctx, *i)
+		if err != nil {
+			return nil, err
+		}
+		message[index] = msg
 	}
 	return &api.SessionDetailRes{
 		Messages: message,

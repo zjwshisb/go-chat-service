@@ -6,15 +6,13 @@
 package service
 
 import (
-	"context"
-	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
+	"gf-chat/internal/trait"
 )
 
 type (
 	IUser interface {
-		GetUsers(ctx context.Context, w any) []*entity.Users
-		First(w do.Users) *entity.Users
+		trait.ICurd[entity.Users]
 		FindByToken(token string) *entity.Users
 	}
 )

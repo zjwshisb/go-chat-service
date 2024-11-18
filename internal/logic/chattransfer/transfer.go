@@ -14,7 +14,6 @@ import (
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
@@ -64,35 +63,50 @@ func (s *sChatTransfer) ToChatTransfer(relation *model.CustomerChatTransfer) api
 }
 
 // Cancel 取消待接入的转接
-func (s *sChatTransfer) Cancel(transfer *model.CustomerChatTransfer) error {
+func (s *sChatTransfer) Cancel(ctx context.Context, transfer *model.CustomerChatTransfer) (err error) {
 	if transfer.ToSession != nil {
 		transfer.ToSession.CanceledAt = gtime.New()
-		dao.CustomerChatSessions.Ctx(gctx.New()).Save(transfer.ToSession)
+		_, err = service.ChatSession().Save(ctx, transfer.ToSession)
+		if err != nil {
+			return
+		}
 	}
 	transfer.CanceledAt = gtime.New()
-	dao.CustomerChatTransfers.Ctx(gctx.New()).Save(transfer)
-	_ = s.removeUser(transfer.CustomerId, transfer.UserId)
+	_, err = s.Save(ctx, transfer)
+	if err != nil {
+		return
+	}
+	err = s.removeUser(ctx, transfer.CustomerId, transfer.UserId)
+	if err != nil {
+		return
+	}
 	service.Chat().NoticeTransfer(transfer.CustomerId, transfer.ToAdminId)
 	return nil
 }
 
-func (s *sChatTransfer) Accept(transfer *model.CustomerChatTransfer) error {
-	transfer.AcceptedAt = gtime.New()
-	dao.CustomerChatTransfers.Ctx(gctx.New()).Save(transfer)
+// Accept 接入转接
+func (s *sChatTransfer) Accept(ctx context.Context, transfer *model.CustomerChatTransfer) error {
+	_, err := s.Save(ctx, transfer)
+	if err != nil {
+		return err
+	}
 	service.Chat().NoticeTransfer(transfer.CustomerId, transfer.ToAdminId)
-	return s.removeUser(transfer.CustomerId, transfer.UserId)
+	return s.removeUser(ctx, transfer.CustomerId, transfer.UserId)
 }
 
 // Create 创建转接
-func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint, remark string) error {
-	session, err := service.ChatSession().ActiveOne(ctx, uid, fromAdminId, nil)
+func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint, remark string) (err error) {
+	session, err := service.ChatSession().FirstActive(ctx, uid, fromAdminId, nil)
 	if err != nil {
 		return err
 	}
 	if session == nil {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "用户已失效，无法转接")
 	}
-	service.ChatSession().Close(ctx, session, true, false)
+	err = service.ChatSession().Close(ctx, session, true, false)
+	if err != nil {
+		return
+	}
 	newSession := &model.CustomerChatSession{
 		CustomerChatSessions: entity.CustomerChatSessions{
 			QueriedAt:  gtime.New(),
@@ -102,19 +116,29 @@ func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint,
 			UserId:     uid,
 		},
 	}
-
-	service.ChatSession().Insert(ctx, newSession)
-	transfer := &entity.CustomerChatTransfers{
-		UserId:        uid,
-		FromSessionId: session.Id,
-		ToSessionId:   newSession.Id,
-		CustomerId:    session.CustomerId,
-		FromAdminId:   fromAdminId,
-		ToAdminId:     toId,
-		Remark:        remark,
+	_, err = service.ChatSession().Save(ctx, newSession)
+	if err != nil {
+		return err
 	}
-	dao.CustomerChatTransfers.Ctx(ctx).Save(transfer)
-	s.addUser(session.CustomerId, uid, toId)
+	transfer := &model.CustomerChatTransfer{
+		CustomerChatTransfers: entity.CustomerChatTransfers{
+			UserId:        uid,
+			FromSessionId: session.Id,
+			ToSessionId:   newSession.Id,
+			CustomerId:    session.CustomerId,
+			FromAdminId:   fromAdminId,
+			ToAdminId:     toId,
+			Remark:        remark,
+		},
+	}
+	_, err = service.ChatTransfer().Save(ctx, transfer)
+	if err != nil {
+		return
+	}
+	err = s.addUser(ctx, session.CustomerId, uid, toId)
+	if err != nil {
+		return
+	}
 	service.Chat().NoticeTransfer(session.CustomerId, toId)
 	return nil
 }
@@ -123,22 +147,30 @@ func (s *sChatTransfer) userKey(customerId uint) string {
 }
 
 // RemoveUser 在转接列表中移除user
-func (s *sChatTransfer) removeUser(customerId, uid uint) error {
-	_, err := g.Redis().Do(gctx.New(), "hDel", s.userKey(customerId), uid)
+func (s *sChatTransfer) removeUser(ctx context.Context, customerId, uid uint) error {
+	_, err := g.Redis().Do(ctx, "hDel", s.userKey(customerId), uid)
 	return err
 }
 
-func (s *sChatTransfer) GetUserTransferId(customerId, uid uint) uint {
-	val, err := g.Redis().Do(gctx.New(), "hGet", s.userKey(customerId), uid)
+func (s *sChatTransfer) GetUserTransferId(ctx context.Context, customerId, uid uint) (id uint, error error) {
+	val, err := g.Redis().Do(ctx, "hGet", s.userKey(customerId), uid)
 	if err != nil {
-		return 0
+		return 0, nil
 	}
-	return val.Uint()
+	return val.Uint(), nil
+}
+
+// IsInTransfer 是否待转接
+func (s *sChatTransfer) IsInTransfer(ctx context.Context, customerId uint, uid uint) (bool, error) {
+	id, err := s.GetUserTransferId(ctx, customerId, uid)
+	if err != nil {
+		return false, nil
+	}
+	return id != 0, nil
 }
 
 // AddUser 添加用户到转接列表中
-func (s *sChatTransfer) addUser(customerId, uid, adminId uint) error {
-	ctx := gctx.New()
-	_, err := g.Redis().Do(ctx, "hSet", s.userKey(customerId), uid, adminId)
-	return err
+func (s *sChatTransfer) addUser(ctx context.Context, customerId, uid, adminId uint) (err error) {
+	_, err = g.Redis().Do(ctx, "hSet", s.userKey(customerId), uid, adminId)
+	return
 }

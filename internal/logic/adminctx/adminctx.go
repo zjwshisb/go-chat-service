@@ -12,10 +12,10 @@ import (
 const adminCtxKey = "admin-ctx"
 
 func init() {
-	service.RegisterAdminCtx(New())
+	service.RegisterAdminCtx(newI())
 }
 
-func New() *sAdminCtx {
+func newI() *sAdminCtx {
 	return &sAdminCtx{}
 }
 

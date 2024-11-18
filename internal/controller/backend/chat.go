@@ -2,7 +2,6 @@ package backend
 
 import (
 	"context"
-	"database/sql"
 	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
@@ -14,8 +13,6 @@ import (
 	"time"
 
 	"github.com/duke-git/lancet/v2/slice"
-	"github.com/gogf/gf/v2/errors/gcode"
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -51,7 +48,10 @@ func (c cChat) Read(ctx context.Context, req *api.MessageReadReq) (res *baseApi.
 		return
 	}
 	if message.SendAt == nil {
-		service.ChatMessage().ChangeToRead([]uint{message.Id})
+		_, err = service.ChatMessage().ToRead(ctx, message.Id)
+		if err != nil {
+			return
+		}
 		service.Chat().NoticeAdminRead(admin.CustomerId, message.UserId, []uint{message.Id})
 	}
 	return baseApi.NewNilResp(), nil
@@ -67,7 +67,7 @@ func (c cChat) CancelTransfer(ctx context.Context, req *api.CancelTransferReq) (
 	if err != nil {
 		return
 	}
-	err = service.ChatTransfer().Cancel(transfer)
+	err = service.ChatTransfer().Cancel(ctx, transfer)
 	if err != nil {
 		return
 	}
@@ -84,17 +84,22 @@ func (c cChat) Transfer(ctx context.Context, req *api.StoreTransferReq) (res *ba
 }
 
 func (c cChat) RemoveUser(ctx context.Context, req *api.RemoveUserReq) (res *baseApi.NilRes, err error) {
-	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	admin := service.AdminCtx().GetAdmin(ctx)
-	session, err := service.ChatSession().ActiveOne(ctx, gconv.Uint(id), admin.Id, nil)
+	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
+
+	session, err := service.ChatSession().FirstActive(ctx, gconv.Uint(id), admin.Id, nil)
 	if err != nil {
-		if err != sql.ErrNoRows {
-			return
-		}
-		service.ChatRelation().RemoveUser(ctx, admin.Id, gconv.Uint(id))
+		return
+	}
+	err = service.ChatRelation().RemoveUser(ctx, admin.Id, gconv.Uint(id))
+	if err != nil {
+		return
 	}
 	if session.BrokenAt == nil {
-		service.ChatSession().Close(ctx, session, true, false)
+		err = service.ChatSession().Close(ctx, session, true, false)
+		if err != nil {
+			return
+		}
 	}
 	return baseApi.NewNilResp(), nil
 }
@@ -111,8 +116,10 @@ func (c cChat) RemoveInvalidUser(ctx context.Context, req *api.RemoveAllUserReq)
 		if err != nil {
 			continue
 		}
-		service.ChatSession().Close(ctx, session, true, false)
-		resIds = append(resIds, id)
+		err = service.ChatSession().Close(ctx, session, true, false)
+		if err == nil {
+			resIds = append(resIds, id)
+		}
 	}
 	res = baseApi.NewResp(api.RemoveAllUserRes{Ids: resIds})
 	return
@@ -121,9 +128,13 @@ func (c cChat) RemoveInvalidUser(ctx context.Context, req *api.RemoveAllUserReq)
 func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.NormalRes[api.UserListRes], err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	ids, times := service.ChatRelation().GetUsersWithLimitTime(ctx, gconv.Uint(admin.Id))
-	users := service.User().GetUsers(ctx, map[string]any{
-		"id": ids,
-	})
+	users, err := service.User().All(ctx, do.Users{
+		Id:         ids,
+		CustomerId: admin.CustomerId,
+	}, nil, nil)
+	if err != nil {
+		return
+	}
 	count := 0
 	userMap := make(map[uint]*entity.Users)
 	for _, user := range users {
@@ -193,7 +204,10 @@ func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.Nor
 				return item.UserId == user.Id
 			})
 			if exist {
-				lastMsg := service.ChatMessage().RelationToChat(*lastMsg)
+				lastMsg, err := service.ChatMessage().RelationToChat(ctx, *lastMsg)
+				if err != nil {
+					return nil, err
+				}
 				cu.LastMessage = &lastMsg
 			}
 			useUnread, exist := slice.Find(unreadCounts, func(index int, item Unread) bool {
@@ -212,12 +226,12 @@ func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.Nor
 func (c cChat) UserInfo(ctx context.Context, req *api.GetUserChatInfoReq) (res *baseApi.NormalRes[api.UserInfoRes], err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	admin := service.AdminCtx().GetAdmin(ctx)
-	user := service.User().First(do.Users{
+	user, err := service.User().First(ctx, do.Users{
 		Id:         id,
 		CustomerId: admin.CustomerId,
 	})
-	if user == nil {
-		return nil, gerror.NewCode(gcode.CodeNotFound)
+	if err != nil {
+		return
 	}
 	res = baseApi.NewResp(api.UserInfoRes{
 		Phone: user.Username,
@@ -238,10 +252,17 @@ func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseAp
 		if i.ReadAt == nil && i.Source == consts.MessageSourceUser {
 			unReadIds = append(unReadIds, i.Id)
 		}
-		r = append(r, service.ChatMessage().RelationToChat(*i))
+		msg, err := service.ChatMessage().RelationToChat(ctx, *i)
+		if err != nil {
+			return nil, err
+		}
+		r = append(r, msg)
 	}
 	if len(unReadIds) > 0 {
-		_, _ = service.ChatMessage().ChangeToRead(unReadIds)
+		_, err = service.ChatMessage().ToRead(ctx, unReadIds)
+		if err != nil {
+			return
+		}
 		service.Chat().NoticeAdminRead(admin.CustomerId, req.Uid, unReadIds)
 	}
 	res = baseApi.NewResp(r)

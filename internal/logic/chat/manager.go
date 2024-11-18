@@ -3,7 +3,6 @@ package chat
 import (
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
-	"gf-chat/internal/service"
 	"sync"
 	"time"
 
@@ -14,7 +13,7 @@ import (
 
 type MessageHandle interface {
 	handleReceiveMessage()
-	handleMessage(cm *chatConnMessage)
+	handleMessage(cm *chatConnMessage) error
 	handleOffline(msg *model.CustomerChatMessage)
 	DeliveryMessage(msg *model.CustomerChatMessage)
 }
@@ -93,7 +92,7 @@ func (m *manager) NoticeRepeatConnect(user IChatUser, newUuid string) {
 func (m *manager) NoticeLocalRepeatConnect(user IChatUser, newUuid string) {
 	oldConn, ok := m.GetConn(user.GetCustomerId(), user.GetPrimaryKey())
 	if ok && oldConn.GetUuid() != newUuid {
-		m.SendAction(service.Action().NewMoreThanOne(), oldConn)
+		m.SendAction(newMoreThanOneAction(), oldConn)
 	}
 }
 
@@ -230,7 +229,7 @@ func (m *manager) Register(conn *websocket.Conn, user IChatUser, platform string
 func (m *manager) NoticeRead(customerId, adminId uint, msgIds []uint) {
 	conn, exist := m.GetConn(customerId, adminId)
 	if exist {
-		action := service.Action().NewReadAction(msgIds)
+		action := newReadActionAction(msgIds)
 		m.SendAction(action, conn)
 	}
 }
@@ -244,7 +243,7 @@ func (m *manager) Ping() {
 	for {
 		select {
 		case <-ticker.C:
-			ping := service.Action().NewPing()
+			ping := newPingAction()
 			for _, s := range m.shard {
 				conns := s.getAll()
 				m.SendAction(ping, conns...)

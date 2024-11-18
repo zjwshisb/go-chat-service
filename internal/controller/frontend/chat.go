@@ -7,6 +7,7 @@ import (
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/frame/g"
 
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -25,7 +26,11 @@ func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *api.C
 	r := api.ChatMessageRes{}
 	adminToMessageId := make(map[uint][]uint)
 	for _, item := range messages {
-		r = append(r, service.ChatMessage().RelationToChat(*item))
+		msg, err := service.ChatMessage().RelationToChat(ctx, *item)
+		if err != nil {
+			return nil, err
+		}
+		r = append(r, msg)
 		if item.ReadAt == nil && item.Source == consts.MessageSourceAdmin {
 			ids, exist := adminToMessageId[item.AdminId]
 			if exist {
@@ -37,7 +42,10 @@ func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *api.C
 	}
 	go func() {
 		for aId, ids := range adminToMessageId {
-			service.ChatMessage().ChangeToRead(ids)
+			_, err := service.ChatMessage().ToRead(ctx, ids)
+			if err != nil {
+				g.Log().Error(ctx, err)
+			}
 			if aId > 0 {
 				service.Chat().NoticeUserRead(service.UserCtx().GetCustomerId(ctx), aId, ids)
 			}
@@ -60,7 +68,10 @@ func (c cChat) Read(ctx context.Context, req *api.ChatReadReq) (res *baseApi.Nil
 	}
 
 	if message.SendAt == nil {
-		service.ChatMessage().ChangeToRead([]uint{message.Id})
+		_, err = service.ChatMessage().ToRead(ctx, message.Id)
+		if err != nil {
+			return
+		}
 		service.Chat().NoticeUserRead(user.CustomerId, message.AdminId, msgIds)
 	}
 	return &baseApi.NilRes{}, nil
@@ -81,10 +92,15 @@ func (c cChat) Rate(ctx context.Context, req *api.ChatRateReq) (res *baseApi.Nil
 		return
 	}
 	msg.Content = gconv.String(req.Rate)
-	service.ChatMessage().Save(ctx, msg)
+	_, err = service.ChatMessage().Save(ctx, msg)
+	if err != nil {
+		return
+	}
 	session.Rate = req.Rate
-	service.ChatSession().Save(ctx, session)
+	_, err = service.ChatSession().Save(ctx, session)
+	if err != nil {
+		return
+	}
 	service.Chat().NoticeRate(msg)
-
 	return &baseApi.NilRes{}, nil
 }

@@ -4,11 +4,9 @@ import (
 	"errors"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
-	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
 	"sync"
-	"time"
 	"unicode/utf8"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -145,48 +143,49 @@ func (c *client) ReadMsg() {
 		case <-c.CloseSignal:
 			return
 		case msgStr := <-msg:
-			act, err := service.Action().UnMarshalAction(msgStr)
+			act, err := unMarshalAction(msgStr)
 			if err != nil {
 				g.Log().Error(gctx.New(), err)
-			} else {
-				data, ok := act.Data.(map[string]interface{})
-				if ok {
-					err = c.validate(data)
-					if err != nil {
-						c.Deliver(service.Action().NewErrorMessage(err.Error()))
-					} else {
-						switch act.Action {
-						case consts.ActionSendMessage:
-							msg, err := service.Action().GetMessage(act)
-							if err == nil {
-								iu := c.GetUser()
-								switch iu.(type) {
-								case *admin:
-									u := iu.(*admin)
-									msg.Admin = u.Entity
-								case *user:
-									u := iu.(*user)
-									msg.User = u.Entity
-								}
-								msg.CustomerId = c.GetCustomerId()
-								msg.ReceivedAt = gtime.New()
-								c.Manager.ReceiveMessage(&chatConnMessage{
-									Msg:  msg,
-									Conn: c,
-								})
-							}
-
-						}
-					}
-				}
+				break
 			}
-
+			data, ok := act.Data.(map[string]interface{})
+			if !ok {
+				break
+			}
+			err = c.validate(data)
+			if err != nil {
+				c.Deliver(newErrorMessageAction(err.Error()))
+				break
+			}
+			switch act.Action {
+			case consts.ActionSendMessage:
+				msg, err := GetMessage(act)
+				if err != nil {
+					g.Log().Error(gctx.New(), err)
+					break
+				}
+				iu := c.GetUser()
+				switch iu.(type) {
+				case *admin:
+					u := iu.(*admin)
+					msg.Admin = u.Entity
+				case *user:
+					u := iu.(*user)
+					msg.User = u.Entity
+				}
+				msg.CustomerId = c.GetCustomerId()
+				msg.ReceivedAt = gtime.New()
+				c.Manager.ReceiveMessage(&chatConnMessage{
+					Msg:  msg,
+					Conn: c,
+				})
+			}
 		}
 	}
 }
 
 // Deliver 投递消息
-func (c *client) Deliver(act *model.ChatAction) {
+func (c *client) Deliver(act *api.ChatAction) {
 	c.Send <- act
 }
 
@@ -195,29 +194,34 @@ func (c *client) SendMsg() {
 	for {
 		select {
 		case act := <-c.Send:
-			msgByte, err := service.Action().MarshalAction(act)
+			ctx := gctx.New()
+			msgByte, err := marshalAction(act)
 			if err != nil {
-				g.Log().Error(gctx.New(), err)
-			} else {
-				err := c.Conn.WriteMessage(websocket.TextMessage, msgByte)
-				if err == nil {
-					switch act.Action {
-					case consts.ActionMoreThanOne:
-						c.Close()
-					case consts.ActionOtherLogin:
-						c.Close()
-					case consts.ActionReceiveMessage:
-						msg, ok := act.Data.(*model.CustomerChatMessage)
-						if ok {
-							_, _ = dao.CustomerChatMessages.Ctx(gctx.New()).WherePri(msg.Id).
-								Data("send_at", time.Now().Unix()).Update()
-						}
-					default:
-					}
-				} else {
-					c.Close()
-					return
+				g.Log().Error(ctx, err)
+				break
+			}
+			err = c.Conn.WriteMessage(websocket.TextMessage, msgByte)
+			if err != nil {
+				g.Log().Error(ctx, err)
+				c.Close()
+				return
+			}
+			switch act.Action {
+			case consts.ActionMoreThanOne:
+				c.Close()
+			case consts.ActionOtherLogin:
+				c.Close()
+			case consts.ActionReceiveMessage:
+				msg, ok := act.Data.(*model.CustomerChatMessage)
+				if !ok {
+					break
 				}
+				msg.SendAt = gtime.New()
+				_, err = service.ChatMessage().Save(ctx, msg)
+				if err != nil {
+					g.Log().Error(ctx, err)
+				}
+			default:
 			}
 		case <-c.CloseSignal:
 			return
