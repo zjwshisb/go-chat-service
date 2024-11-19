@@ -16,19 +16,20 @@ import (
 type (
 	IChat interface {
 		UpdateAdminSetting(customerId uint, setting *entity.CustomerAdminChatSettings)
-		NoticeTransfer(customer uint, admin uint)
+		NoticeTransfer(ctx context.Context, customer uint, admin uint)
 		Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (*api.ChatUser, error)
 		Register(ctx context.Context, u any, conn *websocket.Conn) error
 		IsOnline(customerId uint, uid uint, t string) bool
-		BroadcastWaitingUser(customerId uint)
-		GetOnlineCount(customerId uint) api.ChatOnlineCount
+		BroadcastWaitingUser(ctx context.Context, customerId uint)
+		GetOnlineCount(ctx context.Context, customerId uint) api.ChatOnlineCount
 		GetPlatform(customerId uint, uid uint, t string) string
 		NoticeRate(msg *model.CustomerChatMessage)
 		NoticeUserRead(customerId uint, uid uint, msgIds []uint)
 		NoticeAdminRead(customerId uint, uid uint, msgIds []uint)
-		Transfer(fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) error
+		Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) error
 		GetOnlineAdmin(customerId uint) []api.ChatSimpleUser
 		GetOnlineUser(customerId uint) []api.ChatSimpleUser
+		RemoveManual(ctx context.Context, uid uint, customerId uint) error
 	}
 )
 

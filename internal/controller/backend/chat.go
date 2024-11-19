@@ -30,7 +30,7 @@ func (c cChat) AcceptUser(ctx context.Context, req *api.AcceptUserReq) (res *bas
 	if err != nil {
 		return nil, err
 	}
-	service.Chat().BroadcastWaitingUser(admin.CustomerId)
+	service.Chat().BroadcastWaitingUser(ctx, admin.CustomerId)
 	res = baseApi.NewResp(api.AcceptRes{
 		User: *user,
 	})
@@ -76,7 +76,7 @@ func (c cChat) CancelTransfer(ctx context.Context, req *api.CancelTransferReq) (
 
 func (c cChat) Transfer(ctx context.Context, req *api.StoreTransferReq) (res *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
-	err = service.Chat().Transfer(admin, req.ToId, req.UserId, req.Remark)
+	err = service.Chat().Transfer(ctx, admin, req.ToId, req.UserId, req.Remark)
 	if err != nil {
 		return
 	}

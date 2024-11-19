@@ -10,7 +10,6 @@ import (
 	_ "gf-chat/internal/logic/automessage"
 	_ "gf-chat/internal/logic/autorule"
 	_ "gf-chat/internal/logic/chat"
-	_ "gf-chat/internal/logic/chatmanual"
 	_ "gf-chat/internal/logic/chatmessage"
 	_ "gf-chat/internal/logic/chatrelation"
 	_ "gf-chat/internal/logic/chatsession"

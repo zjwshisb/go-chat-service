@@ -1,8 +1,3 @@
-// ================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
-// You can delete these comments if you wish manually maintain this interface file.
-// ================================================================================
-
 package service
 
 import (
@@ -13,7 +8,6 @@ import (
 type (
 	IUser interface {
 		trait.ICurd[entity.Users]
-		FindByToken(token string) *entity.Users
 	}
 )
 

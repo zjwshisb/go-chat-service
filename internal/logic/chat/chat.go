@@ -14,7 +14,6 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gorilla/websocket"
 	"strings"
@@ -24,34 +23,41 @@ var adminM *adminManager
 var userM *userManager
 
 func init() {
+
+	service.RegisterChat(newChat())
+}
+
+func newChat() *sChat {
 	adminM = &adminManager{
 		&manager{
-			ShardCount:   10,
-			ConnMessages: make(chan *chatConnMessage, 100),
-			Types:        TypeAdmin,
+			shardCount:   10,
+			connMessages: make(chan *chatConnMessage, 100),
+			types:        TypeAdmin,
 		},
 	}
-	adminM.OnRegister = adminM.registerHook
-	adminM.OnUnRegister = adminM.unregisterHook
+	adminM.onRegister = adminM.registerHook
+	adminM.onUnRegister = adminM.unregisterHook
 	adminM.run()
 
 	userM = &userManager{
+		sManual{},
 		&manager{
-			ShardCount:   10,
-			ConnMessages: make(chan *chatConnMessage, 100),
-			Types:        "user",
+			shardCount:   10,
+			connMessages: make(chan *chatConnMessage, 100),
+			types:        "user",
 		},
 	}
-	userM.OnRegister = userM.registerHook
-	userM.OnUnRegister = userM.unRegisterHook
+	userM.onRegister = userM.registerHook
+	userM.onUnRegister = userM.unRegisterHook
 	userM.run()
-	service.RegisterChat(&sChat{
+	return &sChat{
 		admin: adminM,
 		user:  userM,
-	})
+	}
 }
 
 type sChat struct {
+	sManual
 	admin *adminManager
 	user  *userManager
 }
@@ -60,8 +66,8 @@ func (s sChat) UpdateAdminSetting(customerId uint, setting *entity.CustomerAdmin
 	s.admin.updateSetting(customerId, setting)
 }
 
-func (s sChat) NoticeTransfer(customer, admin uint) {
-	s.admin.noticeUserTransfer(customer, admin)
+func (s sChat) NoticeTransfer(ctx context.Context, customer, admin uint) {
+	s.admin.noticeUserTransfer(ctx, customer, admin)
 }
 
 func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (u *api.ChatUser, err error) {
@@ -148,7 +154,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	if err != nil {
 		return
 	}
-	err = service.ChatManual().Remove(session.UserId, session.CustomerId)
+	err = s.RemoveManual(ctx, session.UserId, session.CustomerId)
 	if err != nil {
 		return
 	}
@@ -218,15 +224,15 @@ func (s sChat) IsOnline(customerId uint, uid uint, t string) bool {
 	return false
 }
 
-func (s sChat) BroadcastWaitingUser(customerId uint) {
-	s.admin.broadcastWaitingUser(customerId)
+func (s sChat) BroadcastWaitingUser(ctx context.Context, customerId uint) {
+	s.admin.broadcastWaitingUser(ctx, customerId)
 }
 
-func (s sChat) GetOnlineCount(customerId uint) api.ChatOnlineCount {
+func (s sChat) GetOnlineCount(ctx context.Context, customerId uint) api.ChatOnlineCount {
 	return api.ChatOnlineCount{
 		Admin:   s.admin.GetOnlineTotal(customerId),
 		User:    s.user.GetOnlineTotal(customerId),
-		Waiting: service.ChatManual().GetTotalCount(customerId),
+		Waiting: s.getManualCount(ctx, customerId),
 	}
 }
 
@@ -257,8 +263,7 @@ func (s sChat) NoticeAdminRead(customerId, uid uint, msgIds []uint) {
 	s.user.NoticeRead(customerId, uid, msgIds)
 }
 
-func (s sChat) Transfer(fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) (err error) {
-	ctx := gctx.New()
+func (s sChat) Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) (err error) {
 	user, err := service.User().First(ctx, do.Users{
 		CustomerId: fromAdmin.CustomerId,
 		Id:         userId,

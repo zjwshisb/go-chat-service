@@ -2,7 +2,6 @@ package chat
 
 import (
 	api "gf-chat/api/v1/backend"
-	"gf-chat/internal/model"
 	"sync"
 	"time"
 
@@ -10,13 +9,6 @@ import (
 	"github.com/gorilla/websocket"
 	"golang.org/x/time/rate"
 )
-
-type MessageHandle interface {
-	handleReceiveMessage()
-	handleMessage(cm *chatConnMessage) error
-	handleOffline(msg *model.CustomerChatMessage)
-	DeliveryMessage(msg *model.CustomerChatMessage)
-}
 
 type ManagerHook = func(conn iWsConn)
 
@@ -59,20 +51,20 @@ func (s *Shard) remove(uid uint) {
 }
 
 type manager struct {
-	ShardCount   uint                  // 分组数量
+	shardCount   uint                  // 分组数量
 	shard        []*Shard              // 分组切片
-	ConnMessages chan *chatConnMessage // 接受从conn所读取消息的chan
-	OnRegister   ManagerHook           //conn连接成功hook
-	OnUnRegister ManagerHook           //conn连接断开hook
-	Types        string                //类型
+	connMessages chan *chatConnMessage // 接受从conn所读取消息的chan
+	onRegister   ManagerHook           //conn连接成功hook
+	onUnRegister ManagerHook           //conn连接断开hook
+	types        string                //类型
 }
 
 func (m *manager) GetTypes() string {
-	return m.Types
+	return m.types
 }
 
 func (m *manager) getMod(customerId uint) uint {
-	return customerId % m.ShardCount
+	return customerId % m.shardCount
 }
 
 func (m *manager) getSpread(customerId uint) *Shard {
@@ -81,7 +73,7 @@ func (m *manager) getSpread(customerId uint) *Shard {
 
 // ReceiveMessage 接受消息
 func (m *manager) ReceiveMessage(cm *chatConnMessage) {
-	m.ConnMessages <- cm
+	m.connMessages <- cm
 }
 
 // NoticeRepeatConnect 重复链接
@@ -194,8 +186,8 @@ func (m *manager) Unregister(conn iWsConn) {
 	if exist {
 		if existConn == conn {
 			m.RemoveConn(conn.GetUser())
-			if m.OnUnRegister != nil {
-				m.OnUnRegister(conn)
+			if m.onUnRegister != nil {
+				m.onUnRegister(conn)
 			}
 		}
 	}
@@ -222,8 +214,8 @@ func (m *manager) Register(conn *websocket.Conn, user IChatUser, platform string
 	m.AddConn(client)
 	client.Run()
 	<-timer
-	if m.OnRegister != nil {
-		m.OnRegister(client)
+	if m.onRegister != nil {
+		m.onRegister(client)
 	}
 }
 func (m *manager) NoticeRead(customerId, adminId uint, msgIds []uint) {
@@ -253,9 +245,9 @@ func (m *manager) Ping() {
 }
 
 func (m *manager) Run() {
-	m.shard = make([]*Shard, m.ShardCount)
+	m.shard = make([]*Shard, m.shardCount)
 	var i uint
-	for i = 0; i < m.ShardCount; i++ {
+	for i = 0; i < m.shardCount; i++ {
 		m.shard[i] = &Shard{
 			m:     make(map[uint]iWsConn),
 			mutex: sync.RWMutex{},

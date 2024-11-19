@@ -30,7 +30,7 @@ func (c cDashboard) OnlineUser(ctx context.Context, req *api.DashboardOnlineUser
 }
 
 func (c cDashboard) OnlineInfo(ctx context.Context, req *api.DashboardOnlineReq) (*api.DashboardOnlineRes, error) {
-	count := service.Chat().GetOnlineCount(service.AdminCtx().GetCustomerId(ctx))
+	count := service.Chat().GetOnlineCount(ctx, service.AdminCtx().GetCustomerId(ctx))
 	return &api.DashboardOnlineRes{
 		UserCount:        count.User,
 		WaitingUserCount: count.Waiting,

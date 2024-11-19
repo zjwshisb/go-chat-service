@@ -18,7 +18,3 @@ func init() {
 type sUser struct {
 	trait.Curd[entity.Users]
 }
-
-func (s sUser) FindByToken(token string) *entity.Users {
-	return nil
-}

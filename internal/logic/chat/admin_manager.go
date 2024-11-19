@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"context"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
@@ -32,23 +33,24 @@ func (m *adminManager) run() {
 // 投递消息
 // 查询admin是否在线，是则直接投递
 // 最后则说明admin不在线，处理离线逻辑
-func (m *adminManager) deliveryMessage(msg *model.CustomerChatMessage) {
+func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerChatMessage) {
 	adminConn, exist := m.GetConn(msg.CustomerId, msg.AdminId)
 	if exist { // admin在线
 		adminConn.Deliver(newReceiveAction(msg))
 		return
 	}
-	m.handleOffline(msg)
+	m.handleOffline(ctx, msg)
 }
 
 // 从管道接受消息并处理
 func (m *adminManager) handleReceiveMessage() {
 	for {
-		payload := <-m.ConnMessages
+		payload := <-m.connMessages
 		go func() {
-			err := m.handleMessage(payload)
+			ctx := gctx.New()
+			err := m.handleMessage(ctx, payload)
 			if err != nil {
-				g.Log().Error(gctx.New(), err)
+				g.Log().Error(ctx, err)
 			}
 		}()
 	}
@@ -63,9 +65,8 @@ func (m *adminManager) sendOffline(admin *model.CustomerAdmin, msg *model.Custom
 }
 
 // 处理离线消息
-func (m *adminManager) handleOffline(msg *model.CustomerChatMessage) {
-	err := userM.triggerMessageEvent(consts.AutoRuleSceneAdminOffline, msg, &user{Entity: msg.User})
-	ctx := gctx.New()
+func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerChatMessage) {
+	err := userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOffline, msg, &user{Entity: msg.User})
 	if err != nil {
 		g.Log().Error(ctx, err)
 	}
@@ -79,18 +80,17 @@ func (m *adminManager) handleOffline(msg *model.CustomerChatMessage) {
 		message.UserId = msg.UserId
 		message.SessionId = msg.SessionId
 		_ = service.ChatMessage().SaveWithUpdate(ctx, message)
-		userM.DeliveryMessage(message)
+		userM.DeliveryMessage(ctx, message)
 	}
 	m.sendOffline(admin, msg)
 }
 
 // 处理消息
-func (m *adminManager) handleMessage(payload *chatConnMessage) error {
+func (m *adminManager) handleMessage(ctx context.Context, payload *chatConnMessage) error {
 	msg := payload.Msg
 	conn := payload.Conn
-	ctx := gctx.New()
 	if msg.UserId > 0 {
-		if !service.ChatRelation().IsUserValid(gctx.New(), conn.GetUserId(), msg.UserId) {
+		if !service.ChatRelation().IsUserValid(ctx, conn.GetUserId(), msg.UserId) {
 			conn.Deliver(newErrorMessageAction("该用户已失效，无法发送消息"))
 			return gerror.New("该用户已失效，无法发送消息")
 		}
@@ -104,41 +104,42 @@ func (m *adminManager) handleMessage(payload *chatConnMessage) error {
 		msg.ReceivedAt = gtime.New()
 		msg.SessionId = session.Id
 		_ = service.ChatMessage().SaveWithUpdate(ctx, msg)
-		_ = service.ChatRelation().UpdateUser(gctx.New(), msg.AdminId, msg.UserId)
+		_ = service.ChatRelation().UpdateUser(ctx, msg.AdminId, msg.UserId)
 		// 服务器回执d
 		conn.Deliver(newReceiptAction(msg))
-		userM.DeliveryMessage(msg)
+		userM.DeliveryMessage(ctx, msg)
 	}
 	return nil
 }
 
 func (m *adminManager) registerHook(conn iWsConn) {
-	m.broadcastOnlineAdmins(conn.GetCustomerId())
-	m.broadcastWaitingUser(conn.GetCustomerId())
-	m.noticeUserTransfer(conn.GetCustomerId(), conn.GetUserId())
+	ctx := gctx.New()
+	m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
+	m.broadcastWaitingUser(ctx, conn.GetCustomerId())
+	m.noticeUserTransfer(ctx, conn.GetCustomerId(), conn.GetUserId())
 }
 
 // conn断开连接后，更新admin的最后在线时间
 func (m *adminManager) unregisterHook(conn iWsConn) {
+	ctx := gctx.New()
 	u := conn.GetUser()
 	a, ok := u.(*admin)
 	if ok {
 		e := a.Entity
 		e.Setting.LastOnline = gtime.New()
-		_, err := dao.CustomerAdminChatSettings.Ctx(gctx.New()).Save(e.Setting)
+		_, err := dao.CustomerAdminChatSettings.Ctx(ctx).Save(e.Setting)
 		if err != nil {
 			g.Log().Error(gctx.New(), err)
 		}
 	}
-	m.broadcastOnlineAdmins(conn.GetCustomerId())
+	m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
 }
 
-func (m *adminManager) broadcastWaitingUser(customerId uint) {
-	m.broadcastLocalWaitingUser(customerId)
+func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint) {
+	m.broadcastLocalWaitingUser(ctx, customerId)
 }
 
-func (m *adminManager) broadcastLocalWaitingUser(customerId uint) {
-	ctx := gctx.New()
+func (m *adminManager) broadcastLocalWaitingUser(ctx context.Context, customerId uint) {
 	sessions, _ := service.ChatSession().GetUnAcceptModel(ctx, customerId)
 	sessionIds := slice.Map(sessions, func(index int, item *model.CustomerChatSession) uint {
 		return item.Id
@@ -179,11 +180,11 @@ func (m *adminManager) broadcastLocalWaitingUser(customerId uint) {
 	m.SendAction(action, adminConns...)
 }
 
-func (m *adminManager) broadcastOnlineAdmins(gid uint) {
-	m.broadcastLocalOnlineAdmins(gid)
+func (m *adminManager) broadcastOnlineAdmins(ctx context.Context, gid uint) {
+	m.broadcastLocalOnlineAdmins(ctx, gid)
 }
 
-func (m *adminManager) broadcastLocalOnlineAdmins(customerId uint) {
+func (m *adminManager) broadcastLocalOnlineAdmins(ctx context.Context, customerId uint) {
 	admins, _ := service.Admin().All(gctx.New(), do.CustomerAdmins{
 		CustomerId: customerId,
 	}, g.Slice{
@@ -196,13 +197,13 @@ func (m *adminManager) broadcastLocalOnlineAdmins(customerId uint) {
 		if online {
 			platform = conn.GetPlatform()
 		}
-		avatar, _ := service.Admin().GetAvatar(gctx.New(), c)
+		avatar, _ := service.Admin().GetAvatar(ctx, c)
 		data = append(data, api.ChatCustomerAdmin{
 			Avatar:        avatar,
 			Username:      c.Username,
 			Online:        online,
 			Id:            c.Id,
-			AcceptedCount: service.ChatRelation().GetActiveCount(gctx.New(), c.Id),
+			AcceptedCount: service.ChatRelation().GetActiveCount(ctx, c.Id),
 			Platform:      platform,
 		})
 	}
@@ -233,13 +234,13 @@ func (m *adminManager) noticeLocalUserOffline(uid uint) {
 	}
 }
 
-func (m *adminManager) noticeUserOnline(conn iWsConn) {
-	m.noticeLocalUserOnline(conn.GetUserId(), conn.GetPlatform())
+func (m *adminManager) noticeUserOnline(ctx context.Context, conn iWsConn) {
+	m.noticeLocalUserOnline(ctx, conn.GetUserId(), conn.GetPlatform())
 }
 
-func (m *adminManager) noticeLocalUserOnline(uid uint, platform string) {
-	adminId := service.ChatRelation().GetUserValidAdmin(gctx.New(), uid)
-	admin, _ := service.Admin().First(gctx.New(), do.CustomerAdmins{Id: adminId})
+func (m *adminManager) noticeLocalUserOnline(ctx context.Context, uid uint, platform string) {
+	adminId := service.ChatRelation().GetUserValidAdmin(ctx, uid)
+	admin, _ := service.Admin().First(ctx, do.CustomerAdmins{Id: adminId})
 	if admin != nil {
 		conn, exist := m.GetConn(admin.CustomerId, admin.Id)
 		if exist {
@@ -260,14 +261,14 @@ func (m *adminManager) noticeLocalUserOnline(uid uint, platform string) {
 //	}
 //}
 
-func (m *adminManager) noticeUserTransfer(customerId, adminId uint) {
-	m.noticeLocalUserTransfer(customerId, adminId)
+func (m *adminManager) noticeUserTransfer(ctx context.Context, customerId, adminId uint) {
+	m.noticeLocalUserTransfer(ctx, customerId, adminId)
 }
 
-func (m *adminManager) noticeLocalUserTransfer(customerId, adminId uint) {
+func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, adminId uint) {
 	client, exist := m.GetConn(customerId, adminId)
 	if exist {
-		transfers, _ := service.ChatTransfer().All(gctx.New(), do.CustomerChatTransfers{
+		transfers, _ := service.ChatTransfer().All(ctx, do.CustomerChatTransfers{
 			ToAdminId:  adminId,
 			AcceptedAt: nil,
 			CanceledAt: nil,

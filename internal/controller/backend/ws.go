@@ -33,6 +33,9 @@ func (c cWs) Connect(ctx context.Context, req *api.ChatConnectReq) (res *baseApi
 		return
 	}
 	admin := service.AdminCtx().GetAdmin(ctx)
-	service.Chat().Register(ctx, admin, conn)
-	return nil, nil
+	err = service.Chat().Register(ctx, admin, conn)
+	if err != nil {
+		return
+	}
+	return baseApi.NewNilResp(), nil
 }

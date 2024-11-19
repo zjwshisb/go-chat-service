@@ -143,9 +143,10 @@ func (c *client) ReadMsg() {
 		case <-c.CloseSignal:
 			return
 		case msgStr := <-msg:
+			ctx := gctx.New()
 			act, err := unMarshalAction(msgStr)
 			if err != nil {
-				g.Log().Error(gctx.New(), err)
+				g.Log().Error(ctx, err)
 				break
 			}
 			data, ok := act.Data.(map[string]interface{})
@@ -161,7 +162,7 @@ func (c *client) ReadMsg() {
 			case consts.ActionSendMessage:
 				msg, err := GetMessage(act)
 				if err != nil {
-					g.Log().Error(gctx.New(), err)
+					g.Log().Error(ctx, err)
 					break
 				}
 				iu := c.GetUser()

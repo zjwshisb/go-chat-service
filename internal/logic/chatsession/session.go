@@ -68,11 +68,11 @@ func (s *sChatSession) Cancel(ctx context.Context, session *model.CustomerChatSe
 	if err != nil {
 		return
 	}
-	err = service.ChatManual().Remove(session.UserId, session.CustomerId)
+	err = service.Chat().RemoveManual(ctx, session.UserId, session.CustomerId)
 	if err != nil {
 		return
 	}
-	service.Chat().BroadcastWaitingUser(session.CustomerId)
+	service.Chat().BroadcastWaitingUser(ctx, session.CustomerId)
 	return nil
 }
 

@@ -80,7 +80,7 @@ func (s *sChatTransfer) Cancel(ctx context.Context, transfer *model.CustomerChat
 	if err != nil {
 		return
 	}
-	service.Chat().NoticeTransfer(transfer.CustomerId, transfer.ToAdminId)
+	service.Chat().NoticeTransfer(ctx, transfer.CustomerId, transfer.ToAdminId)
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (s *sChatTransfer) Accept(ctx context.Context, transfer *model.CustomerChat
 	if err != nil {
 		return err
 	}
-	service.Chat().NoticeTransfer(transfer.CustomerId, transfer.ToAdminId)
+	service.Chat().NoticeTransfer(ctx, transfer.CustomerId, transfer.ToAdminId)
 	return s.removeUser(ctx, transfer.CustomerId, transfer.UserId)
 }
 
@@ -139,7 +139,7 @@ func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint,
 	if err != nil {
 		return
 	}
-	service.Chat().NoticeTransfer(session.CustomerId, toId)
+	service.Chat().NoticeTransfer(ctx, session.CustomerId, toId)
 	return nil
 }
 func (s *sChatTransfer) userKey(customerId uint) string {

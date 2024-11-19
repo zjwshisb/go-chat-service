@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"context"
 	"fmt"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
@@ -16,6 +17,7 @@ import (
 )
 
 type userManager struct {
+	sManual
 	*manager
 }
 
@@ -28,9 +30,8 @@ func (s *userManager) run() {
 // 查询user是否在本机上，是则直接投递
 // 查询user当前server，如果存在则投递到该channel上
 // 最后则说明user不在线，处理相关逻辑
-func (s *userManager) DeliveryMessage(message *model.CustomerChatMessage) {
+func (s *userManager) DeliveryMessage(ctx context.Context, message *model.CustomerChatMessage) {
 	userConn, exist := s.GetConn(message.CustomerId, message.UserId)
-	ctx := gctx.New()
 	switch message.Type {
 	case consts.MessageTypeRate:
 		session, _ := service.ChatSession().First(ctx, do.CustomerChatSessions{Id: message.SessionId})
@@ -45,36 +46,37 @@ func (s *userManager) DeliveryMessage(message *model.CustomerChatMessage) {
 		userConn.Deliver(newReceiveAction(message))
 		return
 	}
-	s.handleOffline(message)
+	s.handleOffline(ctx, message)
 }
 
 // NoticeQueueLocation 等待人数
-func (s *userManager) NoticeQueueLocation(conn iWsConn) {
+func (s *userManager) NoticeQueueLocation(ctx context.Context, conn iWsConn) {
 	uid := conn.GetUserId()
-	uTime := service.ChatManual().GetTime(uid, conn.GetCustomerId())
-	count := service.ChatManual().GetCountByTime(conn.GetCustomerId(), "-inf",
+	uTime := s.getManualAddTime(ctx, uid, conn.GetCustomerId())
+	count := s.getCountByTime(ctx, conn.GetCustomerId(), "-inf",
 		strconv.FormatFloat(uTime, 'f', 0, 64))
 	conn.Deliver(newWaitingUserCountAction(count - 1))
 }
 
-func (s *userManager) BroadcastQueueLocation(customerId uint) {
-	s.BroadcastLocalQueueLocation(customerId)
+func (s *userManager) BroadcastQueueLocation(ctx context.Context, customerId uint) {
+	s.BroadcastLocalQueueLocation(ctx, customerId)
 }
 
 // BroadcastLocalQueueLocation 广播前面等待人数
-func (s *userManager) BroadcastLocalQueueLocation(customerId uint) {
+func (s *userManager) BroadcastLocalQueueLocation(ctx context.Context, customerId uint) {
 	conns := s.GetAllConn(customerId)
 	for _, conn := range conns {
-		s.NoticeQueueLocation(conn)
+		s.NoticeQueueLocation(ctx, conn)
 	}
 }
 
 // 从conn接受消息并处理
 func (s *userManager) handleReceiveMessage() {
 	for {
-		payload := <-s.ConnMessages
+		payload := <-s.connMessages
 		go func() {
-			err := s.handleMessage(payload)
+			ctx := gctx.New()
+			err := s.handleMessage(ctx, payload)
 			if err != nil {
 				g.Log().Error(gctx.New(), err)
 			}
@@ -83,13 +85,12 @@ func (s *userManager) handleReceiveMessage() {
 }
 
 // 处理离线逻辑
-func (s *userManager) handleOffline(msg *model.CustomerChatMessage) {
+func (s *userManager) handleOffline(ctx context.Context, msg *model.CustomerChatMessage) {
 	// todo
 }
 
 // 处理消息
-func (s *userManager) handleMessage(payload *chatConnMessage) (err error) {
-	ctx := gctx.New()
+func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessage) (err error) {
 	msg := payload.Msg
 	conn := payload.Conn
 	msg.Source = consts.MessageSourceUser
@@ -117,13 +118,13 @@ func (s *userManager) handleMessage(payload *chatConnMessage) (err error) {
 		if err != nil {
 			return err
 		}
-		err = s.triggerMessageEvent(consts.AutoRuleSceneAdminOnline, msg, conn.GetUser())
+		err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOnline, msg, conn.GetUser())
 		if err != nil {
 			return nil
 		}
-		adminM.deliveryMessage(msg)
+		adminM.deliveryMessage(ctx, msg)
 	} else {
-		err = s.triggerMessageEvent(consts.AutoRuleSceneNotAccepted, msg, conn.GetUser())
+		err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneNotAccepted, msg, conn.GetUser())
 		if err != nil {
 			return nil
 		}
@@ -134,7 +135,7 @@ func (s *userManager) handleMessage(payload *chatConnMessage) (err error) {
 		}
 		if transferAdminId == 0 {
 			// 在代人工接入列表中
-			inManual := service.ChatManual().IsIn(conn.GetUserId(), conn.GetCustomerId())
+			inManual := s.isInManual(ctx, conn.GetUserId(), conn.GetCustomerId())
 			if inManual {
 				session, err := service.ChatSession().FirstNormal(ctx, msg.UserId, 0)
 				if err != nil {
@@ -145,7 +146,7 @@ func (s *userManager) handleMessage(payload *chatConnMessage) (err error) {
 				if err != nil {
 					return err
 				}
-				adminM.broadcastWaitingUser(conn.GetCustomerId())
+				adminM.broadcastWaitingUser(ctx, conn.GetCustomerId())
 			} else {
 				// 不在代人工接入列表中
 				isAutoAdd, err := service.ChatSetting().GetIsAutoTransferManual(ctx, conn.GetCustomerId())
@@ -164,8 +165,8 @@ func (s *userManager) handleMessage(payload *chatConnMessage) (err error) {
 					if err != nil {
 						return err
 					}
-					adminM.broadcastWaitingUser(conn.GetCustomerId())
-					s.BroadcastQueueLocation(conn.GetCustomerId())
+					adminM.broadcastWaitingUser(ctx, conn.GetCustomerId())
+					s.BroadcastQueueLocation(ctx, conn.GetCustomerId())
 				}
 			}
 		} else {
@@ -230,9 +231,10 @@ func (s *userManager) unRegisterHook(conn iWsConn) {
 // 如果已经在待接入人工列表中，则推送当前队列位置
 // 如果不在待接入人工列表中且没有设置客服，则触发进入事件
 func (s *userManager) registerHook(conn iWsConn) {
-	adminM.noticeUserOnline(conn)
-	if service.ChatManual().IsIn(conn.GetUserId(), conn.GetCustomerId()) {
-		s.NoticeQueueLocation(conn)
+	ctx := gctx.New()
+	adminM.noticeUserOnline(ctx, conn)
+	if s.isInManual(ctx, conn.GetUserId(), conn.GetCustomerId()) {
+		s.NoticeQueueLocation(ctx, conn)
 	} else {
 		err := s.triggerEnterEvent(conn)
 		if err != nil {
@@ -244,7 +246,7 @@ func (s *userManager) registerHook(conn iWsConn) {
 // 加入人工列表
 func (s *userManager) addToManual(user IChatUser) (session *model.CustomerChatSession, err error) {
 	ctx := gctx.New()
-	if !service.ChatManual().IsIn(user.GetPrimaryKey(), user.GetCustomerId()) {
+	if !s.isInManual(ctx, user.GetPrimaryKey(), user.GetCustomerId()) {
 		onlineServerCount := adminM.GetOnlineTotal(user.GetCustomerId())
 		if onlineServerCount == 0 { // 如果没有在线客服
 			rule, _ := service.AutoRule().GetSystemOne(ctx, user.GetCustomerId(), consts.AutoRuleMatchAdminAllOffLine)
@@ -268,13 +270,13 @@ func (s *userManager) addToManual(user IChatUser) (session *model.CustomerChatSe
 					if err != nil {
 						return nil, err
 					}
-					s.DeliveryMessage(message)
+					s.DeliveryMessage(ctx, message)
 					return nil, nil
 				default:
 				}
 			}
 		}
-		_ = service.ChatManual().Add(user.GetPrimaryKey(), user.GetCustomerId())
+		_ = s.addToManualSet(ctx, user.GetPrimaryKey(), user.GetCustomerId())
 		session, _ = service.ChatSession().FirstNormal(ctx, user.GetPrimaryKey(), 0)
 		if session == nil {
 			session, err = service.ChatSession().Create(ctx, user.GetPrimaryKey(), user.GetCustomerId(), consts.ChatSessionTypeNormal)
@@ -287,7 +289,7 @@ func (s *userManager) addToManual(user IChatUser) (session *model.CustomerChatSe
 		if err != nil {
 			return nil, err
 		}
-		s.DeliveryMessage(message)
+		s.DeliveryMessage(ctx, message)
 		// 没有客服在线则发送公众号消息
 		go func() {
 			if onlineServerCount == 0 {
@@ -306,8 +308,7 @@ func (s *userManager) addToManual(user IChatUser) (session *model.CustomerChatSe
 }
 
 // 触发事件
-func (s *userManager) triggerMessageEvent(scene string, message *model.CustomerChatMessage, user IChatUser) (err error) {
-	ctx := gctx.New()
+func (s *userManager) triggerMessageEvent(ctx context.Context, scene string, message *model.CustomerChatMessage, user IChatUser) (err error) {
 	rules, err := service.AutoRule().AllActive(ctx, user.GetCustomerId())
 	if err != nil {
 		return
@@ -332,9 +333,9 @@ func (s *userManager) triggerMessageEvent(scene string, message *model.CustomerC
 					if err != nil {
 						return err
 					}
-					adminM.broadcastWaitingUser(message.CustomerId)
-					s.BroadcastQueueLocation(message.CustomerId)
-					adminM.broadcastWaitingUser(user.GetCustomerId())
+					adminM.broadcastWaitingUser(ctx, message.CustomerId)
+					s.BroadcastQueueLocation(ctx, message.CustomerId)
+					adminM.broadcastWaitingUser(ctx, user.GetCustomerId())
 					err = service.AutoRule().Increment(ctx, rule)
 					if err != nil {
 						return err
