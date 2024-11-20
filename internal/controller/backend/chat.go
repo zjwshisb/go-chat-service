@@ -30,7 +30,10 @@ func (c cChat) AcceptUser(ctx context.Context, req *api.AcceptUserReq) (res *bas
 	if err != nil {
 		return nil, err
 	}
-	service.Chat().BroadcastWaitingUser(ctx, admin.CustomerId)
+	err = service.Chat().BroadcastWaitingUser(ctx, admin.CustomerId)
+	if err != nil {
+		return
+	}
 	res = baseApi.NewResp(api.AcceptRes{
 		User: *user,
 	})
@@ -204,7 +207,7 @@ func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.Nor
 				return item.UserId == user.Id
 			})
 			if exist {
-				lastMsg, err := service.ChatMessage().RelationToChat(ctx, *lastMsg)
+				lastMsg, err := service.ChatMessage().ToApi(ctx, *lastMsg)
 				if err != nil {
 					return nil, err
 				}
@@ -242,17 +245,20 @@ func (c cChat) UserInfo(ctx context.Context, req *api.GetUserChatInfoReq) (res *
 func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseApi.NormalRes[api.MessageRes], err error) {
 	admin := service.AdminCtx().GetAdmin(ctx)
 	r := api.MessageRes{}
-	models := service.ChatMessage().GetModels(req.Mid, g.Map{
+	models, err := service.ChatMessage().GetList(ctx, req.Mid, g.Map{
 		"user_id":  req.Uid,
 		"admin_id": admin.Id,
 		"source":   []uint{consts.MessageSourceUser, consts.MessageSourceAdmin},
 	}, 20)
+	if err != nil {
+		return
+	}
 	unReadIds := make([]uint, 0, len(models))
 	for _, i := range models {
 		if i.ReadAt == nil && i.Source == consts.MessageSourceUser {
 			unReadIds = append(unReadIds, i.Id)
 		}
-		msg, err := service.ChatMessage().RelationToChat(ctx, *i)
+		msg, err := service.ChatMessage().ToApi(ctx, *i)
 		if err != nil {
 			return nil, err
 		}

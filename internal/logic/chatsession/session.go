@@ -190,17 +190,14 @@ func (s *sChatSession) Create(ctx context.Context, uid uint, customerId uint, t 
 	return item, nil
 }
 
-func (s *sChatSession) GetUnAcceptModel(ctx context.Context, customerId uint) (res []*model.CustomerChatSession, err error) {
-	err = dao.CustomerChatSessions.Ctx(ctx).Where(do.CustomerChatSessions{
+func (s *sChatSession) GetUnAccepts(ctx context.Context, customerId uint) (res []*model.CustomerChatSession, err error) {
+	return s.All(ctx, do.CustomerChatSessions{
 		CanceledAt: nil,
 		AdminId:    0,
 		Type:       consts.ChatSessionTypeNormal,
 		CustomerId: customerId,
-	}).WithAll().Scan(&res)
-	if err != nil || res == nil {
-		res = make([]*model.CustomerChatSession, 0)
-	}
-	return
+	}, g.Slice{model.CustomerChatSession{}.User, model.CustomerChatSession{}.Admin}, nil)
+
 }
 func (s *sChatSession) FirstTransfer(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error) {
 	return s.FirstActive(ctx, uid, adminId, consts.ChatSessionTypeTransfer)

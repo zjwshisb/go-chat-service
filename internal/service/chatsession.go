@@ -14,7 +14,7 @@ type (
 		// Close 关闭会话
 		Close(ctx context.Context, session *model.CustomerChatSession, isRemoveUser bool, updateTime bool) error
 		RelationToChat(session *model.CustomerChatSession) api.ChatSession
-		GetUnAcceptModel(ctx context.Context, customerId uint) (res []*model.CustomerChatSession, err error)
+		GetUnAccepts(ctx context.Context, customerId uint) (res []*model.CustomerChatSession, err error)
 		FirstTransfer(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error)
 		FirstNormal(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error)
 		FirstActive(ctx context.Context, uid uint, adminId any, t any) (*model.CustomerChatSession, error)

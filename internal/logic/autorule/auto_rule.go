@@ -6,6 +6,7 @@ import (
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/trait"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"strings"
@@ -36,7 +37,7 @@ func (s *sAutoRule) AllActive(ctx context.Context, customerId uint) ([]*model.Cu
 	}, g.Slice{model.CustomerChatAutoRule{}.Scenes}, g.Slice{"sort"})
 }
 
-func (s *sAutoRule) Increment(ctx context.Context, rule *model.CustomerChatAutoRule) error {
+func (s *sAutoRule) IncrTriggerCount(ctx context.Context, rule *model.CustomerChatAutoRule) error {
 	_, err := dao.CustomerChatAutoRules.Ctx(ctx).WherePri(rule.Id).Increment("count", 1)
 	return err
 }
@@ -49,7 +50,7 @@ func (s *sAutoRule) GetMessage(ctx context.Context, rule *model.CustomerChatAuto
 		}
 		return
 	}
-	return nil, gerror.New("no message")
+	return nil, gerror.NewCode(gcode.CodeNotFound)
 }
 
 func (s *sAutoRule) sceneInclude(scenes []*entity.CustomerChatAutoRuleScenes, match string) bool {
@@ -77,14 +78,6 @@ func (s *sAutoRule) IsMatch(rule *model.CustomerChatAutoRule, scene string, mess
 
 func (s *sAutoRule) GetEnterRule(ctx context.Context, customerId uint) (*model.CustomerChatAutoRule, error) {
 	return s.GetSystemOne(ctx, customerId, consts.AutoRuleMatchEnter)
-}
-
-func (s *sAutoRule) GetEnterRuleMessage(ctx context.Context, customerId uint) (*model.CustomerChatAutoMessage, error) {
-	rule, err := s.GetEnterRule(ctx, customerId)
-	if err != nil {
-		return nil, err
-	}
-	return s.GetMessage(ctx, rule)
 }
 
 // GetSystemOne 获取系统规则

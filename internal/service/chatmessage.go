@@ -14,9 +14,9 @@ type (
 		SaveWithUpdate(ctx context.Context, msg *model.CustomerChatMessage) (err error)
 		ToRead(ctx context.Context, where any) (int64, error)
 		GetAdminName(ctx context.Context, model model.CustomerChatMessage) (string, error)
-		RelationToChat(ctx context.Context, message model.CustomerChatMessage) (api.ChatMessage, error)
+		ToApi(ctx context.Context, message model.CustomerChatMessage) (api.ChatMessage, error)
 		GetAvatar(ctx context.Context, model model.CustomerChatMessage) (string, error)
-		GetModels(lastId uint, w any, size uint) []*model.CustomerChatMessage
+		GetList(ctx context.Context, lastId uint, w any, size uint) (res []*model.CustomerChatMessage, err error)
 		NewNotice(session *model.CustomerChatSession, content string) *model.CustomerChatMessage
 		NewOffline(admin *model.CustomerAdmin) *model.CustomerChatMessage
 		NewWelcome(admin *model.CustomerAdmin) *model.CustomerChatMessage

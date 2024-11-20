@@ -16,6 +16,20 @@ import (
 	"golang.org/x/time/rate"
 )
 
+type iWsConn interface {
+	ReadMsg()
+	SendMsg()
+	Close()
+	Run()
+	Deliver(action *api.ChatAction)
+	GetUserId() uint
+	GetUser() IChatUser
+	GetUuid() string
+	GetPlatform() string
+	GetCustomerId() uint
+	GetCreateTime() int64
+}
+
 type client struct {
 	Conn        *websocket.Conn
 	CloseSignal chan interface{}     // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine

@@ -4,9 +4,17 @@ import (
 	"context"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
+	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
+	"gf-chat/internal/util"
+	"github.com/gogf/gf/v2/errors/gcode"
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/util/gconv"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func init() {
@@ -19,6 +27,55 @@ func init() {
 
 type sAdmin struct {
 	trait.Curd[model.CustomerAdmin]
+}
+
+func (s *sAdmin) Login(ctx context.Context, request *ghttp.Request) (admin *model.CustomerAdmin, token string, err error) {
+	username := request.Get("username")
+	password := request.Get("password")
+	admin, err = service.Admin().First(ctx, do.CustomerAdmins{Username: username.String()})
+	if err != nil {
+		return
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(admin.Password), password.Bytes())
+	if err != nil {
+		err = gerror.NewCode(gcode.CodeValidationFailed, "账号或密码错误")
+		return
+	}
+	canAccess := service.Admin().CanAccess(admin)
+	if !canAccess {
+		err = gerror.NewCode(gcode.CodeBusinessValidationFailed, "账号已禁用")
+		return
+	}
+	token, err = service.Jwt().CreateToken(gconv.String(admin.Id))
+	if err != nil {
+		return
+	}
+	return
+
+}
+func (s *sAdmin) Auth(ctx g.Ctx, req *ghttp.Request) (admin *model.CustomerAdmin, err error) {
+	token := util.GetRequestToken(req)
+	if token == "" {
+		err = gerror.NewCode(gcode.CodeNotAuthorized)
+		return
+	}
+	uidStr, err := service.Jwt().ParseToken(token)
+	if err != nil {
+		err = gerror.NewCode(gcode.CodeNotAuthorized)
+		return
+	}
+	uid := gconv.Int(uidStr)
+	admin, err = service.Admin().Find(ctx, uid)
+	if err != nil {
+		err = gerror.NewCode(gcode.CodeNotAuthorized)
+		return
+	}
+	canAccess := s.CanAccess(admin)
+	if !canAccess {
+		err = gerror.NewCode(gcode.CodeInvalidOperation)
+		return
+	}
+	return
 }
 
 func (s *sAdmin) CanAccess(admin *model.CustomerAdmin) bool {

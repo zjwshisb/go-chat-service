@@ -5,13 +5,8 @@ import (
 	baseApi "gf-chat/api"
 	"gf-chat/api/v1/backend"
 	"gf-chat/internal/dao"
-	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
-
-	"github.com/gogf/gf/v2/errors/gcode"
-	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/util/gconv"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/gogf/gf/v2/net/ghttp"
 )
 
 var CUser = &cUser{}
@@ -70,20 +65,11 @@ func (c *cUser) GetSetting(ctx context.Context, req *backend.CurrentUserSettingR
 }
 
 func (c *cUser) Login(ctx context.Context, r *backend.LoginReq) (res *baseApi.NormalRes[backend.LoginRes], err error) {
-	admin, err := service.Admin().First(ctx, do.CustomerAdmins{Username: r.Username})
+	request := ghttp.RequestFromCtx(ctx)
+	_, token, err := service.Admin().Login(ctx, request)
 	if err != nil {
 		return
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(r.Password))
-	if err != nil {
-		return nil, gerror.NewCode(gcode.CodeValidationFailed, "账号或密码错误")
-	}
-	canAccess := service.Admin().CanAccess(admin)
-	if !canAccess {
-		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "账号已禁用")
-	}
-
-	token, _ := service.Jwt().CreateToken(gconv.String(admin.Id))
 	return baseApi.NewResp(backend.LoginRes{
 		Token: token,
 	}), nil

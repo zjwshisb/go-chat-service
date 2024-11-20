@@ -23,43 +23,26 @@ var adminM *adminManager
 var userM *userManager
 
 func init() {
-
 	service.RegisterChat(newChat())
 }
 
 func newChat() *sChat {
-	adminM = &adminManager{
-		&manager{
-			shardCount:   10,
-			connMessages: make(chan *chatConnMessage, 100),
-			types:        TypeAdmin,
-		},
+	m := &sChat{
+		admin: newAdminManager(),
+		user:  newUserManager(),
 	}
-	adminM.onRegister = adminM.registerHook
-	adminM.onUnRegister = adminM.unregisterHook
-	adminM.run()
-
-	userM = &userManager{
-		sManual{},
-		&manager{
-			shardCount:   10,
-			connMessages: make(chan *chatConnMessage, 100),
-			types:        "user",
-		},
-	}
-	userM.onRegister = userM.registerHook
-	userM.onUnRegister = userM.unRegisterHook
-	userM.run()
-	return &sChat{
-		admin: adminM,
-		user:  userM,
-	}
+	m.run()
+	return m
 }
 
 type sChat struct {
-	sManual
 	admin *adminManager
 	user  *userManager
+}
+
+func (s sChat) run() {
+	s.admin.run()
+	s.user.run()
 }
 
 func (s sChat) UpdateAdminSetting(customerId uint, setting *entity.CustomerAdminChatSettings) {
@@ -144,7 +127,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	}, "order desc")
 	var lastMsg *api.ChatMessage
 	if err == nil {
-		v, err := service.ChatMessage().RelationToChat(ctx, *lastMessage)
+		v, err := service.ChatMessage().ToApi(ctx, *lastMessage)
 		if err != nil {
 			return nil, err
 		}
@@ -224,16 +207,21 @@ func (s sChat) IsOnline(customerId uint, uid uint, t string) bool {
 	return false
 }
 
-func (s sChat) BroadcastWaitingUser(ctx context.Context, customerId uint) {
-	s.admin.broadcastWaitingUser(ctx, customerId)
+func (s sChat) BroadcastWaitingUser(ctx context.Context, customerId uint) error {
+	return s.admin.broadcastWaitingUser(ctx, customerId)
 }
 
-func (s sChat) GetOnlineCount(ctx context.Context, customerId uint) api.ChatOnlineCount {
-	return api.ChatOnlineCount{
+func (s sChat) GetOnlineCount(ctx context.Context, customerId uint) (res api.ChatOnlineCount, err error) {
+	waiting, err := manual.getCount(ctx, customerId)
+	if err != nil {
+		return
+	}
+	res = api.ChatOnlineCount{
 		Admin:   s.admin.GetOnlineTotal(customerId),
 		User:    s.user.GetOnlineTotal(customerId),
-		Waiting: s.getManualCount(ctx, customerId),
+		Waiting: waiting,
 	}
+	return
 }
 
 func (s sChat) GetPlatform(customerId, uid uint, t string) string {
@@ -307,4 +295,8 @@ func (s sChat) GetOnlineUser(customerId uint) []api.ChatSimpleUser {
 		}
 	}
 	return res
+}
+
+func (s sChat) RemoveManual(ctx context.Context, uid uint, customerId uint) error {
+	return manual.removeFromSet(ctx, uid, customerId)
 }

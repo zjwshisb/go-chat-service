@@ -138,13 +138,16 @@ func (c cSession) Detail(ctx context.Context, req *api.SessionDetailReq) (res *a
 	if err != nil {
 		return
 	}
-	relations := service.ChatMessage().GetModels(0, do.CustomerChatMessages{
+	relations, err := service.ChatMessage().GetList(ctx, 0, do.CustomerChatMessages{
 		SessionId: session.Id,
 		Source:    []int{consts.MessageSourceAdmin, consts.MessageSourceUser},
 	}, 0)
+	if err != nil {
+		return
+	}
 	message := make([]api.ChatMessage, len(relations))
 	for index, i := range relations {
-		msg, err := service.ChatMessage().RelationToChat(ctx, *i)
+		msg, err := service.ChatMessage().ToApi(ctx, *i)
 		if err != nil {
 			return nil, err
 		}

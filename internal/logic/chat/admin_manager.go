@@ -20,6 +20,19 @@ import (
 
 const TypeAdmin = "admin"
 
+func newAdminManager() *adminManager {
+	adminM = &adminManager{
+		&manager{
+			shardCount:   10,
+			connMessages: make(chan *chatConnMessage, 100),
+			types:        TypeAdmin,
+		},
+	}
+	adminM.onRegister = adminM.registerHook
+	adminM.onUnRegister = adminM.unregisterHook
+	return adminM
+}
+
 type adminManager struct {
 	*manager
 }
@@ -33,13 +46,13 @@ func (m *adminManager) run() {
 // 投递消息
 // 查询admin是否在线，是则直接投递
 // 最后则说明admin不在线，处理离线逻辑
-func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerChatMessage) {
+func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerChatMessage) error {
 	adminConn, exist := m.GetConn(msg.CustomerId, msg.AdminId)
 	if exist { // admin在线
 		adminConn.Deliver(newReceiveAction(msg))
-		return
+		return nil
 	}
-	m.handleOffline(ctx, msg)
+	return m.handleOffline(ctx, msg)
 }
 
 // 从管道接受消息并处理
@@ -65,24 +78,30 @@ func (m *adminManager) sendOffline(admin *model.CustomerAdmin, msg *model.Custom
 }
 
 // 处理离线消息
-func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerChatMessage) {
+func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerChatMessage) error {
 	err := userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOffline, msg, &user{Entity: msg.User})
 	if err != nil {
-		g.Log().Error(ctx, err)
+		return err
 	}
 	admin, err := service.Admin().First(ctx, do.CustomerAdmins{Id: msg.AdminId})
 	if err != nil {
-		g.Log().Error(ctx, err)
-		return
+		return err
 	}
 	message := service.ChatMessage().NewOffline(admin)
 	if message != nil {
 		message.UserId = msg.UserId
 		message.SessionId = msg.SessionId
-		_ = service.ChatMessage().SaveWithUpdate(ctx, message)
-		userM.DeliveryMessage(ctx, message)
+		err = service.ChatMessage().SaveWithUpdate(ctx, message)
+		if err != nil {
+			return err
+		}
+		err = userM.DeliveryMessage(ctx, message)
+		if err != nil {
+			return err
+		}
 	}
 	m.sendOffline(admin, msg)
+	return nil
 }
 
 // 处理消息
@@ -107,7 +126,7 @@ func (m *adminManager) handleMessage(ctx context.Context, payload *chatConnMessa
 		_ = service.ChatRelation().UpdateUser(ctx, msg.AdminId, msg.UserId)
 		// 服务器回执d
 		conn.Deliver(newReceiptAction(msg))
-		userM.DeliveryMessage(ctx, msg)
+		return userM.DeliveryMessage(ctx, msg)
 	}
 	return nil
 }
@@ -115,7 +134,7 @@ func (m *adminManager) handleMessage(ctx context.Context, payload *chatConnMessa
 func (m *adminManager) registerHook(conn iWsConn) {
 	ctx := gctx.New()
 	m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
-	m.broadcastWaitingUser(ctx, conn.GetCustomerId())
+	_ = m.broadcastWaitingUser(ctx, conn.GetCustomerId())
 	m.noticeUserTransfer(ctx, conn.GetCustomerId(), conn.GetUserId())
 }
 
@@ -135,21 +154,26 @@ func (m *adminManager) unregisterHook(conn iWsConn) {
 	m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
 }
 
-func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint) {
-	m.broadcastLocalWaitingUser(ctx, customerId)
+func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint) error {
+	return m.broadcastLocalWaitingUser(ctx, customerId)
 }
 
-func (m *adminManager) broadcastLocalWaitingUser(ctx context.Context, customerId uint) {
-	sessions, _ := service.ChatSession().GetUnAcceptModel(ctx, customerId)
+func (m *adminManager) broadcastLocalWaitingUser(ctx context.Context, customerId uint) (err error) {
+	sessions, err := service.ChatSession().GetUnAccepts(ctx, customerId)
+	if err != nil {
+		return
+	}
 	sessionIds := slice.Map(sessions, func(index int, item *model.CustomerChatSession) uint {
 		return item.Id
 	})
 	userMap := make(map[uint]*api.ChatWaitingUser)
-	messages := make([]entity.CustomerChatMessages, 0)
-	_ = dao.CustomerChatMessages.Ctx(gctx.New()).Where("session_id in (?)", sessionIds).
-		Where("source", consts.MessageSourceUser).
-		Order("id").
-		Scan(&messages)
+	messages, err := service.ChatMessage().All(ctx, do.CustomerChatMessages{
+		Source:    consts.MessageSourceUser,
+		SessionId: sessionIds,
+	}, nil, g.Slice{"id"})
+	if err != nil {
+		return
+	}
 	for _, session := range sessions {
 		userMap[session.UserId] = &api.ChatWaitingUser{
 			Username:     session.User.Username,
@@ -178,6 +202,7 @@ func (m *adminManager) broadcastLocalWaitingUser(ctx context.Context, customerId
 	adminConns := m.GetAllConn(customerId)
 	action := newWaitingUsersAction(waitingUser)
 	m.SendAction(action, adminConns...)
+	return
 }
 
 func (m *adminManager) broadcastOnlineAdmins(ctx context.Context, gid uint) {

@@ -2,6 +2,8 @@ package chatmessage
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
@@ -11,7 +13,6 @@ import (
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/grand"
@@ -40,7 +41,6 @@ func (s *sChatMessage) SaveWithUpdate(ctx context.Context, msg *model.CustomerCh
 	}
 	if msg.Id == 0 {
 		msg.Id = uint(id)
-
 	}
 	return
 }
@@ -68,7 +68,7 @@ func (s *sChatMessage) GetAdminName(ctx context.Context, model model.CustomerCha
 	}
 	return "", nil
 }
-func (s *sChatMessage) RelationToChat(ctx context.Context, message model.CustomerChatMessage) (msg api.ChatMessage, err error) {
+func (s *sChatMessage) ToApi(ctx context.Context, message model.CustomerChatMessage) (msg api.ChatMessage, err error) {
 	username := ""
 	if message.User != nil {
 		username = message.User.Username
@@ -116,10 +116,8 @@ func (s *sChatMessage) GetAvatar(ctx context.Context, model model.CustomerChatMe
 	return "", nil
 }
 
-func (s *sChatMessage) GetModels(lastId uint, w any, size uint) []*model.CustomerChatMessage {
-	res := make([]*model.CustomerChatMessage, 0)
-	ctx := gctx.New()
-	query := dao.CustomerChatMessages.Ctx(ctx).With(
+func (s *sChatMessage) GetList(ctx context.Context, lastId uint, w any, size uint) (res []*model.CustomerChatMessage, err error) {
+	query := s.Dao.Ctx(ctx).With(
 		model.CustomerChatMessage{}.Admin,
 		// todo
 		// 多层关联会用N+1问题
@@ -132,7 +130,14 @@ func (s *sChatMessage) GetModels(lastId uint, w any, size uint) []*model.Custome
 	if lastId > 0 {
 		query = query.Where("id < ?", lastId)
 	}
-	query.Scan(&res)
+	err = query.Scan(&res)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			res = make([]*model.CustomerChatMessage, 0)
+		} else {
+			return
+		}
+	}
 	adminMaps := make(map[uint]*model.CustomerAdmin)
 	for _, message := range res {
 		if message.Admin != nil {
@@ -146,8 +151,10 @@ func (s *sChatMessage) GetModels(lastId uint, w any, size uint) []*model.Custome
 		adminIds = append(adminIds, admin.Id)
 	}
 	settings := make([]*entity.CustomerAdminChatSettings, 0)
-	dao.CustomerAdminChatSettings.Ctx(ctx).Where("admin_id in (?)", adminIds).Scan(&settings)
-
+	err = dao.CustomerAdminChatSettings.Ctx(ctx).Where("admin_id in (?)", adminIds).Scan(&settings)
+	if err != nil {
+		return
+	}
 	settingMap := make(map[uint]*entity.CustomerAdminChatSettings)
 	for _, s := range settings {
 		settingMap[s.AdminId] = s
@@ -160,7 +167,7 @@ func (s *sChatMessage) GetModels(lastId uint, w any, size uint) []*model.Custome
 			}
 		}
 	}
-	return res
+	return
 }
 
 func (s *sChatMessage) NewNotice(session *model.CustomerChatSession, content string) *model.CustomerChatMessage {

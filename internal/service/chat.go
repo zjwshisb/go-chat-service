@@ -20,8 +20,8 @@ type (
 		Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (*api.ChatUser, error)
 		Register(ctx context.Context, u any, conn *websocket.Conn) error
 		IsOnline(customerId uint, uid uint, t string) bool
-		BroadcastWaitingUser(ctx context.Context, customerId uint)
-		GetOnlineCount(ctx context.Context, customerId uint) api.ChatOnlineCount
+		BroadcastWaitingUser(ctx context.Context, customerId uint) error
+		GetOnlineCount(ctx context.Context, customerId uint) (api.ChatOnlineCount, error)
 		GetPlatform(customerId uint, uid uint, t string) string
 		NoticeRate(msg *model.CustomerChatMessage)
 		NoticeUserRead(customerId uint, uid uint, msgIds []uint)

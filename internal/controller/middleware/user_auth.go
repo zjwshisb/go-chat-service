@@ -1,27 +1,23 @@
 package middleware
 
 import (
-	"net/http"
-
+	"gf-chat/internal/model"
+	"gf-chat/internal/service"
 	"github.com/gogf/gf/v2/net/ghttp"
+	"net/http"
 )
 
 func UserAuth(r *ghttp.Request) {
-	token := getRequestToken(r)
-	if token == "" {
+	user, err := service.User().Auth(r.GetCtx(), r)
+	if err != nil {
 		r.Response.WriteStatus(http.StatusUnauthorized)
 		return
 	}
-	//user := service.User().FindByToken(token)
-	//if user == nil {
-	//	r.Response.WriteStatus(http.StatusUnauthorized)
-	//	return
-	//}
-	//ctx := &model.UserCtx{
-	//	Entity: user,
-	//	Data:   make(map[string]any),
-	//}
-	//service.UserCtx().Init(r, ctx)
+	ctx := &model.UserCtx{
+		Entity: user,
+		Data:   make(map[string]any),
+	}
+	service.UserCtx().Init(r, ctx)
 	r.Middleware.Next()
 
 }

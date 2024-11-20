@@ -20,13 +20,16 @@ type cChat struct {
 
 func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *api.ChatMessageRes, err error) {
 	uid := service.UserCtx().GetUser(ctx).Id
-	messages := service.ChatMessage().GetModels(req.Id, do.CustomerChatMessages{
+	messages, err := service.ChatMessage().GetList(ctx, req.Id, do.CustomerChatMessages{
 		UserId: uid,
 	}, 20)
+	if err != nil {
+		return
+	}
 	r := api.ChatMessageRes{}
 	adminToMessageId := make(map[uint][]uint)
 	for _, item := range messages {
-		msg, err := service.ChatMessage().RelationToChat(ctx, *item)
+		msg, err := service.ChatMessage().ToApi(ctx, *item)
 		if err != nil {
 			return nil, err
 		}

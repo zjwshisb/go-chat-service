@@ -1,13 +1,16 @@
 package service
 
 import (
+	"context"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/trait"
+	"github.com/gogf/gf/v2/net/ghttp"
 )
 
 type (
 	IUser interface {
 		trait.ICurd[entity.Users]
+		Auth(ctx context.Context, req *ghttp.Request) (*entity.Users, error)
 	}
 )
 

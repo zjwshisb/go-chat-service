@@ -10,14 +10,40 @@ import (
 	"golang.org/x/time/rate"
 )
 
+type connContainer interface {
+	AddConn(conn iWsConn)
+	GetConn(customerId uint, uid uint) (iWsConn, bool)
+	NoticeRepeatConnect(user IChatUser, newUid string)
+	GetAllConn(customerId uint) []iWsConn
+	GetOnlineTotal(customerId uint) uint
+	ConnExist(customerId uint, uid uint) bool
+	Register(conn *websocket.Conn, user IChatUser, platform string)
+	Unregister(connect iWsConn)
+	RemoveConn(user IChatUser)
+	IsOnline(customerId uint, uid uint) bool
+	IsLocalOnline(customerId uint, uid uint) bool
+	GetOnlineUserIds(gid uint) []uint
+}
+
+type connManager interface {
+	connContainer
+	Run()
+	Destroy()
+	Ping()
+	SendAction(act *api.ChatAction, conn ...iWsConn)
+	ReceiveMessage(cm *chatConnMessage)
+	GetTypes() string
+	NoticeRead(customerId uint, uid uint, msgIds []uint)
+}
+
 type ManagerHook = func(conn iWsConn)
 
-type Shard struct {
+type shard struct {
 	m     map[uint]iWsConn
 	mutex sync.RWMutex
 }
 
-func (s *Shard) getAll() []iWsConn {
+func (s *shard) getAll() []iWsConn {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	conns := make([]iWsConn, 0, len(s.m))
@@ -27,24 +53,24 @@ func (s *Shard) getAll() []iWsConn {
 	return conns
 }
 
-func (s *Shard) getTotalCount() uint {
+func (s *shard) getTotalCount() uint {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return uint(len(s.m))
 }
 
-func (s *Shard) get(uid uint) (conn iWsConn, exist bool) {
+func (s *shard) get(uid uint) (conn iWsConn, exist bool) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	conn, exist = s.m[uid]
 	return
 }
-func (s *Shard) set(conn iWsConn) {
+func (s *shard) set(conn iWsConn) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.m[conn.GetUserId()] = conn
 }
-func (s *Shard) remove(uid uint) {
+func (s *shard) remove(uid uint) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	delete(s.m, uid)
@@ -52,7 +78,7 @@ func (s *Shard) remove(uid uint) {
 
 type manager struct {
 	shardCount   uint                  // 分组数量
-	shard        []*Shard              // 分组切片
+	shard        []*shard              // 分组切片
 	connMessages chan *chatConnMessage // 接受从conn所读取消息的chan
 	onRegister   ManagerHook           //conn连接成功hook
 	onUnRegister ManagerHook           //conn连接断开hook
@@ -67,7 +93,7 @@ func (m *manager) getMod(customerId uint) uint {
 	return customerId % m.shardCount
 }
 
-func (m *manager) getSpread(customerId uint) *Shard {
+func (m *manager) getSpread(customerId uint) *shard {
 	return m.shard[m.getMod(customerId)]
 }
 
@@ -245,10 +271,10 @@ func (m *manager) Ping() {
 }
 
 func (m *manager) Run() {
-	m.shard = make([]*Shard, m.shardCount)
+	m.shard = make([]*shard, m.shardCount)
 	var i uint
 	for i = 0; i < m.shardCount; i++ {
-		m.shard[i] = &Shard{
+		m.shard[i] = &shard{
 			m:     make(map[uint]iWsConn),
 			mutex: sync.RWMutex{},
 		}

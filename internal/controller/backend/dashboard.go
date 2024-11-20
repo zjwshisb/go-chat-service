@@ -29,11 +29,15 @@ func (c cDashboard) OnlineUser(ctx context.Context, req *api.DashboardOnlineUser
 	return &res, nil
 }
 
-func (c cDashboard) OnlineInfo(ctx context.Context, req *api.DashboardOnlineReq) (*api.DashboardOnlineRes, error) {
-	count := service.Chat().GetOnlineCount(ctx, service.AdminCtx().GetCustomerId(ctx))
-	return &api.DashboardOnlineRes{
+func (c cDashboard) OnlineInfo(ctx context.Context, req *api.DashboardOnlineReq) (res *api.DashboardOnlineRes, err error) {
+	count, err := service.Chat().GetOnlineCount(ctx, service.AdminCtx().GetCustomerId(ctx))
+	if err != nil {
+		return
+	}
+	res = &api.DashboardOnlineRes{
 		UserCount:        count.User,
 		WaitingUserCount: count.Waiting,
 		AdminCount:       count.Admin,
-	}, nil
+	}
+	return
 }
