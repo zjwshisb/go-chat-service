@@ -12,13 +12,13 @@ import (
 type (
 	IChatRelation interface {
 		// AddUser 接入user
-		AddUser(ctx gctx.Ctx, adminId uint, uid uint) error
+		AddUser(ctx gctx.Ctx, adminId uint, uid uint) (err error)
 		// UpdateUser 更新user
 		// 更新limit time
 		// 更新最后聊天时间
-		UpdateUser(ctx gctx.Ctx, adminId uint, uid uint) error
+		UpdateUser(ctx gctx.Ctx, adminId uint, uid uint) (err error)
 		// RemoveUser 移除user
-		RemoveUser(ctx gctx.Ctx, adminId uint, uid uint) error
+		RemoveUser(ctx gctx.Ctx, adminId uint, uid uint) (err error)
 		// IsUserValid 检查用户对于客服是否合法
 		IsUserValid(ctx gctx.Ctx, adminId uint, uid uint) bool
 		// IsUserExist user是否存在
@@ -37,11 +37,11 @@ type (
 		GetLimitTime(ctx gctx.Ctx, adminId uint, uid uint) int64
 		GetInvalidUsers(ctx gctx.Ctx, adminId uint) []uint
 		// GetUsersWithLimitTime 获取所有user以及对应的有效期
-		GetUsersWithLimitTime(ctx gctx.Ctx, adminId uint) ([]uint, []int64)
+		GetUsersWithLimitTime(ctx gctx.Ctx, adminId uint) (uids []uint, times []int64)
 		// SetUserAdmin SetAdmin 设置用户客服
-		SetUserAdmin(ctx gctx.Ctx, uid uint, adminId uint) error
+		SetUserAdmin(ctx gctx.Ctx, uid uint, adminId uint) (err error)
 		// RemoveUserAdmin RemoveAdmin 移除用户客服
-		RemoveUserAdmin(ctx gctx.Ctx, uid uint) error
+		RemoveUserAdmin(ctx gctx.Ctx, uid uint) (err error)
 		// GetUserValidAdmin GetValidAdmin 获取用户客服
 		GetUserValidAdmin(ctx gctx.Ctx, uid uint) uint
 	}

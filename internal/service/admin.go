@@ -4,6 +4,7 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/trait"
+
 	"github.com/gogf/gf/v2/net/ghttp"
 
 	"github.com/gogf/gf/v2/frame/g"

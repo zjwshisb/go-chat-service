@@ -21,6 +21,8 @@ type (
 		Get(ctx context.Context) *model.UserCtx
 		// GetCustomerId 获取客户id
 		GetCustomerId(ctx context.Context) uint
+		// GetId 获取客户id
+		GetId(ctx context.Context) uint
 		// GetUser 获取admin实体
 		GetUser(ctx context.Context) *entity.Users
 	}

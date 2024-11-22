@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"gf-chat/internal/consts"
+	"gf-chat/internal/model"
 	"gf-chat/internal/model/entity"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -34,25 +35,32 @@ type localAdapter struct {
 }
 
 func (s *localAdapter) Url(path string) string {
-	return path
+	ctx := gctx.New()
+	host, err := g.Config().Get(ctx, "app.host")
+	if err != nil {
+		g.Log().Error(ctx)
+	}
+	return host.String() + pathSeparator + path
 }
 func (s *localAdapter) ThumbUrl(path string) string {
 	return s.Url(path)
 }
 
-func (s *localAdapter) SaveUpload(ctx context.Context, file *ghttp.UploadFile, relativePath string) (files *entity.CustomerChatFiles, err error) {
+func (s *localAdapter) SaveUpload(_ context.Context, file *ghttp.UploadFile, relativePath string) (files *model.CustomerChatFile, err error) {
 	var fullPath string
-	if strings.HasPrefix(relativePath, pathSeparator) {
-		fullPath = s.serverRoot + relativePath
-	} else {
-		fullPath = s.serverRoot + pathSeparator + relativePath
+	if strings.HasSuffix(relativePath, pathSeparator) {
+		relativePath = relativePath[:len(relativePath)-1]
 	}
+	fullPath = s.serverRoot + pathSeparator + relativePath
 	name, err := file.Save(fullPath, true)
 	if err != nil {
 		return
 	}
-	return &entity.CustomerChatFiles{
-		Path: fullPath + pathSeparator + name,
-		Disk: consts.StorageLocal,
+	return &model.CustomerChatFile{
+		CustomerChatFiles: entity.CustomerChatFiles{
+			Name: file.Filename,
+			Path: relativePath + pathSeparator + name,
+			Disk: consts.StorageLocal,
+		},
 	}, nil
 }

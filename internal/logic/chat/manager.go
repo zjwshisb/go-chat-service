@@ -2,6 +2,7 @@ package chat
 
 import (
 	api "gf-chat/api/v1/backend"
+	"github.com/duke-git/lancet/v2/slice"
 	"sync"
 	"time"
 
@@ -165,10 +166,9 @@ func (m *manager) ConnExist(customerId uint, uid uint) bool {
 }
 
 // GetConn 获取客户端
-func (m *manager) GetConn(customerId, uid uint) (client iWsConn, ok bool) {
+func (m *manager) GetConn(customerId, uid uint) (iWsConn, bool) {
 	s := m.getSpread(customerId)
-	client, ok = s.get(uid)
-	return
+	return s.get(uid)
 }
 
 // AddConn 添加客户端
@@ -186,7 +186,10 @@ func (m *manager) RemoveConn(user IChatUser) {
 // GetAllConn 获取所有客户端
 func (m *manager) GetAllConn(customerId uint) (conns []iWsConn) {
 	s := m.getSpread(customerId)
-	return s.getAll()
+	conns = slice.Filter(s.getAll(), func(index int, item iWsConn) bool {
+		return item.GetCustomerId() == customerId
+	})
+	return
 }
 
 func (m *manager) GetAllConnCount() uint {
@@ -207,8 +210,7 @@ func (m *manager) GetTotalConn() []iWsConn {
 
 // Unregister 客户端注销
 func (m *manager) Unregister(conn iWsConn) {
-	s := m.getSpread(conn.GetCustomerId())
-	existConn, exist := s.get(conn.GetUserId())
+	existConn, exist := m.GetConn(conn.GetCustomerId(), conn.GetUserId())
 	if exist {
 		if existConn == conn {
 			m.RemoveConn(conn.GetUser())

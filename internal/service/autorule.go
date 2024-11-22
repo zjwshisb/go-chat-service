@@ -13,7 +13,6 @@ type (
 		IncrTriggerCount(ctx context.Context, rule *model.CustomerChatAutoRule) error
 		GetMessage(ctx context.Context, rule *model.CustomerChatAutoRule) (msg *model.CustomerChatAutoMessage, err error)
 		GetEnterRule(ctx context.Context, customerId uint) (*model.CustomerChatAutoRule, error)
-		// GetSystemOne 获取系统规则
 		GetSystemOne(ctx context.Context, customerId uint, match string) (rule *model.CustomerChatAutoRule, err error)
 		IsMatch(rule *model.CustomerChatAutoRule, scene string, message string) bool
 	}

@@ -49,8 +49,8 @@ func (s sChat) UpdateAdminSetting(customerId uint, setting *entity.CustomerAdmin
 	s.admin.updateSetting(customerId, setting)
 }
 
-func (s sChat) NoticeTransfer(ctx context.Context, customer, admin uint) {
-	s.admin.noticeUserTransfer(ctx, customer, admin)
+func (s sChat) NoticeTransfer(ctx context.Context, customer, admin uint) error {
+	return s.admin.noticeUserTransfer(ctx, customer, admin)
 }
 
 func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (u *api.ChatUser, err error) {

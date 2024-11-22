@@ -17,21 +17,24 @@ func init() {
 
 // UniqueRule 唯一验证规则
 func UniqueRule(ctx context.Context, in gvalid.RuleFuncInput) error {
+	request := ghttp.RequestFromCtx(ctx)
 	name := in.Rule
 	paramsStr := name[7:]
 	params := gstr.Explode(",", paramsStr)
 	length := len(params)
-	if !(length == 2 || length == 3) {
-		return gerror.New("unique rule need two/three params")
+	if length != 2 && length != 3 {
+		return gerror.New("unsupported used for unique rule")
 	}
 	tableName := params[0]
 	field := params[1]
-	query := g.Model(tableName).Where(field, in.Value.String())
+	primaryKey := "id"
 	if length == 3 {
-		primaryField := params[2]
-		request := ghttp.RequestFromCtx(ctx)
-		v := request.GetRouter(primaryField).Val()
-		query = query.WhereNot(primaryField, v)
+		primaryKey = params[3]
+	}
+	query := g.Model(tableName).Where(field, in.Value.String())
+	if request.Method == "PUT" {
+		v := request.GetRouter(primaryKey).Val()
+		query = query.WhereNot(primaryKey, v)
 	}
 	customerId := service.AdminCtx().GetCustomerId(ctx)
 	if customerId > 0 {

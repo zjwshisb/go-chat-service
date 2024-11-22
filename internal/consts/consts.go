@@ -1,7 +1,7 @@
 package consts
 
 const MessageTypeText = "text"
-const MessageTypeImage = "image"
+const MessageTypeFile = "file"
 const MessageTypeNavigate = "navigator"
 const MessageTypeNotice = "notice"
 const MessageTypeRate = "rate"

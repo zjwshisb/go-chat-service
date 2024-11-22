@@ -133,9 +133,18 @@ func (m *adminManager) handleMessage(ctx context.Context, payload *chatConnMessa
 
 func (m *adminManager) registerHook(conn iWsConn) {
 	ctx := gctx.New()
-	m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
-	_ = m.broadcastWaitingUser(ctx, conn.GetCustomerId())
-	m.noticeUserTransfer(ctx, conn.GetCustomerId(), conn.GetUserId())
+	err := m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
+	if err != nil {
+		g.Log().Error(ctx, err)
+	}
+	err = m.broadcastWaitingUser(ctx, conn.GetCustomerId())
+	if err != nil {
+		g.Log().Error(ctx, err)
+	}
+	err = m.noticeUserTransfer(ctx, conn.GetCustomerId(), conn.GetUserId())
+	if err != nil {
+		g.Log().Error(ctx, err)
+	}
 }
 
 // conn断开连接后，更新admin的最后在线时间
@@ -148,10 +157,13 @@ func (m *adminManager) unregisterHook(conn iWsConn) {
 		e.Setting.LastOnline = gtime.New()
 		_, err := dao.CustomerAdminChatSettings.Ctx(ctx).Save(e.Setting)
 		if err != nil {
-			g.Log().Error(gctx.New(), err)
+			g.Log().Error(ctx, err)
 		}
 	}
-	m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
+	err := m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
+	if err != nil {
+		g.Log().Error(ctx, err)
+	}
 }
 
 func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint) error {
@@ -205,16 +217,19 @@ func (m *adminManager) broadcastLocalWaitingUser(ctx context.Context, customerId
 	return
 }
 
-func (m *adminManager) broadcastOnlineAdmins(ctx context.Context, gid uint) {
-	m.broadcastLocalOnlineAdmins(ctx, gid)
+func (m *adminManager) broadcastOnlineAdmins(ctx context.Context, gid uint) error {
+	return m.broadcastLocalOnlineAdmins(ctx, gid)
 }
 
-func (m *adminManager) broadcastLocalOnlineAdmins(ctx context.Context, customerId uint) {
-	admins, _ := service.Admin().All(gctx.New(), do.CustomerAdmins{
+func (m *adminManager) broadcastLocalOnlineAdmins(ctx context.Context, customerId uint) error {
+	admins, err := service.Admin().All(ctx, do.CustomerAdmins{
 		CustomerId: customerId,
 	}, g.Slice{
 		model.CustomerAdmin{}.Setting,
 	}, nil)
+	if err != nil {
+		return err
+	}
 	data := make([]api.ChatCustomerAdmin, 0, len(admins))
 	for _, c := range admins {
 		conn, online := m.GetConn(customerId, c.Id)
@@ -234,6 +249,7 @@ func (m *adminManager) broadcastLocalOnlineAdmins(ctx context.Context, customerI
 	}
 	conns := m.GetAllConn(customerId)
 	m.SendAction(newAdminsAction(data), conns...)
+	return nil
 }
 
 func (m *adminManager) noticeRate(message *model.CustomerChatMessage) {
@@ -286,14 +302,14 @@ func (m *adminManager) noticeLocalUserOnline(ctx context.Context, uid uint, plat
 //	}
 //}
 
-func (m *adminManager) noticeUserTransfer(ctx context.Context, customerId, adminId uint) {
-	m.noticeLocalUserTransfer(ctx, customerId, adminId)
+func (m *adminManager) noticeUserTransfer(ctx context.Context, customerId, adminId uint) error {
+	return m.noticeLocalUserTransfer(ctx, customerId, adminId)
 }
 
-func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, adminId uint) {
+func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, adminId uint) error {
 	client, exist := m.GetConn(customerId, adminId)
 	if exist {
-		transfers, _ := service.ChatTransfer().All(ctx, do.CustomerChatTransfers{
+		transfers, err := service.ChatTransfer().All(ctx, do.CustomerChatTransfers{
 			ToAdminId:  adminId,
 			AcceptedAt: nil,
 			CanceledAt: nil,
@@ -303,11 +319,15 @@ func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, 
 			model.CustomerChatTransfer{}.ToSession,
 			model.CustomerChatTransfer{}.User,
 		}, nil)
+		if err != nil {
+			return err
+		}
 		data := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) api.ChatTransfer {
 			return service.ChatTransfer().ToChatTransfer(item)
 		})
 		client.Deliver(newUserTransferAction(data))
 	}
+	return nil
 }
 
 // NoticeUpdateSetting admin修改设置后通知conn 更新admin的设置信息

@@ -14,7 +14,7 @@ func init() {
 
 func AutoMessageTypeRule(ctx context.Context, in gvalid.RuleFuncInput) error {
 	t := in.Value.String()
-	if t == consts.MessageTypeImage || t == consts.MessageTypeText || t == consts.MessageTypeNavigate {
+	if t == consts.MessageTypeFile || t == consts.MessageTypeText || t == consts.MessageTypeNavigate {
 		return nil
 	}
 	return gerror.New("消息类型不正确")

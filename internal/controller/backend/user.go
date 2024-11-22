@@ -15,7 +15,7 @@ type cUser struct {
 }
 
 func (c *cUser) Index(ctx context.Context, req *backend.CurrentUserInfoReq) (res *baseApi.NormalRes[backend.CurrentUserRes], err error) {
-	admin := service.AdminCtx().GetAdmin(ctx)
+	admin := service.AdminCtx().GetUser(ctx)
 	res = baseApi.NewResp(backend.CurrentUserRes{
 		Id:         admin.Id,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -25,7 +25,7 @@ func (c *cUser) Index(ctx context.Context, req *backend.CurrentUserInfoReq) (res
 }
 
 func (c *cUser) UpdateSetting(ctx context.Context, req *backend.CurrentUserUpdateSettingReq) (res *baseApi.NilRes, err error) {
-	setting, err := service.Admin().GetSetting(ctx, service.AdminCtx().GetAdmin(ctx))
+	setting, err := service.Admin().GetSetting(ctx, service.AdminCtx().GetUser(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -45,8 +45,8 @@ func (c *cUser) UpdateSetting(ctx context.Context, req *backend.CurrentUserUpdat
 }
 
 func (c *cUser) GetSetting(ctx context.Context, req *backend.CurrentUserSettingReq) (res *baseApi.NormalRes[backend.CurrentUserSettingRes], err error) {
-	//admin := service.AdminCtx().GetAdmin(ctx)
-	setting, err := service.Admin().GetSetting(ctx, service.AdminCtx().GetAdmin(ctx))
+	//admin := service.AdminCtx().GetUser(ctx)
+	setting, err := service.Admin().GetSetting(ctx, service.AdminCtx().GetUser(ctx))
 	if err != nil {
 		return nil, err
 	}

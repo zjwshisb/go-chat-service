@@ -76,10 +76,7 @@ func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *api
 			w["broke_at>"] = 0
 		}
 	}
-	paginator, err := service.ChatSession().Paginate(ctx, w, model.QueryInput{
-		Size: req.PageSize,
-		Page: req.Current,
-	}, g.Array{
+	paginator, err := service.ChatSession().Paginate(ctx, w, req.Paginate, g.Array{
 		model.CustomerChatSession{}.User,
 		model.CustomerChatSession{}.Admin,
 	}, nil)

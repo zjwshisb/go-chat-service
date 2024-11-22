@@ -14,6 +14,7 @@ type CustomerChatFiles struct {
 	CustomerId uint        `json:"CUSTOMER_ID" orm:"customer_id" ` // 客户Id
 	Disk       string      `json:"DISK"        orm:"disk"        ` // 存储引擎
 	Path       string      `json:"PATH"        orm:"path"        ` // 路径
+	Name       string      `json:"NAME"        orm:"name"        ` //
 	FromModel  string      `json:"FROM_MODEL"  orm:"from_model"  ` // 来源模型
 	FromId     uint        `json:"FROM_ID"     orm:"from_id"     ` // 来源id
 	Type       string      `json:"TYPE"        orm:"type"        ` // 文件类型

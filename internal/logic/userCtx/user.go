@@ -44,6 +44,15 @@ func (s *sUserCtx) GetCustomerId(ctx context.Context) uint {
 	return 0
 }
 
+// GetId 获取客户id
+func (s *sUserCtx) GetId(ctx context.Context) uint {
+	admin := s.GetUser(ctx)
+	if admin != nil {
+		return admin.CustomerId
+	}
+	return 0
+}
+
 // GetUser 获取admin实体
 func (s *sUserCtx) GetUser(ctx context.Context) *entity.Users {
 	userCtx := s.Get(ctx)

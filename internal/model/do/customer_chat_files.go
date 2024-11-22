@@ -16,6 +16,7 @@ type CustomerChatFiles struct {
 	CustomerId interface{} // 客户Id
 	Disk       interface{} // 存储引擎
 	Path       interface{} // 路径
+	Name       interface{} //
 	FromModel  interface{} // 来源模型
 	FromId     interface{} // 来源id
 	Type       interface{} // 文件类型

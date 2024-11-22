@@ -24,6 +24,7 @@ type CustomerChatFilesColumns struct {
 	CustomerId string // 客户Id
 	Disk       string // 存储引擎
 	Path       string // 路径
+	Name       string //
 	FromModel  string // 来源模型
 	FromId     string // 来源id
 	Type       string // 文件类型
@@ -38,6 +39,7 @@ var customerChatFilesColumns = CustomerChatFilesColumns{
 	CustomerId: "customer_id",
 	Disk:       "disk",
 	Path:       "path",
+	Name:       "name",
 	FromModel:  "from_model",
 	FromId:     "from_id",
 	Type:       "type",

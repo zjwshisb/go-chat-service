@@ -130,9 +130,7 @@ func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessag
 	}
 	// 发送回执
 	conn.Deliver(newReceiptAction(msg))
-	// 有对应的客服对象
 	if msg.AdminId > 0 {
-		// 更新会话有效期
 		session, err := service.ChatSession().FirstActive(ctx, msg.UserId, msg.AdminId, nil)
 		if err != nil {
 			return err
@@ -154,7 +152,7 @@ func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessag
 	} else {
 		err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneNotAccepted, msg, conn.GetUser())
 		if err != nil {
-			return nil
+			return
 		}
 		var transferAdminId uint
 		// 转接adminId
@@ -320,7 +318,10 @@ func (s *userManager) addToManual(ctx context.Context, user IChatUser) (session 
 				if err != nil {
 					return nil, err
 				}
-				s.DeliveryMessage(ctx, message)
+				err = s.DeliveryMessage(ctx, message)
+				if err != nil {
+					return nil, err
+				}
 				return nil, nil
 			}
 		}
@@ -345,7 +346,10 @@ func (s *userManager) addToManual(ctx context.Context, user IChatUser) (session 
 	if err != nil {
 		return nil, err
 	}
-	s.DeliveryMessage(ctx, message)
+	err = s.DeliveryMessage(ctx, message)
+	if err != nil {
+		return nil, err
+	}
 	// 没有客服在线则发送公众号消息
 	go func() {
 		if onlineServerCount == 0 {

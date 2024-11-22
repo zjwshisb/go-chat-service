@@ -8,6 +8,7 @@ import (
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/net/ghttp"
 
 	"github.com/duke-git/lancet/v2/slice"
 )
@@ -17,10 +18,10 @@ var CTransfer = &cTransfer{}
 type cTransfer struct {
 }
 
-func (c cTransfer) Cancel(ctx context.Context, req *chatApi.TransferCancelReq) (resp *baseApi.NilRes, err error) {
-	admin := service.AdminCtx().GetAdmin(ctx)
+func (c cTransfer) Cancel(ctx context.Context, _ *chatApi.TransferCancelReq) (resp *baseApi.NilRes, err error) {
 	transfer, err := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
-		CustomerId: admin.CustomerId,
+		CustomerId: service.AdminCtx().GetCustomerId(ctx),
+		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id").String(),
 		CanceledAt: nil,
 		AcceptedAt: nil,
 	})
@@ -81,10 +82,7 @@ func (c cTransfer) Index(ctx context.Context, req *chatApi.TransferListReq) (res
 		})
 		w.FromAdminId = adminIds
 	}
-	p, err := service.ChatTransfer().Paginate(ctx, &w, model.QueryInput{
-		Size: req.PageSize,
-		Page: req.Current,
-	}, nil, nil)
+	p, err := service.ChatTransfer().Paginate(ctx, &w, req.Paginate, nil, nil)
 	if err != nil {
 		return
 	}

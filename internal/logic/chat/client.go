@@ -103,36 +103,34 @@ func (c *client) validate(data map[string]interface{}) error {
 	reqId, exist := data["req_id"]
 	if !exist {
 		return errors.New("消息不合法")
-	} else {
-		idStr, ok := reqId.(string)
-		if ok {
-			length := len(idStr)
-			if length <= 0 || length > 20 {
-				return errors.New("消息不合法")
-			}
-		} else {
+	}
+	idStr, ok := reqId.(string)
+	if ok {
+		length := len(idStr)
+		if length <= 0 || length > 20 {
 			return errors.New("消息不合法")
 		}
+	} else {
+		return errors.New("消息不合法")
 	}
 	types, exist := data["type"]
 	if !exist {
 		return errors.New("消息不合法")
-	} else {
-		typeStr, ok := types.(string)
-		if ok {
-			if !c.isTypeValid(typeStr) {
-				return errors.New("消息不合法")
-			}
-		} else {
-			return errors.New("消息不合法")
-		}
+	}
+	typeStr, ok := types.(string)
+	if !ok {
+		return errors.New("消息不合法")
+
+	}
+	if !c.isTypeValid(typeStr) {
+		return errors.New("消息不合法")
 	}
 	return nil
 }
 
 func (c *client) isTypeValid(t string) bool {
 	if t != consts.MessageTypeText &&
-		t != consts.MessageTypeImage &&
+		t != consts.MessageTypeFile &&
 		t != consts.MessageTypeNavigate &&
 		t != consts.MessageTypeRate {
 		return false

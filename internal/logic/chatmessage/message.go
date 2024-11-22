@@ -14,7 +14,6 @@ import (
 	"gf-chat/internal/trait"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
-	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/grand"
 )
 
@@ -136,35 +135,6 @@ func (s *sChatMessage) GetList(ctx context.Context, lastId uint, w any, size uin
 			res = make([]*model.CustomerChatMessage, 0)
 		} else {
 			return
-		}
-	}
-	adminMaps := make(map[uint]*model.CustomerAdmin)
-	for _, message := range res {
-		if message.Admin != nil {
-			if _, ok := adminMaps[message.Admin.Id]; !ok {
-				adminMaps[message.Admin.Id] = message.Admin
-			}
-		}
-	}
-	adminIds := make([]uint, 0, len(adminMaps))
-	for _, admin := range adminMaps {
-		adminIds = append(adminIds, admin.Id)
-	}
-	settings := make([]*entity.CustomerAdminChatSettings, 0)
-	err = dao.CustomerAdminChatSettings.Ctx(ctx).Where("admin_id in (?)", adminIds).Scan(&settings)
-	if err != nil {
-		return
-	}
-	settingMap := make(map[uint]*entity.CustomerAdminChatSettings)
-	for _, s := range settings {
-		settingMap[s.AdminId] = s
-	}
-	for _, message := range res {
-		if message.AdminId > 0 && message.Admin != nil {
-			setting, exist := settingMap[gconv.Uint(message.AdminId)]
-			if exist {
-				message.Admin.Setting = setting
-			}
 		}
 	}
 	return

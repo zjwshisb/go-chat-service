@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"gf-chat/api"
 	"github.com/gogf/gf/v2/os/gtime"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -23,9 +24,8 @@ type ChatSession struct {
 }
 
 type SessionListReq struct {
-	g.Meta    `path:"/chat-sessions" tags:"客服对话" method:"get" summary:"客户对话列表"`
-	PageSize  int               `d:"20" json:"pageSize" v:"max:100"`
-	Current   int               `d:"1" dc:"页码" json:"current"`
+	g.Meta `path:"/chat-sessions" tags:"客服对话" method:"get" summary:"客户对话列表"`
+	api.Paginate
 	QueriedAt map[string]string `p:"queried" dc:"消息类型"`
 	Username  string            `dc:"用户手机号"`
 	AdminName string            `dc:"客服名称"`

@@ -3,7 +3,7 @@ module gf-chat
 go 1.23
 
 require (
-	github.com/duke-git/lancet/v2 v2.1.2
+	github.com/duke-git/lancet/v2 v2.3.3
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gogf/gf/contrib/drivers/mysql/v2 v2.8.0
 	github.com/gogf/gf/contrib/nosql/redis/v2 v2.8.0
@@ -39,6 +39,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.32.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.32.0 // indirect
 	go.opentelemetry.io/otel/trace v1.32.0 // indirect
+	golang.org/x/exp v0.0.0-20221208152030-732eee02a75a // indirect
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/sync v0.9.0 // indirect
 	golang.org/x/sys v0.27.0 // indirect

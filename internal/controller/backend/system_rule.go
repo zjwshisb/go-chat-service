@@ -5,7 +5,6 @@ import (
 	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/dao"
-	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
 )
@@ -15,19 +14,16 @@ var CSystemRule = &cSystemRule{}
 type cSystemRule struct {
 }
 
-func (c cSystemRule) Index(ctx context.Context, req *api.SystemRuleListReq) (res *baseApi.NormalRes[api.SystemRuleListRes], err error) {
-	paginator, err := service.AutoRule().Paginate(ctx, &do.CustomerChatAutoRules{
+func (c cSystemRule) Index(ctx context.Context, _ *api.SystemRuleListReq) (res *baseApi.NormalRes[api.SystemRuleListRes], err error) {
+	items, err := service.AutoRule().All(ctx, &do.CustomerChatAutoRules{
 		IsSystem:   1,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
-	}, model.QueryInput{
-		Size: 100,
-		Page: 1,
 	}, nil, nil)
 	if err != nil {
 		return
 	}
 	rr := api.SystemRuleListRes{}
-	for _, item := range paginator.Items {
+	for _, item := range items {
 		rr = append(rr, api.SystemRuleListItem{
 			Name:      item.Name,
 			MessageId: item.MessageId,

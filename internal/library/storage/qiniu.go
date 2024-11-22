@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"gf-chat/internal/consts"
+	"gf-chat/internal/model"
 	"gf-chat/internal/model/entity"
 	"github.com/duke-git/lancet/v2/random"
 	"github.com/gogf/gf/v2/frame/g"
@@ -48,7 +49,7 @@ func (s *qiniuAdapter) Url(path string) string {
 func (s *qiniuAdapter) ThumbUrl(path string) string {
 	return s.Url(path)
 }
-func (s *qiniuAdapter) SaveUpload(ctx context.Context, file *ghttp.UploadFile, relativePath string) (*entity.CustomerChatFiles, error) {
+func (s *qiniuAdapter) SaveUpload(ctx context.Context, file *ghttp.UploadFile, relativePath string) (*model.CustomerChatFile, error) {
 	formUploader := storage.NewFormUploader(&storage.Config{})
 	policy := storage.PutPolicy{
 		Scope: s.bucket,
@@ -73,9 +74,12 @@ func (s *qiniuAdapter) SaveUpload(ctx context.Context, file *ghttp.UploadFile, r
 	if err != nil {
 		return nil, err
 	}
-	return &entity.CustomerChatFiles{
-		Path: path,
-		Disk: consts.StorageQiniu,
+	return &model.CustomerChatFile{
+		CustomerChatFiles: entity.CustomerChatFiles{
+			Path: path,
+			Disk: consts.StorageQiniu,
+			Name: file.Filename,
+		},
 	}, nil
 
 }

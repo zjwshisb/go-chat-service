@@ -41,15 +41,24 @@ func (s *sAdminCtx) Get(ctx context.Context) *model.AdminCtx {
 
 // GetCustomerId 获取客户id
 func (s *sAdminCtx) GetCustomerId(ctx context.Context) uint {
-	admin := s.GetAdmin(ctx)
+	admin := s.GetUser(ctx)
 	if admin != nil {
 		return admin.CustomerId
 	}
 	return 0
 }
 
-// GetAdmin 获取admin实体
-func (s *sAdminCtx) GetAdmin(ctx context.Context) *model.CustomerAdmin {
+// GetId 获取admin实体
+func (s *sAdminCtx) GetId(ctx context.Context) uint {
+	adminCtx := s.Get(ctx)
+	if adminCtx != nil {
+		return adminCtx.Entity.Id
+	}
+	return 0
+}
+
+// GetUser 获取admin实体
+func (s *sAdminCtx) GetUser(ctx context.Context) *model.CustomerAdmin {
 	adminCtx := s.Get(ctx)
 	if adminCtx != nil {
 		return adminCtx.Entity

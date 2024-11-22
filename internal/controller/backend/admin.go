@@ -20,10 +20,7 @@ type cAdmin struct {
 func (cAdmin cAdmin) Index(ctx context.Context, req *adminApi.AdminListReq) (res *baseApi.ListRes[adminApi.AdminListItem], err error) {
 	p, err := service.Admin().Paginate(ctx, &do.CustomerAdmins{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
-	}, model.QueryInput{
-		Page: req.Current,
-		Size: req.PageSize,
-	}, nil, nil)
+	}, req.Paginate, nil, nil)
 	if err != nil {
 		return
 	}

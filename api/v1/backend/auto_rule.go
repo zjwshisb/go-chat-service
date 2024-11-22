@@ -1,14 +1,14 @@
 package backend
 
 import (
+	"gf-chat/api"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
 type AutoRuleListReq struct {
-	g.Meta   `path:"/auto-rules" tags:"后台自动回复规则" method:"get" summary:"获取自动回复规则"`
-	PageSize int `d:"20" json:"pageSize" v:"max:100"`
-	Current  int `d:"1" dc:"页码" json:"current"`
+	g.Meta `path:"/auto-rules" tags:"后台自动回复规则" method:"get" summary:"获取自动回复规则"`
+	api.Paginate
 }
 type AutoRuleStoreReq struct {
 	g.Meta    `path:"/auto-rules" tags:"后台自动回复规则" method:"post" summary:"新增自动回复规则"`

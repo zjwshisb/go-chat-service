@@ -12,6 +12,11 @@ type ListRes[T any] struct {
 
 type NilRes = NormalRes[any]
 
+type Paginate struct {
+	PageSize int `d:"20" json:"pageSize" v:"max:100"`
+	Current  int `d:"1" dc:"页码" json:"current"`
+}
+
 type OptionRes struct {
 	NormalRes[[]Option]
 }
@@ -35,7 +40,7 @@ type FailRes struct {
 
 type File struct {
 	Id       uint   `json:"id"`
-	Path     uint   `json:"path"`
+	Path     string `json:"path"`
 	Url      string `json:"url"`
 	ThumbUrl string `json:"thumb_url"`
 	Name     string `json:"name"`
@@ -46,11 +51,6 @@ type FileReq struct {
 	g.Meta `path:"/images" tags:"后台图片上传" mine:"multipart/form-data" method:"post" summary:"上传图片"`
 	Path   string            `json:"path" p:"path" v:"required" dc:"文件存储路径"`
 	File   *ghttp.UploadFile `json:"file" p:"file" type:"file" v:"image" dc:"文件"`
-}
-
-type FileRes struct {
-	Url  string `json:"url"`
-	Path string `json:"path"`
 }
 
 func NewOptionResp(options []Option) *OptionRes {

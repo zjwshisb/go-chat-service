@@ -155,10 +155,7 @@ func (c cAutoRule) Index(ctx context.Context, req *api.AutoRuleListReq) (res *ba
 	paginator, err := service.AutoRule().Paginate(ctx, &do.CustomerChatAutoRules{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		IsSystem:   0,
-	}, model.QueryInput{
-		Size: req.PageSize,
-		Page: req.Current,
-	}, nil, nil)
+	}, req.Paginate, nil, nil)
 	if err != nil {
 		return
 	}

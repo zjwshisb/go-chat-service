@@ -5,8 +5,8 @@ import (
 	"gf-chat/internal/controller/backend"
 	"gf-chat/internal/controller/frontend"
 	"gf-chat/internal/controller/middleware"
+	_ "gf-chat/internal/controller/rule"
 	"gf-chat/internal/cron"
-	_ "gf-chat/internal/rule"
 	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -56,6 +56,7 @@ var (
 									backend.CSystemRule,
 									backend.CChatSetting,
 									backend.CTransfer,
+									backend.COption,
 									// backend.CWs,
 									// backend.CChat,
 								)

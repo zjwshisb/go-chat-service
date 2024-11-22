@@ -21,8 +21,10 @@ type (
 		Get(ctx context.Context) *model.AdminCtx
 		// GetCustomerId 获取客户id
 		GetCustomerId(ctx context.Context) uint
-		// GetAdmin 获取admin实体
-		GetAdmin(ctx context.Context) *model.CustomerAdmin
+		// GetId 获取admin实体
+		GetId(ctx context.Context) uint
+		// GetUser 获取admin实体
+		GetUser(ctx context.Context) *model.CustomerAdmin
 		// SetUser 将上下文信息设置到上下文请求中
 		SetUser(ctx context.Context, Admin *model.CustomerAdmin)
 		// SetData 将上下文信息设置到上下文请求中

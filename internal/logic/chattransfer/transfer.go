@@ -80,8 +80,8 @@ func (s *sChatTransfer) Cancel(ctx context.Context, transfer *model.CustomerChat
 	if err != nil {
 		return
 	}
-	service.Chat().NoticeTransfer(ctx, transfer.CustomerId, transfer.ToAdminId)
-	return nil
+	err = service.Chat().NoticeTransfer(ctx, transfer.CustomerId, transfer.ToAdminId)
+	return
 }
 
 // Accept 接入转接
@@ -90,7 +90,10 @@ func (s *sChatTransfer) Accept(ctx context.Context, transfer *model.CustomerChat
 	if err != nil {
 		return err
 	}
-	service.Chat().NoticeTransfer(ctx, transfer.CustomerId, transfer.ToAdminId)
+	err = service.Chat().NoticeTransfer(ctx, transfer.CustomerId, transfer.ToAdminId)
+	if err != nil {
+		return err
+	}
 	return s.removeUser(ctx, transfer.CustomerId, transfer.UserId)
 }
 
@@ -139,7 +142,10 @@ func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint,
 	if err != nil {
 		return
 	}
-	service.Chat().NoticeTransfer(ctx, session.CustomerId, toId)
+	err = service.Chat().NoticeTransfer(ctx, session.CustomerId, toId)
+	if err != nil {
+		return
+	}
 	return nil
 }
 func (s *sChatTransfer) userKey(customerId uint) string {
@@ -155,16 +161,16 @@ func (s *sChatTransfer) removeUser(ctx context.Context, customerId, uid uint) er
 func (s *sChatTransfer) GetUserTransferId(ctx context.Context, customerId, uid uint) (id uint, error error) {
 	val, err := g.Redis().Do(ctx, "hGet", s.userKey(customerId), uid)
 	if err != nil {
-		return 0, nil
+		return
 	}
 	return val.Uint(), nil
 }
 
 // IsInTransfer 是否待转接
-func (s *sChatTransfer) IsInTransfer(ctx context.Context, customerId uint, uid uint) (bool, error) {
+func (s *sChatTransfer) IsInTransfer(ctx context.Context, customerId uint, uid uint) (is bool, err error) {
 	id, err := s.GetUserTransferId(ctx, customerId, uid)
 	if err != nil {
-		return false, nil
+		return
 	}
 	return id != 0, nil
 }
