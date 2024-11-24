@@ -20,3 +20,4 @@ manifest/output/
 temp/
 .history/
 __debug_bin*
+storage/
