@@ -11,10 +11,10 @@ import (
 
 func init() {
 	name := "image"
-	gvalid.RegisterRule(name, ImageRule)
+	gvalid.RegisterRule(name, imageRule)
 }
 
-func ImageRule(ctx context.Context, in gvalid.RuleFuncInput) error {
+func imageRule(ctx context.Context, in gvalid.RuleFuncInput) error {
 	name := in.Rule
 	var maxM int64 = 5
 	if len(name) >= 6 {

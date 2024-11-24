@@ -2,13 +2,12 @@ package rule
 
 import (
 	"context"
-	"gf-chat/api"
+	api "gf-chat/api/v1/backend"
+	"gf-chat/internal/library/storage"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
-	"github.com/duke-git/lancet/v2/fileutil"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/gvalid"
 	"strings"
@@ -19,12 +18,6 @@ func init() {
 	gvalid.RegisterRule("api-file-if", apiFileIf)
 }
 
-var defaultFileSize = map[string]int{
-	"image": 5 * 1024 * 1024,
-	"video": 10 * 1024 * 1024,
-	"audio": 5 * 1024 * 1024,
-}
-
 // v:"file:image,5" or v:"file:image" or v:"file"
 func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 	req := g.RequestFromCtx(ctx)
@@ -32,19 +25,15 @@ func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 	if uploadFile == nil {
 		return nil
 	}
-	name := in.Rule
 	allowFileType := ""
 	allowSize := 0
-	if len(name) >= 5 {
-		paramsStr := name[5:]
-		params := gstr.Explode(",", paramsStr)
-		length := len(params)
-		if length >= 1 {
-			allowFileType = params[0]
-		}
-		if length >= 2 {
-			allowSize = gconv.Int(params[1])
-		}
+	params := getRuleParams(in.Rule)
+	length := len(params)
+	if length >= 1 {
+		allowFileType = params[0]
+	}
+	if length >= 2 {
+		allowSize = gconv.Int(params[1])
 	}
 	f, err := uploadFile.Open()
 	if err != nil {
@@ -53,13 +42,11 @@ func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 	defer func() {
 		_ = f.Close()
 	}()
-	mimeType := fileutil.MiMeType(f)
-	index := strings.Index(mimeType, "/")
-	if index < 0 {
-		return gerror.New("unsupported file")
+	uploadFileType, err := storage.FileType(f)
+	if err != nil {
+		return err
 	}
-	uploadFileType := mimeType[:index]
-	defaultSize, exist := defaultFileSize[uploadFileType]
+	defaultSize, exist := storage.DefaultFileSize[uploadFileType]
 	if !exist {
 		return gerror.New("unsupported file type")
 	}
@@ -79,18 +66,12 @@ func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 
 // v:"api-file-if:field,value"
 func apiFileIf(ctx context.Context, in gvalid.RuleFuncInput) error {
-	rule := in.Rule
-	index := strings.Index(rule, ":")
-	if index == -1 {
+	params := getRuleParams(in.Rule)
+	if len(params) != 2 {
 		return gerror.New("unsupported used for file-if rule")
 	}
-	keyValue := rule[index+1:]
-	keyValueArr := strings.Split(keyValue, ",")
-	if len(keyValueArr) != 2 {
-		return gerror.New("unsupported used for file-if rule")
-	}
-	field := keyValueArr[0]
-	value := keyValueArr[1]
+	field := params[0]
+	value := params[1]
 	data := in.Data.MapStrVar()
 	if existV, ok := data[field]; ok {
 		if existV.String() == value {

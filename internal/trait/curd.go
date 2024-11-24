@@ -14,13 +14,14 @@ type ctx = context.Context
 type ICurd[R any] interface {
 	Save(ctx ctx, data *R) (id int64, err error)
 	Find(ctx ctx, primaryKey any) (model *R, err error)
-	All(ctx ctx, where any, with []any, order any) (items []*R, err error)
+	All(ctx ctx, where any, with []any, order any, limit ...int) (items []*R, err error)
 	First(ctx ctx, where any, order ...string) (model *R, err error)
 	Paginate(ctx ctx, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[R], err error)
 	Insert(ctx ctx, data *R) (id int64, err error)
 	Update(ctx ctx, where any, data any) (count int64, err error)
 	Exists(ctx ctx, where any) (exists bool, err error)
 	Delete(ctx ctx, primaryKey any) error
+	Count(ctx ctx, where any) (count int, err error)
 }
 
 type IDao interface {
@@ -67,14 +68,19 @@ func (c Curd[R]) Exists(ctx ctx, where any) (exists bool, err error) {
 
 }
 
-func (c Curd[R]) All(ctx ctx, where any, with []any, order any) (items []*R, err error) {
-	err = c.Dao.Ctx(ctx).Where(where).With(with...).Order(order).Scan(&items)
+func (c Curd[R]) All(ctx ctx, where any, with []any, order any, limit ...int) (items []*R, err error) {
+	err = c.Dao.Ctx(ctx).Where(where).With(with...).Order(order).Limit(limit...).Scan(&items)
 	if err != nil {
 		return nil, err
 	}
 	if items == nil {
 		items = make([]*R, 0)
 	}
+	return
+}
+
+func (c Curd[R]) Count(ctx ctx, where any) (count int, err error) {
+	count, err = c.Dao.Ctx(ctx).Where(where).Count()
 	return
 }
 

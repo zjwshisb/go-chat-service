@@ -31,6 +31,7 @@ type CustomerChatFilesColumns struct {
 	CreatedAt  string //
 	UpdatedAt  string //
 	DeletedAt  string //
+	IsResource string //
 }
 
 // customerChatFilesColumns holds the columns for table customer_chat_files.
@@ -46,6 +47,7 @@ var customerChatFilesColumns = CustomerChatFilesColumns{
 	CreatedAt:  "created_at",
 	UpdatedAt:  "updated_at",
 	DeletedAt:  "deleted_at",
+	IsResource: "is_resource",
 }
 
 // NewCustomerChatFilesDao creates and returns a new DAO object for table data access.

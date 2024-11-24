@@ -9,10 +9,10 @@ import (
 
 func init() {
 	name := "auto-message-type"
-	gvalid.RegisterRule(name, AutoMessageTypeRule)
+	gvalid.RegisterRule(name, autoMessageTypeRule)
 }
 
-func AutoMessageTypeRule(ctx context.Context, in gvalid.RuleFuncInput) error {
+func autoMessageTypeRule(ctx context.Context, in gvalid.RuleFuncInput) error {
 	t := in.Value.String()
 	if t == consts.MessageTypeFile || t == consts.MessageTypeText || t == consts.MessageTypeNavigate {
 		return nil

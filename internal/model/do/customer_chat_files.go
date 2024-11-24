@@ -23,4 +23,5 @@ type CustomerChatFiles struct {
 	CreatedAt  *gtime.Time //
 	UpdatedAt  *gtime.Time //
 	DeletedAt  *gtime.Time //
+	IsResource interface{} //
 }

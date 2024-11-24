@@ -1,10 +1,5 @@
 package api
 
-import (
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/net/ghttp"
-)
-
 type ListRes[T any] struct {
 	NormalRes[[]T]
 	Total int `json:"total"`
@@ -36,21 +31,6 @@ type FailRes struct {
 	Code    int    `json:"code"    dc:"Error code"`
 	Success bool   `json:"success" dc:"Is Success"`
 	Message string `json:"message" dc:"错误消息"`
-}
-
-type File struct {
-	Id       uint   `json:"id"`
-	Path     string `json:"path"`
-	Url      string `json:"url"`
-	ThumbUrl string `json:"thumb_url"`
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-}
-
-type FileReq struct {
-	g.Meta `path:"/images" tags:"后台图片上传" mine:"multipart/form-data" method:"post" summary:"上传图片"`
-	Path   string            `json:"path" p:"path" v:"required" dc:"文件存储路径"`
-	File   *ghttp.UploadFile `json:"file" p:"file" type:"file" v:"image" dc:"文件"`
 }
 
 func NewOptionResp(options []Option) *OptionRes {

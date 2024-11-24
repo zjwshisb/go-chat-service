@@ -2,7 +2,7 @@ package chatsetting
 
 import (
 	"context"
-	"gf-chat/api"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model/do"

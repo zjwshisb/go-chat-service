@@ -21,4 +21,5 @@ type CustomerChatFiles struct {
 	CreatedAt  *gtime.Time `json:"CREATED_AT"  orm:"created_at"  ` //
 	UpdatedAt  *gtime.Time `json:"UPDATED_AT"  orm:"updated_at"  ` //
 	DeletedAt  *gtime.Time `json:"DELETED_AT"  orm:"deleted_at"  ` //
+	IsResource int         `json:"IS_RESOURCE" orm:"is_resource" ` //
 }

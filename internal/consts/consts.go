@@ -72,3 +72,10 @@ const (
 	StorageQiniu = "qiniu"
 	StorageLocal = "local"
 )
+
+const (
+	FileTypeDir   = "dir"
+	FileTypeImage = "image"
+	FileTypeVideo = "video"
+	FileTypeAudio = "audio"
+)

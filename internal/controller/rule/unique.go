@@ -6,24 +6,21 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gvalid"
 )
 
 func init() {
 	name := "unique"
-	gvalid.RegisterRule(name, UniqueRule)
+	gvalid.RegisterRule(name, uniqueRule)
 }
 
 // UniqueRule 唯一验证规则
-func UniqueRule(ctx context.Context, in gvalid.RuleFuncInput) error {
+func uniqueRule(ctx context.Context, in gvalid.RuleFuncInput) error {
 	request := ghttp.RequestFromCtx(ctx)
-	name := in.Rule
-	paramsStr := name[7:]
-	params := gstr.Explode(",", paramsStr)
+	params := getRuleParams(in.Rule)
 	length := len(params)
 	if length != 2 && length != 3 {
-		return gerror.New("unsupported used for unique rule")
+		panic("unsupported used for unique rule")
 	}
 	tableName := params[0]
 	field := params[1]
@@ -38,7 +35,7 @@ func UniqueRule(ctx context.Context, in gvalid.RuleFuncInput) error {
 	}
 	customerId := service.AdminCtx().GetCustomerId(ctx)
 	if customerId > 0 {
-		query = query.Where("customer_id", service.AdminCtx().GetCustomerId(ctx))
+		query = query.Where("customer_id", customerId)
 	}
 	count, err := query.Count()
 	if err != nil {
