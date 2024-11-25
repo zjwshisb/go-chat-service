@@ -16,9 +16,7 @@ type File struct {
 
 type FileListReq struct {
 	g.Meta `path:"/files" tags:"后台文件管理" method:"get" summary:"上传文件"`
-	DirId  uint   `json:"dir_id"`
-	LastId uint   `json:"last_id"`
-	Type   string `json:"type"`
+	DirId  uint `json:"dir_id"`
 }
 
 type FileStoreReq struct {
@@ -31,5 +29,5 @@ type FileStoreReq struct {
 type FileDirStoreReq struct {
 	g.Meta `path:"/file-dirs" tags:"后台图片上传" method:"post" summary:"新建文件夹"`
 	Pid    uint   `json:"pid"`
-	Path   string `json:"path" p:"path" v:"required" dc:"文件存储路径"`
+	Name   string `json:"name" p:"path" v:"required#请输入文件夹名称" dc:"名称"`
 }

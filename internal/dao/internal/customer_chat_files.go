@@ -32,6 +32,7 @@ type CustomerChatFilesColumns struct {
 	UpdatedAt  string //
 	DeletedAt  string //
 	IsResource string //
+	ParentId   string //
 }
 
 // customerChatFilesColumns holds the columns for table customer_chat_files.
@@ -48,6 +49,7 @@ var customerChatFilesColumns = CustomerChatFilesColumns{
 	UpdatedAt:  "updated_at",
 	DeletedAt:  "deleted_at",
 	IsResource: "is_resource",
+	ParentId:   "parent_id",
 }
 
 // NewCustomerChatFilesDao creates and returns a new DAO object for table data access.
