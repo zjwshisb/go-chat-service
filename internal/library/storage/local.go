@@ -9,11 +9,10 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gctx"
 	"log"
-	"os"
 	"strings"
 )
 
-var pathSeparator = string(os.PathSeparator)
+var pathSeparator = "/"
 
 func newLocal() *localAdapter {
 	ctx := gctx.New()
@@ -56,10 +55,14 @@ func (s *localAdapter) SaveUpload(_ context.Context, file *ghttp.UploadFile, rel
 	if err != nil {
 		return
 	}
+	if relativePath != "" {
+		relativePath = relativePath + pathSeparator
+	}
+	relativePath += name
 	return &model.CustomerChatFile{
 		CustomerChatFiles: entity.CustomerChatFiles{
 			Name: file.Filename,
-			Path: relativePath + pathSeparator + name,
+			Path: relativePath,
 			Disk: consts.StorageLocal,
 		},
 	}, nil

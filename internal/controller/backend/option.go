@@ -16,7 +16,7 @@ var COption = &cOption{}
 type cOption struct {
 }
 
-func (c *cAutoMessage) AutoMessage(ctx context.Context, req *api.OptionAutoMessageReq) (res *baseApi.OptionRes, err error) {
+func (c *cOption) AutoMessage(ctx context.Context, _ *api.OptionAutoMessageReq) (res *baseApi.OptionRes, err error) {
 	items, err := service.AutoMessage().All(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	}, nil, nil)
@@ -32,7 +32,7 @@ func (c *cAutoMessage) AutoMessage(ctx context.Context, req *api.OptionAutoMessa
 	return baseApi.NewOptionResp(options), nil
 }
 
-func (c *cAutoMessage) AutoRuleScene(ctx context.Context, req *api.OptionAutoRuleSceneReq) (res *baseApi.OptionRes, err error) {
+func (c *cOption) AutoRuleScene(_ context.Context, _ *api.OptionAutoRuleSceneReq) (res *baseApi.OptionRes, err error) {
 	options := []baseApi.Option{
 		{
 			Label: "人工未接入",
@@ -45,6 +45,24 @@ func (c *cAutoMessage) AutoRuleScene(ctx context.Context, req *api.OptionAutoRul
 		{
 			Label: "已接入客服在线",
 			Value: consts.AutoRuleSceneAdminOnline,
+		},
+	}
+	return baseApi.NewOptionResp(options), nil
+}
+
+func (c *cOption) FileType(_ context.Context, _ *api.OptionFileTypeReq) (res *baseApi.OptionRes, err error) {
+	options := []baseApi.Option{
+		{
+			Label: "图片",
+			Value: consts.FileTypeImage,
+		},
+		{
+			Label: "音频",
+			Value: consts.FileTypeAudio,
+		},
+		{
+			Label: "视频",
+			Value: consts.FileTypeVideo,
 		},
 	}
 	return baseApi.NewOptionResp(options), nil

@@ -3,9 +3,11 @@ package rule
 import (
 	"context"
 	api "gf-chat/api/v1/backend"
+	"gf-chat/internal/consts"
 	"gf-chat/internal/library/storage"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -16,12 +18,38 @@ import (
 func init() {
 	gvalid.RegisterRule("api-file", apiFile)
 	gvalid.RegisterRule("api-file-if", apiFileIf)
+	gvalid.RegisterRule("file", file)
+	gvalid.RegisterRule("file-dir", fileDir)
+}
+
+var (
+	UnSupportFileError = gerror.New("不支持的文件类型")
+)
+
+func fileDir(ctx context.Context, in gvalid.RuleFuncInput) error {
+	if in.Value.IsEmpty() {
+		return nil
+	}
+	request := g.RequestFromCtx(ctx)
+	parent, err := service.File().First(ctx, do.CustomerChatFiles{
+		Id:         in.Value.Uint(),
+		CustomerId: service.AdminCtx().GetCustomerId(ctx),
+		Type:       consts.FileTypeDir,
+	})
+	if err != nil {
+		return err
+	}
+	if parent == nil {
+		return gerror.NewCode(gcode.CodeValidationFailed, "上级目录不存在")
+	}
+	request.SetCtxVar("file-dir", parent)
+	return nil
 }
 
 // v:"file:image,5" or v:"file:image" or v:"file"
 func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 	req := g.RequestFromCtx(ctx)
-	uploadFile := req.GetUploadFile(in.Field)
+	uploadFile := req.GetUploadFile(strings.ToLower(in.Field))
 	if uploadFile == nil {
 		return nil
 	}
@@ -48,17 +76,17 @@ func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 	}
 	defaultSize, exist := storage.DefaultFileSize[uploadFileType]
 	if !exist {
-		return gerror.New("unsupported file type")
+		return UnSupportFileError
 	}
 	if allowSize <= 0 {
 		allowSize = defaultSize
 	}
 	if allowFileType != "" && strings.ToLower(uploadFileType) != strings.ToLower(allowFileType) {
-		return gerror.New("unsupported file type")
+		return UnSupportFileError
 	}
 	if allowSize > 0 {
 		if uploadFile.Size > int64(1024*1024*allowSize) {
-			return gerror.New("file size too large")
+			return gerror.Newf("最多允许上传%dM的文件", allowSize)
 		}
 	}
 	return nil
@@ -68,7 +96,7 @@ func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 func apiFileIf(ctx context.Context, in gvalid.RuleFuncInput) error {
 	params := getRuleParams(in.Rule)
 	if len(params) != 2 {
-		return gerror.New("unsupported used for file-if rule")
+		panic("unsupported used for file-if rule")
 	}
 	field := params[0]
 	value := params[1]

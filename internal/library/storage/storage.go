@@ -4,12 +4,12 @@ import (
 	"context"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
-	"github.com/duke-git/lancet/v2/fileutil"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gctx"
 	"mime/multipart"
+	"net/http"
 	"strings"
 )
 
@@ -26,14 +26,19 @@ type Adapter interface {
 }
 
 func FileType(file multipart.File) (string, error) {
-	mimetype := fileutil.MiMeType(file)
+	buffer := make([]byte, 512)
+	_, err := file.Read(buffer)
+	if err != nil {
+		return "", err
+	}
+	mimetype := http.DetectContentType(buffer)
 	index := strings.Index(mimetype, "/")
 	if index < 0 {
-		return "", gerror.New("unsupported file type")
+		return "", gerror.New("不支持的文件类型")
 	}
 	types := mimetype[:index]
 	if _, exist := DefaultFileSize[types]; !exist {
-		return "", gerror.New("unsupported file type")
+		return "", gerror.New("不支持的文件类型")
 	}
 	return types, nil
 }
