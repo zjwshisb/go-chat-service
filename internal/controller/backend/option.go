@@ -32,6 +32,24 @@ func (c *cOption) AutoMessage(ctx context.Context, _ *api.OptionAutoMessageReq) 
 	return baseApi.NewOptionResp(options), nil
 }
 
+func (c *cOption) MessageType(_ context.Context, _ *api.OptionMessageTypeReq) (res *baseApi.OptionRes, err error) {
+	options := []baseApi.Option{
+		{
+			Label: "文本",
+			Value: consts.MessageTypeText,
+		},
+		{
+			Label: "文件",
+			Value: consts.MessageTypeFile,
+		},
+		{
+			Label: "导航卡片",
+			Value: consts.MessageTypeNavigate,
+		},
+	}
+	return baseApi.NewOptionResp(options), nil
+}
+
 func (c *cOption) AutoRuleScene(_ context.Context, _ *api.OptionAutoRuleSceneReq) (res *baseApi.OptionRes, err error) {
 	options := []baseApi.Option{
 		{

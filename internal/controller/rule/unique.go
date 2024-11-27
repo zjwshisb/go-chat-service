@@ -17,7 +17,7 @@ func init() {
 // UniqueRule 唯一验证规则
 func uniqueRule(ctx context.Context, in gvalid.RuleFuncInput) error {
 	request := ghttp.RequestFromCtx(ctx)
-	params := getRuleParams(in.Rule)
+	params := parseRuleParams(in.Rule)
 	length := len(params)
 	if length != 2 && length != 3 {
 		panic("unsupported used for unique rule")
@@ -26,7 +26,7 @@ func uniqueRule(ctx context.Context, in gvalid.RuleFuncInput) error {
 	field := params[1]
 	primaryKey := "id"
 	if length == 3 {
-		primaryKey = params[3]
+		primaryKey = params[2]
 	}
 	query := g.Model(tableName).Where(field, in.Value.String())
 	if request.Method == "PUT" {

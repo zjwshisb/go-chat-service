@@ -16,7 +16,7 @@ func init() {
 
 // ExistsRule 数据存在验证规则
 func existsRule(ctx context.Context, in gvalid.RuleFuncInput) error {
-	params := getRuleParams(in.Rule)
+	params := parseRuleParams(in.Rule)
 	length := len(params)
 	if length < 1 {
 		panic("exists rule must set table name params")

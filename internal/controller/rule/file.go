@@ -17,7 +17,6 @@ import (
 
 func init() {
 	gvalid.RegisterRule("api-file", apiFile)
-	gvalid.RegisterRule("api-file-if", apiFileIf)
 	gvalid.RegisterRule("file", file)
 	gvalid.RegisterRule("file-dir", fileDir)
 }
@@ -26,11 +25,14 @@ var (
 	UnSupportFileError = gerror.New("不支持的文件类型")
 )
 
+// v:"file-dir"
 func fileDir(ctx context.Context, in gvalid.RuleFuncInput) error {
 	if in.Value.IsEmpty() {
 		return nil
 	}
-	request := g.RequestFromCtx(ctx)
+	if in.Value.Uint() == 0 {
+		return nil
+	}
 	parent, err := service.File().First(ctx, do.CustomerChatFiles{
 		Id:         in.Value.Uint(),
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -42,6 +44,7 @@ func fileDir(ctx context.Context, in gvalid.RuleFuncInput) error {
 	if parent == nil {
 		return gerror.NewCode(gcode.CodeValidationFailed, "上级目录不存在")
 	}
+	request := g.RequestFromCtx(ctx)
 	request.SetCtxVar("file-dir", parent)
 	return nil
 }
@@ -55,7 +58,7 @@ func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 	}
 	allowFileType := ""
 	allowSize := 0
-	params := getRuleParams(in.Rule)
+	params := parseRuleParams(in.Rule)
 	length := len(params)
 	if length >= 1 {
 		allowFileType = params[0]
@@ -92,27 +95,7 @@ func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 	return nil
 }
 
-// v:"api-file-if:field,value"
-func apiFileIf(ctx context.Context, in gvalid.RuleFuncInput) error {
-	params := getRuleParams(in.Rule)
-	if len(params) != 2 {
-		panic("unsupported used for file-if rule")
-	}
-	field := params[0]
-	value := params[1]
-	data := in.Data.MapStrVar()
-	if existV, ok := data[field]; ok {
-		if existV.String() == value {
-			return apiFile(ctx, in)
-		} else {
-			return nil
-		}
-	} else {
-		return gerror.Newf("%s 必须是个有效的文件", in.Field)
-	}
-}
-
-// v:"api-file"
+// v:"api-file" | v:"api-file:image" | v:"api-file:image,video"
 func apiFile(ctx context.Context, in gvalid.RuleFuncInput) error {
 	if in.Value.IsNil() {
 		return nil
@@ -125,17 +108,22 @@ func apiFile(ctx context.Context, in gvalid.RuleFuncInput) error {
 	if err != nil {
 		return gerror.Newf("%s 必须是个有效的文件", in.Field)
 	}
-	uid := service.AdminCtx().GetId(ctx)
-
-	exists, err := service.File().Exists(ctx, do.CustomerChatFiles{
-		Id:     apiFile.Id,
-		FromId: uid,
+	fileModel, err := service.File().First(ctx, do.CustomerChatFiles{
+		Id:         apiFile.Id,
+		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	})
 	if err != nil {
 		return gerror.Newf("%s 必须是个有效的文件", in.Field)
 	}
-	if !exists {
-		return gerror.Newf("%s 必须是个有效的文件", in.Field)
+	params := parseRuleParams(in.Rule)
+
+	if len(params) != 0 {
+		for _, allowType := range params {
+			if allowType == fileModel.Type {
+				return nil
+			}
+		}
+		return gerror.New("文件类型不匹配")
 	}
 	return nil
 }

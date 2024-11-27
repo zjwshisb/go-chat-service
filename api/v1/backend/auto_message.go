@@ -11,6 +11,7 @@ type AutoMessageListReq struct {
 	g.Meta `path:"/auto-messages" tags:"后台快捷回复" method:"get" summary:"获取快捷回复详情"`
 	api.Paginate
 	Type string `json:"type"`
+	Name string `json:"name"`
 }
 
 type AutoMessageFormReq struct {
@@ -24,7 +25,7 @@ type AutoMessageFormRes struct {
 type AutoMessageNavigator struct {
 	Url   string `json:"url" v:"required-if:type,navigator|max-length:512"`
 	Title string `json:"title" v:"required-if:type,navigator|max-length:32"`
-	Image *File  `json:"image" v:"required-if:type,navigator|api-file"`
+	Image *File  `json:"image" v:"required-if:type,navigator|api-file:image"`
 }
 
 type AutoMessageForm struct {

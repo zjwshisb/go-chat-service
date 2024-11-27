@@ -6,38 +6,43 @@ import (
 	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
+	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
+	"gf-chat/internal/service"
 	"github.com/duke-git/lancet/v2/maputil"
 	"github.com/duke-git/lancet/v2/slice"
+	"github.com/duke-git/lancet/v2/strutil"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
-
-	"gf-chat/internal/model"
-	"gf-chat/internal/service"
 )
 
 var CAutoMessage = &cAutoMessage{}
+
+type simpleNavigator struct {
+	Image uint   `json:"image"`
+	Url   string `json:"url"`
+	Title string `json:"title"`
+}
 
 type cAutoMessage struct {
 }
 
 func (c *cAutoMessage) Index(ctx context.Context, req *api.AutoMessageListReq) (res *baseApi.ListRes[api.AutoMessageListItem], err error) {
-	w := do.CustomerChatAutoMessages{
-		CustomerId: service.AdminCtx().GetCustomerId(ctx),
+	w := g.Map{
+		"customer_id": service.AdminCtx().GetCustomerId(ctx),
 	}
 	if req.Type != "" {
-		w.Type = req.Type
+		w["type"] = strutil.Trim(req.Type)
+	}
+	if req.Name != "" {
+		w["name like"] = "%" + strutil.Trim(req.Name) + "%"
 	}
 	p, err := service.AutoMessage().Paginate(ctx, &w, req.Paginate, nil, nil)
 	if err != nil {
 		return
 	}
-	type simpleNavigator struct {
-		Image uint   `json:"image"`
-		Url   string `json:"url"`
-		Title string `json:"title"`
-	}
+
 	items := make([]api.AutoMessageListItem, p.Total)
 	filesId := slice.Map(p.Items, func(index int, item model.CustomerChatAutoMessage) any {
 		switch item.Type {
@@ -119,17 +124,20 @@ func (c *cAutoMessage) Form(ctx context.Context, _ *api.AutoMessageFormReq) (res
 	case consts.MessageTypeText:
 		form.Content = message.Content
 	case consts.MessageTypeNavigate:
-		var navigator *api.AutoMessageNavigator
-		err = json.Unmarshal([]byte(message.Content), navigator)
+		var navigator *simpleNavigator
+		err = json.Unmarshal([]byte(message.Content), &navigator)
 		if err != nil {
 			return
 		}
-		form.Navigator = navigator
+		form.Navigator = &api.AutoMessageNavigator{
+			Url:   navigator.Url,
+			Title: navigator.Title,
+		}
+		form.Navigator.Image, _ = service.File().FindAnd2Api(ctx, navigator.Image)
+
 	case consts.MessageTypeFile:
-		form.File, err = service.File().FindAnd2Api(ctx, message.Content)
-		if err != nil {
-			return
-		}
+		form.File, _ = service.File().FindAnd2Api(ctx, message.Content)
+
 	default:
 	}
 	return baseApi.NewResp(form), nil

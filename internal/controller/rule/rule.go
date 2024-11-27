@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-func getRuleParams(ruleName string) []string {
+func parseRuleParams(ruleName string) []string {
 	index := strings.Index(ruleName, ":")
 	if index == -1 {
 		return []string{}

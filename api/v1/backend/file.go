@@ -28,12 +28,12 @@ type FileStoreReq struct {
 type FileDirStoreReq struct {
 	g.Meta `path:"/file-dirs" tags:"后台文件管理" method:"post" summary:"新建目录"`
 	Pid    uint   `json:"pid" v:"file-dir"`
-	Name   string `json:"name" p:"path" v:"required#请输入文件夹名称" dc:"名称"`
+	Name   string `json:"name" p:"path" v:"required|length:1,20#请输入文件夹名称|名称最长20个字符" dc:"名称"`
 }
 
 type FileUpdateReq struct {
 	g.Meta `path:"/files/:id" tags:"后台文件管理" method:"put" summary:"修改文件名"`
-	Name   string `json:"name" p:"path" v:"required#请输入新的文件名" dc:"名称"`
+	Name   string `json:"name" p:"path" v:"required|length:1,20#请输入文件夹名称|名称最长20个字符" dc:"名称"`
 }
 
 type FileDeleteReq struct {
