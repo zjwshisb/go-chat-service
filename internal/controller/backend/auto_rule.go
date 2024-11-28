@@ -10,14 +10,13 @@ import (
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
+	"github.com/duke-git/lancet/v2/maputil"
+	"github.com/gogf/gf/v2/frame/g"
 
 	"github.com/duke-git/lancet/v2/slice"
-	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/gogf/gf/v2/os/gtime"
-	"github.com/gogf/gf/v2/util/gconv"
 )
 
 var CAutoRule = &cAutoRule{}
@@ -25,7 +24,7 @@ var CAutoRule = &cAutoRule{}
 type cAutoRule struct {
 }
 
-func (c cAutoRule) Delete(ctx context.Context, req *api.AutoRuleDeleteReq) (resp *baseApi.NilRes, err error) {
+func (c cAutoRule) Delete(ctx context.Context, _ *api.AutoRuleDeleteReq) (resp *baseApi.NilRes, err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	rule, err := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
 		Id:         id,
@@ -37,12 +36,14 @@ func (c cAutoRule) Delete(ctx context.Context, req *api.AutoRuleDeleteReq) (resp
 	if rule == nil {
 		return nil, gerror.NewCode(gcode.CodeNotFound)
 	}
-	_, _ = dao.CustomerChatAutoRules.Ctx(ctx).
-		WherePri("id", id).Delete()
+	err = service.AutoRule().Delete(ctx, id)
+	if err != nil {
+		return
+	}
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cAutoRule) Form(ctx context.Context, req *api.AutoRuleFormReq) (res *baseApi.NormalRes[api.AutoRuleFormRes], err error) {
+func (c cAutoRule) Form(ctx context.Context, _ *api.AutoRuleFormReq) (res *baseApi.NormalRes[api.AutoRuleFormRes], err error) {
 	rule, err := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
 		IsSystem:   0,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -51,22 +52,17 @@ func (c cAutoRule) Form(ctx context.Context, req *api.AutoRuleFormReq) (res *bas
 	if err != nil {
 		return
 	}
-	scenes := make([]entity.CustomerChatAutoRuleScenes, 0)
-	dao.CustomerChatAutoRuleScenes.Ctx(ctx).Where(do.CustomerChatAutoRuleScenes{
-		RuleId: rule.Id,
-	}).Scan(&scenes)
-	sceneStr := slice.Map(scenes, func(index int, item entity.CustomerChatAutoRuleScenes) string {
-		return item.Name
-	})
 	res = baseApi.NewResp(api.AutoRuleFormRes{
-		IsOpen:    gconv.Bool(rule.IsOpen),
-		Match:     rule.Match,
-		MatchType: rule.MatchType,
-		MessageId: rule.MessageId,
-		Name:      rule.Name,
-		ReplyType: rule.ReplyType,
-		Scenes:    sceneStr,
-		Sort:      rule.Sort,
+		AutoRuleForm: api.AutoRuleForm{
+			IsOpen:    rule.IsOpen,
+			Match:     rule.Match,
+			MatchType: rule.MatchType,
+			MessageId: rule.MessageId,
+			Name:      rule.Name,
+			ReplyType: rule.ReplyType,
+			Scenes:    rule.Scenes,
+			Sort:      rule.Sort,
+		},
 	})
 	return
 }
@@ -80,31 +76,21 @@ func (c cAutoRule) Update(ctx context.Context, req *api.AutoRuleUpdateReq) (res 
 	if err != nil {
 		return
 	}
-	err = dao.CustomerChatAutoRules.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
-		rule.Name = req.Name
-		rule.Sort = req.Sort
-		rule.IsOpen = gconv.Int(req.IsOpen)
-		rule.Match = req.Match
-		rule.MatchType = req.MatchType
-		rule.ReplyType = req.ReplyType
-		if rule.ReplyType == consts.AutoRuleReplyTypeMessage {
-			rule.MessageId = req.MessageId
-		}
-		dao.CustomerChatAutoRules.Ctx(ctx).Save(rule)
-		dao.CustomerChatAutoRuleScenes.Ctx(ctx).Where(do.CustomerChatAutoRuleScenes{RuleId: rule.Id}).Delete()
-		if rule.ReplyType == consts.AutoRuleReplyTypeTransfer {
-			req.Scenes = []string{consts.AutoRuleSceneNotAccepted}
-		}
-		for _, s := range req.Scenes {
-			dao.CustomerChatAutoRuleScenes.Ctx(ctx).Data(&entity.CustomerChatAutoRuleScenes{
-				Name:      s,
-				RuleId:    rule.Id,
-				CreatedAt: gtime.New(),
-				UpdatedAt: gtime.New(),
-			}).Save()
-		}
-		return nil
-	})
+	updateData := do.CustomerChatAutoRules{
+		Name:      req.Name,
+		Sort:      req.Sort,
+		IsOpen:    req.IsOpen,
+		Match:     req.Match,
+		MatchType: req.MatchType,
+	}
+	if rule.ReplyType == consts.AutoRuleReplyTypeMessage {
+		updateData.MessageId = req.MessageId
+		updateData.Scenes = req.Scenes
+	}
+	if rule.ReplyType == consts.AutoRuleReplyTypeTransfer {
+		updateData.Scenes = []string{consts.AutoRuleSceneNotAccepted}
+	}
+	_, err = service.AutoRule().Update(ctx, do.CustomerChatAutoRules{Id: rule.Id}, updateData)
 	if err != nil {
 		return
 	}
@@ -112,83 +98,88 @@ func (c cAutoRule) Update(ctx context.Context, req *api.AutoRuleUpdateReq) (res 
 }
 
 func (c cAutoRule) Store(ctx context.Context, req *api.AutoRuleStoreReq) (res *baseApi.NilRes, err error) {
-	err = dao.CustomerChatAutoRules.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
-		open := 0
-		if req.IsOpen {
-			open = 1
-		}
-		rule := &entity.CustomerChatAutoRules{
+	rule := &model.CustomerChatAutoRule{
+		CustomerChatAutoRules: entity.CustomerChatAutoRules{
 			Name:       req.Name,
 			Match:      req.Match,
 			MatchType:  req.MatchType,
 			ReplyType:  req.ReplyType,
-			IsOpen:     open,
 			Sort:       req.Sort,
 			IsSystem:   0,
 			CustomerId: service.AdminCtx().GetCustomerId(ctx),
-		}
-		if rule.ReplyType == consts.AutoRuleReplyTypeMessage {
-			rule.MessageId = req.MessageId
-		}
-		result, _ := dao.CustomerChatAutoRules.Ctx(ctx).Save(rule)
-		id, err := result.LastInsertId()
-		if err != nil {
-			return err
-		}
-		if rule.ReplyType == consts.AutoRuleReplyTypeTransfer {
-			req.Scenes = []string{consts.AutoRuleSceneNotAccepted}
-		}
-		for _, s := range req.Scenes {
-			dao.CustomerChatAutoRuleScenes.Ctx(ctx).Data(&entity.CustomerChatAutoRuleScenes{
-				Name:      s,
-				RuleId:    uint(id),
-				CreatedAt: gtime.New(),
-				UpdatedAt: gtime.New(),
-			}).Save()
-		}
-		return nil
-	})
-	return baseApi.NewNilResp(), err
-}
-
-func (c cAutoRule) Index(ctx context.Context, req *api.AutoRuleListReq) (res *baseApi.ListRes[api.AutoRuleListItem], err error) {
-	paginator, err := service.AutoRule().Paginate(ctx, &do.CustomerChatAutoRules{
-		CustomerId: service.AdminCtx().GetCustomerId(ctx),
-		IsSystem:   0,
-	}, req.Paginate, nil, nil)
+		},
+		Scenes: req.Scenes,
+		IsOpen: req.IsOpen,
+	}
+	if rule.ReplyType == consts.AutoRuleReplyTypeMessage {
+		rule.MessageId = req.MessageId
+	}
+	if rule.ReplyType == consts.AutoRuleReplyTypeTransfer {
+		rule.Scenes = []string{consts.AutoRuleSceneNotAccepted}
+	}
+	_, err = dao.CustomerChatAutoRules.Ctx(ctx).Save(rule)
 	if err != nil {
 		return
 	}
-	messageIds := slice.Map(paginator.Items, func(index int, item model.CustomerChatAutoRule) uint {
+
+	return baseApi.NewNilResp(), err
+}
+
+func (c cAutoRule) Index(ctx context.Context, req *api.AutoRuleListReq) (res *baseApi.ListRes[api.AutoRule], err error) {
+	w := g.Map{
+		"customer_id": service.AdminCtx().GetCustomerId(ctx),
+		"is_system":   0,
+	}
+	if req.Name != "" {
+		w["name like ?"] = "%" + req.Name + "%"
+	}
+	if req.ReplyType != "" {
+		w["reply_type"] = req.ReplyType
+	}
+	if req.ReplyType != "" {
+		w["match_type"] = req.MatchType
+	}
+	if req.IsOpen != nil {
+		w["is_open"] = *req.IsOpen
+	}
+	paginator, err := service.AutoRule().Paginate(ctx, w, req.Paginate, nil, nil)
+	if err != nil {
+		return
+	}
+	messageIds := slice.Map(paginator.Items, func(index int, item *model.CustomerChatAutoRule) uint {
 		return item.MessageId
 	})
 
-	items := make([]api.AutoRuleListItem, len(paginator.Items))
+	items := make([]api.AutoRule, len(paginator.Items))
 	messages, err := service.AutoMessage().All(ctx, do.CustomerChatAutoMessages{
 		Id: messageIds,
 	}, nil, nil)
 	if err != nil {
 		return
 	}
+	apiMessages, err := service.AutoMessage().ToApis(ctx, messages)
+	apiMessagesMap := slice.KeyBy(apiMessages, func(item *api.AutoMessage) uint {
+		return item.Id
+	})
 	for index, i := range paginator.Items {
-		items[index] = api.AutoRuleListItem{
+		apiRule := api.AutoRule{
 			Id:        i.Id,
 			Name:      i.Name,
 			Match:     i.Match,
 			MatchType: i.MatchType,
 			ReplyType: i.ReplyType,
-			IsOpen:    i.IsOpen == 1,
+			IsOpen:    i.IsOpen,
+			Scenes:    i.Scenes,
 			Sort:      i.Sort,
 			Count:     uint(i.Count),
+			CreatedAt: i.CreatedAt,
+			UpdatedAt: i.UpdatedAt,
 		}
 		if i.MessageId != 0 {
-			_, exit := slice.Find(messages, func(index int, item *model.CustomerChatAutoMessage) bool {
-				return item.Id == i.MessageId
-			})
-			if exit {
-				//items[index].Message = service.AutoMessage().EntityToListItem(*m)
-			}
+			msg := maputil.GetOrDefault(apiMessagesMap, i.MessageId, nil)
+			apiRule.Message = msg
 		}
+		items[index] = apiRule
 
 	}
 	return baseApi.NewListResp(items, paginator.Total), nil

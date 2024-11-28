@@ -6,7 +6,8 @@ import (
 
 type CustomerChatAutoRule struct {
 	entity.CustomerChatAutoRules
-	Scenes []*entity.CustomerChatAutoRuleScenes `orm:"with:rule_id=id"`
+	IsOpen bool     `json:"is_open"`
+	Scenes []string `json:"scenes"`
 }
 
 type CustomerChatAutoMessage struct {

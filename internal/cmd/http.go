@@ -46,7 +46,7 @@ var (
 								group.Bind(
 									backend.CDashboard,
 									backend.CSession,
-									backend.CAdmin,
+									backend.CCustomerAdmin,
 									backend.CUser.Index,
 									backend.CUser.UpdateSetting,
 									backend.CUser.GetSetting,

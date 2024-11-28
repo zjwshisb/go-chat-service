@@ -14,7 +14,7 @@ var CSystemRule = &cSystemRule{}
 type cSystemRule struct {
 }
 
-func (c cSystemRule) Index(ctx context.Context, _ *api.SystemRuleListReq) (res *baseApi.NormalRes[api.SystemRuleListRes], err error) {
+func (c cSystemRule) Index(ctx context.Context, _ *api.SystemRuleListReq) (res *baseApi.NormalRes[[]api.SystemAutoRule], err error) {
 	items, err := service.AutoRule().All(ctx, &do.CustomerChatAutoRules{
 		IsSystem:   1,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -22,9 +22,9 @@ func (c cSystemRule) Index(ctx context.Context, _ *api.SystemRuleListReq) (res *
 	if err != nil {
 		return
 	}
-	rr := api.SystemRuleListRes{}
+	rr := make([]api.SystemAutoRule, 0)
 	for _, item := range items {
-		rr = append(rr, api.SystemRuleListItem{
+		rr = append(rr, api.SystemAutoRule{
 			Name:      item.Name,
 			MessageId: item.MessageId,
 			Id:        item.Id,

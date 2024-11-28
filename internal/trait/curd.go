@@ -12,11 +12,11 @@ import (
 type ctx = context.Context
 
 type ICurd[R any] interface {
-	Save(ctx ctx, data *R) (id int64, err error)
+	Save(ctx ctx, data any) (id int64, err error)
 	Find(ctx ctx, primaryKey any) (model *R, err error)
 	All(ctx ctx, where any, with []any, order any, limit ...int) (items []*R, err error)
 	First(ctx ctx, where any, order ...string) (model *R, err error)
-	Paginate(ctx ctx, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[R], err error)
+	Paginate(ctx ctx, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error)
 	Insert(ctx ctx, data *R) (id int64, err error)
 	Update(ctx ctx, where any, data any) (count int64, err error)
 	Exists(ctx ctx, where any) (exists bool, err error)
@@ -84,7 +84,7 @@ func (c Curd[R]) Count(ctx ctx, where any) (count int, err error) {
 	return
 }
 
-func (c Curd[R]) Save(ctx ctx, data *R) (id int64, err error) {
+func (c Curd[R]) Save(ctx ctx, data any) (id int64, err error) {
 	result, err := c.Dao.Ctx(ctx).Save(data)
 	if err != nil {
 		return
@@ -111,38 +111,44 @@ func (c Curd[R]) Update(ctx ctx, where any, data any) (count int64, err error) {
 	return
 }
 
-func (c Curd[R]) SimplePaginate(ctx context.Context, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[R], err error) {
+func (c Curd[R]) SimplePaginate(ctx context.Context, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error) {
 	query := c.Dao.Ctx(ctx)
 	if where != nil {
 		query = query.Where(where)
 	}
-	items := make([]R, 0)
+	items := make([]*R, 0)
 	total := 0
 	query = query.Page(p.Current, p.PageSize)
+	if order == nil {
+		order = "id desc"
+	}
 	err = query.With(with...).Order(order).Scan(&items)
 	if err != nil {
 		return
 	}
-	return &model.Paginator[R]{
+	return &model.Paginator[*R]{
 		Items:    items,
 		Total:    total,
 		IsSimple: true,
 	}, nil
 }
 
-func (c Curd[R]) Paginate(ctx context.Context, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[R], err error) {
+func (c Curd[R]) Paginate(ctx context.Context, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error) {
 	query := c.Dao.Ctx(ctx)
 	if where != nil {
 		query = query.Where(where)
 	}
-	items := make([]R, 0)
+	items := make([]*R, 0)
 	total := 0
 	query = query.Page(p.Current, p.PageSize)
+	if order == nil {
+		order = "id desc"
+	}
 	err = query.With(with...).Order(order).ScanAndCount(&items, &total, true)
 	if err != nil {
 		return
 	}
-	return &model.Paginator[R]{
+	return &model.Paginator[*R]{
 		Items:    items,
 		Total:    total,
 		IsSimple: false,

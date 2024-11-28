@@ -53,7 +53,7 @@ func (s *sChatMessage) ToRead(ctx context.Context, id any) (int64, error) {
 	})
 }
 
-func (s *sChatMessage) GetAdminName(ctx context.Context, model model.CustomerChatMessage) (avatar string, err error) {
+func (s *sChatMessage) GetAdminName(ctx context.Context, model *model.CustomerChatMessage) (avatar string, err error) {
 	switch model.Source {
 	case consts.MessageSourceAdmin:
 		if model.Admin.Setting != nil && model.Admin.Setting.Name != "" {
@@ -67,7 +67,7 @@ func (s *sChatMessage) GetAdminName(ctx context.Context, model model.CustomerCha
 	}
 	return "", nil
 }
-func (s *sChatMessage) ToApi(ctx context.Context, message model.CustomerChatMessage) (msg api.ChatMessage, err error) {
+func (s *sChatMessage) ToApi(ctx context.Context, message *model.CustomerChatMessage) (msg *api.ChatMessage, err error) {
 	username := ""
 	if message.User != nil {
 		username = message.User.Username
@@ -80,7 +80,7 @@ func (s *sChatMessage) ToApi(ctx context.Context, message model.CustomerChatMess
 	if err != nil {
 		return
 	}
-	msg = api.ChatMessage{
+	msg = &api.ChatMessage{
 		Id:         message.Id,
 		UserId:     message.UserId,
 		AdminId:    message.AdminId,
@@ -97,7 +97,7 @@ func (s *sChatMessage) ToApi(ctx context.Context, message model.CustomerChatMess
 	}
 	return
 }
-func (s *sChatMessage) GetAvatar(ctx context.Context, model model.CustomerChatMessage) (avatar string, err error) {
+func (s *sChatMessage) GetAvatar(ctx context.Context, model *model.CustomerChatMessage) (avatar string, err error) {
 	switch model.Source {
 	case consts.MessageSourceAdmin:
 		if model.Admin != nil &&

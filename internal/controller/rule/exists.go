@@ -16,6 +16,9 @@ func init() {
 
 // ExistsRule 数据存在验证规则
 func existsRule(ctx context.Context, in gvalid.RuleFuncInput) error {
+	if in.Value.IsEmpty() {
+		return nil
+	}
 	params := parseRuleParams(in.Rule)
 	length := len(params)
 	if length < 1 {

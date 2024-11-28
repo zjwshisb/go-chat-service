@@ -11,9 +11,7 @@ type SystemRuleUpdateReq struct {
 	Data   map[string]string `p:"data" json:"data"`
 }
 
-type SystemRuleListRes []SystemRuleListItem
-
-type SystemRuleListItem struct {
+type SystemAutoRule struct {
 	Id        uint   `json:"id"`
 	MessageId uint   `json:"message_id"`
 	Name      string `json:"name"`

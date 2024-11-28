@@ -85,7 +85,7 @@ func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *api
 	}
 	res := make([]api.ChatSession, len(paginator.Items))
 	for index, s := range paginator.Items {
-		res[index] = service.ChatSession().RelationToChat(&s)
+		res[index] = service.ChatSession().RelationToChat(s)
 	}
 	r := &api.SessionListRes{
 		Items: res,
@@ -142,9 +142,9 @@ func (c cSession) Detail(ctx context.Context, req *api.SessionDetailReq) (res *a
 	if err != nil {
 		return
 	}
-	message := make([]api.ChatMessage, len(relations))
+	message := make([]*api.ChatMessage, len(relations))
 	for index, i := range relations {
-		msg, err := service.ChatMessage().ToApi(ctx, *i)
+		msg, err := service.ChatMessage().ToApi(ctx, i)
 		if err != nil {
 			return nil, err
 		}

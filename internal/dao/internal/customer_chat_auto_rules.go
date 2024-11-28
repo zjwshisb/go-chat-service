@@ -30,6 +30,7 @@ type CustomerChatAutoRulesColumns struct {
 	IsSystem   string //
 	Sort       string //
 	IsOpen     string //
+	Scenes     string //
 	Count      string //
 	CreatedAt  string //
 	UpdatedAt  string //
@@ -48,6 +49,7 @@ var customerChatAutoRulesColumns = CustomerChatAutoRulesColumns{
 	IsSystem:   "is_system",
 	Sort:       "sort",
 	IsOpen:     "is_open",
+	Scenes:     "scenes",
 	Count:      "count",
 	CreatedAt:  "created_at",
 	UpdatedAt:  "updated_at",

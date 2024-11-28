@@ -45,4 +45,4 @@ type ChatMessageReq struct {
 	Size   uint `p:"size" d:"20"`
 }
 
-type ChatMessageRes []api.ChatMessage
+type ChatMessageRes []*api.ChatMessage

@@ -106,24 +106,23 @@ func apiFile(ctx context.Context, in gvalid.RuleFuncInput) error {
 	var apiFile *api.File
 	err := in.Value.Scan(&apiFile)
 	if err != nil {
-		return gerror.Newf("%s 必须是个有效的文件", in.Field)
+		return UnSupportFileError
 	}
 	fileModel, err := service.File().First(ctx, do.CustomerChatFiles{
 		Id:         apiFile.Id,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	})
 	if err != nil {
-		return gerror.Newf("%s 必须是个有效的文件", in.Field)
+		return UnSupportFileError
 	}
 	params := parseRuleParams(in.Rule)
-
 	if len(params) != 0 {
 		for _, allowType := range params {
 			if allowType == fileModel.Type {
 				return nil
 			}
 		}
-		return gerror.New("文件类型不匹配")
+		return UnSupportFileError
 	}
 	return nil
 }

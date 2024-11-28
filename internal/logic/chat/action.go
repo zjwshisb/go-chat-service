@@ -38,7 +38,7 @@ func marshalAction(action *api.ChatAction) (b []byte, err error) {
 			err = errors.New("param error")
 			return
 		}
-		data, err := service.ChatMessage().ToApi(gctx.New(), *msg)
+		data, err := service.ChatMessage().ToApi(gctx.New(), msg)
 		if err != nil {
 			return b, err
 		}

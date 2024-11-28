@@ -50,6 +50,34 @@ func (c *cOption) MessageType(_ context.Context, _ *api.OptionMessageTypeReq) (r
 	return baseApi.NewOptionResp(options), nil
 }
 
+func (c *cOption) AutoRuleMatchType(_ context.Context, _ *api.OptionAutoRuleMatchTypeReq) (res *baseApi.OptionRes, err error) {
+	options := []baseApi.Option{
+		{
+			Label: "全匹配",
+			Value: consts.AutoRuleMatchTypeAll,
+		},
+		{
+			Label: "半匹配",
+			Value: consts.AutoRuleMatchTypePart,
+		},
+	}
+	return baseApi.NewOptionResp(options), nil
+}
+
+func (c *cOption) AutoRuleReplyType(_ context.Context, _ *api.OptionAutoRuleReplyTypeReq) (res *baseApi.OptionRes, err error) {
+	options := []baseApi.Option{
+		{
+			Label: "回复消息",
+			Value: consts.AutoRuleReplyTypeMessage,
+		},
+		{
+			Label: "转接人工",
+			Value: consts.AutoRuleReplyTypeTransfer,
+		},
+	}
+	return baseApi.NewOptionResp(options), nil
+}
+
 func (c *cOption) AutoRuleScene(_ context.Context, _ *api.OptionAutoRuleSceneReq) (res *baseApi.OptionRes, err error) {
 	options := []baseApi.Option{
 		{
@@ -58,7 +86,7 @@ func (c *cOption) AutoRuleScene(_ context.Context, _ *api.OptionAutoRuleSceneReq
 		},
 		{
 			Label: "已接入但客服离线",
-			Value: consts.AutoRuleSceneAdminOnline,
+			Value: consts.AutoRuleSceneAdminOffline,
 		},
 		{
 			Label: "已接入客服在线",

@@ -13,7 +13,6 @@ import (
 
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 )
 
@@ -53,9 +52,9 @@ func (s *sAutoRule) GetMessage(ctx context.Context, rule *model.CustomerChatAuto
 	return nil, gerror.NewCode(gcode.CodeNotFound)
 }
 
-func (s *sAutoRule) sceneInclude(scenes []*entity.CustomerChatAutoRuleScenes, match string) bool {
-	for _, item := range scenes {
-		if item.Name == match {
+func (s *sAutoRule) sceneInclude(rule *model.CustomerChatAutoRule, match string) bool {
+	for _, item := range rule.Scenes {
+		if item == match {
 			return true
 		}
 	}
@@ -66,11 +65,11 @@ func (s *sAutoRule) IsMatch(rule *model.CustomerChatAutoRule, scene string, mess
 	switch rule.MatchType {
 	case consts.AutoRuleMatchTypeAll:
 		if rule.Match == message {
-			return s.sceneInclude(rule.Scenes, scene)
+			return s.sceneInclude(rule, scene)
 		}
 	case consts.AutoRuleMatchTypePart:
 		if strings.Contains(message, rule.Match) {
-			return s.sceneInclude(rule.Scenes, scene)
+			return s.sceneInclude(rule, scene)
 		}
 	}
 	return false

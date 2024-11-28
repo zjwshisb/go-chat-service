@@ -22,6 +22,12 @@ type AutoMessageFormRes struct {
 	AutoMessageForm
 }
 
+type AutoMessageOriginNavigator struct {
+	Image uint   `json:"image"`
+	Url   string `json:"url"`
+	Title string `json:"title"`
+}
+
 type AutoMessageNavigator struct {
 	Url   string `json:"url" v:"required-if:type,navigator|max-length:512"`
 	Title string `json:"title" v:"required-if:type,navigator|max-length:32"`
@@ -49,14 +55,13 @@ type AutoMessageDeleteReq struct {
 	g.Meta `path:"/auto-messages/:id" tags:"后台快捷回复" method:"delete" summary:"删除快捷回复"`
 }
 
-type AutoMessageListItem struct {
-	Id         uint                  `json:"id"`
-	Name       string                `json:"name"`
-	Type       string                `json:"type"`
-	Content    string                `json:"content"`
-	File       *File                 `json:"file"`
-	Navigator  *AutoMessageNavigator `json:"navigator"`
-	CreatedAt  *gtime.Time           `json:"created_at"`
-	UpdatedAt  *gtime.Time           `json:"updated_at"`
-	RulesCount uint                  `json:"rules_count"`
+type AutoMessage struct {
+	Id        uint                  `json:"id"`
+	Name      string                `json:"name"`
+	Type      string                `json:"type"`
+	Content   string                `json:"content"`
+	File      *File                 `json:"file"`
+	Navigator *AutoMessageNavigator `json:"navigator"`
+	CreatedAt *gtime.Time           `json:"created_at"`
+	UpdatedAt *gtime.Time           `json:"updated_at"`
 }

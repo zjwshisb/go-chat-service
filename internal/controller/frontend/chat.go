@@ -29,7 +29,7 @@ func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *api.C
 	r := api.ChatMessageRes{}
 	adminToMessageId := make(map[uint][]uint)
 	for _, item := range messages {
-		msg, err := service.ChatMessage().ToApi(ctx, *item)
+		msg, err := service.ChatMessage().ToApi(ctx, item)
 		if err != nil {
 			return nil, err
 		}

@@ -127,11 +127,11 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	}, "order desc")
 	var lastMsg *api.ChatMessage
 	if err == nil {
-		v, err := service.ChatMessage().ToApi(ctx, *lastMessage)
+		v, err := service.ChatMessage().ToApi(ctx, lastMessage)
 		if err != nil {
 			return nil, err
 		}
-		lastMsg = &v
+		lastMsg = v
 	}
 	err = service.ChatRelation().AddUser(ctx, admin.Id, session.UserId)
 	if err != nil {

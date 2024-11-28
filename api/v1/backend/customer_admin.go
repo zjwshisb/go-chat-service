@@ -6,7 +6,7 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
-type AdminDetailReq struct {
+type CustomerAdminDetailReq struct {
 	g.Meta `path:"/admins/:id" tags:"后台管理员" method:"get" summary:"获取管理员详情"`
 	Month  string `json:"month" v:"required" p:"month"`
 }
@@ -14,22 +14,24 @@ type AdminDetailReq struct {
 type AdminDetailRes struct {
 }
 
-type AdminListReq struct {
+type CustomerAdminListReq struct {
 	g.Meta `path:"/admins" tags:"后台管理员" method:"get" summary:"获取管理员列表"`
 	api.Paginate
 }
 
-type AdminStoreReq struct {
+type CustomerAdminStoreReq struct {
 	g.Meta   `path:"/admins" tags:"后台管理员" method:"get" summary:"获取管理员列表"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-type AdminListItem struct {
+type CustomerAdmin struct {
 	Id            uint        `json:"id"`
 	Username      string      `json:"username"`
 	Avatar        string      `json:"avatar"`
 	Online        bool        `json:"online"`
 	AcceptedCount uint        `json:"accepted_count"`
 	LastOnline    *gtime.Time `json:"last_online"`
+	CreatedAt     *gtime.Time `json:"created_at"`
+	UpdatedAt     *gtime.Time `json:"updated_at"`
 }

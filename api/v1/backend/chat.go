@@ -132,7 +132,7 @@ type ChatSimpleUser struct {
 	Username string `json:"username"`
 }
 
-type MessageRes []ChatMessage
+type MessageRes []*ChatMessage
 
 type UserListRes []ChatUser
 

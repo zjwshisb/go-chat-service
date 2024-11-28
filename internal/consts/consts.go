@@ -1,13 +1,17 @@
 package consts
 
-const MessageTypeText = "text"
-const MessageTypeFile = "file"
-const MessageTypeNavigate = "navigator"
-const MessageTypeNotice = "notice"
-const MessageTypeRate = "rate"
+const (
+	MessageTypeText     = "text"
+	MessageTypeFile     = "file"
+	MessageTypeNavigate = "navigator"
+	MessageTypeNotice   = "notice"
+	MessageTypeRate     = "rate"
+)
 
-const ChatSessionTypeNormal = 0
-const ChatSessionTypeTransfer = 1
+const (
+	ChatSessionTypeNormal   = 0
+	ChatSessionTypeTransfer = 1
+)
 
 const WebsocketPlatformWeb = "web"
 const WebsocketPlatformH5 = "h5"

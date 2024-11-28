@@ -22,6 +22,7 @@ type CustomerChatAutoRules struct {
 	IsSystem   interface{} //
 	Sort       interface{} //
 	IsOpen     interface{} //
+	Scenes     interface{} //
 	Count      interface{} //
 	CreatedAt  *gtime.Time //
 	UpdatedAt  *gtime.Time //

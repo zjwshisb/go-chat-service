@@ -20,6 +20,7 @@ type CustomerChatAutoRules struct {
 	IsSystem   uint        `json:"IS_SYSTEM"   orm:"is_system"   ` //
 	Sort       uint        `json:"SORT"        orm:"sort"        ` //
 	IsOpen     int         `json:"IS_OPEN"     orm:"is_open"     ` //
+	Scenes     string      `json:"SCENES"      orm:"scenes"      ` //
 	Count      int64       `json:"COUNT"       orm:"count"       ` //
 	CreatedAt  *gtime.Time `json:"CREATED_AT"  orm:"created_at"  ` //
 	UpdatedAt  *gtime.Time `json:"UPDATED_AT"  orm:"updated_at"  ` //

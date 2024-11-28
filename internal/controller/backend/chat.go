@@ -207,11 +207,11 @@ func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.Nor
 				return item.UserId == user.Id
 			})
 			if exist {
-				lastMsg, err := service.ChatMessage().ToApi(ctx, *lastMsg)
+				lastMsg, err := service.ChatMessage().ToApi(ctx, lastMsg)
 				if err != nil {
 					return nil, err
 				}
-				cu.LastMessage = &lastMsg
+				cu.LastMessage = lastMsg
 			}
 			useUnread, exist := slice.Find(unreadCounts, func(index int, item Unread) bool {
 				return item.UserId == cu.Id
@@ -258,7 +258,7 @@ func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseAp
 		if i.ReadAt == nil && i.Source == consts.MessageSourceUser {
 			unReadIds = append(unReadIds, i.Id)
 		}
-		msg, err := service.ChatMessage().ToApi(ctx, *i)
+		msg, err := service.ChatMessage().ToApi(ctx, i)
 		if err != nil {
 			return nil, err
 		}

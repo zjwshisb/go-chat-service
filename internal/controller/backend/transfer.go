@@ -86,8 +86,8 @@ func (c cTransfer) Index(ctx context.Context, req *chatApi.TransferListReq) (res
 	if err != nil {
 		return
 	}
-	items := slice.Map(p.Items, func(index int, item model.CustomerChatTransfer) chatApi.ChatTransfer {
-		return service.ChatTransfer().ToChatTransfer(&item)
+	items := slice.Map(p.Items, func(index int, item *model.CustomerChatTransfer) chatApi.ChatTransfer {
+		return service.ChatTransfer().ToChatTransfer(item)
 	})
 	return baseApi.NewListResp(items, p.Total), nil
 }

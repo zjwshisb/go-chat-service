@@ -50,7 +50,7 @@ type SessionDetailReq struct {
 }
 
 type SessionDetailRes struct {
-	Messages []ChatMessage `json:"messages"`
-	Session  ChatSession   `json:"session"`
-	Total    int           `json:"total"`
+	Messages []*ChatMessage `json:"messages"`
+	Session  ChatSession    `json:"session"`
+	Total    int            `json:"total"`
 }
