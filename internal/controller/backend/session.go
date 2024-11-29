@@ -23,7 +23,7 @@ var CSession = &cSession{}
 type cSession struct {
 }
 
-func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *api.SessionListRes, err error) {
+func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *baseApi.ListRes[api.ChatSession], err error) {
 	w := make(map[string]any)
 	customerId := service.AdminCtx().GetCustomerId(ctx)
 	w["customer_id"] = customerId
@@ -87,11 +87,7 @@ func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *api
 	for index, s := range paginator.Items {
 		res[index] = service.ChatSession().RelationToChat(s)
 	}
-	r := &api.SessionListRes{
-		Items: res,
-		Total: paginator.Total,
-	}
-	return r, nil
+	return baseApi.NewListResp(res, paginator.Total), nil
 }
 
 func (c cSession) Cancel(ctx context.Context, req *api.SessionCancelReq) (resp *baseApi.NilRes, err error) {

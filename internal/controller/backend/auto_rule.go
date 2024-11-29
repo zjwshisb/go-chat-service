@@ -5,7 +5,6 @@ import (
 	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
-	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
@@ -43,7 +42,7 @@ func (c cAutoRule) Delete(ctx context.Context, _ *api.AutoRuleDeleteReq) (resp *
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cAutoRule) Form(ctx context.Context, _ *api.AutoRuleFormReq) (res *baseApi.NormalRes[api.AutoRuleFormRes], err error) {
+func (c cAutoRule) Form(ctx context.Context, _ *api.AutoRuleFormReq) (res *baseApi.NormalRes[api.AutoRuleForm], err error) {
 	rule, err := service.AutoRule().First(ctx, do.CustomerChatAutoRules{
 		IsSystem:   0,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -52,17 +51,15 @@ func (c cAutoRule) Form(ctx context.Context, _ *api.AutoRuleFormReq) (res *baseA
 	if err != nil {
 		return
 	}
-	res = baseApi.NewResp(api.AutoRuleFormRes{
-		AutoRuleForm: api.AutoRuleForm{
-			IsOpen:    rule.IsOpen,
-			Match:     rule.Match,
-			MatchType: rule.MatchType,
-			MessageId: rule.MessageId,
-			Name:      rule.Name,
-			ReplyType: rule.ReplyType,
-			Scenes:    rule.Scenes,
-			Sort:      rule.Sort,
-		},
+	res = baseApi.NewResp(api.AutoRuleForm{
+		IsOpen:    rule.IsOpen,
+		Match:     rule.Match,
+		MatchType: rule.MatchType,
+		MessageId: rule.MessageId,
+		Name:      rule.Name,
+		ReplyType: rule.ReplyType,
+		Scenes:    rule.Scenes,
+		Sort:      rule.Sort,
 	})
 	return
 }
@@ -108,16 +105,16 @@ func (c cAutoRule) Store(ctx context.Context, req *api.AutoRuleStoreReq) (res *b
 			IsSystem:   0,
 			CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		},
-		Scenes: req.Scenes,
 		IsOpen: req.IsOpen,
 	}
 	if rule.ReplyType == consts.AutoRuleReplyTypeMessage {
 		rule.MessageId = req.MessageId
+		rule.Scenes = req.Scenes
 	}
 	if rule.ReplyType == consts.AutoRuleReplyTypeTransfer {
 		rule.Scenes = []string{consts.AutoRuleSceneNotAccepted}
 	}
-	_, err = dao.CustomerChatAutoRules.Ctx(ctx).Save(rule)
+	_, err = service.AutoRule().Save(ctx, rule)
 	if err != nil {
 		return
 	}

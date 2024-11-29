@@ -3,20 +3,19 @@ package backend
 import (
 	"context"
 	baseApi "gf-chat/api"
-	"gf-chat/api/v1/backend"
-	"gf-chat/internal/dao"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/service"
 	"github.com/gogf/gf/v2/net/ghttp"
 )
 
-var CUser = &cUser{}
+var CCurrentAdmin = &cCurrentAdmin{}
 
-type cUser struct {
+type cCurrentAdmin struct {
 }
 
-func (c *cUser) Index(ctx context.Context, req *backend.CurrentUserInfoReq) (res *baseApi.NormalRes[backend.CurrentUserRes], err error) {
+func (c *cCurrentAdmin) Index(ctx context.Context, _ *api.CurrentAdminInfoReq) (res *baseApi.NormalRes[api.CurrentAdminRes], err error) {
 	admin := service.AdminCtx().GetUser(ctx)
-	res = baseApi.NewResp(backend.CurrentUserRes{
+	res = baseApi.NewResp(api.CurrentAdminRes{
 		Id:         admin.Id,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Username:   admin.Username,
@@ -24,53 +23,34 @@ func (c *cUser) Index(ctx context.Context, req *backend.CurrentUserInfoReq) (res
 	return
 }
 
-func (c *cUser) UpdateSetting(ctx context.Context, req *backend.CurrentUserUpdateSettingReq) (res *baseApi.NilRes, err error) {
+func (c *cCurrentAdmin) UpdateSetting(ctx context.Context, req *api.CurrentAdminSettingUpdateReq) (res *baseApi.NilRes, err error) {
 	setting, err := service.Admin().GetSetting(ctx, service.AdminCtx().GetUser(ctx))
 	if err != nil {
 		return nil, err
 	}
-	setting.Name = req.Name
-	//setting.Background = req.Background.Path
-	//setting.Avatar = req.Avatar.Path
-	if req.IsAutoAccept {
-		setting.IsAutoAccept = 1
-	} else {
-		setting.IsAutoAccept = 0
+	err = service.Admin().UpdateSetting(ctx, service.AdminCtx().GetUser(ctx), req.CurrentAdminSettingForm)
+	if err != nil {
+		return
 	}
-	setting.WelcomeContent = req.WelcomeContent
-	setting.OfflineContent = req.OfflineContent
-	dao.CustomerAdminChatSettings.Ctx(ctx).Save(setting)
 	service.Chat().UpdateAdminSetting(service.AdminCtx().GetCustomerId(ctx), setting)
 	return &baseApi.NilRes{}, nil
 }
 
-func (c *cUser) GetSetting(ctx context.Context, req *backend.CurrentUserSettingReq) (res *baseApi.NormalRes[backend.CurrentUserSettingRes], err error) {
-	//admin := service.AdminCtx().GetUser(ctx)
+func (c *cCurrentAdmin) GetSetting(ctx context.Context, _ *api.CurrentAdminSettingReq) (res *baseApi.NormalRes[*api.CurrentAdminSetting], err error) {
 	setting, err := service.Admin().GetSetting(ctx, service.AdminCtx().GetUser(ctx))
 	if err != nil {
 		return nil, err
 	}
-	//avatar := service.Qiniu().Form(setting.Avatar)
-	//if avatar == nil {
-	//avatar := service.ChatSetting().DefaultAvatarForm(admin.CustomerId)
-	//}
-	return baseApi.NewResp(backend.CurrentUserSettingRes{
-		//Background:     service.Qiniu().Form(setting.Background),
-		IsAutoAccept:   setting.IsAutoAccept == 1,
-		WelcomeContent: setting.WelcomeContent,
-		OfflineContent: setting.OfflineContent,
-		Name:           setting.Name,
-		//Avatar:         avatar,
-	}), nil
+	return baseApi.NewResp(setting), nil
 }
 
-func (c *cUser) Login(ctx context.Context, r *backend.LoginReq) (res *baseApi.NormalRes[backend.LoginRes], err error) {
+func (c *cCurrentAdmin) Login(ctx context.Context, _ *api.LoginReq) (res *baseApi.NormalRes[api.LoginRes], err error) {
 	request := ghttp.RequestFromCtx(ctx)
 	_, token, err := service.Admin().Login(ctx, request)
 	if err != nil {
 		return
 	}
-	return baseApi.NewResp(backend.LoginRes{
+	return baseApi.NewResp(api.LoginRes{
 		Token: token,
 	}), nil
 }

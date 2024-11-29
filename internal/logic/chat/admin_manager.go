@@ -7,7 +7,6 @@ import (
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"github.com/duke-git/lancet/v2/maputil"
 	"github.com/duke-git/lancet/v2/slice"
@@ -331,17 +330,17 @@ func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, 
 }
 
 // NoticeUpdateSetting admin修改设置后通知conn 更新admin的设置信息
-func (m *adminManager) noticeUpdateSetting(customerId uint, setting *entity.CustomerAdminChatSettings) {
+func (m *adminManager) noticeUpdateSetting(customerId uint, setting *api.CurrentAdminSetting) {
 	m.updateSetting(customerId, setting)
 }
 
 // UpdateSetting 更新设置
-func (m *adminManager) updateSetting(customerId uint, setting *entity.CustomerAdminChatSettings) {
+func (m *adminManager) updateSetting(customerId uint, setting *api.CurrentAdminSetting) {
 	conn, exist := m.GetConn(customerId, setting.AdminId)
 	if exist {
 		u, ok := conn.GetUser().(*admin)
 		if ok {
-			u.Entity.Setting = setting
+			u.Entity.ApiSetting = setting
 		}
 	}
 }

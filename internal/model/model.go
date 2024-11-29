@@ -1,6 +1,8 @@
 package model
 
 import (
+	"gf-chat/api"
+	"gf-chat/api/v1/backend"
 	"gf-chat/internal/model/entity"
 )
 
@@ -16,7 +18,8 @@ type CustomerChatAutoMessage struct {
 
 type CustomerAdmin struct {
 	entity.CustomerAdmins
-	Setting *entity.CustomerAdminChatSettings `orm:"with:admin_id=id"`
+	Setting    *entity.CustomerAdminChatSettings `orm:"with:admin_id=id"`
+	ApiSetting *backend.CurrentAdminSetting
 }
 
 type CustomerChatMessage struct {
@@ -41,4 +44,9 @@ type CustomerChatSession struct {
 
 type CustomerChatFile struct {
 	entity.CustomerChatFiles
+}
+
+type CustomerChatSetting struct {
+	entity.CustomerChatSettings
+	Options []api.Option `json:"options"`
 }

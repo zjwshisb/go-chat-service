@@ -8,6 +8,7 @@ import (
 	"github.com/gogf/gf/v2/os/gcmd"
 )
 
+// Init 初始化客户基本数据
 var Init = &gcmd.Command{
 	Name:        "init",
 	Brief:       "init database",

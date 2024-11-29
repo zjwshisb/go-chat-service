@@ -43,10 +43,6 @@ type AutoRuleFormReq struct {
 	g.Meta `path:"/auto-rules/:id/form" tags:"后台自动回复规则" method:"get" summary:"获取自动回复规则表单"`
 }
 
-type AutoRuleFormRes struct {
-	AutoRuleForm
-}
-
 type AutoRule struct {
 	Id         uint         `json:"id"`
 	Name       string       `json:"name"`

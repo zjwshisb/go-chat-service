@@ -2,6 +2,8 @@ package admin
 
 import (
 	"context"
+	api "gf-chat/api/v1/backend"
+	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -82,35 +84,103 @@ func (s *sAdmin) CanAccess(admin *model.CustomerAdmin) bool {
 	return true
 }
 
-func (s *sAdmin) GetSetting(ctx context.Context, admin *model.CustomerAdmin) (*entity.CustomerAdminChatSettings, error) {
-	if admin.Setting != nil {
-		return admin.Setting, nil
+func (s *sAdmin) UpdateSetting(ctx context.Context, admin *model.CustomerAdmin, form api.CurrentAdminSettingForm) (err error) {
+	updateData := do.CustomerAdminChatSettings{
+		Name:           form.Name,
+		IsAutoAccept:   gconv.Int(form.IsAutoAccept),
+		WelcomeContent: form.WelcomeContent,
+		OfflineContent: form.OfflineContent,
 	}
-	err := dao.CustomerAdminChatSettings.Ctx(ctx).Where("admin_id", admin.Id).Scan(&admin.Setting)
+	exists := false
+	if form.Avatar == nil {
+		updateData.Avatar = 0
+	} else {
+		exists, err = service.File().Exists(ctx, do.CustomerChatFiles{
+			Id:         form.Avatar.Id,
+			CustomerId: service.AdminCtx().GetCustomerId(ctx),
+			Type:       consts.FileTypeImage,
+		})
+		if err != nil {
+			return
+		}
+		if !exists {
+			return gerror.New("无效的图片文件")
+		}
+		updateData.Avatar = form.Avatar.Id
+	}
+	if form.Background == nil {
+		updateData.Background = 0
+	} else {
+		exists, err = service.File().Exists(ctx, do.CustomerChatFiles{
+			Id:         form.Background.Id,
+			CustomerId: service.AdminCtx().GetCustomerId(ctx),
+			Type:       consts.FileTypeImage,
+		})
+		if err != nil {
+			return
+		}
+		if !exists {
+			return gerror.New("无效的图片文件")
+		}
+		updateData.Background = form.Background.Id
+	}
+	_, err = dao.CustomerAdminChatSettings.Ctx(ctx).Data(updateData).Where("admin_id", admin.Id).Update()
 	if err != nil {
-		return nil, err
+		return
 	}
-	if admin.Setting == nil {
-		setting := &entity.CustomerAdminChatSettings{
-			AdminId:        admin.Id,
-			Name:           admin.Username,
-			IsAutoAccept:   0,
-			WelcomeContent: "",
-			Avatar:         "",
-		}
-		result, err := dao.CustomerAdminChatSettings.Ctx(ctx).Save(*setting)
+	return
+}
+
+func (s *sAdmin) GetSetting(ctx context.Context, admin *model.CustomerAdmin) (*api.CurrentAdminSetting, error) {
+	var setting *entity.CustomerAdminChatSettings
+	if admin.Setting != nil {
+		setting = admin.Setting
+	} else {
+		err := dao.CustomerAdminChatSettings.Ctx(ctx).Where("admin_id", admin.Id).Scan(&admin.Setting)
 		if err != nil {
 			return nil, err
 		}
-		id, err := result.LastInsertId()
-		if err != nil {
+		if admin.Setting == nil {
+			setting := &entity.CustomerAdminChatSettings{
+				AdminId:        admin.Id,
+				Name:           admin.Username,
+				IsAutoAccept:   0,
+				WelcomeContent: "",
+				Avatar:         0,
+			}
+			result, err := dao.CustomerAdminChatSettings.Ctx(ctx).Save(*setting)
+			if err != nil {
+				return nil, err
+			}
+			id, err := result.LastInsertId()
+			if err != nil {
+				return nil, err
+			}
+			setting.Id = uint(id)
+			admin.Setting = setting
 			return nil, err
 		}
-		setting.Id = uint(id)
-		admin.Setting = setting
-		return nil, err
+		setting = admin.Setting
 	}
-	return admin.Setting, nil
+	apiSetting := &api.CurrentAdminSetting{
+		CurrentAdminSettingForm: api.CurrentAdminSettingForm{
+			Background:     nil,
+			IsAutoAccept:   setting.IsAutoAccept > 0,
+			WelcomeContent: setting.WelcomeContent,
+			OfflineContent: setting.OfflineContent,
+			Name:           setting.Name,
+			Avatar:         nil,
+		},
+		AdminId: admin.Id,
+	}
+	if setting.Background > 0 {
+		apiSetting.Background, _ = service.File().FindAnd2Api(ctx, setting.Background)
+	}
+	if setting.Avatar > 0 {
+		apiSetting.Avatar, _ = service.File().FindAnd2Api(ctx, setting.Avatar)
+	}
+	return apiSetting, nil
+
 }
 
 func (s *sAdmin) GetAvatar(ctx context.Context, model *model.CustomerAdmin) (string, error) {
@@ -118,10 +188,8 @@ func (s *sAdmin) GetAvatar(ctx context.Context, model *model.CustomerAdmin) (str
 	if err != nil {
 		return "", err
 	}
-	if setting.Avatar != "" {
-		//return service.Qiniu().Url(model.Setting.Avatar), nil
-	} else {
-		return "", nil
+	if setting.Avatar != nil {
+		return setting.Avatar.Url, nil
 	}
 	return "", nil
 }

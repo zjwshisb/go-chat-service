@@ -1,10 +1,10 @@
 package setup
 
 import (
-	"database/sql"
-	"encoding/json"
+	"gf-chat/api"
 	"gf-chat/internal/consts"
-	"gf-chat/internal/dao"
+	"gf-chat/internal/model"
+	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 
@@ -13,74 +13,84 @@ import (
 )
 
 var (
-	options1, _ = json.Marshal([]map[string]string{
+	options1 = []api.Option{
 		{
-			"label": "是",
-			"value": "1",
+			Label: "是",
+			Value: "1",
 		},
 		{
-			"label": "否",
-			"value": "0",
+			Label: "否",
+			Value: "0",
 		},
-	})
-	options2, _ = json.Marshal([]map[string]string{
+	}
+	options2 = []api.Option{
 		{
-			"label": "5分钟",
-			"value": "5",
-		},
-		{
-			"label": "10分钟",
-			"value": "10",
+			Label: "5分钟",
+			Value: "5",
 		},
 		{
-			"label": "30分钟",
-			"value": "30",
+			Label: "10分钟",
+			Value: "10",
 		},
 		{
-			"label": "60分钟",
-			"value": "60",
-		},
-	})
-	settings = []entity.CustomerChatSettings{
-		{
-			Name:        consts.ChatSettingIsAutoTransfer,
-			Title:       "自动转接人工客服",
-			Value:       "1",
-			Options:     string(options1),
-			Type:        "select",
-			Description: "开启后用户发送任何消息将自动转入到待人工接入列表中，关闭时用户只有发送的消息匹配到转人工的规则才会转入到人工列表中",
+			Label: "30分钟",
+			Value: "30",
 		},
 		{
-			Name:        consts.ChatSettingShowQueue,
-			Title:       "显示队列",
-			Value:       "0",
-			Options:     string(options1),
-			Type:        "select",
-			Description: "用户等待人工客服接入时，是否显示前面还有多少人在等待",
+			Label: "60分钟",
+			Value: "60",
+		},
+	}
+	settings = []model.CustomerChatSetting{
+		{
+			CustomerChatSettings: entity.CustomerChatSettings{
+				Name:        consts.ChatSettingIsAutoTransfer,
+				Title:       "自动转接人工客服",
+				Value:       "1",
+				Type:        "select",
+				Description: "开启后用户发送任何消息将自动转入到待人工接入列表中，关闭时用户只有发送的消息匹配到转人工的规则才会转入到人工列表中",
+			},
+			Options: options1,
 		},
 		{
-			Name:        consts.ChatSettingShowRead,
-			Title:       "显示已读",
-			Value:       "0",
-			Options:     string(options1),
-			Type:        "select",
-			Description: "用户端页面是否显示消息已读/未读",
+			CustomerChatSettings: entity.CustomerChatSettings{
+				Name:        consts.ChatSettingShowQueue,
+				Title:       "显示队列",
+				Value:       "0",
+				Type:        "select",
+				Description: "用户等待人工客服接入时，是否显示前面还有多少人在等待",
+			},
+			Options: options1,
 		},
 		{
-			Name:        consts.ChatSettingSystemAvatar,
-			Title:       "客服系统默认头像",
-			Value:       "",
-			Options:     "",
-			Type:        "image",
-			Description: "系统回复消息以及客服没有设置头像时的默认头像",
+			CustomerChatSettings: entity.CustomerChatSettings{
+				Name:        consts.ChatSettingShowRead,
+				Title:       "显示已读",
+				Value:       "0",
+				Type:        "select",
+				Description: "用户端页面是否显示消息已读/未读",
+			},
+			Options: options1,
 		},
 		{
-			Name:        consts.ChatSettingSystemName,
-			Title:       "客服系统默认名称",
-			Value:       "",
-			Options:     "",
-			Type:        "text",
-			Description: "系统回复消息以及客服没有设置名称时的默认名称",
+			CustomerChatSettings: entity.CustomerChatSettings{
+				Name:        consts.ChatSettingSystemAvatar,
+				Title:       "客服系统默认头像",
+				Value:       "",
+				Type:        "image",
+				Description: "系统回复消息以及客服没有设置头像时的默认头像",
+			},
+			Options: []api.Option{},
+		},
+		{
+			CustomerChatSettings: entity.CustomerChatSettings{
+				Name:        consts.ChatSettingSystemName,
+				Title:       "客服系统默认名称",
+				Value:       "",
+				Type:        "text",
+				Description: "系统回复消息以及客服没有设置名称时的默认名称",
+			},
+			Options: []api.Option{},
 		},
 	}
 
@@ -111,27 +121,36 @@ type sSetup struct {
 
 func (s *sSetup) Setup(ctx gctx.Ctx, customerId uint) {
 	for _, setting := range settings {
-		model := &entity.CustomerChatSettings{}
-		err := dao.CustomerChatSettings.Ctx(ctx).
-			Where("name", setting.Name).
-			Where("customer_id", customerId).Scan(model)
-		if err == sql.ErrNoRows {
-			model = &setting
-			model.CustomerId = customerId
+		m, _ := service.ChatSetting().First(ctx, do.CustomerChatSettings{
+			Name:       setting.Name,
+			CustomerId: setting.CustomerId,
+		})
+		if m != nil {
+			m.CustomerId = customerId
 		} else {
-			model.Description = setting.Description
-			model.Title = setting.Title
+			m.Description = setting.Description
+			m.Title = setting.Title
 		}
-		dao.CustomerChatSettings.Ctx(ctx).Save(model)
+		_, err := service.ChatSetting().Save(ctx, m)
+		if err != nil {
+			panic(err)
+		}
 	}
 	for _, rule := range rules {
-		count, _ := dao.CustomerChatAutoRules.Ctx(ctx).
-			Where("match", rule.Match).
-			Where("is_system", 1).
-			Where("customer_id", customerId).Count()
-		if count == 0 {
+		exists, err := service.AutoRule().Exists(ctx, do.CustomerChatAutoRules{
+			Match:      rule.Match,
+			IsSystem:   1,
+			CustomerId: customerId,
+		})
+		if err != nil {
+			panic(err)
+		}
+		if !exists {
 			rule.CustomerId = customerId
-			dao.CustomerChatAutoRules.Ctx(ctx).Save(rule)
+			_, err = service.AutoRule().Save(ctx, rules)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 }

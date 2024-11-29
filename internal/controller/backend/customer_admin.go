@@ -44,7 +44,7 @@ func (cAdmin cCustomerAdmin) Index(ctx context.Context, req *api.CustomerAdminLi
 	return
 }
 
-func (cAdmin cCustomerAdmin) Show(ctx context.Context, req *api.CustomerAdminDetailReq) (res *baseApi.NormalRes[api.AdminDetailRes], err error) {
+func (cAdmin cCustomerAdmin) Show(ctx context.Context, req *api.CustomerAdminDetailReq) (res *baseApi.NormalRes[api.CustomerAdminDetailRes], err error) {
 
 	return
 }

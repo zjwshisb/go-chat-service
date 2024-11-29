@@ -45,7 +45,7 @@ func (s sChat) run() {
 	s.user.run()
 }
 
-func (s sChat) UpdateAdminSetting(customerId uint, setting *entity.CustomerAdminChatSettings) {
+func (s sChat) UpdateAdminSetting(customerId uint, setting *api.CurrentAdminSetting) {
 	s.admin.updateSetting(customerId, setting)
 }
 

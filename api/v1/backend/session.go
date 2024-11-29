@@ -32,11 +32,6 @@ type SessionListReq struct {
 	Status    string            `dc:"状态"`
 }
 
-type SessionListRes struct {
-	Items []ChatSession `json:"items"`
-	Total int           `json:"total"`
-}
-
 type SessionCancelReq struct {
 	g.Meta `path:"/chat-sessions/:id/cancel" tags:"客服对话" method:"post" summary:"取消客服对话"`
 }

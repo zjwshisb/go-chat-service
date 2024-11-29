@@ -5,8 +5,8 @@ import (
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
+	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
 
@@ -15,14 +15,14 @@ import (
 
 func init() {
 	service.RegisterChatSetting(&sChatSetting{
-		trait.Curd[entity.CustomerChatSettings]{
+		trait.Curd[model.CustomerChatSetting]{
 			Dao: &dao.CustomerChatSettings,
 		},
 	})
 }
 
 type sChatSetting struct {
-	trait.Curd[entity.CustomerChatSettings]
+	trait.Curd[model.CustomerChatSetting]
 }
 
 func (s *sChatSetting) DefaultAvatarForm(ctx context.Context, customerId uint) (file *api.File, error error) {

@@ -40,16 +40,16 @@ var (
 					group.Middleware(middleware.Cors, middleware.HandlerResponse).
 						Group("/", func(group *ghttp.RouterGroup) {
 							group.Bind(
-								backend.CUser.Login,
+								backend.CCurrentAdmin.Login,
 							)
 							group.Middleware(middleware.AdminAuth).Group("/", func(group *ghttp.RouterGroup) {
 								group.Bind(
 									backend.CDashboard,
 									backend.CSession,
 									backend.CCustomerAdmin,
-									backend.CUser.Index,
-									backend.CUser.UpdateSetting,
-									backend.CUser.GetSetting,
+									backend.CCurrentAdmin.Index,
+									backend.CCurrentAdmin.UpdateSetting,
+									backend.CCurrentAdmin.GetSetting,
 									backend.CAutoMessage,
 									backend.CImage,
 									backend.CAutoRule,

@@ -101,9 +101,8 @@ func (s *sChatMessage) GetAvatar(ctx context.Context, model *model.CustomerChatM
 	switch model.Source {
 	case consts.MessageSourceAdmin:
 		if model.Admin != nil &&
-			model.Admin.Setting != nil &&
-			model.Admin.Setting.Avatar != "" {
-			//return service.Qiniu().Url(model.Admin.Setting.Avatar)
+			model.Admin.Setting != nil {
+			return service.Admin().GetAvatar(ctx, model.Admin)
 		} else {
 			return service.ChatSetting().GetAvatar(ctx, model.CustomerId)
 		}

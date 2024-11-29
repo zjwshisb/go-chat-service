@@ -64,6 +64,10 @@ const (
 )
 
 const (
+	ChatSettingTypeImage  = "image"
+	ChatSettingTypeText   = "text"
+	ChatSettingTypeSelect = "select"
+
 	ChatSettingIsAutoTransfer = "is-auto-transfer"
 	ChatSettingMinuteToBreak  = "minute-to-break"
 	ChatSettingSystemName     = "system-name"

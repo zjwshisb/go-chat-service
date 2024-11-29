@@ -11,7 +11,7 @@ type CustomerAdminDetailReq struct {
 	Month  string `json:"month" v:"required" p:"month"`
 }
 
-type AdminDetailRes struct {
+type CustomerAdminDetailRes struct {
 }
 
 type CustomerAdminListReq struct {

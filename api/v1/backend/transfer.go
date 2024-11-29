@@ -17,7 +17,7 @@ type TransferCancelReq struct {
 	g.Meta `path:"/transfers/:id/cancel" tags:"后台转接记录" method:"post" summary:"取消转接记录"`
 }
 
-type TransferListItem struct {
+type Transfer struct {
 	Id            int64  `json:"id"`
 	SessionId     uint64 `json:"session_id"`
 	UserId        int    `json:"user_id"`
