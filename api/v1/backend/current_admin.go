@@ -5,7 +5,7 @@ import (
 )
 
 type CurrentAdminInfoReq struct {
-	g.Meta `path:"/user/info" tags:"管理员" method:"get" summary:"获取管理员信息"`
+	g.Meta `path:"/current-admin/info" tags:"管理员" method:"get" summary:"获取管理员信息"`
 }
 
 type CurrentAdminRes struct {
@@ -15,7 +15,7 @@ type CurrentAdminRes struct {
 }
 
 type CurrentAdminSettingReq struct {
-	g.Meta `path:"/user/settings" tags:"管理员" method:"get" summary:"获取管理员设置"`
+	g.Meta `path:"/current-admin/settings" tags:"管理员" method:"get" summary:"获取管理员设置"`
 }
 
 type CurrentAdminSetting struct {
@@ -25,10 +25,10 @@ type CurrentAdminSetting struct {
 
 type CurrentAdminSettingForm struct {
 	Background     *File  `json:"background" v:"api-file:image"`
-	IsAutoAccept   bool   `json:"is_auto_accept" v:"bool"`
+	IsAutoAccept   bool   `json:"is_auto_accept" v:"boolean"`
 	WelcomeContent string `json:"welcome_content" v:"max-length:512"`
 	OfflineContent string `json:"offline_content" v:"max-length:512"`
-	Name           string `json:"name" v:"max:20"`
+	Name           string `json:"name" v:"max-length:20"`
 	Avatar         *File  `json:"avatar" v:"api-file:image"`
 }
 
@@ -37,7 +37,7 @@ type CurrentAdminSettingRes struct {
 }
 
 type CurrentAdminSettingUpdateReq struct {
-	g.Meta `path:"/user/settings" tags:"管理员" method:"put" summary:"更新管理员设置"`
+	g.Meta `path:"/current-admin/settings" tags:"管理员" method:"put" summary:"更新管理员设置"`
 	CurrentAdminSettingForm
 }
 

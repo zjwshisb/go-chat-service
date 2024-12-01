@@ -8,7 +8,6 @@ package service
 import (
 	"context"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/entity"
 
 	"github.com/gogf/gf/v2/net/ghttp"
 )
@@ -24,7 +23,7 @@ type (
 		// GetId 获取客户id
 		GetId(ctx context.Context) uint
 		// GetUser 获取admin实体
-		GetUser(ctx context.Context) *entity.Users
+		GetUser(ctx context.Context) *model.User
 	}
 )
 

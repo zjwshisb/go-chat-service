@@ -6,7 +6,6 @@ import (
 	chatApi "gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"github.com/gogf/gf/v2/net/ghttp"
 
@@ -51,7 +50,7 @@ func (c cTransfer) Index(ctx context.Context, req *chatApi.TransferListReq) (res
 		if err != nil {
 			return nil, err
 		}
-		uids := slice.Map(users, func(index int, item *entity.Users) uint {
+		uids := slice.Map(users, func(index int, item *model.User) uint {
 			return item.Id
 		})
 		w.UserId = uids

@@ -25,7 +25,7 @@ var (
 type cWs struct {
 }
 
-func (c cWs) Connect(ctx context.Context, req *api.ChatConnectReq) (res *baseApi.NilRes, err error) {
+func (c cWs) Connect(ctx context.Context, _ *api.ChatConnectReq) (res *baseApi.NilRes, err error) {
 	request := ghttp.RequestFromCtx(ctx)
 	conn, err := update.Upgrade(request.Response.Writer, request.Request, nil)
 	if err != nil {

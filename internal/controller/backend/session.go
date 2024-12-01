@@ -7,7 +7,6 @@ import (
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 
 	"github.com/duke-git/lancet/v2/slice"
@@ -44,7 +43,7 @@ func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *bas
 		if err != nil {
 			return nil, err
 		}
-		uids := slice.Map(users, func(index int, item *entity.Users) uint {
+		uids := slice.Map(users, func(index int, item *model.User) uint {
 			return item.Id
 		})
 		w["user_id"] = uids

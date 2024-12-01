@@ -57,8 +57,8 @@ var (
 									backend.CChatSetting,
 									backend.CTransfer,
 									backend.COption,
-									// backend.CWs,
-									// backend.CChat,
+									backend.CWs,
+									backend.CChat,
 								)
 							})
 						})

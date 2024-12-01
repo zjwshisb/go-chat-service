@@ -5,5 +5,12 @@ gfcli:
     dao:
     - link:     "mysql:root:zjw8837533@tcp(120.77.242.145:3306)/chat?loc=Local&parseTime=true"
       jsonCase: "SnakeScreaming"
+  run:
+    path:  "./bin"
+    extra: ""
+    args:  "http"
+    watchPaths:
+      - api/*.go
+      - internal/*.go
 
 

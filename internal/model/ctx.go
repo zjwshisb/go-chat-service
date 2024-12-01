@@ -1,8 +1,6 @@
 package model
 
 import (
-	"gf-chat/internal/model/entity"
-
 	"github.com/gogf/gf/v2/frame/g"
 )
 
@@ -12,6 +10,6 @@ type AdminCtx struct {
 }
 
 type UserCtx struct {
-	Entity *entity.Users
+	Entity *User
 	Data   g.Map
 }

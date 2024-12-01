@@ -33,7 +33,7 @@ func (c *cCurrentAdmin) UpdateSetting(ctx context.Context, req *api.CurrentAdmin
 		return
 	}
 	service.Chat().UpdateAdminSetting(service.AdminCtx().GetCustomerId(ctx), setting)
-	return &baseApi.NilRes{}, nil
+	return baseApi.NewNilResp(), nil
 }
 
 func (c *cCurrentAdmin) GetSetting(ctx context.Context, _ *api.CurrentAdminSettingReq) (res *baseApi.NormalRes[*api.CurrentAdminSetting], err error) {

@@ -4,7 +4,6 @@ import (
 	"context"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
-	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
@@ -149,16 +148,16 @@ func (m *adminManager) registerHook(conn iWsConn) {
 // conn断开连接后，更新admin的最后在线时间
 func (m *adminManager) unregisterHook(conn iWsConn) {
 	ctx := gctx.New()
-	u := conn.GetUser()
-	a, ok := u.(*admin)
-	if ok {
-		e := a.Entity
-		e.Setting.LastOnline = gtime.New()
-		_, err := dao.CustomerAdminChatSettings.Ctx(ctx).Save(e.Setting)
-		if err != nil {
-			g.Log().Error(ctx, err)
-		}
-	}
+	//u := conn.GetUser()
+	//a, ok := u.(*admin)
+	//if ok {
+	//e := a.Entity
+	//e.Setting.LastOnline = gtime.New()
+	//_, err := dao.CustomerAdminChatSettings.Ctx(ctx).Save(e.Setting)
+	//if err != nil {
+	//	g.Log().Error(ctx, err)
+	//}
+	//}
 	err := m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
 	if err != nil {
 		g.Log().Error(ctx, err)
@@ -181,7 +180,7 @@ func (m *adminManager) broadcastLocalWaitingUser(ctx context.Context, customerId
 	messages, err := service.ChatMessage().All(ctx, do.CustomerChatMessages{
 		Source:    consts.MessageSourceUser,
 		SessionId: sessionIds,
-	}, nil, g.Slice{"id"})
+	}, nil, "id")
 	if err != nil {
 		return
 	}

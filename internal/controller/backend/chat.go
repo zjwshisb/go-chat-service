@@ -8,7 +8,6 @@ import (
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"time"
 
@@ -139,7 +138,7 @@ func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.Nor
 		return
 	}
 	count := 0
-	userMap := make(map[uint]*entity.Users)
+	userMap := make(map[uint]*model.User)
 	for _, user := range users {
 		userMap[user.Id] = user
 	}
@@ -275,12 +274,12 @@ func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseAp
 	return
 }
 
-func (c cChat) ReqId(ctx context.Context, req *api.ReqIdReq) (res *baseApi.NormalRes[api.ReqIdRes], err error) {
+func (c cChat) ReqId(_ context.Context, _ *api.ReqIdReq) (res *baseApi.NormalRes[api.ReqIdRes], err error) {
 	res = baseApi.NewResp(api.ReqIdRes{ReqId: service.ChatMessage().GenReqId()})
 	return
 }
 
-func (c cChat) Sessions(ctx context.Context, req *api.GetUserSessionReq) (res *baseApi.NormalRes[api.UserSessionRes], err error) {
+func (c cChat) Sessions(ctx context.Context, _ *api.GetUserSessionReq) (res *baseApi.NormalRes[api.UserSessionRes], err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	sessions, err := service.ChatSession().All(ctx, map[string]any{
 		"user_id":     id,

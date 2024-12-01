@@ -23,6 +23,7 @@ type UsersColumns struct {
 	Id         string //
 	CustomerId string //
 	Username   string //
+	Password   string //
 	CreatedAt  string //
 	UpdatedAt  string //
 	DeletedAt  string //
@@ -33,6 +34,7 @@ var usersColumns = UsersColumns{
 	Id:         "id",
 	CustomerId: "customer_id",
 	Username:   "username",
+	Password:   "password",
 	CreatedAt:  "created_at",
 	UpdatedAt:  "updated_at",
 	DeletedAt:  "deleted_at",

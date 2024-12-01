@@ -15,6 +15,7 @@ type Users struct {
 	Id         interface{} //
 	CustomerId interface{} //
 	Username   interface{} //
+	Password   interface{} //
 	CreatedAt  *gtime.Time //
 	UpdatedAt  *gtime.Time //
 	DeletedAt  *gtime.Time //

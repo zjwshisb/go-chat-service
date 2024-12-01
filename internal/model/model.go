@@ -50,3 +50,7 @@ type CustomerChatSetting struct {
 	entity.CustomerChatSettings
 	Options []api.Option `json:"options"`
 }
+
+type User struct {
+	entity.Users
+}

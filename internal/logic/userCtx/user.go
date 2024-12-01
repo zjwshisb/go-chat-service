@@ -3,7 +3,6 @@ package userCtx
 import (
 	"context"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -54,7 +53,7 @@ func (s *sUserCtx) GetId(ctx context.Context) uint {
 }
 
 // GetUser 获取admin实体
-func (s *sUserCtx) GetUser(ctx context.Context) *entity.Users {
+func (s *sUserCtx) GetUser(ctx context.Context) *model.User {
 	userCtx := s.Get(ctx)
 	if userCtx != nil {
 		return userCtx.Entity

@@ -34,7 +34,7 @@ type sAdmin struct {
 func (s *sAdmin) Login(ctx context.Context, request *ghttp.Request) (admin *model.CustomerAdmin, token string, err error) {
 	username := request.Get("username")
 	password := request.Get("password")
-	admin, err = service.Admin().First(ctx, do.CustomerAdmins{Username: username.String()})
+	admin, err = s.First(ctx, do.CustomerAdmins{Username: username.String()})
 	if err != nil {
 		return
 	}
@@ -43,7 +43,7 @@ func (s *sAdmin) Login(ctx context.Context, request *ghttp.Request) (admin *mode
 		err = gerror.NewCode(gcode.CodeValidationFailed, "账号或密码错误")
 		return
 	}
-	canAccess := service.Admin().CanAccess(admin)
+	canAccess := s.CanAccess(admin)
 	if !canAccess {
 		err = gerror.NewCode(gcode.CodeBusinessValidationFailed, "账号已禁用")
 		return
@@ -53,7 +53,6 @@ func (s *sAdmin) Login(ctx context.Context, request *ghttp.Request) (admin *mode
 		return
 	}
 	return
-
 }
 func (s *sAdmin) Auth(ctx g.Ctx, req *ghttp.Request) (admin *model.CustomerAdmin, err error) {
 	token := util.GetRequestToken(req)
@@ -67,7 +66,7 @@ func (s *sAdmin) Auth(ctx g.Ctx, req *ghttp.Request) (admin *model.CustomerAdmin
 		return
 	}
 	uid := gconv.Int(uidStr)
-	admin, err = service.Admin().Find(ctx, uid)
+	admin, err = s.Find(ctx, uid)
 	if err != nil {
 		err = gerror.NewCode(gcode.CodeNotAuthorized)
 		return
@@ -188,7 +187,7 @@ func (s *sAdmin) GetAvatar(ctx context.Context, model *model.CustomerAdmin) (str
 	if err != nil {
 		return "", err
 	}
-	if setting.Avatar != nil {
+	if setting != nil && setting.Avatar != nil {
 		return setting.Avatar.Url, nil
 	}
 	return "", nil
