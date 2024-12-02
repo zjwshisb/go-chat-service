@@ -11,7 +11,6 @@ type (
 	IChatMessage interface {
 		trait.ICurd[model.CustomerChatMessage]
 		GenReqId() string
-		SaveWithUpdate(ctx context.Context, msg *model.CustomerChatMessage) (err error)
 		ToRead(ctx context.Context, where any) (int64, error)
 		GetAdminName(ctx context.Context, model *model.CustomerChatMessage) (string, error)
 		ToApi(ctx context.Context, message *model.CustomerChatMessage) (*api.ChatMessage, error)
@@ -20,6 +19,7 @@ type (
 		NewNotice(session *model.CustomerChatSession, content string) *model.CustomerChatMessage
 		NewOffline(admin *model.CustomerAdmin) *model.CustomerChatMessage
 		NewWelcome(admin *model.CustomerAdmin) *model.CustomerChatMessage
+		Insert(ctx context.Context, message *model.CustomerChatMessage) (*model.CustomerChatMessage, error)
 	}
 )
 

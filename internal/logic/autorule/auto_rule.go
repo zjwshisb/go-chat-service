@@ -6,9 +6,6 @@ import (
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/trait"
-	"github.com/gogf/gf/v2/errors/gcode"
-	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
 	"strings"
 
 	"gf-chat/internal/dao"
@@ -33,7 +30,7 @@ func (s *sAutoRule) AllActive(ctx context.Context, customerId uint) ([]*model.Cu
 		CustomerId: customerId,
 		IsSystem:   0,
 		IsOpen:     1,
-	}, g.Slice{model.CustomerChatAutoRule{}.Scenes}, g.Slice{"sort"})
+	}, nil, "sort")
 }
 
 func (s *sAutoRule) IncrTriggerCount(ctx context.Context, rule *model.CustomerChatAutoRule) error {
@@ -42,14 +39,11 @@ func (s *sAutoRule) IncrTriggerCount(ctx context.Context, rule *model.CustomerCh
 }
 
 func (s *sAutoRule) GetMessage(ctx context.Context, rule *model.CustomerChatAutoRule) (msg *model.CustomerChatAutoMessage, err error) {
-	if rule.MessageId > 0 {
-		msg, err = service.AutoMessage().Find(ctx, rule.MessageId)
-		if err != nil {
-			return
-		}
+	msg, err = service.AutoMessage().Find(ctx, rule.MessageId)
+	if err != nil {
 		return
 	}
-	return nil, gerror.NewCode(gcode.CodeNotFound)
+	return
 }
 
 func (s *sAutoRule) sceneInclude(rule *model.CustomerChatAutoRule, match string) bool {

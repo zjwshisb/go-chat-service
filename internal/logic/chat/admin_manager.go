@@ -12,7 +12,6 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
-	"github.com/gogf/gf/v2/os/gtime"
 	"sort"
 )
 
@@ -89,7 +88,7 @@ func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerCha
 	if message != nil {
 		message.UserId = msg.UserId
 		message.SessionId = msg.SessionId
-		err = service.ChatMessage().SaveWithUpdate(ctx, message)
+		message, err = service.ChatMessage().Insert(ctx, message)
 		if err != nil {
 			return err
 		}
@@ -118,9 +117,11 @@ func (m *adminManager) handleMessage(ctx context.Context, payload *chatConnMessa
 		}
 		msg.AdminId = conn.GetUserId()
 		msg.Source = consts.MessageSourceAdmin
-		msg.ReceivedAt = gtime.New()
 		msg.SessionId = session.Id
-		_ = service.ChatMessage().SaveWithUpdate(ctx, msg)
+		msg, err := service.ChatMessage().Insert(ctx, msg)
+		if err != nil {
+			return err
+		}
 		_ = service.ChatRelation().UpdateUser(ctx, msg.AdminId, msg.UserId)
 		// 服务器回执d
 		conn.Deliver(newReceiptAction(msg))

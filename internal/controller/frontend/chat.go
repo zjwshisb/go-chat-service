@@ -3,6 +3,7 @@ package frontend
 import (
 	"context"
 	baseApi "gf-chat/api"
+	"gf-chat/api/v1/backend"
 	api "gf-chat/api/v1/frontend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model/do"
@@ -18,7 +19,7 @@ var CChat = &cChat{}
 type cChat struct {
 }
 
-func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *api.ChatMessageRes, err error) {
+func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *baseApi.NormalRes[[]*backend.ChatMessage], err error) {
 	uid := service.UserCtx().GetUser(ctx).Id
 	messages, err := service.ChatMessage().GetList(ctx, req.Id, do.CustomerChatMessages{
 		UserId: uid,
@@ -26,7 +27,7 @@ func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *api.C
 	if err != nil {
 		return
 	}
-	r := api.ChatMessageRes{}
+	r := make([]*backend.ChatMessage, 0)
 	adminToMessageId := make(map[uint][]uint)
 	for _, item := range messages {
 		msg, err := service.ChatMessage().ToApi(ctx, item)
@@ -55,29 +56,29 @@ func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *api.C
 		}
 
 	}()
-	return &r, nil
+	return baseApi.NewResp(r), nil
 }
 
 func (c cChat) Read(ctx context.Context, req *api.ChatReadReq) (res *baseApi.NilRes, err error) {
 	user := service.UserCtx().GetUser(ctx)
-	msgIds := []uint{req.MsgId}
 	message, err := service.ChatMessage().First(ctx, do.CustomerChatMessages{
 		Id:     req.MsgId,
 		UserId: user.Id,
-		Source: consts.MessageSourceAdmin,
+		Source: []int{consts.MessageSourceAdmin, consts.MessageSourceSystem},
 	})
 	if err != nil {
 		return
 	}
 
-	if message.SendAt == nil {
+	if message.ReadAt == nil {
 		_, err = service.ChatMessage().ToRead(ctx, message.Id)
+		msgIds := []uint{req.MsgId}
 		if err != nil {
 			return
 		}
 		service.Chat().NoticeUserRead(user.CustomerId, message.AdminId, msgIds)
 	}
-	return &baseApi.NilRes{}, nil
+	return baseApi.NewNilResp(), nil
 }
 
 func (c cChat) Rate(ctx context.Context, req *api.ChatRateReq) (res *baseApi.NilRes, err error) {
@@ -105,5 +106,9 @@ func (c cChat) Rate(ctx context.Context, req *api.ChatRateReq) (res *baseApi.Nil
 		return
 	}
 	service.Chat().NoticeRate(msg)
-	return &baseApi.NilRes{}, nil
+	return baseApi.NewNilResp(), nil
+}
+
+func (c cChat) ReqId(_ context.Context, _ *api.ChatReqIdReq) (res *baseApi.NormalRes[api.ChatReqId], err error) {
+	return baseApi.NewResp(api.ChatReqId{ReqId: service.ChatMessage().GenReqId()}), nil
 }

@@ -1,13 +1,13 @@
 package chat
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
-	"github.com/gogf/gf/v2/os/gctx"
 	"time"
 
 	"github.com/gogf/gf/v2/util/gconv"
@@ -28,7 +28,7 @@ func unMarshalAction(b []byte) (action *api.ChatAction, err error) {
 	err = json.Unmarshal(b, action)
 	return
 }
-func marshalAction(action *api.ChatAction) (b []byte, err error) {
+func marshalAction(ctx context.Context, action api.ChatAction) (b []byte, err error) {
 	if action.Action == consts.ActionPing {
 		return []byte(""), nil
 	}
@@ -38,7 +38,7 @@ func marshalAction(action *api.ChatAction) (b []byte, err error) {
 			err = errors.New("param error")
 			return
 		}
-		data, err := service.ChatMessage().ToApi(gctx.New(), msg)
+		data, err := service.ChatMessage().ToApi(ctx, msg)
 		if err != nil {
 			return b, err
 		}

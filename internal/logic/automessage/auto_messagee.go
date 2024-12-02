@@ -130,7 +130,7 @@ func (s *sAutoMessage) ToChatMessage(auto *model.CustomerChatAutoMessage) (msg *
 		//content = service.Qiniu().Url(content)
 	}
 	if auto.Type == consts.MessageTypeNavigate {
-		m := make(map[string]string)
+		m := make(map[string]any)
 		err = json.Unmarshal([]byte(auto.Content), &m)
 		if err != nil {
 			return

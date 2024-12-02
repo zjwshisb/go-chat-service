@@ -74,6 +74,7 @@ func (s *userManager) NoticeQueueLocation(ctx context.Context, conn iWsConn) (er
 	}
 	count, err := manual.getCountByTime(ctx, conn.GetCustomerId(), "-inf",
 		strconv.FormatFloat(uTime, 'f', 0, 64))
+	g.Dump(count)
 	if err != nil {
 		return
 	}
@@ -89,10 +90,13 @@ func (s *userManager) BroadcastQueueLocation(ctx context.Context, customerId uin
 func (s *userManager) BroadcastLocalQueueLocation(ctx context.Context, customerId uint) error {
 	conns := s.GetAllConn(customerId)
 	for _, conn := range conns {
-		err := s.NoticeQueueLocation(ctx, conn)
-		if err != nil {
-			return err
+		if manual.isInSet(ctx, conn.GetUserId(), conn.GetCustomerId()) {
+			err := s.NoticeQueueLocation(ctx, conn)
+			if err != nil {
+				return err
+			}
 		}
+
 	}
 	return nil
 }
@@ -105,7 +109,7 @@ func (s *userManager) handleReceiveMessage() {
 			ctx := gctx.New()
 			err := s.handleMessage(ctx, payload)
 			if err != nil {
-				g.Log().Error(gctx.New(), err)
+				g.Log().Error(ctx, err)
 			}
 		}()
 	}
@@ -124,7 +128,7 @@ func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessag
 	msg.Source = consts.MessageSourceUser
 	msg.UserId = conn.GetUserId()
 	msg.AdminId = service.ChatRelation().GetUserValidAdmin(ctx, msg.UserId)
-	_, err = service.ChatMessage().Save(ctx, msg)
+	msg, err = service.ChatMessage().Insert(ctx, msg)
 	if err != nil {
 		return
 	}
@@ -140,7 +144,9 @@ func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessag
 			return err
 		}
 		msg.SessionId = session.Id
-		_, err = service.ChatMessage().Save(ctx, msg)
+		_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
+			SessionId: msg.SessionId,
+		})
 		if err != nil {
 			return err
 		}
@@ -150,9 +156,10 @@ func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessag
 		}
 		return adminM.deliveryMessage(ctx, msg)
 	} else {
+		// 触发自动回复事件
 		err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneNotAccepted, msg, conn.GetUser())
 		if err != nil {
-			return
+			g.Log().Error(ctx, err)
 		}
 		var transferAdminId uint
 		// 转接adminId
@@ -164,13 +171,16 @@ func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessag
 		if transferAdminId == 0 {
 			// 在代人工接入列表中
 			inManual := manual.isInSet(ctx, conn.GetUserId(), conn.GetCustomerId())
+
 			if inManual {
 				session, err = service.ChatSession().FirstNormal(ctx, msg.UserId, 0)
 				if err != nil {
 					return
 				}
 				msg.SessionId = session.Id
-				_, err = service.ChatMessage().Save(ctx, msg)
+				_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
+					SessionId: msg.SessionId,
+				})
 				if err != nil {
 					return
 				}
@@ -192,8 +202,10 @@ func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessag
 					}
 					if session != nil {
 						msg.SessionId = session.Id
+						_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
+							SessionId: msg.SessionId,
+						})
 					}
-					_, err = service.ChatMessage().Save(ctx, msg)
 					if err != nil {
 						return
 					}
@@ -213,7 +225,9 @@ func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessag
 				return
 			}
 			msg.SessionId = session.Id
-			_, err = service.ChatMessage().Save(ctx, msg)
+			_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
+				SessionId: msg.SessionId,
+			})
 			if err != nil {
 				return
 			}
@@ -314,7 +328,7 @@ func (s *userManager) addToManual(ctx context.Context, user IChatUser) (session 
 					return nil, err
 				}
 				message.UserId = user.GetPrimaryKey()
-				_, err = service.ChatMessage().Save(ctx, message)
+				message, err = service.ChatMessage().Insert(ctx, message)
 				if err != nil {
 					return nil, err
 				}

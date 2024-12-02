@@ -2,7 +2,6 @@ package chat
 
 import (
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/entity"
 )
 
 type IChatUser interface {
@@ -20,7 +19,7 @@ type chatConnMessage struct {
 }
 
 type user struct {
-	Entity *entity.Users
+	Entity *model.User
 }
 
 func (u user) GetUser() any {

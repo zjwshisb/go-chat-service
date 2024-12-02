@@ -8,8 +8,8 @@ import (
 
 type CustomerChatAutoRule struct {
 	entity.CustomerChatAutoRules
-	IsOpen bool     `json:"is_open"`
-	Scenes []string `json:"scenes"`
+	IsOpen bool     `json:"is_open" orm:"is_open"`
+	Scenes []string `json:"scenes" orm:"scenes"`
 }
 
 type CustomerChatAutoMessage struct {
@@ -25,7 +25,7 @@ type CustomerAdmin struct {
 type CustomerChatMessage struct {
 	entity.CustomerChatMessages
 	Admin *CustomerAdmin `orm:"with:id=admin_id"`
-	User  *entity.Users  `orm:"with:id=user_id"`
+	User  *User          `orm:"with:id=user_id"`
 }
 
 type CustomerChatTransfer struct {

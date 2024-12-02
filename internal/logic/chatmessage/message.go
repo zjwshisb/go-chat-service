@@ -2,8 +2,6 @@ package chatmessage
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
@@ -14,6 +12,7 @@ import (
 	"gf-chat/internal/trait"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/grand"
 )
 
@@ -115,27 +114,24 @@ func (s *sChatMessage) GetAvatar(ctx context.Context, model *model.CustomerChatM
 }
 
 func (s *sChatMessage) GetList(ctx context.Context, lastId uint, w any, size uint) (res []*model.CustomerChatMessage, err error) {
-	query := s.Dao.Ctx(ctx).With(
-		model.CustomerChatMessage{}.Admin,
-		// todo
-		// 多层关联会用N+1问题
-		// relation.CustomerAdmins{}.Setting,
-		model.CustomerChatMessage{}.User,
-	).Where(w).OrderDesc("id")
-	if size > 0 {
-		query = query.Limit(int(size))
-	}
-	if lastId > 0 {
-		query = query.Where("id < ?", lastId)
-	}
-	err = query.Scan(&res)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			res = make([]*model.CustomerChatMessage, 0)
-		} else {
-			return
-		}
-	}
+	res, err = service.ChatMessage().All(ctx, do.CustomerChatMessages{
+		UserId: service.UserCtx().GetId(ctx),
+	}, g.Slice{model.CustomerChatMessage{}.Admin,
+		model.CustomerChatMessage{}.User}, "id desc", 20)
+	//if size > 0 {
+	//	query = query.Limit(int(size))
+	//}
+	//if lastId > 0 {
+	//	query = query.Where("id < ?", lastId)
+	//}
+	//err = query.Scan(&res)
+	//if err != nil {
+	//	if errors.Is(err, sql.ErrNoRows) {
+	//		res = make([]*model.CustomerChatMessage, 0)
+	//	} else {
+	//		return
+	//	}
+	//}
 	return
 }
 
@@ -191,4 +187,13 @@ func (s *sChatMessage) NewWelcome(admin *model.CustomerAdmin) *model.CustomerCha
 		}
 	}
 	return nil
+}
+
+func (s *sChatMessage) Insert(ctx context.Context, message *model.CustomerChatMessage) (*model.CustomerChatMessage, error) {
+	id, err := s.Save(ctx, message)
+	if err != nil {
+		return nil, err
+	}
+	message.Id = gconv.Uint(id)
+	return message, nil
 }

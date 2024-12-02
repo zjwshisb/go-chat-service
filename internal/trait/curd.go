@@ -3,6 +3,7 @@ package trait
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"gf-chat/api"
 	"gf-chat/internal/model"
 
@@ -17,8 +18,8 @@ type ICurd[R any] interface {
 	All(ctx ctx, where any, with []any, order any, limit ...int) (items []*R, err error)
 	First(ctx ctx, where any, order ...string) (model *R, err error)
 	Paginate(ctx ctx, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error)
-	Insert(ctx ctx, data *R) (id int64, err error)
 	Update(ctx ctx, where any, data any) (count int64, err error)
+	UpdatePri(ctx ctx, where any, data any) (count int64, err error)
 	Exists(ctx ctx, where any) (exists bool, err error)
 	Delete(ctx ctx, primaryKey any) error
 	Count(ctx ctx, where any) (count int, err error)
@@ -70,7 +71,7 @@ func (c Curd[R]) Exists(ctx ctx, where any) (exists bool, err error) {
 
 func (c Curd[R]) All(ctx ctx, where any, with []any, order any, limit ...int) (items []*R, err error) {
 	err = c.Dao.Ctx(ctx).Where(where).With(with...).Order(order).Limit(limit...).Scan(&items)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 	if items == nil {
@@ -93,17 +94,17 @@ func (c Curd[R]) Save(ctx ctx, data any) (id int64, err error) {
 	return
 }
 
-func (c Curd[R]) Insert(ctx ctx, data *R) (id int64, err error) {
-	result, err := c.Dao.Ctx(ctx).Data(data).Insert()
+func (c Curd[R]) Update(ctx ctx, where any, data any) (count int64, err error) {
+	result, err := c.Dao.Ctx(ctx).Where(where).Data(data).Update()
 	if err != nil {
 		return
 	}
-	id, err = result.LastInsertId()
+	count, err = result.RowsAffected()
 	return
 }
 
-func (c Curd[R]) Update(ctx ctx, where any, data any) (count int64, err error) {
-	result, err := c.Dao.Ctx(ctx).Where(where).Data(data).Update()
+func (c Curd[R]) UpdatePri(ctx ctx, primaryKey any, data any) (count int64, err error) {
+	result, err := c.Dao.Ctx(ctx).WherePri(primaryKey).Data(data).Update()
 	if err != nil {
 		return
 	}

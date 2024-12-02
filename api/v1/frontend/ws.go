@@ -35,7 +35,7 @@ type ChatImageRes struct {
 	Path string `json:"path"`
 }
 
-type ChatReqIdRes struct {
+type ChatReqId struct {
 	ReqId string `json:"req_id"`
 }
 

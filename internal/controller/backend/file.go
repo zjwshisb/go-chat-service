@@ -80,7 +80,7 @@ func (c cFile) Store(ctx context.Context, req *api.FileStoreReq) (res *baseApi.N
 	fileModel.CustomerId = service.AdminCtx().GetCustomerId(ctx)
 	fileModel.FromId = service.AdminCtx().GetId(ctx)
 	fileModel.FromModel = "admin"
-	err = service.File().SaveAndFill(ctx, fileModel)
+	_, err = service.File().Insert(ctx, fileModel)
 	if err != nil {
 		return
 	}

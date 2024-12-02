@@ -2,6 +2,8 @@ package chatsetting
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
@@ -39,10 +41,12 @@ func (s *sChatSetting) DefaultAvatarForm(ctx context.Context, customerId uint) (
 func (s *sChatSetting) GetName(ctx context.Context, customerId uint) (name string, err error) {
 	setting, err := s.First(ctx, do.CustomerChatSettings{
 		CustomerId: customerId,
-		Type:       consts.ChatSettingSystemName,
+		Name:       consts.ChatSettingSystemName,
 	})
 	if err != nil {
-		return
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", nil
+		}
 	}
 	name = setting.Value
 	return
@@ -51,9 +55,12 @@ func (s *sChatSetting) GetName(ctx context.Context, customerId uint) (name strin
 func (s *sChatSetting) GetAvatar(ctx context.Context, customerId uint) (name string, err error) {
 	setting, err := s.First(ctx, do.CustomerChatSettings{
 		CustomerId: customerId,
-		Type:       consts.ChatSettingSystemAvatar,
+		Name:       consts.ChatSettingSystemAvatar,
 	})
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", nil
+		}
 		return
 	}
 	name = setting.Value
@@ -64,9 +71,12 @@ func (s *sChatSetting) GetAvatar(ctx context.Context, customerId uint) (name str
 func (s *sChatSetting) GetIsAutoTransferManual(ctx context.Context, customerId uint) (b bool, err error) {
 	setting, err := s.First(ctx, do.CustomerChatSettings{
 		CustomerId: customerId,
-		Type:       consts.ChatSettingIsAutoTransfer,
+		Name:       consts.ChatSettingIsAutoTransfer,
 	})
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
 		return
 	}
 	b = gconv.Bool(gconv.Int(setting.Value))

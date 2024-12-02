@@ -10,7 +10,7 @@ import (
 type (
 	IFile interface {
 		trait.ICurd[model.CustomerChatFile]
-		SaveAndFill(ctx context.Context, file *model.CustomerChatFile) error
+		Insert(ctx context.Context, file *model.CustomerChatFile) (*model.CustomerChatFile, error)
 		ToApi(file *model.CustomerChatFile) *api.File
 		FindAnd2Api(ctx context.Context, id any) (apiFile *api.File, err error)
 	}

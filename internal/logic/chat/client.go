@@ -5,7 +5,9 @@ import (
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
+	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/util/guid"
 	"sync"
 	"unicode/utf8"
 
@@ -27,7 +29,7 @@ type iWsConn interface {
 	GetUuid() string
 	GetPlatform() string
 	GetCustomerId() uint
-	GetCreateTime() int64
+	CreateTime() *gtime.Time
 }
 
 type client struct {
@@ -38,12 +40,26 @@ type client struct {
 	Manager  connManager
 	User     IChatUser
 	Uuid     string
-	Created  int64
+	Created  *gtime.Time
 	Limiter  *rate.Limiter
 	Platform string
 }
 
-func (c *client) GetCreateTime() int64 {
+func newClient(conn *websocket.Conn, user IChatUser, platform string) *client {
+	return &client{
+		Conn:        conn,
+		CloseSignal: make(chan interface{}),
+		Send:        make(chan *api.ChatAction, 100),
+		Once:        sync.Once{},
+		User:        user,
+		Uuid:        guid.S(),
+		Created:     gtime.Now(),
+		Limiter:     rate.NewLimiter(5, 10),
+		Platform:    platform,
+	}
+}
+
+func (c *client) CreateTime() *gtime.Time {
 	return c.Created
 }
 
@@ -168,31 +184,32 @@ func (c *client) ReadMsg() {
 			err = c.validate(data)
 			if err != nil {
 				c.Deliver(newErrorMessageAction(err.Error()))
-				break
-			}
-			switch act.Action {
-			case consts.ActionSendMessage:
-				msg, err := GetMessage(act)
-				if err != nil {
-					g.Log().Error(ctx, err)
-					break
+			} else {
+				switch act.Action {
+				case consts.ActionSendMessage:
+					msg, err := GetMessage(act)
+					if err != nil {
+						g.Log().Error(ctx, err)
+						break
+					}
+					iu := c.GetUser()
+					switch iu.(type) {
+					case *admin:
+						u := iu.(*admin)
+						msg.Admin = u.Entity
+					case *user:
+						u := iu.(*user)
+						msg.User = u.Entity
+					}
+					msg.CustomerId = c.GetCustomerId()
+					msg.ReceivedAt = gtime.New()
+					c.Manager.ReceiveMessage(&chatConnMessage{
+						Msg:  msg,
+						Conn: c,
+					})
 				}
-				iu := c.GetUser()
-				switch iu.(type) {
-				case *admin:
-					u := iu.(*admin)
-					msg.Admin = u.Entity
-				case *user:
-					u := iu.(*user)
-					msg.User = u.Entity
-				}
-				msg.CustomerId = c.GetCustomerId()
-				msg.ReceivedAt = gtime.New()
-				c.Manager.ReceiveMessage(&chatConnMessage{
-					Msg:  msg,
-					Conn: c,
-				})
 			}
+
 		}
 	}
 }
@@ -208,7 +225,7 @@ func (c *client) SendMsg() {
 		select {
 		case act := <-c.Send:
 			ctx := gctx.New()
-			msgByte, err := marshalAction(act)
+			msgByte, err := marshalAction(ctx, *act)
 			if err != nil {
 				g.Log().Error(ctx, err)
 				break
@@ -229,11 +246,15 @@ func (c *client) SendMsg() {
 				if !ok {
 					break
 				}
-				msg.SendAt = gtime.New()
-				_, err = service.ChatMessage().Save(ctx, msg)
-				if err != nil {
-					g.Log().Error(ctx, err)
+				if msg.SendAt == nil {
+					_, err := service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
+						SendAt: gtime.Now(),
+					})
+					if err != nil {
+						g.Log().Error(ctx, err)
+					}
 				}
+
 			default:
 			}
 		case <-c.CloseSignal:

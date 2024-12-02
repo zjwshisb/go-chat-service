@@ -2,14 +2,11 @@ package cmd
 
 import (
 	"context"
-	"gf-chat/internal/controller/backend"
-	"gf-chat/internal/controller/frontend"
-	"gf-chat/internal/controller/middleware"
+	"gf-chat/internal/controller"
 	_ "gf-chat/internal/controller/rule"
 	"gf-chat/internal/cron"
 	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
 )
 
@@ -24,47 +21,7 @@ var (
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			s := g.Server()
-			s.BindHandler("/", func(r *ghttp.Request) {
-				r.Response.WriteStatus(200, "hello word")
-			})
-			s.Group("/api", func(group *ghttp.RouterGroup) {
-				group.Group("/user", func(group *ghttp.RouterGroup) {
-					group.Middleware(middleware.Cors, middleware.UserAuth, middleware.HandlerResponse).Group("/chat", func(group *ghttp.RouterGroup) {
-						group.Bind(
-							frontend.CWs,
-							frontend.CChat,
-						)
-					})
-				})
-				group.Group("/backend", func(group *ghttp.RouterGroup) {
-					group.Middleware(middleware.Cors, middleware.HandlerResponse).
-						Group("/", func(group *ghttp.RouterGroup) {
-							group.Bind(
-								backend.CCurrentAdmin.Login,
-							)
-							group.Middleware(middleware.AdminAuth).Group("/", func(group *ghttp.RouterGroup) {
-								group.Bind(
-									backend.CDashboard,
-									backend.CSession,
-									backend.CCustomerAdmin,
-									backend.CCurrentAdmin.Index,
-									backend.CCurrentAdmin.UpdateSetting,
-									backend.CCurrentAdmin.GetSetting,
-									backend.CAutoMessage,
-									backend.CImage,
-									backend.CAutoRule,
-									backend.CSystemRule,
-									backend.CChatSetting,
-									backend.CTransfer,
-									backend.COption,
-									backend.CWs,
-									backend.CChat,
-								)
-							})
-						})
-				})
-			})
-
+			controller.RegisterRouter(s)
 			go func() {
 				cron.Run()
 			}()

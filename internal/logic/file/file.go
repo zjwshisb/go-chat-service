@@ -23,13 +23,13 @@ type sFile struct {
 	trait.Curd[model.CustomerChatFile]
 }
 
-func (s *sFile) SaveAndFill(ctx context.Context, file *model.CustomerChatFile) error {
+func (s *sFile) Insert(ctx context.Context, file *model.CustomerChatFile) (*model.CustomerChatFile, error) {
 	id, err := s.Save(ctx, file)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	file.Id = uint(id)
-	return nil
+	return file, nil
 }
 func (s *sFile) FindAnd2Api(ctx context.Context, id any) (apiFile *api.File, err error) {
 	file, err := s.Find(ctx, id)

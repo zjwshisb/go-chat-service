@@ -6,9 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gogf/gf/v2/util/guid"
 	"github.com/gorilla/websocket"
-	"golang.org/x/time/rate"
 )
 
 type connContainer interface {
@@ -41,7 +39,7 @@ type ManagerHook = func(conn iWsConn)
 
 type shard struct {
 	m     map[uint]iWsConn
-	mutex sync.RWMutex
+	mutex *sync.RWMutex
 }
 
 func (s *shard) getAll() []iWsConn {
@@ -225,18 +223,8 @@ func (m *manager) Unregister(conn iWsConn) {
 // 先处理是否重复连接
 // 集群模式下，如果不在本机则投递一个消息
 func (m *manager) Register(conn *websocket.Conn, user IChatUser, platform string) {
-	client := &client{
-		Conn:        conn,
-		CloseSignal: make(chan interface{}),
-		Send:        make(chan *api.ChatAction, 100),
-		Once:        sync.Once{},
-		Manager:     m,
-		User:        user,
-		Uuid:        guid.S(),
-		Created:     time.Now().Unix(),
-		Limiter:     rate.NewLimiter(5, 10),
-		Platform:    platform,
-	}
+	client := newClient(conn, user, platform)
+	client.Manager = m
 	timer := time.After(1 * time.Second)
 	m.NoticeRepeatConnect(client.GetUser(), client.GetUuid())
 	m.AddConn(client)
@@ -278,7 +266,7 @@ func (m *manager) Run() {
 	for i = 0; i < m.shardCount; i++ {
 		m.shard[i] = &shard{
 			m:     make(map[uint]iWsConn),
-			mutex: sync.RWMutex{},
+			mutex: &sync.RWMutex{},
 		}
 	}
 	go m.Ping()

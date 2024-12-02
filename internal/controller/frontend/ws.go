@@ -26,10 +26,6 @@ var CWs = &cWs{}
 type cWs struct {
 }
 
-func (c cWs) GetReqId(ctx context.Context, req *frontend.ChatReqIdReq) (res *frontend.ChatReqIdRes, err error) {
-	return &frontend.ChatReqIdRes{ReqId: service.ChatMessage().GenReqId()}, nil
-}
-
 func (c cWs) Image(ctx context.Context, req *frontend.ChatImageReq) (res *frontend.ChatImageRes, err error) {
 	//path := fmt.Sprintf("chat/%d/user", service.UserCtx().GetCustomerId(ctx))
 	//r, err := service.Qiniu().Save(ctx, req.File, path)
@@ -51,6 +47,9 @@ func (c cWs) Connect(ctx context.Context, req *frontend.ChatConnectReq) (res *ba
 		return
 	}
 	user := service.UserCtx().GetUser(ctx)
-	service.Chat().Register(ctx, user, conn)
-	return nil, nil
+	err = service.Chat().Register(ctx, user, conn)
+	if err != nil {
+		return
+	}
+	return baseApi.NewNilResp(), err
 }

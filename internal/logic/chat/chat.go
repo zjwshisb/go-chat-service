@@ -8,7 +8,6 @@ import (
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -109,14 +108,14 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		chatName, _ := service.Admin().GetChatName(ctx, &admin)
 		notice := service.ChatMessage().NewNotice(session,
 			chatName+"为您服务")
-		_ = service.ChatMessage().SaveWithUpdate(ctx, notice)
+		_, _ = service.ChatMessage().Insert(ctx, notice)
 		s.user.SendAction(newReceiveAction(notice), userConn)
 		// 欢迎语
 		welcomeMsg := service.ChatMessage().NewWelcome(&admin)
 		if welcomeMsg != nil {
 			welcomeMsg.UserId = session.UserId
 			welcomeMsg.SessionId = session.Id
-			_ = service.ChatMessage().SaveWithUpdate(ctx, welcomeMsg)
+			_, _ = service.ChatMessage().Insert(ctx, welcomeMsg)
 			action := newReceiveAction(welcomeMsg)
 			s.user.SendAction(action, userConn)
 		}
@@ -181,8 +180,8 @@ func (s sChat) Register(ctx context.Context, u any, conn *websocket.Conn) error 
 		}
 		s.admin.Register(conn, e, platform)
 		return nil
-	case *entity.Users:
-		uu, _ := u.(*entity.Users)
+	case *model.User:
+		uu, _ := u.(*model.User)
 		e := &user{
 			uu,
 		}
