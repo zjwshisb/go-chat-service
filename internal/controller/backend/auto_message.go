@@ -13,12 +13,6 @@ import (
 
 var CAutoMessage = &cAutoMessage{}
 
-type simpleNavigator struct {
-	Image uint   `json:"image"`
-	Url   string `json:"url"`
-	Title string `json:"title"`
-}
-
 type cAutoMessage struct {
 }
 
@@ -56,7 +50,10 @@ func (c *cAutoMessage) Form(ctx context.Context, _ *api.AutoMessageFormReq) (res
 			Type: message.Type,
 		},
 	}
-	apiMessage := service.AutoMessage().ToApi(ctx, message, nil)
+	apiMessage, err := service.AutoMessage().ToApi(ctx, message, nil)
+	if err != nil {
+		return
+	}
 	switch message.Type {
 	case consts.MessageTypeText:
 		form.Content = apiMessage.Content

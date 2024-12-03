@@ -65,13 +65,13 @@ func (s *sChatTransfer) ToChatTransfer(relation *model.CustomerChatTransfer) api
 // Cancel 取消待接入的转接
 func (s *sChatTransfer) Cancel(ctx context.Context, transfer *model.CustomerChatTransfer) (err error) {
 	if transfer.ToSession != nil {
-		transfer.ToSession.CanceledAt = gtime.New()
+		transfer.ToSession.CanceledAt = gtime.Now()
 		_, err = service.ChatSession().Save(ctx, transfer.ToSession)
 		if err != nil {
 			return
 		}
 	}
-	transfer.CanceledAt = gtime.New()
+	transfer.CanceledAt = gtime.Now()
 	_, err = s.Save(ctx, transfer)
 	if err != nil {
 		return
@@ -112,7 +112,7 @@ func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint,
 	}
 	newSession := &model.CustomerChatSession{
 		CustomerChatSessions: entity.CustomerChatSessions{
-			QueriedAt:  gtime.New(),
+			QueriedAt:  gtime.Now(),
 			CustomerId: session.CustomerId,
 			AdminId:    toId,
 			Type:       consts.ChatSessionTypeTransfer,

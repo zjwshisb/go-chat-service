@@ -40,9 +40,9 @@ type ChatReqId struct {
 }
 
 type ChatMessageReq struct {
-	g.Meta `path:"/messages" tags:"C端客服系统" method:"get" summary:"获取历史消息"`
-	Id     uint `p:"id"`
-	Size   uint `p:"size" d:"20"`
+	g.Meta   `path:"/messages" tags:"C端客服系统" method:"get" summary:"获取历史消息"`
+	Id       uint `p:"id"`
+	PageSize int  `d:"20"`
 }
 
 type ChatMessageRes []*api.ChatMessage

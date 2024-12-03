@@ -74,7 +74,6 @@ func (s *userManager) NoticeQueueLocation(ctx context.Context, conn iWsConn) (er
 	}
 	count, err := manual.getCountByTime(ctx, conn.GetCustomerId(), "-inf",
 		strconv.FormatFloat(uTime, 'f', 0, 64))
-	g.Dump(count)
 	if err != nil {
 		return
 	}
@@ -260,7 +259,7 @@ func (s *userManager) triggerEnterEvent(ctx context.Context, conn iWsConn) (err 
 		return
 	}
 	var entityMessage *model.CustomerChatMessage
-	entityMessage, err = service.AutoMessage().ToChatMessage(autoMsg)
+	entityMessage, err = service.AutoMessage().ToChatMessage(ctx, autoMsg)
 	if err != nil {
 		return
 	}
@@ -315,28 +314,27 @@ func (s *userManager) addToManual(ctx context.Context, user IChatUser) (session 
 		if rule != nil {
 			switch rule.ReplyType {
 			case consts.AutoRuleReplyTypeMessage:
-				autoMessage, err := service.AutoRule().GetMessage(ctx, rule)
-				if err != nil {
-					return nil, err
+				autoMessage, _ := service.AutoRule().GetMessage(ctx, rule)
+				if autoMessage != nil {
+					message, err := service.AutoMessage().ToChatMessage(ctx, autoMessage)
+					if err != nil {
+						return nil, err
+					}
+					err = service.AutoRule().IncrTriggerCount(ctx, rule)
+					if err != nil {
+						return nil, err
+					}
+					message.UserId = user.GetPrimaryKey()
+					message, err = service.ChatMessage().Insert(ctx, message)
+					if err != nil {
+						return nil, err
+					}
+					err = s.DeliveryMessage(ctx, message)
+					if err != nil {
+						return nil, err
+					}
+					return nil, nil
 				}
-				message, err := service.AutoMessage().ToChatMessage(autoMessage)
-				if err != nil {
-					return nil, err
-				}
-				err = service.AutoRule().IncrTriggerCount(ctx, rule)
-				if err != nil {
-					return nil, err
-				}
-				message.UserId = user.GetPrimaryKey()
-				message, err = service.ChatMessage().Insert(ctx, message)
-				if err != nil {
-					return nil, err
-				}
-				err = s.DeliveryMessage(ctx, message)
-				if err != nil {
-					return nil, err
-				}
-				return nil, nil
 			}
 		}
 	}
@@ -346,14 +344,14 @@ func (s *userManager) addToManual(ctx context.Context, user IChatUser) (session 
 	}
 	session, err = service.ChatSession().FirstNormal(ctx, user.GetPrimaryKey(), 0)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			session, err = service.ChatSession().Create(ctx, user.GetPrimaryKey(), user.GetCustomerId(), consts.ChatSessionTypeNormal)
-			if err != nil {
-				return nil, err
-			}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
 		} else {
-			return
+			session, err = service.ChatSession().Create(ctx, user.GetPrimaryKey(), user.GetCustomerId(), consts.ChatSessionTypeNormal)
 		}
+	}
+	if session == nil {
+		return
 	}
 	message := service.ChatMessage().NewNotice(session, "正在为你转接人工客服")
 	_, err = service.ChatMessage().Save(ctx, message)
@@ -434,7 +432,7 @@ func (s *userManager) triggerMessageEvent(ctx context.Context, scene string, mes
 			if err != nil {
 				return err
 			}
-			msg, err := service.AutoMessage().ToChatMessage(autoMessage)
+			msg, err := service.AutoMessage().ToChatMessage(ctx, autoMessage)
 			if err != nil {
 				return err
 			}

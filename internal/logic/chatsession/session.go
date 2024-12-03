@@ -6,8 +6,6 @@ import (
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/do"
-	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
 	"github.com/gogf/gf/v2/frame/g"
@@ -63,7 +61,7 @@ func (s *sChatSession) Cancel(ctx context.Context, session *model.CustomerChatSe
 	if session.CanceledAt != nil {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "会话已取消，请勿重复取消")
 	}
-	session.CanceledAt = gtime.New()
+	session.CanceledAt = gtime.Now()
 	_, err = s.Save(ctx, session)
 	if err != nil {
 		return
@@ -72,14 +70,14 @@ func (s *sChatSession) Cancel(ctx context.Context, session *model.CustomerChatSe
 	if err != nil {
 		return
 	}
-	service.Chat().BroadcastWaitingUser(ctx, session.CustomerId)
+	_ = service.Chat().BroadcastWaitingUser(ctx, session.CustomerId)
 	return nil
 }
 
 // Close 关闭会话
 func (s *sChatSession) Close(ctx context.Context, session *model.CustomerChatSession, isRemoveUser bool, updateTime bool) (err error) {
 	if session.BrokenAt != nil {
-		session.BrokenAt = gtime.New()
+		session.BrokenAt = gtime.Now()
 		_, err = s.Save(ctx, session)
 		if err != nil {
 			return
@@ -174,14 +172,11 @@ func (s *sChatSession) RelationToChat(session *model.CustomerChatSession) api.Ch
 // }
 
 func (s *sChatSession) Create(ctx context.Context, uid uint, customerId uint, t uint) (item *model.CustomerChatSession, err error) {
-	item = &model.CustomerChatSession{
-		CustomerChatSessions: entity.CustomerChatSessions{
-			UserId:     uid,
-			Type:       t,
-			CustomerId: customerId,
-			QueriedAt:  gtime.New(),
-		},
-	}
+	item = &model.CustomerChatSession{}
+	item.Type = t
+	item.CustomerId = customerId
+	item.QueriedAt = gtime.Now()
+	item.UserId = uid
 	id, err := s.Save(ctx, item)
 	if err != nil {
 		return
@@ -191,12 +186,12 @@ func (s *sChatSession) Create(ctx context.Context, uid uint, customerId uint, t 
 }
 
 func (s *sChatSession) GetUnAccepts(ctx context.Context, customerId uint) (res []*model.CustomerChatSession, err error) {
-	return s.All(ctx, do.CustomerChatSessions{
-		CanceledAt: nil,
-		AdminId:    0,
-		Type:       consts.ChatSessionTypeNormal,
-		CustomerId: customerId,
-	}, g.Slice{model.CustomerChatSession{}.User, model.CustomerChatSession{}.Admin}, nil)
+	return s.All(ctx, g.Map{
+		"canceled_at": nil,
+		"admin_id":    0,
+		"type":        consts.ChatSessionTypeNormal,
+		"customer_id": customerId,
+	}, g.Slice{model.CustomerChatSession{}.User}, nil)
 
 }
 func (s *sChatSession) FirstTransfer(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error) {

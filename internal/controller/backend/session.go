@@ -104,7 +104,7 @@ func (c cSession) Cancel(ctx context.Context, req *api.SessionCancelReq) (resp *
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cSession) Close(ctx context.Context, req *api.SessionCloseReq) (resp *baseApi.NilRes, err error) {
+func (c cSession) Close(ctx context.Context, _ *api.SessionCloseReq) (resp *baseApi.NilRes, err error) {
 	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id"),
@@ -139,7 +139,7 @@ func (c cSession) Detail(ctx context.Context, req *api.SessionDetailReq) (res *a
 	}
 	message := make([]*api.ChatMessage, len(relations))
 	for index, i := range relations {
-		msg, err := service.ChatMessage().ToApi(ctx, i)
+		msg, err := service.ChatMessage().ToApi(ctx, i, nil)
 		if err != nil {
 			return nil, err
 		}

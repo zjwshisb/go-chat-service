@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/util/gconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
-	"github.com/gogf/gf/v2/util/gconv"
 )
 
 const (
@@ -138,16 +138,12 @@ func (s *sChatRelation) GetInvalidUsers(ctx gctx.Ctx, adminId uint) []uint {
 // GetUsersWithLimitTime 获取所有user以及对应的有效期
 func (s *sChatRelation) GetUsersWithLimitTime(ctx gctx.Ctx, adminId uint) (uids []uint, times []int64) {
 	val, _ := g.Redis().Do(ctx, "ZREVRANGE", s.getUserCacheKey(adminId), 0, -1, "WITHSCORES")
-	for index, item := range val.Slice() {
-		types := index % 2
-		switch types {
-		case 0:
-			uids = append(uids, gconv.Uint(item))
-		case 1:
-			times = append(times, gconv.Int64(item))
-		}
+	for _, item := range val.Vars() {
+		s := item.Slice()
+		uids = append(uids, gconv.Uint(s[0]))
+		times = append(times, gconv.Int64(s[1]))
 	}
-	return uids, times
+	return
 }
 
 // SetUserAdmin SetAdmin 设置用户客服

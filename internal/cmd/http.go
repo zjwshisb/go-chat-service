@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	_ "gf-chat/internal/cache"
 	"gf-chat/internal/controller"
 	_ "gf-chat/internal/controller/rule"
 	"gf-chat/internal/cron"

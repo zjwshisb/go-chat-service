@@ -30,7 +30,7 @@ type sAutoMessage struct {
 }
 
 func (s *sAutoMessage) ToApi(ctx context.Context, message *model.CustomerChatAutoMessage,
-	files *map[uint]*model.CustomerChatFile) *api.AutoMessage {
+	files *map[uint]*model.CustomerChatFile) (*api.AutoMessage, error) {
 	resp := &api.AutoMessage{
 		Id:        message.Id,
 		Name:      message.Name,
@@ -46,7 +46,11 @@ func (s *sAutoMessage) ToApi(ctx context.Context, message *model.CustomerChatAut
 				resp.File = service.File().ToApi(file)
 			}
 		} else {
-			resp.File, _ = service.File().FindAnd2Api(ctx, message.Content)
+			var err error
+			resp.File, err = service.File().FindAnd2Api(ctx, message.Content)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	if message.Type == consts.MessageTypeNavigate {
@@ -62,12 +66,12 @@ func (s *sAutoMessage) ToApi(ctx context.Context, message *model.CustomerChatAut
 					navigator.Image = service.File().ToApi(image)
 				}
 			} else {
-				navigator.Image, _ = service.File().FindAnd2Api(ctx, navigator.Image)
+				navigator.Image, _ = service.File().FindAnd2Api(ctx, simpleNavigator.Image)
 			}
 			resp.Navigator = &navigator
 		}
 	}
-	return resp
+	return resp, nil
 }
 
 func (s *sAutoMessage) ToApis(ctx context.Context, items []*model.CustomerChatAutoMessage) (resp []*api.AutoMessage, err error) {
@@ -96,7 +100,10 @@ func (s *sAutoMessage) ToApis(ctx context.Context, items []*model.CustomerChatAu
 		return
 	}
 	for index, i := range items {
-		item := s.ToApi(ctx, i, &filesMap)
+		item, err := s.ToApi(ctx, i, &filesMap)
+		if err != nil {
+			return resp, err
+		}
 		resp[index] = item
 	}
 	return
@@ -106,7 +113,6 @@ func (s *sAutoMessage) Form2Do(form api.AutoMessageForm) *do.CustomerChatAutoMes
 	message := &do.CustomerChatAutoMessages{}
 	message.Name = form.Name
 	message.Type = form.Type
-	// UpdatedAt 不为nil时不会自动更新时间
 	switch message.Type {
 	case consts.MessageTypeNavigate:
 		content := g.Map{
@@ -124,35 +130,41 @@ func (s *sAutoMessage) Form2Do(form api.AutoMessageForm) *do.CustomerChatAutoMes
 	}
 	return message
 }
-func (s *sAutoMessage) ToChatMessage(auto *model.CustomerChatAutoMessage) (msg *model.CustomerChatMessage, err error) {
-	content := auto.Content
-	if auto.Type == consts.MessageTypeFile {
-		//content = service.Qiniu().Url(content)
+func (s *sAutoMessage) ToChatMessage(ctx context.Context, auto *model.CustomerChatAutoMessage) (msg *model.CustomerChatMessage, err error) {
+	apiMessage, err := s.ToApi(ctx, auto, nil)
+	if err != nil {
+		return
 	}
-	if auto.Type == consts.MessageTypeNavigate {
-		m := make(map[string]any)
-		err = json.Unmarshal([]byte(auto.Content), &m)
-		if err != nil {
-			return
-		}
-		//m["content"] = service.Qiniu().Url(m["content"])
-		newT, err := json.Marshal(m)
-		if err != nil {
-			return nil, err
-		}
-		content = string(newT)
-	}
-
-	return &model.CustomerChatMessage{
+	chatMessage := &model.CustomerChatMessage{
 		CustomerChatMessages: entity.CustomerChatMessages{
 			UserId:     0,
 			AdminId:    0,
-			Type:       auto.Type,
-			Content:    content,
+			Type:       apiMessage.Type,
 			CustomerId: auto.CustomerId,
 			Source:     consts.MessageSourceSystem,
 			SessionId:  0,
 			ReqId:      service.ChatMessage().GenReqId(),
 		},
-	}, err
+	}
+	switch auto.Type {
+	case consts.MessageTypeFile:
+		chatMessage.Content = apiMessage.File.Url
+	case consts.MessageTypeNavigate:
+		if apiMessage.Navigator != nil {
+			mapContent := g.Map{
+				"title": apiMessage.Navigator.Title,
+				"url":   apiMessage.Navigator.Url,
+			}
+			if apiMessage.Navigator.Image != nil {
+				mapContent["image"] = apiMessage.Navigator.Image.Url
+			}
+			content, _ := json.Marshal(mapContent)
+			chatMessage.Content = string(content)
+		}
+
+	case consts.ChatSettingTypeText:
+		chatMessage.Content = apiMessage.Content
+
+	}
+	return chatMessage, nil
 }

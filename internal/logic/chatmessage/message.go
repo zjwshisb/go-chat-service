@@ -66,7 +66,7 @@ func (s *sChatMessage) GetAdminName(ctx context.Context, model *model.CustomerCh
 	}
 	return "", nil
 }
-func (s *sChatMessage) ToApi(ctx context.Context, message *model.CustomerChatMessage) (msg *api.ChatMessage, err error) {
+func (s *sChatMessage) ToApi(ctx context.Context, message *model.CustomerChatMessage, files *map[uint]*model.CustomerChatFile) (msg *api.ChatMessage, err error) {
 	username := ""
 	if message.User != nil {
 		username = message.User.Username
@@ -157,7 +157,7 @@ func (s *sChatMessage) NewOffline(admin *model.CustomerAdmin) *model.CustomerCha
 				AdminId:    admin.Id,
 				Type:       consts.MessageTypeText,
 				Content:    admin.Setting.OfflineContent,
-				ReceivedAt: gtime.New(),
+				ReceivedAt: gtime.Now(),
 				CustomerId: admin.CustomerId,
 				Source:     consts.MessageSourceAdmin,
 				ReqId:      service.ChatMessage().GenReqId(),
@@ -177,7 +177,7 @@ func (s *sChatMessage) NewWelcome(admin *model.CustomerAdmin) *model.CustomerCha
 				AdminId:    admin.Id,
 				Type:       consts.MessageTypeText,
 				Content:    admin.Setting.WelcomeContent,
-				ReceivedAt: gtime.New(),
+				ReceivedAt: gtime.Now(),
 				CustomerId: admin.CustomerId,
 				Source:     consts.MessageSourceAdmin,
 				ReqId:      service.ChatMessage().GenReqId(),

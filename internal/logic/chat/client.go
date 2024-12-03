@@ -202,7 +202,7 @@ func (c *client) ReadMsg() {
 						msg.User = u.Entity
 					}
 					msg.CustomerId = c.GetCustomerId()
-					msg.ReceivedAt = gtime.New()
+					msg.ReceivedAt = gtime.Now()
 					c.Manager.ReceiveMessage(&chatConnMessage{
 						Msg:  msg,
 						Conn: c,

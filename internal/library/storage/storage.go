@@ -32,7 +32,6 @@ func FileType(file multipart.File) (string, error) {
 		return "", err
 	}
 	mimetype := http.DetectContentType(buffer)
-	g.Dump(mimetype)
 	index := strings.Index(mimetype, "/")
 	if index < 0 {
 		return "", gerror.New("不支持的文件类型")

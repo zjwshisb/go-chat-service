@@ -11,7 +11,6 @@ import (
 	"gf-chat/internal/service"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gorilla/websocket"
@@ -81,22 +80,28 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 			return
 		}
 	}
-	session.AcceptedAt = gtime.New()
+	session.AcceptedAt = gtime.Now()
 	session.AdminId = admin.Id
 	_, err = service.ChatSession().Save(ctx, session)
 	if err != nil {
 		return
 	}
-	unRead, _ := dao.CustomerChatMessages.Ctx(ctx).
-		Where("session_id", session.Id).
-		Where("admin_id", 0).
-		Where("source", consts.MessageSourceUser).Count()
+	unRead, err := service.ChatMessage().Count(ctx, do.CustomerChatMessages{
+		SessionId: session.Id,
+		AdminId:   0,
+		Source:    consts.MessageSourceUser,
+	})
+	if err != nil {
+		return
+	}
 	// 更新未发送的消息
-	_, err = dao.CustomerChatMessages.Ctx(ctx).Where("session_id", session.Id).
-		Where("admin_id", 0).
-		Where("source", consts.MessageSourceUser).Data(g.Map{
-		"admin_id": admin.Id,
-	}).Update()
+	_, err = service.ChatMessage().Update(ctx, do.CustomerChatMessages{
+		AdminId:   0,
+		Source:    consts.MessageSourceUser,
+		SessionId: session.Id,
+	}, do.CustomerChatMessages{
+		AdminId: admin.Id,
+	})
 	if err != nil {
 		return
 	}
@@ -108,14 +113,20 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		chatName, _ := service.Admin().GetChatName(ctx, &admin)
 		notice := service.ChatMessage().NewNotice(session,
 			chatName+"为您服务")
-		_, _ = service.ChatMessage().Insert(ctx, notice)
+		_, err = service.ChatMessage().Insert(ctx, notice)
+		if err != nil {
+			return
+		}
 		s.user.SendAction(newReceiveAction(notice), userConn)
 		// 欢迎语
 		welcomeMsg := service.ChatMessage().NewWelcome(&admin)
 		if welcomeMsg != nil {
 			welcomeMsg.UserId = session.UserId
 			welcomeMsg.SessionId = session.Id
-			_, _ = service.ChatMessage().Insert(ctx, welcomeMsg)
+			_, err = service.ChatMessage().Insert(ctx, welcomeMsg)
+			if err != nil {
+				return
+			}
 			action := newReceiveAction(welcomeMsg)
 			s.user.SendAction(action, userConn)
 		}
@@ -126,7 +137,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	}, "order desc")
 	var lastMsg *api.ChatMessage
 	if err == nil {
-		v, err := service.ChatMessage().ToApi(ctx, lastMessage)
+		v, err := service.ChatMessage().ToApi(ctx, lastMessage, nil)
 		if err != nil {
 			return nil, err
 		}

@@ -4,6 +4,7 @@ import (
 	"gf-chat/api"
 	"gf-chat/api/v1/backend"
 	"gf-chat/internal/model/entity"
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 type CustomerChatAutoRule struct {
@@ -17,6 +18,7 @@ type CustomerChatAutoMessage struct {
 }
 
 type CustomerAdmin struct {
+	g.Meta `orm:"table:users"`
 	entity.CustomerAdmins
 	Setting    *entity.CustomerAdminChatSettings `orm:"with:admin_id=id"`
 	ApiSetting *backend.CurrentAdminSetting
@@ -52,5 +54,6 @@ type CustomerChatSetting struct {
 }
 
 type User struct {
+	g.Meta `orm:"table:users"`
 	entity.Users
 }

@@ -6,6 +6,7 @@ import (
 	"gf-chat/api/v1/backend"
 	api "gf-chat/api/v1/frontend"
 	"gf-chat/internal/consts"
+	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
 	"github.com/gogf/gf/v2/frame/g"
@@ -21,16 +22,23 @@ type cChat struct {
 
 func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *baseApi.NormalRes[[]*backend.ChatMessage], err error) {
 	uid := service.UserCtx().GetUser(ctx).Id
-	messages, err := service.ChatMessage().GetList(ctx, req.Id, do.CustomerChatMessages{
-		UserId: uid,
-	}, 20)
+	w := g.Map{
+		"user_id": uid,
+	}
+	if req.Id > 0 {
+		w["id <"] = req.Id
+	}
+	messages, err := service.ChatMessage().All(ctx, w, g.Slice{
+		model.CustomerChatMessage{}.User,
+		model.CustomerChatMessage{}.Admin,
+	}, "id desc", req.PageSize)
 	if err != nil {
 		return
 	}
 	r := make([]*backend.ChatMessage, 0)
 	adminToMessageId := make(map[uint][]uint)
 	for _, item := range messages {
-		msg, err := service.ChatMessage().ToApi(ctx, item)
+		msg, err := service.ChatMessage().ToApi(ctx, item, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -45,13 +53,13 @@ func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *baseA
 		}
 	}
 	go func() {
-		for aId, ids := range adminToMessageId {
+		for adminId, ids := range adminToMessageId {
 			_, err := service.ChatMessage().ToRead(ctx, ids)
 			if err != nil {
 				g.Log().Error(ctx, err)
 			}
-			if aId > 0 {
-				service.Chat().NoticeUserRead(service.UserCtx().GetCustomerId(ctx), aId, ids)
+			if adminId > 0 {
+				service.Chat().NoticeUserRead(service.UserCtx().GetCustomerId(ctx), adminId, ids)
 			}
 		}
 
@@ -82,9 +90,8 @@ func (c cChat) Read(ctx context.Context, req *api.ChatReadReq) (res *baseApi.Nil
 }
 
 func (c cChat) Rate(ctx context.Context, req *api.ChatRateReq) (res *baseApi.NilRes, err error) {
-	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	msg, err := service.ChatMessage().First(ctx, do.CustomerChatMessages{
-		Id:     id,
+		Id:     ghttp.RequestFromCtx(ctx).GetRouter("id"),
 		UserId: service.UserCtx().GetUser(ctx).Id,
 		Type:   consts.MessageTypeRate,
 	})

@@ -105,7 +105,6 @@ func (c *cChatSetting) Update(ctx context.Context, req *api.ChatSettingUpdateReq
 				CustomerId: service.AdminCtx().GetCustomerId(ctx),
 				Id:         apiFile.Id,
 			})
-			g.Dump(file)
 			if err == nil {
 				updateData.Value = file.Id
 			} else {
@@ -117,6 +116,10 @@ func (c *cChatSetting) Update(ctx context.Context, req *api.ChatSettingUpdateReq
 		return
 	}
 	_, err = service.ChatSetting().Update(ctx, do.CustomerChatSettings{Id: setting.Id}, updateData)
+	if err != nil {
+		return
+	}
+	err = service.ChatSetting().RemoveCache(ctx, service.AdminCtx().GetCustomerId(ctx))
 	if err != nil {
 		return
 	}

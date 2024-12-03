@@ -130,6 +130,7 @@ func (c cChat) RemoveInvalidUser(ctx context.Context, req *api.RemoveAllUserReq)
 func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.NormalRes[api.UserListRes], err error) {
 	admin := service.AdminCtx().GetUser(ctx)
 	ids, times := service.ChatRelation().GetUsersWithLimitTime(ctx, gconv.Uint(admin.Id))
+	g.Dump(ids, times)
 	users, err := service.User().All(ctx, do.Users{
 		Id:         ids,
 		CustomerId: admin.CustomerId,
@@ -206,7 +207,7 @@ func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.Nor
 				return item.UserId == user.Id
 			})
 			if exist {
-				lastMsg, err := service.ChatMessage().ToApi(ctx, lastMsg)
+				lastMsg, err := service.ChatMessage().ToApi(ctx, lastMsg, nil)
 				if err != nil {
 					return nil, err
 				}
@@ -257,7 +258,7 @@ func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseAp
 		if i.ReadAt == nil && i.Source == consts.MessageSourceUser {
 			unReadIds = append(unReadIds, i.Id)
 		}
-		msg, err := service.ChatMessage().ToApi(ctx, i)
+		msg, err := service.ChatMessage().ToApi(ctx, i, nil)
 		if err != nil {
 			return nil, err
 		}

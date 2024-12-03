@@ -16,7 +16,7 @@ type ICurd[R any] interface {
 	Save(ctx ctx, data any) (id int64, err error)
 	Find(ctx ctx, primaryKey any) (model *R, err error)
 	All(ctx ctx, where any, with []any, order any, limit ...int) (items []*R, err error)
-	First(ctx ctx, where any, order ...string) (model *R, err error)
+	First(ctx ctx, where any, order ...any) (model *R, err error)
 	Paginate(ctx ctx, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error)
 	Update(ctx ctx, where any, data any) (count int64, err error)
 	UpdatePri(ctx ctx, where any, data any) (count int64, err error)
@@ -53,8 +53,8 @@ func (c Curd[R]) Find(ctx ctx, primaryKey any) (model *R, err error) {
 	return
 }
 
-func (c Curd[R]) First(ctx ctx, where any, order ...string) (model *R, err error) {
-	err = c.Dao.Ctx(ctx).Where(where).Order(order).Scan(&model)
+func (c Curd[R]) First(ctx ctx, where any, order ...any) (model *R, err error) {
+	err = c.Dao.Ctx(ctx).Where(where).Order(order...).Scan(&model)
 	if err != nil {
 		return
 	}
