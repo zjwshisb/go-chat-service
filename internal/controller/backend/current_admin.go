@@ -24,20 +24,17 @@ func (c *cCurrentAdmin) Index(ctx context.Context, _ *api.CurrentAdminInfoReq) (
 }
 
 func (c *cCurrentAdmin) UpdateSetting(ctx context.Context, req *api.CurrentAdminSettingUpdateReq) (res *baseApi.NilRes, err error) {
-	setting, err := service.Admin().GetSetting(ctx, service.AdminCtx().GetUser(ctx))
-	if err != nil {
-		return nil, err
-	}
-	err = service.Admin().UpdateSetting(ctx, service.AdminCtx().GetUser(ctx), req.CurrentAdminSettingForm)
+	admin := service.AdminCtx().GetUser(ctx)
+	err = service.Admin().UpdateSetting(ctx, admin, req.CurrentAdminSettingForm)
 	if err != nil {
 		return
 	}
-	service.Chat().UpdateAdminSetting(service.AdminCtx().GetCustomerId(ctx), setting)
+	service.Chat().UpdateAdminSetting(service.AdminCtx().GetUser(ctx))
 	return baseApi.NewNilResp(), nil
 }
 
 func (c *cCurrentAdmin) GetSetting(ctx context.Context, _ *api.CurrentAdminSettingReq) (res *baseApi.NormalRes[*api.CurrentAdminSetting], err error) {
-	setting, err := service.Admin().GetSetting(ctx, service.AdminCtx().GetUser(ctx))
+	setting, err := service.Admin().GetApiSetting(ctx, service.AdminCtx().GetUser(ctx))
 	if err != nil {
 		return nil, err
 	}

@@ -38,7 +38,7 @@ func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *baseA
 	r := make([]*backend.ChatMessage, 0)
 	adminToMessageId := make(map[uint][]uint)
 	for _, item := range messages {
-		msg, err := service.ChatMessage().ToApi(ctx, item, nil)
+		msg, err := service.ChatMessage().ToApi(ctx, item)
 		if err != nil {
 			return nil, err
 		}

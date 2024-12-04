@@ -43,8 +43,8 @@ func (s sChat) run() {
 	s.user.run()
 }
 
-func (s sChat) UpdateAdminSetting(customerId uint, setting *api.CurrentAdminSetting) {
-	s.admin.updateSetting(customerId, setting)
+func (s sChat) UpdateAdminSetting(admin *model.CustomerAdmin) {
+	s.admin.updateSetting(admin)
 }
 
 func (s sChat) NoticeTransfer(ctx context.Context, customer, admin uint) error {
@@ -137,7 +137,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	}, "order desc")
 	var lastMsg *api.ChatMessage
 	if err == nil {
-		v, err := service.ChatMessage().ToApi(ctx, lastMessage, nil)
+		v, err := service.ChatMessage().ToApi(ctx, lastMessage)
 		if err != nil {
 			return nil, err
 		}

@@ -331,16 +331,19 @@ func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, 
 
 // NoticeUpdateSetting admin修改设置后通知conn 更新admin的设置信息
 func (m *adminManager) noticeUpdateSetting(customerId uint, setting *api.CurrentAdminSetting) {
-	m.updateSetting(customerId, setting)
+	//m.updateSetting(customerId, setting)
 }
 
 // UpdateSetting 更新设置
-func (m *adminManager) updateSetting(customerId uint, setting *api.CurrentAdminSetting) {
-	conn, exist := m.GetConn(customerId, setting.AdminId)
+func (m *adminManager) updateSetting(a *model.CustomerAdmin) {
+	conn, exist := m.GetConn(a.CustomerId, a.Id)
 	if exist {
 		u, ok := conn.GetUser().(*admin)
 		if ok {
-			u.Entity.ApiSetting = setting
+			setting, err := service.Admin().FindSetting(gctx.New(), a.Id, true)
+			if err == nil {
+				u.Entity.Setting = setting
+			}
 		}
 	}
 }

@@ -33,6 +33,8 @@ func (c cWs) Connect(ctx context.Context, _ *api.ChatConnectReq) (res *baseApi.N
 		return
 	}
 	admin := service.AdminCtx().GetUser(ctx)
+	setting, err := service.Admin().FindSetting(ctx, admin.Id, true)
+	admin.Setting = setting
 	err = service.Chat().Register(ctx, admin, conn)
 	if err != nil {
 		return

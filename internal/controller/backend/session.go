@@ -89,7 +89,7 @@ func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *bas
 	return baseApi.NewListResp(res, paginator.Total), nil
 }
 
-func (c cSession) Cancel(ctx context.Context, req *api.SessionCancelReq) (resp *baseApi.NilRes, err error) {
+func (c cSession) Cancel(ctx context.Context, _ *api.SessionCancelReq) (resp *baseApi.NilRes, err error) {
 	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id"),
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -122,7 +122,7 @@ func (c cSession) Close(ctx context.Context, _ *api.SessionCloseReq) (resp *base
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cSession) Detail(ctx context.Context, req *api.SessionDetailReq) (res *api.SessionDetailRes, err error) {
+func (c cSession) Detail(ctx context.Context, _ *api.SessionDetailReq) (res *api.SessionDetailRes, err error) {
 	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id"),
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -130,16 +130,16 @@ func (c cSession) Detail(ctx context.Context, req *api.SessionDetailReq) (res *a
 	if err != nil {
 		return
 	}
-	relations, err := service.ChatMessage().GetList(ctx, 0, do.CustomerChatMessages{
+	relations, err := service.ChatMessage().All(ctx, do.CustomerChatMessages{
 		SessionId: session.Id,
 		Source:    []int{consts.MessageSourceAdmin, consts.MessageSourceUser},
-	}, 0)
+	}, nil, "id")
 	if err != nil {
 		return
 	}
 	message := make([]*api.ChatMessage, len(relations))
 	for index, i := range relations {
-		msg, err := service.ChatMessage().ToApi(ctx, i, nil)
+		msg, err := service.ChatMessage().ToApi(ctx, i)
 		if err != nil {
 			return nil, err
 		}

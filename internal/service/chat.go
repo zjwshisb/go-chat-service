@@ -13,7 +13,7 @@ type (
 		Register(ctx context.Context, u any, conn *websocket.Conn) error
 		IsOnline(customerId uint, uid uint, t string) bool
 		BroadcastWaitingUser(ctx context.Context, customerId uint) error
-		UpdateAdminSetting(customerId uint, setting *api.CurrentAdminSetting)
+		UpdateAdminSetting(admin *model.CustomerAdmin)
 		RemoveManual(ctx context.Context, uid uint, customerId uint) error
 		Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) error
 		GetOnlineCount(ctx context.Context, customerId uint) (api.ChatOnlineCount, error)

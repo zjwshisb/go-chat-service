@@ -31,6 +31,15 @@ func (s *sFile) Insert(ctx context.Context, file *model.CustomerChatFile) (*mode
 	file.Id = uint(id)
 	return file, nil
 }
+
+func (s *sFile) Url(file *model.CustomerChatFile) string {
+	return storage.Disk(file.Disk).Url(file.Path)
+}
+
+func (s *sFile) ThumbUrl(file *model.CustomerChatFile) string {
+	return storage.Disk(file.Disk).ThumbUrl(file.Path)
+}
+
 func (s *sFile) FindAnd2Api(ctx context.Context, id any) (apiFile *api.File, err error) {
 	file, err := s.Find(ctx, id)
 	if err != nil {
@@ -47,8 +56,8 @@ func (s *sFile) ToApi(file *model.CustomerChatFile) *api.File {
 		Type: file.Type,
 	}
 	if file.Type != consts.FileTypeDir {
-		apiFile.Url = storage.Disk(file.Disk).Url(file.Path)
-		apiFile.ThumbUrl = storage.Disk(file.Disk).ThumbUrl(file.Path)
+		apiFile.Url = s.Url(file)
+		apiFile.ThumbUrl = s.ThumbUrl(file)
 	}
 	return apiFile
 }

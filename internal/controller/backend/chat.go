@@ -5,7 +5,6 @@ import (
 	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
-	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
@@ -59,7 +58,7 @@ func (c cChat) Read(ctx context.Context, req *api.MessageReadReq) (res *baseApi.
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cChat) CancelTransfer(ctx context.Context, req *api.CancelTransferReq) (res *baseApi.NilRes, err error) {
+func (c cChat) CancelTransfer(ctx context.Context, _ *api.CancelTransferReq) (res *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetUser(ctx)
 	transfer, err := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
 		ToAdminId:  admin.Id,
@@ -85,7 +84,7 @@ func (c cChat) Transfer(ctx context.Context, req *api.StoreTransferReq) (res *ba
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cChat) RemoveUser(ctx context.Context, req *api.RemoveUserReq) (res *baseApi.NilRes, err error) {
+func (c cChat) RemoveUser(ctx context.Context, _ *api.RemoveUserReq) (res *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetUser(ctx)
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 
@@ -106,7 +105,7 @@ func (c cChat) RemoveUser(ctx context.Context, req *api.RemoveUserReq) (res *bas
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cChat) RemoveInvalidUser(ctx context.Context, req *api.RemoveAllUserReq) (res *baseApi.NormalRes[api.RemoveAllUserRes], err error) {
+func (c cChat) RemoveInvalidUser(ctx context.Context, _ *api.RemoveAllUserReq) (res *baseApi.NormalRes[api.RemoveAllUserRes], err error) {
 	admin := service.AdminCtx().GetUser(ctx)
 	ids := service.ChatRelation().GetInvalidUsers(ctx, admin.Id)
 	resIds := make([]uint, 0, len(ids))
@@ -127,10 +126,9 @@ func (c cChat) RemoveInvalidUser(ctx context.Context, req *api.RemoveAllUserReq)
 	return
 }
 
-func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.NormalRes[api.UserListRes], err error) {
+func (c cChat) User(ctx context.Context, _ *api.UserListReq) (res *baseApi.NormalRes[[]api.ChatUser], err error) {
 	admin := service.AdminCtx().GetUser(ctx)
 	ids, times := service.ChatRelation().GetUsersWithLimitTime(ctx, gconv.Uint(admin.Id))
-	g.Dump(ids, times)
 	users, err := service.User().All(ctx, do.Users{
 		Id:         ids,
 		CustomerId: admin.CustomerId,
@@ -143,44 +141,18 @@ func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.Nor
 	for _, user := range users {
 		userMap[user.Id] = user
 	}
-	type maxChatIds struct {
-		Id     int
-		UserId int
-	}
-	lastRes := make([]maxChatIds, 0)
-	sources := []int{consts.MessageSourceAdmin, consts.MessageSourceUser}
-	err = dao.CustomerChatMessages.Ctx(ctx).
-		FieldMax("id").
-		Fields("user_id").
-		Where("user_id in (?)", ids).
-		Where("source in (?)", sources).
-		Where("admin_id", admin.Id).
-		Group("user_id").Scan(&lastRes)
+	lastMessages, err := service.ChatMessage().GetLastGroupByUsers(ctx, admin.Id, ids)
 	if err != nil {
 		return
 	}
-	lastMessages := make([]model.CustomerChatMessage, 0)
-	lastMessageIds := slice.Map(lastRes, func(index int, item maxChatIds) int {
-		return item.Id
+	unreadCounts, err := service.ChatMessage().GetUnreadCountGroupByUsers(ctx, ids, do.CustomerChatMessages{
+		AdminId: admin.Id,
+		Source:  consts.MessageSourceUser,
 	})
-	_ = dao.CustomerChatMessages.Ctx(ctx).Where("id in (?)", lastMessageIds).
-		Where("source in (?)", sources).
-		WithAll().
-		Scan(&lastMessages)
-	type Unread struct {
-		Count  uint
-		UserId uint
+	if err != nil {
+		return
 	}
-	unreadCounts := make([]Unread, 0)
-	_ = dao.CustomerChatMessages.Ctx(ctx).Where("user_id in (?)", ids).
-		FieldCount("*", "Count").
-		Fields("user_id").
-		Group("user_id").
-		Where("admin_id", admin.Id).
-		Where("read_at", 0).
-		Where("source", consts.MessageSourceUser).
-		Scan(&unreadCounts)
-	items := api.UserListRes{}
+	items := make([]api.ChatUser, 0)
 	for index, id := range ids {
 		limitTime := times[index]
 		disabled := limitTime <= time.Now().Unix()
@@ -202,18 +174,19 @@ func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.Nor
 				Avatar:      "",
 				Online:      service.Chat().IsOnline(user.CustomerId, user.Id, "user"),
 				Platform:    service.Chat().GetPlatform(user.CustomerId, user.Id, "user"),
+				Messages:    make([]api.ChatMessage, 0),
 			}
-			lastMsg, exist := slice.Find(lastMessages, func(index int, item model.CustomerChatMessage) bool {
+			lastMsg, exist := slice.FindBy(lastMessages, func(index int, item *model.CustomerChatMessage) bool {
 				return item.UserId == user.Id
 			})
 			if exist {
-				lastMsg, err := service.ChatMessage().ToApi(ctx, lastMsg, nil)
+				lastMsg, err := service.ChatMessage().ToApi(ctx, lastMsg)
 				if err != nil {
 					return nil, err
 				}
 				cu.LastMessage = lastMsg
 			}
-			useUnread, exist := slice.Find(unreadCounts, func(index int, item Unread) bool {
+			useUnread, exist := slice.FindBy(unreadCounts, func(index int, item model.UnreadCount) bool {
 				return item.UserId == cu.Id
 			})
 			if exist {
@@ -226,7 +199,7 @@ func (c cChat) User(ctx context.Context, req *api.UserListReq) (res *baseApi.Nor
 	res = baseApi.NewResp(items)
 	return
 }
-func (c cChat) UserInfo(ctx context.Context, req *api.GetUserChatInfoReq) (res *baseApi.NormalRes[api.UserInfoRes], err error) {
+func (c cChat) UserInfo(ctx context.Context, _ *api.GetUserChatInfoReq) (res *baseApi.NormalRes[[]api.UserInfoItem], err error) {
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	admin := service.AdminCtx().GetUser(ctx)
 	user, err := service.User().First(ctx, do.Users{
@@ -236,29 +209,42 @@ func (c cChat) UserInfo(ctx context.Context, req *api.GetUserChatInfoReq) (res *
 	if err != nil {
 		return
 	}
-	res = baseApi.NewResp(api.UserInfoRes{
-		Phone: user.Username,
-	})
-	return
-}
-
-func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseApi.NormalRes[api.MessageRes], err error) {
-	admin := service.AdminCtx().GetUser(ctx)
-	r := api.MessageRes{}
-	models, err := service.ChatMessage().GetList(ctx, req.Mid, g.Map{
-		"user_id":  req.Uid,
-		"admin_id": admin.Id,
-		"source":   []uint{consts.MessageSourceUser, consts.MessageSourceAdmin},
-	}, 20)
+	info, err := service.User().GetInfo(ctx, user)
 	if err != nil {
 		return
 	}
-	unReadIds := make([]uint, 0, len(models))
-	for _, i := range models {
+	return baseApi.NewResp(info), nil
+}
+
+func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseApi.NormalRes[[]*api.ChatMessage], err error) {
+	admin := service.AdminCtx().GetUser(ctx)
+	settings, err := service.Admin().FindSetting(ctx, admin.Id, true)
+	if err != nil {
+		return
+	}
+	admin.Setting = settings
+	r := make([]*api.ChatMessage, 0)
+	w := g.Map{
+		"user_id":  req.Uid,
+		"admin_id": admin.Id,
+		"source":   []uint{consts.MessageSourceUser, consts.MessageSourceAdmin},
+	}
+	if req.Mid > 0 {
+		w["id < ?"] = req.Mid
+	}
+	messages, err := service.ChatMessage().All(ctx, w, g.Slice{
+		model.CustomerChatMessage{}.User,
+	}, "id desc")
+	if err != nil {
+		return
+	}
+	unReadIds := make([]uint, 0, len(messages))
+	for _, i := range messages {
+		i.Admin = admin
 		if i.ReadAt == nil && i.Source == consts.MessageSourceUser {
 			unReadIds = append(unReadIds, i.Id)
 		}
-		msg, err := service.ChatMessage().ToApi(ctx, i, nil)
+		msg, err := service.ChatMessage().ToApi(ctx, i)
 		if err != nil {
 			return nil, err
 		}
@@ -271,8 +257,7 @@ func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseAp
 		}
 		service.Chat().NoticeAdminRead(admin.CustomerId, req.Uid, unReadIds)
 	}
-	res = baseApi.NewResp(r)
-	return
+	return baseApi.NewResp(r), nil
 }
 
 func (c cChat) ReqId(_ context.Context, _ *api.ReqIdReq) (res *baseApi.NormalRes[api.ReqIdRes], err error) {

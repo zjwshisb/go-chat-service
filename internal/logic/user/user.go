@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -26,6 +27,10 @@ func init() {
 
 type sUser struct {
 	trait.Curd[model.User]
+}
+
+func (s *sUser) GetInfo(ctx context.Context, user *model.User) ([]api.UserInfoItem, error) {
+	return make([]api.UserInfoItem, 0), nil
 }
 
 func (s *sUser) Login(ctx context.Context, request *ghttp.Request) (user *model.User, token string, err error) {

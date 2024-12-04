@@ -5,3 +5,8 @@ type Paginator[I any] struct {
 	Total    int
 	IsSimple bool
 }
+
+type UnreadCount struct {
+	Count  uint
+	UserId uint
+}

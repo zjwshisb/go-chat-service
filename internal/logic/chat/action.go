@@ -38,7 +38,7 @@ func marshalAction(ctx context.Context, action api.ChatAction) (b []byte, err er
 			err = errors.New("param error")
 			return
 		}
-		data, err := service.ChatMessage().ToApi(ctx, msg, nil)
+		data, err := service.ChatMessage().ToApi(ctx, msg)
 		if err != nil {
 			return b, err
 		}

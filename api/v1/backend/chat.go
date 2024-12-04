@@ -116,15 +116,16 @@ type ChatTransfer struct {
 }
 
 type ChatUser struct {
-	Id           uint         `json:"id"`
-	Username     string       `json:"username"`
-	LastChatTime *gtime.Time  `json:"last_chat_time"`
-	Disabled     bool         `json:"disabled"`
-	Online       bool         `json:"online"`
-	LastMessage  *ChatMessage `json:"last_message"`
-	Unread       uint         `json:"unread"`
-	Avatar       string       `json:"avatar"`
-	Platform     string       `json:"platform"`
+	Id           uint          `json:"id"`
+	Username     string        `json:"username"`
+	LastChatTime *gtime.Time   `json:"last_chat_time"`
+	Disabled     bool          `json:"disabled"`
+	Online       bool          `json:"online"`
+	LastMessage  *ChatMessage  `json:"last_message"`
+	Unread       uint          `json:"unread"`
+	Avatar       string        `json:"avatar"`
+	Platform     string        `json:"platform"`
+	Messages     []ChatMessage `json:"messages"`
 }
 
 type ChatSimpleUser struct {
@@ -138,11 +139,6 @@ type UserListRes []ChatUser
 
 type AcceptRes struct {
 	User ChatUser
-}
-
-type SimpleStudent struct {
-	Name       string `json:"name"`
-	SchoolName string `json:"school_name"`
 }
 
 type ChatMessage struct {
@@ -160,10 +156,11 @@ type ChatMessage struct {
 	Avatar     string      `json:"avatar"`
 	Username   string      `json:"username"`
 }
-
+type UserInfoItem struct {
+	Name        string
+	Label       string
+	Description string
+}
 type UserInfoRes struct {
-	Phone       string          `json:"phone"`
-	RefundCount uint            `json:"refund_count"`
-	Students    []SimpleStudent `json:"students"`
-	OrderCount  uint            `json:"order_count"`
+	Phone string `json:"phone"`
 }

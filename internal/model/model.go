@@ -2,7 +2,6 @@ package model
 
 import (
 	"gf-chat/api"
-	"gf-chat/api/v1/backend"
 	"gf-chat/internal/model/entity"
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -20,8 +19,14 @@ type CustomerChatAutoMessage struct {
 type CustomerAdmin struct {
 	g.Meta `orm:"table:users"`
 	entity.CustomerAdmins
-	Setting    *entity.CustomerAdminChatSettings `orm:"with:admin_id=id"`
-	ApiSetting *backend.CurrentAdminSetting
+	Setting *CustomerAdminChatSetting `orm:"with:admin_id=id"`
+}
+
+type CustomerAdminChatSetting struct {
+	g.Meta `orm:"table:customer_admin_chat_settings"`
+	entity.CustomerAdminChatSettings
+	AvatarFile     *CustomerChatFile `orm:"with:id=avatar"`
+	BackgroundFile *CustomerChatFile `orm:"with:id=background"`
 }
 
 type CustomerChatMessage struct {
@@ -45,6 +50,7 @@ type CustomerChatSession struct {
 }
 
 type CustomerChatFile struct {
+	g.Meta `orm:"table:customer_chat_files"`
 	entity.CustomerChatFiles
 }
 

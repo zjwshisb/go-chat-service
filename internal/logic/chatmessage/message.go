@@ -10,6 +10,7 @@ import (
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -28,19 +29,43 @@ type sChatMessage struct {
 	trait.Curd[model.CustomerChatMessage]
 }
 
-func (s *sChatMessage) GenReqId() string {
-	return grand.S(20)
+func (s *sChatMessage) GetUnreadCountGroupByUsers(ctx context.Context, uids []uint, w any) (res []model.UnreadCount, err error) {
+	res = make([]model.UnreadCount, 0)
+	err = s.Dao.Ctx(ctx).Where("user_id in (?)", uids).
+		FieldCount("*", "Count").
+		Fields("user_id").
+		Group("user_id").
+		Where(w).
+		Where("read_at", nil).
+		Scan(&res)
+	return
 }
 
-func (s *sChatMessage) SaveWithUpdate(ctx context.Context, msg *model.CustomerChatMessage) (err error) {
-	id, err := s.Save(ctx, msg)
+func (s *sChatMessage) GetLastGroupByUsers(ctx context.Context, adminId uint, uids []uint) (res []*model.CustomerChatMessage, err error) {
+	type idStruct struct {
+		Id uint
+	}
+	var idArr []idStruct
+	err = s.Dao.Ctx(ctx).
+		Fields("max(id) as id").
+		Where("user_id in (?)", uids).
+		Where("source in (?)", []int{consts.MessageSourceAdmin, consts.MessageSourceUser}).
+		Where("admin_id", adminId).
+		Group("user_id").Scan(&idArr)
 	if err != nil {
+		res = make([]*model.CustomerChatMessage, 0)
 		return
 	}
-	if msg.Id == 0 {
-		msg.Id = uint(id)
-	}
+	res, err = s.All(ctx, do.CustomerChatMessages{
+		Id: slice.Map(idArr, func(_ int, i idStruct) uint {
+			return i.Id
+		}),
+	}, nil, nil)
 	return
+}
+
+func (s *sChatMessage) GenReqId() string {
+	return grand.S(20)
 }
 
 func (s *sChatMessage) ToRead(ctx context.Context, id any) (int64, error) {
@@ -55,7 +80,7 @@ func (s *sChatMessage) ToRead(ctx context.Context, id any) (int64, error) {
 func (s *sChatMessage) GetAdminName(ctx context.Context, model *model.CustomerChatMessage) (avatar string, err error) {
 	switch model.Source {
 	case consts.MessageSourceAdmin:
-		if model.Admin.Setting != nil && model.Admin.Setting.Name != "" {
+		if model.Admin != nil && model.Admin.Setting != nil && model.Admin.Setting.Name != "" {
 			return model.Admin.Setting.Name, nil
 		}
 		avatar, err = service.ChatSetting().GetName(ctx, model.CustomerId)
@@ -66,7 +91,7 @@ func (s *sChatMessage) GetAdminName(ctx context.Context, model *model.CustomerCh
 	}
 	return "", nil
 }
-func (s *sChatMessage) ToApi(ctx context.Context, message *model.CustomerChatMessage, files *map[uint]*model.CustomerChatFile) (msg *api.ChatMessage, err error) {
+func (s *sChatMessage) ToApi(ctx context.Context, message *model.CustomerChatMessage) (msg *api.ChatMessage, err error) {
 	username := ""
 	if message.User != nil {
 		username = message.User.Username
@@ -111,28 +136,6 @@ func (s *sChatMessage) GetAvatar(ctx context.Context, model *model.CustomerChatM
 		return "", nil
 	}
 	return "", nil
-}
-
-func (s *sChatMessage) GetList(ctx context.Context, lastId uint, w any, size uint) (res []*model.CustomerChatMessage, err error) {
-	res, err = service.ChatMessage().All(ctx, do.CustomerChatMessages{
-		UserId: service.UserCtx().GetId(ctx),
-	}, g.Slice{model.CustomerChatMessage{}.Admin,
-		model.CustomerChatMessage{}.User}, "id desc", 20)
-	//if size > 0 {
-	//	query = query.Limit(int(size))
-	//}
-	//if lastId > 0 {
-	//	query = query.Where("id < ?", lastId)
-	//}
-	//err = query.Scan(&res)
-	//if err != nil {
-	//	if errors.Is(err, sql.ErrNoRows) {
-	//		res = make([]*model.CustomerChatMessage, 0)
-	//	} else {
-	//		return
-	//	}
-	//}
-	return
 }
 
 func (s *sChatMessage) NewNotice(session *model.CustomerChatSession, content string) *model.CustomerChatMessage {

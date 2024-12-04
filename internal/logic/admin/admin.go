@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"database/sql"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
@@ -83,6 +84,43 @@ func (s *sAdmin) CanAccess(admin *model.CustomerAdmin) bool {
 	return true
 }
 
+func (s *sAdmin) FindSetting(ctx context.Context, adminId uint, withFile bool) (*model.CustomerAdminChatSetting, error) {
+	var setting *model.CustomerAdminChatSetting
+	query := dao.CustomerAdminChatSettings.Ctx(ctx).Where("admin_id", adminId)
+	if withFile {
+		query = query.WithAll()
+	}
+	err := query.Scan(&setting)
+	if err != nil {
+		return nil, err
+	}
+	if setting == nil {
+		return nil, sql.ErrNoRows
+	}
+	return setting, nil
+}
+func (s *sAdmin) GenSetting(ctx context.Context, admin *model.CustomerAdmin) (*model.CustomerAdminChatSetting, error) {
+	setting := &model.CustomerAdminChatSetting{
+		CustomerAdminChatSettings: entity.CustomerAdminChatSettings{
+			AdminId:        admin.Id,
+			Name:           admin.Username,
+			IsAutoAccept:   0,
+			WelcomeContent: "",
+			Avatar:         0,
+		},
+	}
+	result, err := dao.CustomerAdminChatSettings.Ctx(ctx).Save(*setting)
+	if err != nil {
+		return nil, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	setting.Id = gconv.Uint(id)
+	return setting, nil
+}
+
 func (s *sAdmin) UpdateSetting(ctx context.Context, admin *model.CustomerAdmin, form api.CurrentAdminSettingForm) (err error) {
 	updateData := do.CustomerAdminChatSettings{
 		Name:           form.Name,
@@ -129,9 +167,15 @@ func (s *sAdmin) UpdateSetting(ctx context.Context, admin *model.CustomerAdmin, 
 	}
 	return
 }
-
-func (s *sAdmin) GetSetting(ctx context.Context, admin *model.CustomerAdmin) (*api.CurrentAdminSetting, error) {
-	var setting *entity.CustomerAdminChatSettings
+func (s *sAdmin) GetAndFindSetting(ctx context.Context, admin *model.CustomerAdmin) (*model.CustomerAdminChatSetting, error) {
+	if admin.Setting != nil {
+		return admin.Setting, nil
+	} else {
+		return s.FindSetting(ctx, admin.Id, true)
+	}
+}
+func (s *sAdmin) GetApiSetting(ctx context.Context, admin *model.CustomerAdmin) (*api.CurrentAdminSetting, error) {
+	var setting *model.CustomerAdminChatSetting
 	if admin.Setting != nil {
 		setting = admin.Setting
 	} else {
@@ -140,24 +184,11 @@ func (s *sAdmin) GetSetting(ctx context.Context, admin *model.CustomerAdmin) (*a
 			return nil, err
 		}
 		if admin.Setting == nil {
-			setting := &entity.CustomerAdminChatSettings{
-				AdminId:        admin.Id,
-				Name:           admin.Username,
-				IsAutoAccept:   0,
-				WelcomeContent: "",
-				Avatar:         0,
-			}
-			result, err := dao.CustomerAdminChatSettings.Ctx(ctx).Save(*setting)
+			setting, err := s.GenSetting(ctx, admin)
 			if err != nil {
 				return nil, err
 			}
-			id, err := result.LastInsertId()
-			if err != nil {
-				return nil, err
-			}
-			setting.Id = uint(id)
 			admin.Setting = setting
-			return nil, err
 		}
 		setting = admin.Setting
 	}
@@ -172,34 +203,46 @@ func (s *sAdmin) GetSetting(ctx context.Context, admin *model.CustomerAdmin) (*a
 		},
 		AdminId: admin.Id,
 	}
-	if setting.Background > 0 {
+	if setting.BackgroundFile != nil {
+		apiSetting.Background = service.File().ToApi(setting.BackgroundFile)
+	} else if setting.Background > 0 {
 		apiSetting.Background, _ = service.File().FindAnd2Api(ctx, setting.Background)
 	}
-	if setting.Avatar > 0 {
+	if setting.AvatarFile != nil {
+		apiSetting.Avatar = service.File().ToApi(setting.AvatarFile)
+	} else if setting.Avatar > 0 {
 		apiSetting.Avatar, _ = service.File().FindAnd2Api(ctx, setting.Avatar)
 	}
 	return apiSetting, nil
 
 }
 
-func (s *sAdmin) GetAvatar(ctx context.Context, model *model.CustomerAdmin) (string, error) {
-	setting, err := s.GetSetting(ctx, model)
+func (s *sAdmin) GetAvatar(ctx context.Context, admin *model.CustomerAdmin) (string, error) {
+	setting, err := s.GetAndFindSetting(ctx, admin)
 	if err != nil {
 		return "", err
 	}
-	if setting != nil && setting.Avatar != nil {
-		return setting.Avatar.Url, nil
+	if setting != nil {
+		if setting.AvatarFile != nil {
+			return service.File().Url(setting.AvatarFile), nil
+		} else if setting.Avatar > 0 {
+			avatarFile, err := service.File().Find(ctx, setting.Avatar)
+			if err != nil {
+				return "", err
+			}
+			return service.File().Url(avatarFile), nil
+		}
 	}
 	return "", nil
 }
 
-func (s *sAdmin) GetChatName(ctx context.Context, model *model.CustomerAdmin) (string, error) {
-	setting, err := s.GetSetting(ctx, model)
+func (s *sAdmin) GetChatName(ctx context.Context, admin *model.CustomerAdmin) (string, error) {
+	setting, err := s.GetAndFindSetting(ctx, admin)
 	if err != nil {
 		return "", nil
 	}
 	if setting != nil && setting.Name != "" {
 		return setting.Name, nil
 	}
-	return model.Username, nil
+	return admin.Username, nil
 }
