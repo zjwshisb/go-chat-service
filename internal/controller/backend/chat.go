@@ -60,10 +60,10 @@ func (c cChat) Read(ctx context.Context, req *api.MessageReadReq) (res *baseApi.
 
 func (c cChat) CancelTransfer(ctx context.Context, _ *api.CancelTransferReq) (res *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetUser(ctx)
-	transfer, err := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
-		ToAdminId:  admin.Id,
-		CanceledAt: nil,
-		AcceptedAt: nil,
+	transfer, err := service.ChatTransfer().First(ctx, g.Map{
+		"to_admin_id":         admin.Id,
+		"canceled_at is null": nil,
+		"accepted_at is null": nil,
 	})
 	if err != nil {
 		return
@@ -280,7 +280,7 @@ func (c cChat) Sessions(ctx context.Context, _ *api.GetUserSessionReq) (res *bas
 	}
 	r := api.UserSessionRes{}
 	for _, s := range sessions {
-		r = append(r, service.ChatSession().RelationToChat(s))
+		r = append(r, service.ChatSession().ToApi(s))
 	}
 	res = baseApi.NewResp(r)
 	return

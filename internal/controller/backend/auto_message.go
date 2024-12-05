@@ -60,6 +60,13 @@ func (c *cAutoMessage) Form(ctx context.Context, _ *api.AutoMessageFormReq) (res
 	case consts.MessageTypeNavigate:
 		form.Navigator = apiMessage.Navigator
 	case consts.MessageTypeFile:
+	case consts.MessageTypeAudio:
+		fallthrough
+	case consts.MessageTypePdf:
+		fallthrough
+	case consts.MessageTypeVideo:
+		fallthrough
+	case consts.MessageTypeImage:
 		form.File = apiMessage.File
 	default:
 	}
@@ -92,7 +99,7 @@ func (c *cAutoMessage) Delete(ctx context.Context, _ *api.AutoMessageDeleteReq) 
 	if err != nil {
 		return
 	}
-	err = service.ChatMessage().Delete(ctx, message.Id)
+	err = service.AutoMessage().Delete(ctx, message.Id)
 	if err != nil {
 		return
 	}

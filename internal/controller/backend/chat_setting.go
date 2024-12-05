@@ -2,7 +2,9 @@ package backend
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
@@ -10,6 +12,7 @@ import (
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
 	"github.com/duke-git/lancet/v2/maputil"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/util/gconv"
 
@@ -93,7 +96,7 @@ func (c *cChatSetting) Update(ctx context.Context, req *api.ChatSettingUpdateReq
 			}
 		}
 		if updateData.Value == nil {
-			err = gerror.New("无效的选项")
+			err = gerror.NewCode(gcode.CodeValidationFailed, "无效的选项")
 		}
 	case consts.ChatSettingTypeImage:
 		var apiFile *api.File
@@ -105,17 +108,19 @@ func (c *cChatSetting) Update(ctx context.Context, req *api.ChatSettingUpdateReq
 				CustomerId: service.AdminCtx().GetCustomerId(ctx),
 				Id:         apiFile.Id,
 			})
-			if err == nil {
-				updateData.Value = file.Id
-			} else {
-				err = gerror.New("无效的图片")
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					err = gerror.NewCode(gcode.CodeValidationFailed, "无效的图片")
+				}
+				return
 			}
+			updateData.Value = file.Id
 		}
 	}
 	if err != nil {
 		return
 	}
-	_, err = service.ChatSetting().Update(ctx, do.CustomerChatSettings{Id: setting.Id}, updateData)
+	_, err = service.ChatSetting().UpdatePri(ctx, setting.Id, updateData)
 	if err != nil {
 		return
 	}

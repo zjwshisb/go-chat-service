@@ -3,7 +3,6 @@ package middleware
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"gf-chat/api"
 	"net/http"
 
@@ -38,42 +37,28 @@ func HandlerResponse(r *ghttp.Request) {
 				"message": "not found",
 			})
 			return
-		}
-		// 404错误
-		if code == gcode.CodeNotFound {
+		} else if code == gcode.CodeNotFound {
+			// 404错误
 			r.Response.WriteStatus(http.StatusNotFound, g.MapStrStr{
 				"message": msg,
 			})
 			return
-		}
-		// 校验错误
-		if code == gcode.CodeValidationFailed {
+		} else if code == gcode.CodeValidationFailed {
+			// 校验错误
 			r.Response.WriteStatus(http.StatusUnprocessableEntity, g.MapStrStr{
 				"message": msg,
 			})
 			return
-		}
-		// 内部错误
-		if code == gcode.CodeNil {
-			code = gcode.CodeInternalError
-			fmt.Printf("%v", err)
-		}
-		// 业务错误
-		if code == gcode.CodeBusinessValidationFailed {
-
+		} else if code == gcode.CodeBusinessValidationFailed {
+			// 业务错误
+		} else {
+			// 非正常错误，记录一下
+			g.Log().Error(r.Context(), err)
 		}
 		r.Response.WriteJson(api.NewFailResp(msg, code.Code()))
 		return
 	} else if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
 		msg = http.StatusText(r.Response.Status)
-		switch r.Response.Status {
-		case http.StatusNotFound:
-			code = gcode.CodeNotFound
-		case http.StatusForbidden:
-			code = gcode.CodeNotAuthorized
-		default:
-			code = gcode.CodeUnknown
-		}
 		r.Response.WriteStatus(r.Response.Status, msg)
 
 		return

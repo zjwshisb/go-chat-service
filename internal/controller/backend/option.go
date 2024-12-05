@@ -113,3 +113,25 @@ func (c *cOption) FileType(_ context.Context, _ *api.OptionFileTypeReq) (res *ba
 	}
 	return baseApi.NewOptionResp(options), nil
 }
+
+func (c *cOption) SessionStatus(_ context.Context, _ *api.OptionSessionStatus) (res *baseApi.OptionRes, err error) {
+	options := []baseApi.Option{
+		{
+			Label: "已取消",
+			Value: consts.ChatSessionStatusCancel,
+		},
+		{
+			Label: "已关闭",
+			Value: consts.ChatSessionStatusClose,
+		},
+		{
+			Label: "待接入",
+			Value: consts.ChatSessionStatusWait,
+		},
+		{
+			Label: "已接入",
+			Value: consts.ChatSessionStatusAccept,
+		},
+	}
+	return baseApi.NewOptionResp(options), nil
+}

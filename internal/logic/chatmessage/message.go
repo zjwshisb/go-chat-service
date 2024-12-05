@@ -70,8 +70,8 @@ func (s *sChatMessage) GenReqId() string {
 
 func (s *sChatMessage) ToRead(ctx context.Context, id any) (int64, error) {
 	return s.Update(ctx, g.Map{
-		"read_at": nil,
-		"id":      id,
+		"read_at is null": nil,
+		"id":              id,
 	}, do.CustomerChatMessages{
 		ReadAt: gtime.Now(),
 	})

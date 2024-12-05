@@ -44,8 +44,7 @@ type SessionDetailReq struct {
 	g.Meta `path:"/chat-sessions/:id" tags:"客服对话" method:"get" summary:"获取客服对话详情"`
 }
 
-type SessionDetailRes struct {
+type SessionDetail struct {
 	Messages []*ChatMessage `json:"messages"`
 	Session  ChatSession    `json:"session"`
-	Total    int            `json:"total"`
 }

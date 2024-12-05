@@ -3,6 +3,10 @@ package consts
 const (
 	MessageTypeText     = "text"
 	MessageTypeFile     = "file"
+	MessageTypeImage    = "image"
+	MessageTypeAudio    = "audio"
+	MessageTypeVideo    = "video"
+	MessageTypePdf      = "pdf"
 	MessageTypeNavigate = "navigator"
 	MessageTypeNotice   = "notice"
 	MessageTypeRate     = "rate"

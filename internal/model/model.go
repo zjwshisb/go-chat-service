@@ -45,8 +45,8 @@ type CustomerChatTransfer struct {
 
 type CustomerChatSession struct {
 	entity.CustomerChatSessions
-	User  *entity.Users          `orm:"with:id=user_id"`
-	Admin *entity.CustomerAdmins `orm:"with:id=admin_id"`
+	User  *User          `orm:"with:id=user_id"`
+	Admin *CustomerAdmin `orm:"with:id=admin_id"`
 }
 
 type CustomerChatFile struct {

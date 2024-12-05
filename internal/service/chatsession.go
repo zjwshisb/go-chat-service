@@ -13,7 +13,7 @@ type (
 		Cancel(ctx context.Context, session *model.CustomerChatSession) error
 		// Close 关闭会话
 		Close(ctx context.Context, session *model.CustomerChatSession, isRemoveUser bool, updateTime bool) error
-		RelationToChat(session *model.CustomerChatSession) api.ChatSession
+		ToApi(session *model.CustomerChatSession) api.ChatSession
 		GetUnAccepts(ctx context.Context, customerId uint) (res []*model.CustomerChatSession, err error)
 		FirstTransfer(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error)
 		FirstNormal(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error)

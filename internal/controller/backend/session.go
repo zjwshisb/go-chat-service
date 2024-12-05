@@ -2,19 +2,19 @@ package backend
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/duke-git/lancet/v2/strutil"
 
 	"github.com/duke-git/lancet/v2/slice"
-	"github.com/gogf/gf/v2/errors/gcode"
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/gogf/gf/v2/os/gtime"
 )
 
 var CSession = &cSession{}
@@ -23,23 +23,21 @@ type cSession struct {
 }
 
 func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *baseApi.ListRes[api.ChatSession], err error) {
-	w := make(map[string]any)
+	w := g.Map{}
 	customerId := service.AdminCtx().GetCustomerId(ctx)
 	w["customer_id"] = customerId
 	if startTime, exist := req.QueriedAt["0"]; exist {
-		w["queried_at>="] = gtime.New(startTime).Unix()
+		w["queried_at >="] = strutil.Trim(startTime)
 	}
 	if endTime, exist := req.QueriedAt["1"]; exist {
-		w["queried_at<="] = gtime.New(endTime).Unix()
+		w["queried_at <="] = strutil.Trim(endTime)
 	}
-	if req.Username != "" {
+	username := strutil.Trim(req.Username)
+	if username != "" {
 		uW := make(map[string]any)
-		uW["phone"] = req.Username
+		uW["username like"] = username + "%"
 		uW["customer_id"] = customerId
-		users, err := service.User().All(ctx, do.Users{
-			Username:   req.Username,
-			CustomerId: customerId,
-		}, nil, nil)
+		users, err := service.User().All(ctx, uW, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -48,10 +46,11 @@ func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *bas
 		})
 		w["user_id"] = uids
 	}
-	if req.AdminName != "" {
-		admins, err := service.Admin().All(ctx, do.CustomerAdmins{
-			Username:   req.AdminName,
-			CustomerId: customerId,
+	adminName := strutil.Trim(req.AdminName)
+	if adminName != "" {
+		admins, err := service.Admin().All(ctx, g.Map{
+			"username like": "%" + adminName + "%",
+			"customer_id":   customerId,
 		}, nil, nil)
 		if err != nil {
 			return nil, err
@@ -64,15 +63,15 @@ func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *bas
 	if req.Status != "" {
 		switch req.Status {
 		case consts.ChatSessionStatusCancel:
-			w["canceled_at>"] = 0
+			w["canceled_at is null"] = nil
 		case consts.ChatSessionStatusWait:
-			w["accepted_at"] = 0
-			w["canceled_at"] = 0
+			w["accepted_at is null"] = nil
+			w["canceled_at is null"] = nil
 		case consts.ChatSessionStatusAccept:
-			w["accepted_at>"] = 0
-			w["broke_at"] = 0
+			w["accepted_at is not null"] = nil
+			w["broken_at is null"] = nil
 		case consts.ChatSessionStatusClose:
-			w["broke_at>"] = 0
+			w["broken_at is not null"] = nil
 		}
 	}
 	paginator, err := service.ChatSession().Paginate(ctx, w, req.Paginate, g.Array{
@@ -82,10 +81,9 @@ func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *bas
 	if err != nil {
 		return
 	}
-	res := make([]api.ChatSession, len(paginator.Items))
-	for index, s := range paginator.Items {
-		res[index] = service.ChatSession().RelationToChat(s)
-	}
+	res := slice.Map(paginator.Items, func(index int, item *model.CustomerChatSession) api.ChatSession {
+		return service.ChatSession().ToApi(item)
+	})
 	return baseApi.NewListResp(res, paginator.Total), nil
 }
 
@@ -112,9 +110,6 @@ func (c cSession) Close(ctx context.Context, _ *api.SessionCloseReq) (resp *base
 	if err != nil {
 		return
 	}
-	if session.BrokenAt != nil {
-		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "该会话已关闭")
-	}
 	err = service.ChatSession().Close(ctx, session, false, true)
 	if err != nil {
 		return
@@ -122,12 +117,23 @@ func (c cSession) Close(ctx context.Context, _ *api.SessionCloseReq) (resp *base
 	return baseApi.NewNilResp(), nil
 }
 
-func (c cSession) Detail(ctx context.Context, _ *api.SessionDetailReq) (res *api.SessionDetailRes, err error) {
+func (c cSession) Show(ctx context.Context, _ *api.SessionDetailReq) (res *baseApi.NormalRes[api.SessionDetail], err error) {
 	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id"),
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	})
+
 	if err != nil {
+		return
+	}
+	if session.AdminId > 0 {
+		session.Admin, err = service.Admin().First(ctx, session.AdminId)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return
+		}
+	}
+	session.User, err = service.User().First(ctx, session.AdminId)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return
 	}
 	relations, err := service.ChatMessage().All(ctx, do.CustomerChatMessages{
@@ -145,9 +151,9 @@ func (c cSession) Detail(ctx context.Context, _ *api.SessionDetailReq) (res *api
 		}
 		message[index] = msg
 	}
-	return &api.SessionDetailRes{
+	return baseApi.NewResp(api.SessionDetail{
 		Messages: message,
-		Session:  service.ChatSession().RelationToChat(session),
-		Total:    len(message),
-	}, nil
+		Session:  service.ChatSession().ToApi(session),
+	}), nil
+
 }
