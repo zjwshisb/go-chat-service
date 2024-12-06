@@ -39,8 +39,16 @@ func (c *cOption) MessageType(_ context.Context, _ *api.OptionMessageTypeReq) (r
 			Value: consts.MessageTypeText,
 		},
 		{
-			Label: "文件",
-			Value: consts.MessageTypeFile,
+			Label: "图片",
+			Value: consts.MessageTypeImage,
+		},
+		{
+			Label: "音频",
+			Value: consts.MessageTypeAudio,
+		},
+		{
+			Label: "视频",
+			Value: consts.MessageTypeVideo,
 		},
 		{
 			Label: "导航卡片",
@@ -97,21 +105,7 @@ func (c *cOption) AutoRuleScene(_ context.Context, _ *api.OptionAutoRuleSceneReq
 }
 
 func (c *cOption) FileType(_ context.Context, _ *api.OptionFileTypeReq) (res *baseApi.OptionRes, err error) {
-	options := []baseApi.Option{
-		{
-			Label: "图片",
-			Value: consts.FileTypeImage,
-		},
-		{
-			Label: "音频",
-			Value: consts.FileTypeAudio,
-		},
-		{
-			Label: "视频",
-			Value: consts.FileTypeVideo,
-		},
-	}
-	return baseApi.NewOptionResp(options), nil
+	return baseApi.NewOptionResp(consts.UserAllowMessageType), nil
 }
 
 func (c *cOption) SessionStatus(_ context.Context, _ *api.OptionSessionStatus) (res *baseApi.OptionRes, err error) {

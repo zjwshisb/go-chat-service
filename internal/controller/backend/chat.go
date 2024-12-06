@@ -265,23 +265,20 @@ func (c cChat) ReqId(_ context.Context, _ *api.ReqIdReq) (res *baseApi.NormalRes
 	return
 }
 
-func (c cChat) Sessions(ctx context.Context, _ *api.GetUserSessionReq) (res *baseApi.NormalRes[api.UserSessionRes], err error) {
-	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
+func (c cChat) Sessions(ctx context.Context, _ *api.GetUserSessionReq) (res *baseApi.NormalRes[[]api.ChatSession], err error) {
 	sessions, err := service.ChatSession().All(ctx, map[string]any{
-		"user_id":     id,
+		"user_id":     ghttp.RequestFromCtx(ctx).GetRouter("id"),
 		"customer_id": service.AdminCtx().GetCustomerId(ctx),
-		"admin_id>":   0,
+		"admin_id >":  0,
 	}, g.Array{
 		model.CustomerChatSession{}.User,
 		model.CustomerChatSession{}.Admin,
-	}, nil)
+	}, "id desc")
 	if err != nil {
 		return
 	}
-	r := api.UserSessionRes{}
-	for _, s := range sessions {
-		r = append(r, service.ChatSession().ToApi(s))
-	}
-	res = baseApi.NewResp(r)
-	return
+	apiSessions := slice.Map(sessions, func(index int, item *model.CustomerChatSession) api.ChatSession {
+		return service.ChatSession().ToApi(item)
+	})
+	return baseApi.NewResp(apiSessions), nil
 }

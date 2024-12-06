@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
+	"gf-chat/internal/model/do"
 	"gf-chat/internal/trait"
 )
 
@@ -15,6 +17,7 @@ type (
 		GetEnterRule(ctx context.Context, customerId uint) (*model.CustomerChatAutoRule, error)
 		GetSystemOne(ctx context.Context, customerId uint, match string) (rule *model.CustomerChatAutoRule, err error)
 		IsMatch(rule *model.CustomerChatAutoRule, scene string, message string) bool
+		Form2Do(form api.AutoRuleForm) *do.CustomerChatAutoRules
 	}
 )
 

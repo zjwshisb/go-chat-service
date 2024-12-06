@@ -57,8 +57,6 @@ type UserListReq struct {
 	g.Meta `path:"/ws/chat-users" tags:"后台客服面板" method:"get" summary:"获取客户对应用户列表"`
 }
 
-type UserSessionRes []ChatSession
-
 type ReqIdRes struct {
 	ReqId string `json:"req_id"`
 }

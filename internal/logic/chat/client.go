@@ -7,6 +7,7 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/util/guid"
 	"sync"
 	"unicode/utf8"
@@ -145,13 +146,15 @@ func (c *client) validate(data map[string]interface{}) error {
 }
 
 func (c *client) isTypeValid(t string) bool {
-	if t != consts.MessageTypeText &&
-		t != consts.MessageTypeFile &&
-		t != consts.MessageTypeNavigate &&
-		t != consts.MessageTypeRate {
-		return false
+	allowTypes := []string{
+		consts.MessageTypeText,
+		consts.MessageTypeImage,
+		consts.MessageTypeAudio,
+		consts.MessageTypeVideo,
+		consts.MessageTypePdf,
+		consts.MessageTypeNavigate,
 	}
-	return true
+	return slice.Contain(allowTypes, t)
 }
 
 // ReadMsg 从websocket读消息

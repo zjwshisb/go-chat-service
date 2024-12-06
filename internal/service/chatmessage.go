@@ -21,6 +21,8 @@ type (
 		Insert(ctx context.Context, message *model.CustomerChatMessage) (*model.CustomerChatMessage, error)
 		GetLastGroupByUsers(ctx context.Context, adminId uint, uids []uint) (res []*model.CustomerChatMessage, err error)
 		GetUnreadCountGroupByUsers(ctx context.Context, uids []uint, w any) (res []model.UnreadCount, err error)
+		IsTypeValid(types string) (valid bool)
+		IsFileType(types string) (valid bool)
 	}
 )
 

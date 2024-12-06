@@ -39,7 +39,7 @@ func (s *sAutoMessage) ToApi(ctx context.Context, message *model.CustomerChatAut
 		CreatedAt: message.CreatedAt,
 		UpdatedAt: message.UpdatedAt,
 	}
-	if message.Type == consts.MessageTypeFile {
+	if service.ChatMessage().IsFileType(message.Type) {
 		if files != nil {
 			file := maputil.GetOrDefault(*files, gconv.Uint(message.Content), nil)
 			if file != nil {
@@ -77,10 +77,10 @@ func (s *sAutoMessage) ToApi(ctx context.Context, message *model.CustomerChatAut
 func (s *sAutoMessage) ToApis(ctx context.Context, items []*model.CustomerChatAutoMessage) (resp []*api.AutoMessage, err error) {
 	resp = make([]*api.AutoMessage, len(items))
 	filesId := slice.Map(items, func(index int, item *model.CustomerChatAutoMessage) any {
-		switch item.Type {
-		case consts.MessageTypeFile:
+		if service.ChatMessage().IsFileType(item.Type) {
 			return item.Content
-		case consts.MessageTypeNavigate:
+		}
+		if item.Type == consts.MessageTypeNavigate {
 			var navigator *api.AutoMessageOriginNavigator
 			err := json.Unmarshal([]byte(item.Content), &navigator)
 			if err != nil {
@@ -113,8 +113,10 @@ func (s *sAutoMessage) Form2Do(form api.AutoMessageForm) *do.CustomerChatAutoMes
 	message := &do.CustomerChatAutoMessages{}
 	message.Name = form.Name
 	message.Type = form.Type
-	switch message.Type {
-	case consts.MessageTypeNavigate:
+	message.Content = ""
+	if service.ChatMessage().IsFileType(form.Type) {
+		message.Content = gconv.String(form.File.Id)
+	} else if form.Type == consts.MessageTypeNavigate {
 		content := g.Map{
 			"title": form.Navigator.Title,
 			"image": form.Navigator.Image.Id,
@@ -122,12 +124,10 @@ func (s *sAutoMessage) Form2Do(form api.AutoMessageForm) *do.CustomerChatAutoMes
 		}
 		contentJson, _ := json.Marshal(content)
 		message.Content = string(contentJson)
-	case consts.MessageTypeText:
+	} else if form.Type == consts.ChatSettingTypeText {
 		message.Content = form.Content
-	case consts.MessageTypeFile:
-		message.Content = gconv.String(form.File.Id)
-	default:
 	}
+
 	return message
 }
 func (s *sAutoMessage) ToChatMessage(ctx context.Context, auto *model.CustomerChatAutoMessage) (msg *model.CustomerChatMessage, err error) {
@@ -146,10 +146,9 @@ func (s *sAutoMessage) ToChatMessage(ctx context.Context, auto *model.CustomerCh
 			ReqId:      service.ChatMessage().GenReqId(),
 		},
 	}
-	switch auto.Type {
-	case consts.MessageTypeFile:
+	if service.ChatMessage().IsFileType(auto.Type) && apiMessage.File != nil {
 		chatMessage.Content = apiMessage.File.Url
-	case consts.MessageTypeNavigate:
+	} else if auto.Type == consts.MessageTypeNavigate {
 		if apiMessage.Navigator != nil {
 			mapContent := g.Map{
 				"title": apiMessage.Navigator.Title,
@@ -161,10 +160,9 @@ func (s *sAutoMessage) ToChatMessage(ctx context.Context, auto *model.CustomerCh
 			content, _ := json.Marshal(mapContent)
 			chatMessage.Content = string(content)
 		}
-
-	case consts.ChatSettingTypeText:
+	} else if auto.Type == consts.ChatSettingTypeText {
 		chatMessage.Content = apiMessage.Content
-
 	}
+
 	return chatMessage, nil
 }

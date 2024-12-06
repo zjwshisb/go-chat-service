@@ -17,7 +17,7 @@ type CustomerChatAutoMessage struct {
 }
 
 type CustomerAdmin struct {
-	g.Meta `orm:"table:users"`
+	g.Meta `orm:"table:customer_admins"`
 	entity.CustomerAdmins
 	Setting *CustomerAdminChatSetting `orm:"with:admin_id=id"`
 }

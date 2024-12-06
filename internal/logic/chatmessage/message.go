@@ -2,6 +2,7 @@ package chatmessage
 
 import (
 	"context"
+	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
@@ -27,6 +28,17 @@ func init() {
 
 type sChatMessage struct {
 	trait.Curd[model.CustomerChatMessage]
+}
+
+func (s *sChatMessage) IsFileType(types string) (valid bool) {
+	return slice.Contain(consts.MessageTypeFileTypes, types)
+}
+
+func (s *sChatMessage) IsTypeValid(types string) (valid bool) {
+	_, valid = slice.FindBy(consts.UserAllowMessageType, func(index int, item baseApi.Option) bool {
+		return gconv.String(item.Value) == types
+	})
+	return
 }
 
 func (s *sChatMessage) GetUnreadCountGroupByUsers(ctx context.Context, uids []uint, w any) (res []model.UnreadCount, err error) {

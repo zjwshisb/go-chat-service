@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gvalid"
@@ -44,7 +45,6 @@ func existsRule(ctx context.Context, in gvalid.RuleFuncInput) error {
 	message := fmt.Sprintf("%s had no row for %s:%s", tableName, field, in.Value.String())
 	if in.Message != "" {
 		message = in.Message
-		return gerror.New(in.Message)
 	}
-	return gerror.Newf(message)
+	return gerror.NewCode(gcode.CodeValidationFailed, message)
 }

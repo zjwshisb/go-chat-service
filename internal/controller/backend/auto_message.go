@@ -54,21 +54,16 @@ func (c *cAutoMessage) Form(ctx context.Context, _ *api.AutoMessageFormReq) (res
 	if err != nil {
 		return
 	}
-	switch message.Type {
-	case consts.MessageTypeText:
-		form.Content = apiMessage.Content
-	case consts.MessageTypeNavigate:
-		form.Navigator = apiMessage.Navigator
-	case consts.MessageTypeFile:
-	case consts.MessageTypeAudio:
-		fallthrough
-	case consts.MessageTypePdf:
-		fallthrough
-	case consts.MessageTypeVideo:
-		fallthrough
-	case consts.MessageTypeImage:
+	if service.ChatMessage().IsFileType(message.Type) {
 		form.File = apiMessage.File
-	default:
+	} else {
+		switch message.Type {
+		case consts.MessageTypeText:
+			form.Content = apiMessage.Content
+		case consts.MessageTypeNavigate:
+			form.Navigator = apiMessage.Navigator
+		default:
+		}
 	}
 	return baseApi.NewResp(form), nil
 }

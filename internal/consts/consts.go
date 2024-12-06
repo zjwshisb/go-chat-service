@@ -1,16 +1,51 @@
 package consts
 
+import "gf-chat/api"
+
 const (
 	MessageTypeText     = "text"
-	MessageTypeFile     = "file"
 	MessageTypeImage    = "image"
 	MessageTypeAudio    = "audio"
 	MessageTypeVideo    = "video"
 	MessageTypePdf      = "pdf"
 	MessageTypeNavigate = "navigator"
-	MessageTypeNotice   = "notice"
 	MessageTypeRate     = "rate"
+	MessageTypeNotice   = "notice"
 )
+
+var MessageTypeFileTypes = []string{
+	MessageTypeImage,
+	MessageTypeAudio,
+	MessageTypeVideo,
+	MessageTypePdf,
+}
+
+var UserAllowMessageType = []api.Option{
+	{
+		Label: "文本",
+		Value: MessageTypeText,
+	},
+	{
+		Label: "图片",
+		Value: MessageTypeImage,
+	},
+	{
+		Label: "语音",
+		Value: MessageTypeAudio,
+	},
+	{
+		Label: "视频",
+		Value: MessageTypeVideo,
+	},
+	{
+		Label: "PDF",
+		Value: MessageTypePdf,
+	},
+	{
+		Label: "导航卡片",
+		Value: MessageTypeNavigate,
+	},
+}
 
 const (
 	ChatSessionTypeNormal   = 0

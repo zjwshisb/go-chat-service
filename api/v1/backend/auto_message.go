@@ -39,7 +39,7 @@ type AutoMessageForm struct {
 	Name      string                `json:"name" v:"required|max-length:32|unique:customer_chat_auto_messages,name#||已存在相同名字的消息"`
 	Content   string                `json:"content" v:"required-if:type,text|max-length:512"`
 	Navigator *AutoMessageNavigator `json:"navigator" v:"required-if:type,navigator"`
-	File      *File                 `json:"file" v:"required-if:type,image|api-file"`
+	File      *File                 `json:"file" v:"auto-message-file|api-file"`
 }
 
 type AutoMessageStoreReq struct {

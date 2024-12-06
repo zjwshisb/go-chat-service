@@ -3,6 +3,7 @@ package autorule
 import (
 	"context"
 	"database/sql"
+	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/trait"
@@ -23,6 +24,26 @@ func init() {
 
 type sAutoRule struct {
 	trait.Curd[model.CustomerChatAutoRule]
+}
+
+func (s *sAutoRule) Form2Do(form api.AutoRuleForm) *do.CustomerChatAutoRules {
+	updateData := &do.CustomerChatAutoRules{
+		Name:      form.Name,
+		Sort:      form.Sort,
+		IsOpen:    form.IsOpen,
+		Match:     form.Match,
+		MatchType: form.MatchType,
+		ReplyType: form.ReplyType,
+		IsSystem:  0,
+	}
+	if form.ReplyType == consts.AutoRuleReplyTypeMessage {
+		updateData.MessageId = form.MessageId
+		updateData.Scenes = form.Scenes
+	}
+	if form.ReplyType == consts.AutoRuleReplyTypeTransfer {
+		updateData.Scenes = []string{consts.AutoRuleSceneNotAccepted}
+	}
+	return updateData
 }
 
 func (s *sAutoRule) AllActive(ctx context.Context, customerId uint) ([]*model.CustomerChatAutoRule, error) {

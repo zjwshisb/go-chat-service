@@ -7,6 +7,7 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/frame/g"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -20,7 +21,7 @@ type cCustomerAdmin struct {
 func (cAdmin cCustomerAdmin) Index(ctx context.Context, req *api.CustomerAdminListReq) (res *baseApi.ListRes[api.CustomerAdmin], err error) {
 	p, err := service.Admin().Paginate(ctx, &do.CustomerAdmins{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
-	}, req.Paginate, nil, nil)
+	}, req.Paginate, g.Slice{model.CustomerAdmin{}.Setting}, nil)
 	if err != nil {
 		return
 	}
