@@ -22,7 +22,7 @@ var CChat = &cChat{}
 type cChat struct {
 }
 
-func (c cChat) AcceptUser(ctx context.Context, req *api.AcceptUserReq) (res *baseApi.NormalRes[api.AcceptRes], err error) {
+func (c cChat) AcceptUser(ctx context.Context, req *api.AcceptUserReq) (res *baseApi.NormalRes[api.ChatUser], err error) {
 	admin := service.AdminCtx().GetUser(ctx)
 	user, err := service.Chat().Accept(ctx, *admin, req.Sid)
 	if err != nil {
@@ -32,9 +32,8 @@ func (c cChat) AcceptUser(ctx context.Context, req *api.AcceptUserReq) (res *bas
 	if err != nil {
 		return
 	}
-	res = baseApi.NewResp(api.AcceptRes{
-		User: *user,
-	})
+	res = baseApi.NewResp(
+		*user)
 	return
 }
 
@@ -87,8 +86,10 @@ func (c cChat) Transfer(ctx context.Context, req *api.StoreTransferReq) (res *ba
 func (c cChat) RemoveUser(ctx context.Context, _ *api.RemoveUserReq) (res *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetUser(ctx)
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
-
-	session, err := service.ChatSession().FirstActive(ctx, gconv.Uint(id), admin.Id, nil)
+	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
+		UserId:  id,
+		AdminId: id,
+	}, "id desc")
 	if err != nil {
 		return
 	}
@@ -214,6 +215,31 @@ func (c cChat) UserInfo(ctx context.Context, _ *api.GetUserChatInfoReq) (res *ba
 		return
 	}
 	return baseApi.NewResp(info), nil
+}
+
+func (c cChat) TransferMessage(ctx context.Context, _ *api.TransferMessageReq) (res *baseApi.NormalRes[[]*api.ChatMessage], err error) {
+	transfer, err := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
+		Id:        ghttp.RequestFromCtx(ctx).GetRouter("id"),
+		ToAdminId: service.AdminCtx().GetId(ctx),
+	}, nil, nil)
+	if err != nil {
+		return
+	}
+	messages, err := service.ChatMessage().All(ctx, do.CustomerChatMessages{
+		SessionId: transfer.FromSessionId,
+		Source:    g.Slice{consts.MessageSourceUser, consts.MessageSourceAdmin},
+	}, g.Slice{
+		model.CustomerChatMessage{}.User,
+		model.CustomerChatMessage{}.Admin,
+	}, "id desc")
+	if err != nil {
+		return
+	}
+	apiMessage := slice.Map(messages, func(index int, item *model.CustomerChatMessage) *api.ChatMessage {
+		i, _ := service.ChatMessage().ToApi(ctx, item)
+		return i
+	})
+	return baseApi.NewResp(apiMessage), nil
 }
 
 func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseApi.NormalRes[[]*api.ChatMessage], err error) {

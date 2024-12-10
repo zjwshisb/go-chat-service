@@ -10,6 +10,7 @@ import (
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
 
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -151,6 +152,15 @@ func (s *sChatSession) GetUnAccepts(ctx context.Context, customerId uint) (res [
 	}, g.Slice{model.CustomerChatSession{}.User}, nil)
 
 }
+func (s *sChatSession) Insert(ctx context.Context, session *model.CustomerChatSession) (m *model.CustomerChatSession, err error) {
+	id, err := s.Save(ctx, session)
+	if err != nil {
+		return
+	}
+	session.Id = gconv.Uint(id)
+	return session, nil
+}
+
 func (s *sChatSession) FirstTransfer(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error) {
 	return s.FirstActive(ctx, uid, adminId, consts.ChatSessionTypeTransfer)
 }
@@ -160,6 +170,7 @@ func (s *sChatSession) FirstNormal(ctx context.Context, uid uint, adminId uint) 
 }
 
 func (s *sChatSession) FirstActive(ctx context.Context, uid uint, adminId, t any) (*model.CustomerChatSession, error) {
+
 	w := g.Map{
 		"user_id":             uid,
 		"admin_id":            adminId,

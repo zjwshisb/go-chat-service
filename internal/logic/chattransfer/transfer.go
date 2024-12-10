@@ -7,6 +7,7 @@ import (
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
+	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
@@ -34,7 +35,7 @@ type sChatTransfer struct {
 	trait.Curd[model.CustomerChatTransfer]
 }
 
-func (s *sChatTransfer) ToChatTransfer(relation *model.CustomerChatTransfer) api.ChatTransfer {
+func (s *sChatTransfer) ToApi(relation *model.CustomerChatTransfer) api.ChatTransfer {
 	formName := ""
 	toName := ""
 	username := ""
@@ -64,15 +65,24 @@ func (s *sChatTransfer) ToChatTransfer(relation *model.CustomerChatTransfer) api
 
 // Cancel 取消待接入的转接
 func (s *sChatTransfer) Cancel(ctx context.Context, transfer *model.CustomerChatTransfer) (err error) {
+	if transfer.CanceledAt != nil {
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "该转接已取消")
+	}
+	if transfer.AcceptedAt != nil {
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "该转接已接入，无法取消")
+	}
+	now := gtime.Now()
 	if transfer.ToSession != nil {
-		transfer.ToSession.CanceledAt = gtime.Now()
-		_, err = service.ChatSession().Save(ctx, transfer.ToSession)
+		_, err = service.ChatSession().UpdatePri(ctx, transfer.ToSessionId, do.CustomerChatSessions{
+			CanceledAt: now,
+		})
 		if err != nil {
 			return
 		}
 	}
-	transfer.CanceledAt = gtime.Now()
-	_, err = s.Save(ctx, transfer)
+	_, err = s.UpdatePri(ctx, transfer.Id, do.CustomerChatTransfers{
+		CanceledAt: now,
+	})
 	if err != nil {
 		return
 	}
@@ -86,7 +96,15 @@ func (s *sChatTransfer) Cancel(ctx context.Context, transfer *model.CustomerChat
 
 // Accept 接入转接
 func (s *sChatTransfer) Accept(ctx context.Context, transfer *model.CustomerChatTransfer) error {
-	_, err := s.Save(ctx, transfer)
+	if transfer.AcceptedAt != nil {
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "该转接已被接入")
+	}
+	if transfer.CanceledAt != nil {
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "该转接已取消")
+	}
+	_, err := s.UpdatePri(ctx, transfer.Id, do.CustomerChatTransfers{
+		AcceptedAt: gtime.Now(),
+	})
 	if err != nil {
 		return err
 	}
@@ -119,7 +137,7 @@ func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint,
 			UserId:     uid,
 		},
 	}
-	_, err = service.ChatSession().Save(ctx, newSession)
+	newSession, err = service.ChatSession().Insert(ctx, newSession)
 	if err != nil {
 		return err
 	}

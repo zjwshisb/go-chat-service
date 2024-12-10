@@ -13,7 +13,7 @@ import (
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
-func GetMessage(action *api.ChatAction) (message *model.CustomerChatMessage, err error) {
+func getMessage(action *api.ChatAction) (message *model.CustomerChatMessage, err error) {
 	if action.Action == consts.ActionSendMessage {
 		message = &model.CustomerChatMessage{}
 		err = gconv.Struct(action.Data, message)

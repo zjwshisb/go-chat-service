@@ -16,8 +16,8 @@ type (
 		ToApi(ctx context.Context, message *model.CustomerChatMessage) (*api.ChatMessage, error)
 		GetAvatar(ctx context.Context, model *model.CustomerChatMessage) (string, error)
 		NewNotice(session *model.CustomerChatSession, content string) *model.CustomerChatMessage
-		NewOffline(admin *model.CustomerAdmin) *model.CustomerChatMessage
-		NewWelcome(admin *model.CustomerAdmin) *model.CustomerChatMessage
+		NewOffline(ctx context.Context, admin *model.CustomerAdmin) (msg *model.CustomerChatMessage, err error)
+		NewWelcome(ctx context.Context, admin *model.CustomerAdmin) (msg *model.CustomerChatMessage, err error)
 		Insert(ctx context.Context, message *model.CustomerChatMessage) (*model.CustomerChatMessage, error)
 		GetLastGroupByUsers(ctx context.Context, adminId uint, uids []uint) (res []*model.CustomerChatMessage, err error)
 		GetUnreadCountGroupByUsers(ctx context.Context, uids []uint, w any) (res []model.UnreadCount, err error)

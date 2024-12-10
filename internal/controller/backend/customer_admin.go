@@ -5,7 +5,6 @@ import (
 	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
-	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
 	"github.com/gogf/gf/v2/frame/g"
 
@@ -19,9 +18,13 @@ type cCustomerAdmin struct {
 }
 
 func (cAdmin cCustomerAdmin) Index(ctx context.Context, req *api.CustomerAdminListReq) (res *baseApi.ListRes[api.CustomerAdmin], err error) {
-	p, err := service.Admin().Paginate(ctx, &do.CustomerAdmins{
-		CustomerId: service.AdminCtx().GetCustomerId(ctx),
-	}, req.Paginate, g.Slice{model.CustomerAdmin{}.Setting}, nil)
+	w := g.Map{
+		"customer_id": service.AdminCtx().GetCustomerId(ctx),
+	}
+	if req.Username != "" {
+		w["username like"] = "%" + req.Username + "%"
+	}
+	p, err := service.Admin().Paginate(ctx, w, req.Paginate, g.Slice{model.CustomerAdmin{}.Setting}, nil)
 	if err != nil {
 		return
 	}

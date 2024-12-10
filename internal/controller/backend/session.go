@@ -75,9 +75,9 @@ func (c cSession) Index(ctx context.Context, req *api.SessionListReq) (resp *bas
 		}
 	}
 	paginator, err := service.ChatSession().Paginate(ctx, w, req.Paginate, g.Array{
-		model.CustomerChatSession{}.User,
-		model.CustomerChatSession{}.Admin,
-	}, nil)
+		model.User{},
+		model.CustomerAdmin{},
+	}, "id desc")
 	if err != nil {
 		return
 	}
@@ -127,12 +127,12 @@ func (c cSession) Show(ctx context.Context, _ *api.SessionDetailReq) (res *baseA
 		return
 	}
 	if session.AdminId > 0 {
-		session.Admin, err = service.Admin().First(ctx, session.AdminId)
+		session.Admin, err = service.Admin().Find(ctx, session.AdminId)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return
 		}
 	}
-	session.User, err = service.User().First(ctx, session.AdminId)
+	session.User, err = service.User().Find(ctx, session.UserId)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return
 	}

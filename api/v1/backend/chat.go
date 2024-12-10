@@ -45,6 +45,10 @@ type StoreTransferReq struct {
 	Remark string `v:"max-length:255" json:"remark"`
 }
 
+type TransferMessageReq struct {
+	g.Meta `path:"/ws/transfer/:id/messages" tags:"后台客服面板" method:"get" summary:"获取转接消息记录"`
+}
+
 type ReqIdReq struct {
 	g.Meta `path:"/ws/req-id" tags:"后台客服面板" method:"get" summary:"获取message reqId"`
 }

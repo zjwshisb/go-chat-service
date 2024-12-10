@@ -19,6 +19,7 @@ type (
 		FirstNormal(ctx context.Context, uid uint, adminId uint) (*model.CustomerChatSession, error)
 		FirstActive(ctx context.Context, uid uint, adminId any, t any) (*model.CustomerChatSession, error)
 		Create(ctx context.Context, uid uint, customerId uint, t uint) (item *model.CustomerChatSession, err error)
+		Insert(ctx context.Context, session *model.CustomerChatSession) (m *model.CustomerChatSession, err error)
 	}
 )
 

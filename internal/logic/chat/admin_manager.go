@@ -84,7 +84,10 @@ func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerCha
 	if err != nil {
 		return err
 	}
-	message := service.ChatMessage().NewOffline(admin)
+	message, err := service.ChatMessage().NewOffline(ctx, admin)
+	if err != nil {
+		return err
+	}
 	if message != nil {
 		message.UserId = msg.UserId
 		message.SessionId = msg.SessionId
@@ -308,11 +311,11 @@ func (m *adminManager) noticeUserTransfer(ctx context.Context, customerId, admin
 func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, adminId uint) error {
 	client, exist := m.GetConn(customerId, adminId)
 	if exist {
-		transfers, err := service.ChatTransfer().All(ctx, do.CustomerChatTransfers{
-			ToAdminId:  adminId,
-			AcceptedAt: nil,
-			CanceledAt: nil,
-		}, g.Slice{model.CustomerChatTransfer{}.FormAdmin,
+		transfers, err := service.ChatTransfer().All(ctx, g.Map{
+			"to_admin_id":         adminId,
+			"accepted_at is null": nil,
+			"canceled_at is null": nil,
+		}, g.Slice{
 			model.CustomerChatTransfer{}.ToAdmin,
 			model.CustomerChatTransfer{}.FormAdmin,
 			model.CustomerChatTransfer{}.ToSession,
@@ -322,7 +325,7 @@ func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, 
 			return err
 		}
 		data := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) api.ChatTransfer {
-			return service.ChatTransfer().ToChatTransfer(item)
+			return service.ChatTransfer().ToApi(item)
 		})
 		client.Deliver(newUserTransferAction(data))
 	}

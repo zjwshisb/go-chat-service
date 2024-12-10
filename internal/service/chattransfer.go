@@ -10,7 +10,7 @@ import (
 type (
 	IChatTransfer interface {
 		trait.ICurd[model.CustomerChatTransfer]
-		ToChatTransfer(relation *model.CustomerChatTransfer) api.ChatTransfer
+		ToApi(relation *model.CustomerChatTransfer) api.ChatTransfer
 		// Cancel 取消待接入的转接
 		Cancel(ctx context.Context, transfer *model.CustomerChatTransfer) error
 		Accept(ctx context.Context, transfer *model.CustomerChatTransfer) error

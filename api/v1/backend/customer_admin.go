@@ -15,7 +15,8 @@ type CustomerAdminDetailRes struct {
 }
 
 type CustomerAdminListReq struct {
-	g.Meta `path:"/admins" tags:"后台管理员" method:"get" summary:"获取管理员列表"`
+	g.Meta   `path:"/admins" tags:"后台管理员" method:"get" summary:"获取管理员列表"`
+	Username string `json:"username"`
 	api.Paginate
 }
 

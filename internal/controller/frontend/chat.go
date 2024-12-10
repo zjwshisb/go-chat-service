@@ -9,7 +9,9 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gctx"
 
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -28,38 +30,49 @@ func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *baseA
 	if req.Id > 0 {
 		w["id <"] = req.Id
 	}
-	messages, err := service.ChatMessage().All(ctx, w, g.Slice{
-		model.CustomerChatMessage{}.User,
-		model.CustomerChatMessage{}.Admin,
-	}, "id desc", req.PageSize)
+	user := service.UserCtx().GetUser(ctx)
+	messages, err := service.ChatMessage().All(ctx, w, nil, "id desc", req.PageSize)
 	if err != nil {
 		return
 	}
-	r := make([]*backend.ChatMessage, 0)
+	adminIds := slice.Unique(slice.Map(messages, func(index int, item *model.CustomerChatMessage) uint {
+		return item.AdminId
+	}))
+	admins, err := service.Admin().GetAdminsWithSetting(ctx, do.CustomerAdmins{Id: adminIds})
 	adminToMessageId := make(map[uint][]uint)
+	r := make([]*backend.ChatMessage, 0, len(messages))
 	for _, item := range messages {
+		item.User = user
+		if item.AdminId > 0 {
+			item.Admin, _ = slice.FindBy(admins, func(index int, a *model.CustomerAdmin) bool {
+				return a.Id == item.AdminId
+			})
+			if item.ReadAt == nil && item.Source == consts.MessageSourceAdmin {
+				ids, exist := adminToMessageId[item.AdminId]
+				if exist {
+					adminToMessageId[item.AdminId] = append(ids, item.Id)
+				} else {
+					adminToMessageId[item.AdminId] = []uint{item.Id}
+				}
+			}
+		}
 		msg, err := service.ChatMessage().ToApi(ctx, item)
 		if err != nil {
 			return nil, err
 		}
 		r = append(r, msg)
-		if item.ReadAt == nil && item.Source == consts.MessageSourceAdmin {
-			ids, exist := adminToMessageId[item.AdminId]
-			if exist {
-				adminToMessageId[item.AdminId] = append(ids, item.Id)
-			} else {
-				adminToMessageId[item.AdminId] = []uint{item.Id}
-			}
-		}
 	}
+	customer := service.UserCtx().GetCustomerId(ctx)
+
 	go func() {
+		ctx := gctx.New()
 		for adminId, ids := range adminToMessageId {
 			_, err := service.ChatMessage().ToRead(ctx, ids)
 			if err != nil {
 				g.Log().Error(ctx, err)
 			}
 			if adminId > 0 {
-				service.Chat().NoticeUserRead(service.UserCtx().GetCustomerId(ctx), adminId, ids)
+				service.Chat().NoticeUserRead(customer, adminId, ids)
 			}
 		}
 
@@ -77,7 +90,6 @@ func (c cChat) Read(ctx context.Context, req *api.ChatReadReq) (res *baseApi.Nil
 	if err != nil {
 		return
 	}
-
 	if message.ReadAt == nil {
 		_, err = service.ChatMessage().ToRead(ctx, message.Id)
 		msgIds := []uint{req.MsgId}

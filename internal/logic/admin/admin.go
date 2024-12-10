@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"database/sql"
+	"errors"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
@@ -245,4 +246,15 @@ func (s *sAdmin) GetChatName(ctx context.Context, admin *model.CustomerAdmin) (s
 		return setting.Name, nil
 	}
 	return admin.Username, nil
+}
+
+func (s *sAdmin) GetAdminsWithSetting(ctx context.Context, where any) (res []*model.CustomerAdmin, err error) {
+	err = s.Dao.Ctx(ctx).Where(where).WithAll().Scan(&res)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return
+	}
+	if res == nil {
+		res = make([]*model.CustomerAdmin, 0)
+	}
+	return
 }

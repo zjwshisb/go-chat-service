@@ -7,6 +7,7 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 
 	"github.com/duke-git/lancet/v2/slice"
@@ -21,8 +22,6 @@ func (c cTransfer) Cancel(ctx context.Context, _ *chatApi.TransferCancelReq) (re
 	transfer, err := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Id:         ghttp.RequestFromCtx(ctx).GetRouter("id").String(),
-		CanceledAt: nil,
-		AcceptedAt: nil,
 	})
 	if err != nil {
 		return
@@ -31,7 +30,7 @@ func (c cTransfer) Cancel(ctx context.Context, _ *chatApi.TransferCancelReq) (re
 	if err != nil {
 		return
 	}
-	return &baseApi.NilRes{}, nil
+	return baseApi.NewNilResp(), nil
 }
 
 func (c cTransfer) Index(ctx context.Context, req *chatApi.TransferListReq) (res *baseApi.ListRes[chatApi.ChatTransfer], err error) {
@@ -41,7 +40,7 @@ func (c cTransfer) Index(ctx context.Context, req *chatApi.TransferListReq) (res
 	}
 	if req.Username != "" {
 		uW := make(map[string]any)
-		uW["phone"] = req.Username
+		uW["username"] = req.Username
 		uW["customer_id"] = customerId
 		users, err := service.User().All(ctx, do.Users{
 			Username:   req.Username,
@@ -81,12 +80,16 @@ func (c cTransfer) Index(ctx context.Context, req *chatApi.TransferListReq) (res
 		})
 		w.FromAdminId = adminIds
 	}
-	p, err := service.ChatTransfer().Paginate(ctx, &w, req.Paginate, nil, nil)
+	p, err := service.ChatTransfer().Paginate(ctx, &w, req.Paginate, g.Slice{
+		model.CustomerChatTransfer{}.FormAdmin,
+		model.CustomerChatTransfer{}.ToAdmin,
+		model.CustomerChatTransfer{}.User,
+	}, nil)
 	if err != nil {
 		return
 	}
 	items := slice.Map(p.Items, func(index int, item *model.CustomerChatTransfer) chatApi.ChatTransfer {
-		return service.ChatTransfer().ToChatTransfer(item)
+		return service.ChatTransfer().ToApi(item)
 	})
 	return baseApi.NewListResp(items, p.Total), nil
 }

@@ -9,8 +9,10 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gorilla/websocket"
@@ -69,11 +71,9 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	if session.Type == consts.ChatSessionTypeTransfer {
 		transfer, _ := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
 			ToSessionId: session.Id,
-			AcceptedAt:  nil,
-			CanceledAt:  nil,
 		})
 		if transfer == nil {
-			return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "该转接已被接入")
+			return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "转接不存在")
 		}
 		err = service.ChatTransfer().Accept(ctx, transfer)
 		if err != nil {
@@ -82,23 +82,28 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	}
 	session.AcceptedAt = gtime.Now()
 	session.AdminId = admin.Id
-	_, err = service.ChatSession().Save(ctx, session)
-	if err != nil {
-		return
-	}
-	unRead, err := service.ChatMessage().Count(ctx, do.CustomerChatMessages{
-		SessionId: session.Id,
-		AdminId:   0,
-		Source:    consts.MessageSourceUser,
+	_, err = service.ChatSession().UpdatePri(ctx, session.Id, do.CustomerChatSessions{
+		AcceptedAt: session.AcceptedAt,
+		AdminId:    session.AdminId,
 	})
 	if err != nil {
 		return
 	}
-	// 更新未发送的消息
-	_, err = service.ChatMessage().Update(ctx, do.CustomerChatMessages{
+	messages, err := service.ChatMessage().All(ctx, do.CustomerChatMessages{
+		SessionId: session.Id,
 		AdminId:   0,
 		Source:    consts.MessageSourceUser,
-		SessionId: session.Id,
+	}, g.Slice{model.CustomerChatMessage{}.User}, "id desc")
+	if err != nil {
+		return
+	}
+	unRead := len(messages)
+	// 更新未发送的消息
+	updateIds := slice.Map(messages, func(index int, item *model.CustomerChatMessage) uint {
+		return item.Id
+	})
+	_, err = service.ChatMessage().Update(ctx, do.CustomerChatMessages{
+		Id: updateIds,
 	}, do.CustomerChatMessages{
 		AdminId: admin.Id,
 	})
@@ -119,24 +124,25 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		}
 		s.user.SendAction(newReceiveAction(notice), userConn)
 		// 欢迎语
-		welcomeMsg := service.ChatMessage().NewWelcome(&admin)
+		welcomeMsg, err := service.ChatMessage().NewWelcome(ctx, &admin)
+		if err != nil {
+			return nil, err
+		}
 		if welcomeMsg != nil {
 			welcomeMsg.UserId = session.UserId
 			welcomeMsg.SessionId = session.Id
 			_, err = service.ChatMessage().Insert(ctx, welcomeMsg)
 			if err != nil {
-				return
+				return nil, err
 			}
 			action := newReceiveAction(welcomeMsg)
 			s.user.SendAction(action, userConn)
 		}
 	}
-	lastMessage, err := service.ChatMessage().First(ctx, do.CustomerChatMessages{
-		UserId: session.UserId,
-		Source: []int{consts.MessageSourceUser, consts.MessageSourceAdmin},
-	}, "order desc")
+	messagesLength := len(messages)
 	var lastMsg *api.ChatMessage
-	if err == nil {
+	if messagesLength > 0 {
+		lastMessage := messages[0]
 		v, err := service.ChatMessage().ToApi(ctx, lastMessage)
 		if err != nil {
 			return nil, err
@@ -151,6 +157,10 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	if err != nil {
 		return
 	}
+	apiMessages := slice.Map(messages, func(index int, item *model.CustomerChatMessage) api.ChatMessage {
+		m, _ := service.ChatMessage().ToApi(ctx, item)
+		return *m
+	})
 	user := &api.ChatUser{
 		Id:           session.User.Id,
 		Username:     session.User.Username,
@@ -161,6 +171,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		Unread:       uint(unRead),
 		Avatar:       "",
 		Platform:     platform,
+		Messages:     apiMessages,
 	}
 	return user, nil
 

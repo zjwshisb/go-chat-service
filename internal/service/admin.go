@@ -21,6 +21,7 @@ type (
 		FindSetting(ctx context.Context, adminId uint, withFile bool) (*model.CustomerAdminChatSetting, error)
 		GetApiSetting(ctx context.Context, admin *model.CustomerAdmin) (*api.CurrentAdminSetting, error)
 		GenSetting(ctx context.Context, admin *model.CustomerAdmin) (*model.CustomerAdminChatSetting, error)
+		GetAdminsWithSetting(ctx context.Context, where any) (res []*model.CustomerAdmin, err error)
 	}
 )
 

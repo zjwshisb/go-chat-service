@@ -190,7 +190,7 @@ func (c *client) ReadMsg() {
 			} else {
 				switch act.Action {
 				case consts.ActionSendMessage:
-					msg, err := GetMessage(act)
+					msg, err := getMessage(act)
 					if err != nil {
 						g.Log().Error(ctx, err)
 						break

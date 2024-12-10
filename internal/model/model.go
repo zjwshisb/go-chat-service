@@ -37,13 +37,14 @@ type CustomerChatMessage struct {
 
 type CustomerChatTransfer struct {
 	entity.CustomerChatTransfers
-	User      *entity.Users          `orm:"with:id=user_id"`
-	FormAdmin *entity.CustomerAdmins `orm:"with:id=from_admin_id"`
-	ToAdmin   *entity.CustomerAdmins `orm:"with:id=to_admin_id"`
-	ToSession *CustomerChatSession   `orm:"with:id=to_session_id"`
+	User      *User                `orm:"with:id=user_id"`
+	FormAdmin *CustomerAdmin       `orm:"with:id=from_admin_id"`
+	ToAdmin   *CustomerAdmin       `orm:"with:id=to_admin_id"`
+	ToSession *CustomerChatSession `orm:"with:id=to_session_id"`
 }
 
 type CustomerChatSession struct {
+	g.Meta `orm:"table:customer_chat_sessions"`
 	entity.CustomerChatSessions
 	User  *User          `orm:"with:id=user_id"`
 	Admin *CustomerAdmin `orm:"with:id=admin_id"`

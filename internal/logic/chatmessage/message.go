@@ -2,6 +2,8 @@ package chatmessage
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	baseApi "gf-chat/api"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
@@ -164,9 +166,19 @@ func (s *sChatMessage) NewNotice(session *model.CustomerChatSession, content str
 		},
 	}
 }
-func (s *sChatMessage) NewOffline(admin *model.CustomerAdmin) *model.CustomerChatMessage {
-	if admin.Setting != nil && admin.Setting.OfflineContent != "" {
-		return &model.CustomerChatMessage{
+func (s *sChatMessage) NewOffline(ctx context.Context, admin *model.CustomerAdmin) (msg *model.CustomerChatMessage, err error) {
+	var setting *model.CustomerAdminChatSetting
+	if admin.Setting != nil {
+		setting = admin.Setting
+	} else {
+		setting, err = service.Admin().FindSetting(ctx, admin.Id, true)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return
+		}
+		admin.Setting = setting
+	}
+	if setting != nil && setting.OfflineContent != "" {
+		msg = &model.CustomerChatMessage{
 			CustomerChatMessages: entity.CustomerChatMessages{
 				UserId:     0,
 				AdminId:    admin.Id,
@@ -181,12 +193,22 @@ func (s *sChatMessage) NewOffline(admin *model.CustomerAdmin) *model.CustomerCha
 			User:  nil,
 		}
 	}
-	return nil
+	return
 }
 
-func (s *sChatMessage) NewWelcome(admin *model.CustomerAdmin) *model.CustomerChatMessage {
-	if admin.Setting != nil && admin.Setting.WelcomeContent != "" {
-		return &model.CustomerChatMessage{
+func (s *sChatMessage) NewWelcome(ctx context.Context, admin *model.CustomerAdmin) (msg *model.CustomerChatMessage, err error) {
+	var setting *model.CustomerAdminChatSetting
+	if admin.Setting != nil {
+		setting = admin.Setting
+	} else {
+		setting, err = service.Admin().FindSetting(ctx, admin.Id, true)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return
+		}
+		admin.Setting = setting
+	}
+	if setting != nil && setting.WelcomeContent != "" {
+		msg = &model.CustomerChatMessage{
 			CustomerChatMessages: entity.CustomerChatMessages{
 				UserId:     0,
 				AdminId:    admin.Id,
@@ -201,7 +223,7 @@ func (s *sChatMessage) NewWelcome(admin *model.CustomerAdmin) *model.CustomerCha
 			User:  nil,
 		}
 	}
-	return nil
+	return
 }
 
 func (s *sChatMessage) Insert(ctx context.Context, message *model.CustomerChatMessage) (*model.CustomerChatMessage, error) {
