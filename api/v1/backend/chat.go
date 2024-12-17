@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"gf-chat/api/v1"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
@@ -71,12 +72,6 @@ type ChatOnlineCount struct {
 	Waiting uint
 }
 
-type ChatAction struct {
-	Data   any    `json:"data"`
-	Time   int64  `json:"time"`
-	Action string `json:"action"`
-}
-
 type ChatWaitingUser struct {
 	Username     string              `json:"username"`
 	Avatar       string              `json:"avatar"`
@@ -118,16 +113,16 @@ type ChatTransfer struct {
 }
 
 type ChatUser struct {
-	Id           uint          `json:"id"`
-	Username     string        `json:"username"`
-	LastChatTime *gtime.Time   `json:"last_chat_time"`
-	Disabled     bool          `json:"disabled"`
-	Online       bool          `json:"online"`
-	LastMessage  *ChatMessage  `json:"last_message"`
-	Unread       uint          `json:"unread"`
-	Avatar       string        `json:"avatar"`
-	Platform     string        `json:"platform"`
-	Messages     []ChatMessage `json:"messages"`
+	Id           uint             `json:"id"`
+	Username     string           `json:"username"`
+	LastChatTime *gtime.Time      `json:"last_chat_time"`
+	Disabled     bool             `json:"disabled"`
+	Online       bool             `json:"online"`
+	LastMessage  *v1.ChatMessage  `json:"last_message"`
+	Unread       uint             `json:"unread"`
+	Avatar       string           `json:"avatar"`
+	Platform     string           `json:"platform"`
+	Messages     []v1.ChatMessage `json:"messages"`
 }
 
 type ChatSimpleUser struct {
@@ -135,7 +130,7 @@ type ChatSimpleUser struct {
 	Username string `json:"username"`
 }
 
-type MessageRes []*ChatMessage
+type MessageRes []*v1.ChatMessage
 
 type UserListRes []ChatUser
 
@@ -143,21 +138,6 @@ type AcceptRes struct {
 	User ChatUser
 }
 
-type ChatMessage struct {
-	Id         uint        `json:"id"`
-	UserId     uint        `json:"user_id"`
-	AdminId    uint        `json:"admin_id"`
-	AdminName  string      `json:"admin_name"`
-	Type       string      `json:"type"`
-	Content    string      `json:"content"`
-	ReceivedAT *gtime.Time `json:"received_at"`
-	Source     uint        `json:"source"`
-	ReqId      string      `json:"req_id"`
-	IsSuccess  bool        `json:"is_success"`
-	IsRead     bool        `json:"is_read"`
-	Avatar     string      `json:"avatar"`
-	Username   string      `json:"username"`
-}
 type UserInfoItem struct {
 	Name        string
 	Label       string

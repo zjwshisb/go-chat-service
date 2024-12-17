@@ -2,7 +2,7 @@ package frontend
 
 import (
 	"context"
-	baseApi "gf-chat/api"
+	baseApi "gf-chat/api/v1"
 	"gf-chat/api/v1/frontend"
 	"gf-chat/internal/service"
 	"net/http"
@@ -39,7 +39,7 @@ func (c cWs) Image(ctx context.Context, req *frontend.ChatImageReq) (res *fronte
 	return nil, nil
 }
 
-func (c cWs) Connect(ctx context.Context, req *frontend.ChatConnectReq) (res *baseApi.NilRes, err error) {
+func (c cWs) Connect(ctx context.Context, _ *frontend.ChatConnectReq) (res *baseApi.NilRes, err error) {
 	request := ghttp.RequestFromCtx(ctx)
 	conn, err := update.Upgrade(request.Response.Writer, request.Request, nil)
 	if err != nil {
@@ -47,9 +47,10 @@ func (c cWs) Connect(ctx context.Context, req *frontend.ChatConnectReq) (res *ba
 		return
 	}
 	user := service.UserCtx().GetUser(ctx)
-	err = service.Chat().Register(ctx, user, conn)
+	err = service.Chat().Register(user, conn, service.Platform().GetPlatform(ctx))
 	if err != nil {
 		return
 	}
-	return baseApi.NewNilResp(), err
+	res = baseApi.NewNilResp()
+	return
 }

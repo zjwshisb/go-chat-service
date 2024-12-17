@@ -2,7 +2,7 @@ package backend
 
 import (
 	"context"
-	baseApi "gf-chat/api"
+	baseApi "gf-chat/api/v1"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"

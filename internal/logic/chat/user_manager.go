@@ -59,7 +59,7 @@ func (s *userManager) DeliveryMessage(ctx context.Context, message *model.Custom
 		}
 	}
 	if exist {
-		userConn.Deliver(newReceiveAction(message))
+		userConn.Deliver(action.newReceive(message))
 		return nil
 	}
 	return s.handleOffline(ctx, message)
@@ -77,7 +77,7 @@ func (s *userManager) NoticeQueueLocation(ctx context.Context, conn iWsConn) (er
 	if err != nil {
 		return
 	}
-	conn.Deliver(newWaitingUserCountAction(count - 1))
+	conn.Deliver(action.newWaitingUserCount(count - 1))
 	return
 }
 
@@ -108,7 +108,7 @@ func (s *userManager) handleReceiveMessage() {
 			ctx := gctx.New()
 			err := s.handleMessage(ctx, payload)
 			if err != nil {
-				g.Log().Error(ctx, err)
+				g.Log().Errorf(ctx, "%+v", err)
 			}
 		}()
 	}
@@ -132,12 +132,14 @@ func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessag
 		return
 	}
 	// 发送回执
-	conn.Deliver(newReceiptAction(msg))
+	conn.Deliver(action.newReceipt(msg))
 	if msg.AdminId > 0 {
+		// 获取有效会话
 		session, err := service.ChatSession().FirstActive(ctx, msg.UserId, msg.AdminId, nil)
 		if err != nil {
 			return err
 		}
+		// 更新有效时间
 		err = service.ChatRelation().UpdateUser(ctx, msg.AdminId, msg.UserId)
 		if err != nil {
 			return err
@@ -149,16 +151,12 @@ func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessag
 		if err != nil {
 			return err
 		}
-		err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOnline, msg, conn.GetUser())
-		if err != nil {
-			return nil
-		}
-		return adminM.deliveryMessage(ctx, msg)
+		return adminM.deliveryMessage(ctx, msg, conn)
 	} else {
 		// 触发自动回复事件
-		err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneNotAccepted, msg, conn.GetUser())
+		err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneNotAccepted, msg, conn)
 		if err != nil {
-			g.Log().Error(ctx, err)
+			g.Log().Errorf(ctx, "%+v", err)
 		}
 		var transferAdminId uint
 		// 转接adminId
@@ -273,7 +271,7 @@ func (s *userManager) triggerEnterEvent(ctx context.Context, conn iWsConn) (err 
 	if err != nil {
 		return
 	}
-	conn.Deliver(newReceiveAction(entityMessage))
+	conn.Deliver(action.newReceive(entityMessage))
 	err = gcache.Set(ctx, cacheKey, gtime.Now().String(), time.Minute*10)
 	if err != nil {
 		return
@@ -298,7 +296,7 @@ func (s *userManager) registerHook(conn iWsConn) {
 		err = s.triggerEnterEvent(ctx, conn)
 	}
 	if err != nil {
-		g.Log().Error(ctx, err)
+		g.Log().Errorf(ctx, "%+v", err)
 	}
 }
 
@@ -377,7 +375,8 @@ func (s *userManager) addToManual(ctx context.Context, user IChatUser) (session 
 }
 
 // 触发事件
-func (s *userManager) triggerMessageEvent(ctx context.Context, scene string, message *model.CustomerChatMessage, user IChatUser) (err error) {
+func (s *userManager) triggerMessageEvent(ctx context.Context, scene string, message *model.CustomerChatMessage, userConn iWsConn) (err error) {
+	user := userConn.GetUser()
 	rules, err := service.AutoRule().AllActive(ctx, user.GetCustomerId())
 	if err != nil {
 		return
@@ -442,10 +441,7 @@ func (s *userManager) triggerMessageEvent(ctx context.Context, scene string, mes
 			if err != nil {
 				return err
 			}
-			conn, exist := s.GetConn(user.GetCustomerId(), user.GetPrimaryKey())
-			if exist {
-				s.SendAction(newReceiveAction(msg), conn)
-			}
+			s.SendAction(action.newReceive(msg), userConn)
 			_ = service.AutoRule().IncrTriggerCount(ctx, rule)
 			return nil
 		}

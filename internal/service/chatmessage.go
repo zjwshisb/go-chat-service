@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	api "gf-chat/api/v1/backend"
+	v1 "gf-chat/api/v1"
 	"gf-chat/internal/model"
 	"gf-chat/internal/trait"
 )
@@ -13,7 +13,7 @@ type (
 		GenReqId() string
 		ToRead(ctx context.Context, where any) (int64, error)
 		GetAdminName(ctx context.Context, model *model.CustomerChatMessage) (string, error)
-		ToApi(ctx context.Context, message *model.CustomerChatMessage) (*api.ChatMessage, error)
+		ToApi(ctx context.Context, message *model.CustomerChatMessage) (*v1.ChatMessage, error)
 		GetAvatar(ctx context.Context, model *model.CustomerChatMessage) (string, error)
 		NewNotice(session *model.CustomerChatSession, content string) *model.CustomerChatMessage
 		NewOffline(ctx context.Context, admin *model.CustomerAdmin) (msg *model.CustomerChatMessage, err error)

@@ -2,7 +2,7 @@ package frontend
 
 import (
 	"context"
-	baseApi "gf-chat/api"
+	baseApi "gf-chat/api/v1"
 	"gf-chat/api/v1/frontend"
 	"gf-chat/internal/service"
 	"github.com/gogf/gf/v2/net/ghttp"

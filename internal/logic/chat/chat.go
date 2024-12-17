@@ -2,10 +2,9 @@ package chat
 
 import (
 	"context"
-	"errors"
+	"gf-chat/api/v1"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
-	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
@@ -13,10 +12,8 @@ import (
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gorilla/websocket"
-	"strings"
 )
 
 var adminM *adminManager
@@ -49,16 +46,17 @@ func (s sChat) UpdateAdminSetting(admin *model.CustomerAdmin) {
 	s.admin.updateSetting(admin)
 }
 
+// NoticeTransfer 发送转接通知
 func (s sChat) NoticeTransfer(ctx context.Context, customer, admin uint) error {
 	return s.admin.noticeUserTransfer(ctx, customer, admin)
 }
 
+// Accept 接入用户
 func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (u *api.ChatUser, err error) {
-	session := &model.CustomerChatSession{}
-	err = dao.CustomerChatSessions.Ctx(ctx).
-		Where("customer_id", admin.CustomerId).WithAll().
-		WherePri(sessionId).
-		Scan(session)
+	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
+		Id:         sessionId,
+		CustomerId: admin.CustomerId,
+	})
 	if err != nil {
 		return
 	}
@@ -68,16 +66,17 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	if session.AcceptedAt != nil {
 		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "该用户已接入")
 	}
+	// 如果是转接
 	if session.Type == consts.ChatSessionTypeTransfer {
-		transfer, _ := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
+		transfer, err := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
 			ToSessionId: session.Id,
 		})
-		if transfer == nil {
-			return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "转接不存在")
+		if err != nil {
+			return nil, err
 		}
 		err = service.ChatTransfer().Accept(ctx, transfer)
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 	session.AcceptedAt = gtime.Now()
@@ -110,9 +109,9 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	if err != nil {
 		return
 	}
-	userConn, exist := s.user.GetConn(session.CustomerId, session.UserId)
+	userConn, online := s.user.GetConn(session.CustomerId, session.UserId)
 	platform := ""
-	if exist {
+	if online {
 		// 服务提醒
 		platform = userConn.GetPlatform()
 		chatName, _ := service.Admin().GetChatName(ctx, &admin)
@@ -122,7 +121,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		if err != nil {
 			return
 		}
-		s.user.SendAction(newReceiveAction(notice), userConn)
+		s.user.SendAction(action.newReceive(notice), userConn)
 		// 欢迎语
 		welcomeMsg, err := service.ChatMessage().NewWelcome(ctx, &admin)
 		if err != nil {
@@ -135,12 +134,12 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 			if err != nil {
 				return nil, err
 			}
-			action := newReceiveAction(welcomeMsg)
+			action := action.newReceive(welcomeMsg)
 			s.user.SendAction(action, userConn)
 		}
 	}
 	messagesLength := len(messages)
-	var lastMsg *api.ChatMessage
+	var lastMsg *v1.ChatMessage
 	if messagesLength > 0 {
 		lastMessage := messages[0]
 		v, err := service.ChatMessage().ToApi(ctx, lastMessage)
@@ -157,7 +156,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	if err != nil {
 		return
 	}
-	apiMessages := slice.Map(messages, func(index int, item *model.CustomerChatMessage) api.ChatMessage {
+	apiMessages := slice.Map(messages, func(index int, item *model.CustomerChatMessage) v1.ChatMessage {
 		m, _ := service.ChatMessage().ToApi(ctx, item)
 		return *m
 	})
@@ -177,28 +176,12 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 
 }
 
-func (s sChat) Register(ctx context.Context, u any, conn *websocket.Conn) error {
-	request := ghttp.RequestFromCtx(ctx)
-	userAgent := strings.ToLower(request.UserAgent())
-	wechatAgent := []string{"micromessenger", "wechatdevtools"}
-	isWeapp := false
-	for _, s := range wechatAgent {
-		if strings.Contains(userAgent, s) {
-			isWeapp = true
-			break
-		}
-	}
-	platform := ""
+func (s sChat) Register(u any, conn *websocket.Conn, platform string) error {
 	switch u.(type) {
 	case *model.CustomerAdmin:
 		uu, _ := u.(*model.CustomerAdmin)
 		e := &admin{
 			uu,
-		}
-		if isWeapp {
-			platform = consts.WebsocketPlatformMp
-		} else {
-			platform = consts.WebsocketPlatformWeb
 		}
 		s.admin.Register(conn, e, platform)
 		return nil
@@ -207,15 +190,10 @@ func (s sChat) Register(ctx context.Context, u any, conn *websocket.Conn) error 
 		e := &user{
 			uu,
 		}
-		if isWeapp {
-			platform = consts.WebsocketPlatformMp
-		} else {
-			platform = consts.WebsocketPlatformH5
-		}
 		s.user.Register(conn, e, platform)
 		return nil
 	}
-	return errors.New("无效的用户模型")
+	return gerror.New("无效的用户模型")
 }
 
 func (s sChat) IsOnline(customerId uint, uid uint, t string) bool {

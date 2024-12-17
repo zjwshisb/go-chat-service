@@ -3,39 +3,44 @@ package chat
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	api "gf-chat/api/v1/backend"
+	"gf-chat/api/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"time"
 
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
-func getMessage(action *api.ChatAction) (message *model.CustomerChatMessage, err error) {
+var action = &iaction{}
+
+type iaction struct {
+}
+
+func (a iaction) getMessage(action *v1.ChatAction) (message *model.CustomerChatMessage, err error) {
 	if action.Action == consts.ActionSendMessage {
 		message = &model.CustomerChatMessage{}
 		err = gconv.Struct(action.Data, message)
 	} else {
-		err = errors.New("invalid action")
+		err = gerror.New("invalid action")
 	}
 	return
 }
 
-func unMarshalAction(b []byte) (action *api.ChatAction, err error) {
-	action = &api.ChatAction{}
+func (a iaction) unMarshal(b []byte) (action *v1.ChatAction, err error) {
+	action = &v1.ChatAction{}
 	err = json.Unmarshal(b, action)
 	return
 }
-func marshalAction(ctx context.Context, action api.ChatAction) (b []byte, err error) {
+func (a iaction) marshal(ctx context.Context, action v1.ChatAction) (b []byte, err error) {
 	if action.Action == consts.ActionPing {
 		return []byte(""), nil
 	}
 	if action.Action == consts.ActionReceiveMessage {
 		msg, ok := action.Data.(*model.CustomerChatMessage)
 		if !ok {
-			err = errors.New("param error")
+			err = gerror.New("param error")
 			return
 		}
 		data, err := service.ChatMessage().ToApi(ctx, msg)
@@ -48,111 +53,111 @@ func marshalAction(ctx context.Context, action api.ChatAction) (b []byte, err er
 	return
 }
 
-func newReceiveAction(msg *model.CustomerChatMessage) *api.ChatAction {
-	return &api.ChatAction{
+func (a iaction) newReceive(msg *model.CustomerChatMessage) *v1.ChatAction {
+	return &v1.ChatAction{
 		Action: consts.ActionReceiveMessage,
 		Time:   time.Now().Unix(),
 		Data:   msg,
 	}
 }
-func newReceiptAction(msg *model.CustomerChatMessage) (act *api.ChatAction) {
+func (a iaction) newReceipt(msg *model.CustomerChatMessage) (act *v1.ChatAction) {
 	data := make(map[string]interface{})
 	data["user_id"] = msg.UserId
 	data["req_id"] = msg.ReqId
 	data["msg_id"] = msg.Id
-	act = &api.ChatAction{
+	act = &v1.ChatAction{
 		Action: consts.ActionReceipt,
 		Time:   time.Now().Unix(),
 		Data:   data,
 	}
 	return
 }
-func newAdminsAction(d any) (act *api.ChatAction) {
-	return &api.ChatAction{
+func (a iaction) newAdmins(d any) (act *v1.ChatAction) {
+	return &v1.ChatAction{
 		Action: consts.ActionAdmins,
 		Time:   time.Now().Unix(),
 		Data:   d,
 	}
 }
-func newUserOnlineAction(uid uint, platform string) *api.ChatAction {
+func (a iaction) newUserOnline(uid uint, platform string) *v1.ChatAction {
 	data := make(map[string]interface{})
 	data["user_id"] = uid
 	data["platform"] = platform
-	return &api.ChatAction{
+	return &v1.ChatAction{
 		Action: consts.ActionUserOnLine,
 		Time:   time.Now().Unix(),
 		Data:   data,
 	}
 }
-func newUserOfflineAction(uid uint) *api.ChatAction {
+func (a iaction) newUserOffline(uid uint) *v1.ChatAction {
 	data := make(map[string]interface{})
 	data["user_id"] = uid
-	return &api.ChatAction{
+	return &v1.ChatAction{
 		Action: consts.ActionUserOffLine,
 		Time:   time.Now().Unix(),
 		Data:   data,
 	}
 }
-func newMoreThanOneAction() *api.ChatAction {
-	return &api.ChatAction{
+func (a iaction) newMoreThanOne() *v1.ChatAction {
+	return &v1.ChatAction{
 		Action: consts.ActionMoreThanOne,
 		Time:   time.Now().Unix(),
 	}
 }
-func newOtherLoginAction() *api.ChatAction {
-	return &api.ChatAction{
+func (a iaction) newOtherLogin() *v1.ChatAction {
+	return &v1.ChatAction{
 		Action: consts.ActionOtherLogin,
 		Time:   time.Now().Unix(),
 	}
 }
-func newPingAction() *api.ChatAction {
-	return &api.ChatAction{
+func (a iaction) newPing() *v1.ChatAction {
+	return &v1.ChatAction{
 		Action: consts.ActionPing,
 		Time:   time.Now().Unix(),
 	}
 }
-func newWaitingUsersAction(i interface{}) *api.ChatAction {
-	return &api.ChatAction{
+func (a iaction) newWaitingUsers(i interface{}) *v1.ChatAction {
+	return &v1.ChatAction{
 		Action: consts.ActionWaitingUser,
 		Time:   time.Now().Unix(),
 		Data:   i,
 	}
 }
-func newWaitingUserCountAction(count uint) *api.ChatAction {
-	return &api.ChatAction{
+func (a iaction) newWaitingUserCount(count uint) *v1.ChatAction {
+	return &v1.ChatAction{
 		Data:   count,
 		Time:   time.Now().Unix(),
 		Action: consts.ActionWaitingUserCount,
 	}
 }
-func newUserTransferAction(i interface{}) *api.ChatAction {
-	return &api.ChatAction{
+func (a iaction) newUserTransfer(i interface{}) *v1.ChatAction {
+	return &v1.ChatAction{
 		Data:   i,
 		Time:   time.Now().Unix(),
 		Action: consts.ActionUserTransfer,
 	}
 }
-func newErrorMessageAction(msg string) *api.ChatAction {
-	return &api.ChatAction{
+func (a iaction) newErrorMessage(msg string) *v1.ChatAction {
+	return &v1.ChatAction{
 		Data:   msg,
 		Time:   time.Now().Unix(),
 		Action: consts.ActionErrorMessage,
 	}
 }
 
-func newReadActionAction(msgIds []uint) *api.ChatAction {
-	return &api.ChatAction{
+func (a iaction) newReadAction(msgIds []uint) *v1.ChatAction {
+	return &v1.ChatAction{
 		Data:   msgIds,
 		Time:   time.Now().Unix(),
 		Action: consts.ActionRead,
 	}
 }
-func newRateActionAction(message *model.CustomerChatMessage) *api.ChatAction {
+func (a iaction) newRateAction(message *model.CustomerChatMessage) *v1.ChatAction {
 	data := make(map[string]interface{})
 	data["msg_id"] = message.Id
 	data["rate"] = message.Content
 	data["user_id"] = message.UserId
-	return &api.ChatAction{
+	return &v1.ChatAction{
 		Action: consts.ActionUserRate,
 		Time:   time.Now().Unix(),
 		Data:   data,

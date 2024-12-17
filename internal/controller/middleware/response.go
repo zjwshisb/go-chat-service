@@ -3,7 +3,7 @@ package middleware
 import (
 	"database/sql"
 	"errors"
-	"gf-chat/api"
+	"gf-chat/api/v1"
 	"net/http"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -55,7 +55,7 @@ func HandlerResponse(r *ghttp.Request) {
 			// 非正常错误，记录一下
 			g.Log().Error(r.Context(), err)
 		}
-		r.Response.WriteJson(api.NewFailResp(msg, code.Code()))
+		r.Response.WriteJson(v1.NewFailResp(msg, code.Code()))
 		return
 	} else if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
 		msg = http.StatusText(r.Response.Status)

@@ -49,6 +49,5 @@ func RegisterRouter(s *ghttp.Server) {
 				})
 			})
 		})
-
 	})
 }

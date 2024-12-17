@@ -43,13 +43,17 @@ func (m *adminManager) run() {
 // 投递消息
 // 查询admin是否在线，是则直接投递
 // 最后则说明admin不在线，处理离线逻辑
-func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerChatMessage) error {
+func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerChatMessage, userConn iWsConn) error {
 	adminConn, exist := m.GetConn(msg.CustomerId, msg.AdminId)
 	if exist { // admin在线
-		adminConn.Deliver(newReceiveAction(msg))
+		err := userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOnline, msg, userConn)
+		if err != nil {
+			return nil
+		}
+		adminConn.Deliver(action.newReceive(msg))
 		return nil
 	}
-	return m.handleOffline(ctx, msg)
+	return m.handleOffline(ctx, msg, userConn)
 }
 
 // 从管道接受消息并处理
@@ -60,7 +64,7 @@ func (m *adminManager) handleReceiveMessage() {
 			ctx := gctx.New()
 			err := m.handleMessage(ctx, payload)
 			if err != nil {
-				g.Log().Error(ctx, err)
+				g.Log().Errorf(ctx, "%+v", err)
 			}
 		}()
 	}
@@ -75,8 +79,8 @@ func (m *adminManager) sendOffline(admin *model.CustomerAdmin, msg *model.Custom
 }
 
 // 处理离线消息
-func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerChatMessage) error {
-	err := userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOffline, msg, &user{Entity: msg.User})
+func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerChatMessage, userConn iWsConn) error {
+	err := userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOffline, msg, userConn)
 	if err != nil {
 		return err
 	}
@@ -110,12 +114,12 @@ func (m *adminManager) handleMessage(ctx context.Context, payload *chatConnMessa
 	conn := payload.Conn
 	if msg.UserId > 0 {
 		if !service.ChatRelation().IsUserValid(ctx, conn.GetUserId(), msg.UserId) {
-			conn.Deliver(newErrorMessageAction("该用户已失效，无法发送消息"))
+			conn.Deliver(action.newErrorMessage("该用户已失效，无法发送消息"))
 			return gerror.New("该用户已失效，无法发送消息")
 		}
 		session, _ := service.ChatSession().FirstActive(ctx, msg.UserId, conn.GetUserId(), nil)
 		if session == nil {
-			conn.Deliver(newErrorMessageAction(""))
+			conn.Deliver(action.newErrorMessage("无效的用户"))
 			return gerror.New("无效的用户")
 		}
 		msg.AdminId = conn.GetUserId()
@@ -127,7 +131,7 @@ func (m *adminManager) handleMessage(ctx context.Context, payload *chatConnMessa
 		}
 		_ = service.ChatRelation().UpdateUser(ctx, msg.AdminId, msg.UserId)
 		// 服务器回执d
-		conn.Deliver(newReceiptAction(msg))
+		conn.Deliver(action.newReceipt(msg))
 		return userM.DeliveryMessage(ctx, msg)
 	}
 	return nil
@@ -137,34 +141,28 @@ func (m *adminManager) registerHook(conn iWsConn) {
 	ctx := gctx.New()
 	err := m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
 	if err != nil {
-		g.Log().Error(ctx, err)
+		g.Log().Errorf(ctx, "%+v", err)
 	}
 	err = m.broadcastWaitingUser(ctx, conn.GetCustomerId())
 	if err != nil {
-		g.Log().Error(ctx, err)
+		g.Log().Errorf(ctx, "%+v", err)
 	}
 	err = m.noticeUserTransfer(ctx, conn.GetCustomerId(), conn.GetUserId())
 	if err != nil {
-		g.Log().Error(ctx, err)
+		g.Log().Errorf(ctx, "%+v", err)
 	}
 }
 
 // conn断开连接后，更新admin的最后在线时间
 func (m *adminManager) unregisterHook(conn iWsConn) {
 	ctx := gctx.New()
-	//u := conn.GetUser()
-	//a, ok := u.(*admin)
-	//if ok {
-	//e := a.Entity
-	//e.Setting.LastOnline = gtime.New()
-	//_, err := dao.CustomerAdminChatSettings.Ctx(ctx).Save(e.Setting)
-	//if err != nil {
-	//	g.Log().Error(ctx, err)
-	//}
-	//}
-	err := m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
+	err := service.Admin().UpdateLastOnline(ctx, conn.GetUserId())
 	if err != nil {
-		g.Log().Error(ctx, err)
+		g.Log().Errorf(ctx, "%+v", err)
+	}
+	err = m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
+	if err != nil {
+		g.Log().Errorf(ctx, "%+v", err)
 	}
 }
 
@@ -214,8 +212,8 @@ func (m *adminManager) broadcastLocalWaitingUser(ctx context.Context, customerId
 		return waitingUser[i].LastTime.Unix() > waitingUser[j].LastTime.Unix()
 	})
 	adminConns := m.GetAllConn(customerId)
-	action := newWaitingUsersAction(waitingUser)
-	m.SendAction(action, adminConns...)
+	act := action.newWaitingUsers(waitingUser)
+	m.SendAction(act, adminConns...)
 	return
 }
 
@@ -250,12 +248,12 @@ func (m *adminManager) broadcastLocalOnlineAdmins(ctx context.Context, customerI
 		})
 	}
 	conns := m.GetAllConn(customerId)
-	m.SendAction(newAdminsAction(data), conns...)
+	m.SendAction(action.newAdmins(data), conns...)
 	return nil
 }
 
 func (m *adminManager) noticeRate(message *model.CustomerChatMessage) {
-	action := newRateActionAction(message)
+	action := action.newRateAction(message)
 	conn, exist := m.GetConn(message.CustomerId, message.AdminId)
 	if exist {
 		conn.Deliver(action)
@@ -272,7 +270,7 @@ func (m *adminManager) noticeLocalUserOffline(uid uint) {
 	if admin != nil {
 		conn, exist := m.GetConn(admin.CustomerId, admin.Id)
 		if exist {
-			m.SendAction(newUserOfflineAction(uid), conn)
+			m.SendAction(action.newUserOffline(uid), conn)
 		}
 	}
 }
@@ -287,7 +285,7 @@ func (m *adminManager) noticeLocalUserOnline(ctx context.Context, uid uint, plat
 	if admin != nil {
 		conn, exist := m.GetConn(admin.CustomerId, admin.Id)
 		if exist {
-			m.SendAction(newUserOnlineAction(uid, platform), conn)
+			m.SendAction(action.newUserOnline(uid, platform), conn)
 		}
 	}
 }
@@ -327,7 +325,7 @@ func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, 
 		data := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) api.ChatTransfer {
 			return service.ChatTransfer().ToApi(item)
 		})
-		client.Deliver(newUserTransferAction(data))
+		client.Deliver(action.newUserTransfer(data))
 	}
 	return nil
 }

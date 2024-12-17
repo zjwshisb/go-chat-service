@@ -7,6 +7,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/util/gvalid"
+	"strings"
 )
 
 func init() {
@@ -14,18 +15,21 @@ func init() {
 	gvalid.RegisterRule(name, uniqueRule)
 }
 
-// UniqueRule 唯一验证规则
+// UniqueRule unique:users[,name][,id] 唯一验证规则
 func uniqueRule(ctx context.Context, in gvalid.RuleFuncInput) error {
 	request := ghttp.RequestFromCtx(ctx)
 	params := parseRuleParams(in.Rule)
 	length := len(params)
-	if length != 2 && length != 3 {
+	if length < 1 {
 		panic("unsupported used for unique rule")
 	}
 	tableName := params[0]
-	field := params[1]
+	field := strings.ToLower(in.Field)
+	if length >= 2 {
+		field = params[1]
+	}
 	primaryKey := "id"
-	if length == 3 {
+	if length >= 3 {
 		primaryKey = params[2]
 	}
 	query := g.Model(tableName).Where(field, in.Value.String())

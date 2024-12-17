@@ -2,10 +2,8 @@ package backend
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"errors"
-	baseApi "gf-chat/api"
+	baseApi "gf-chat/api/v1"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
@@ -109,9 +107,6 @@ func (c *cChatSetting) Update(ctx context.Context, req *api.ChatSettingUpdateReq
 				Id:         apiFile.Id,
 			})
 			if err != nil {
-				if errors.Is(err, sql.ErrNoRows) {
-					err = gerror.NewCode(gcode.CodeValidationFailed, "无效的图片")
-				}
 				return
 			}
 			updateData.Value = file.Id

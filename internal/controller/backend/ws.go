@@ -2,7 +2,7 @@ package backend
 
 import (
 	"context"
-	baseApi "gf-chat/api"
+	baseApi "gf-chat/api/v1"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/service"
 	"net/http"
@@ -29,13 +29,12 @@ func (c cWs) Connect(ctx context.Context, _ *api.ChatConnectReq) (res *baseApi.N
 	request := ghttp.RequestFromCtx(ctx)
 	conn, err := update.Upgrade(request.Response.Writer, request.Request, nil)
 	if err != nil {
-		request.Exit()
 		return
 	}
 	admin := service.AdminCtx().GetUser(ctx)
 	setting, err := service.Admin().FindSetting(ctx, admin.Id, true)
 	admin.Setting = setting
-	err = service.Chat().Register(ctx, admin, conn)
+	err = service.Chat().Register(admin, conn, service.Platform().GetPlatform(ctx))
 	if err != nil {
 		return
 	}

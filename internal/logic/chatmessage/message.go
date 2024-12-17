@@ -4,8 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	baseApi "gf-chat/api"
-	api "gf-chat/api/v1/backend"
+	baseApi "gf-chat/api/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
@@ -105,7 +104,7 @@ func (s *sChatMessage) GetAdminName(ctx context.Context, model *model.CustomerCh
 	}
 	return "", nil
 }
-func (s *sChatMessage) ToApi(ctx context.Context, message *model.CustomerChatMessage) (msg *api.ChatMessage, err error) {
+func (s *sChatMessage) ToApi(ctx context.Context, message *model.CustomerChatMessage) (msg *baseApi.ChatMessage, err error) {
 	username := ""
 	if message.User != nil {
 		username = message.User.Username
@@ -118,7 +117,7 @@ func (s *sChatMessage) ToApi(ctx context.Context, message *model.CustomerChatMes
 	if err != nil {
 		return
 	}
-	msg = &api.ChatMessage{
+	msg = &baseApi.ChatMessage{
 		Id:         message.Id,
 		UserId:     message.UserId,
 		AdminId:    message.AdminId,

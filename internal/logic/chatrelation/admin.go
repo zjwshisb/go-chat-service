@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/util/gconv"
 	"time"
 
@@ -117,7 +118,7 @@ func (s *sChatRelation) GetActiveCount(ctx gctx.Ctx, adminId uint) uint {
 // UpdateLimitTime 更新有效期
 func (s *sChatRelation) UpdateLimitTime(ctx gctx.Ctx, adminId uint, uid uint, duration int64) error {
 	if !s.IsUserExist(ctx, adminId, uid) {
-		return errors.New("user not valid")
+		return gerror.New("user not valid")
 	}
 	_, err := g.Redis().Do(ctx, "ZAdd", s.getUserCacheKey(adminId), time.Now().Unix()+duration, uid)
 	return err

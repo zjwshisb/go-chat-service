@@ -5,6 +5,7 @@ import (
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
 	"gf-chat/internal/trait"
+
 	"github.com/gogf/gf/v2/frame/g"
 
 	"github.com/gogf/gf/v2/net/ghttp"

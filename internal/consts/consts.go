@@ -1,6 +1,8 @@
 package consts
 
-import "gf-chat/api"
+import (
+	"gf-chat/api/v1"
+)
 
 const (
 	MessageTypeText     = "text"
@@ -20,7 +22,7 @@ var MessageTypeFileTypes = []string{
 	MessageTypePdf,
 }
 
-var UserAllowMessageType = []api.Option{
+var UserAllowMessageType = []v1.Option{
 	{
 		Label: "文本",
 		Value: MessageTypeText,
@@ -125,4 +127,11 @@ const (
 	FileTypeImage = "image"
 	FileTypeVideo = "video"
 	FileTypeAudio = "audio"
+)
+
+const (
+	PlatformWeb   = "web"
+	PlatformH5    = "h5"
+	PlatformWeapp = "weapp"
+	PlatformApp   = "app"
 )

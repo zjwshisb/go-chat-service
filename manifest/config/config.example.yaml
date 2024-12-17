@@ -1,6 +1,9 @@
 logger:
   path: "D:\\code\\kfbackend\\storage\\log\\"
   file: "{Y-m-d}.log"
+  ws:
+    path: "D:\\code\\kfbackend\\storage\\log\\ws"
+    level: "debug"
 storage:
   default: 'local'
   qiniu:
@@ -18,7 +21,7 @@ server:
   swaggerPath: "/swagger"
 database:
   logger:
-    path: "./storage/sql"
+    path: "./storage/log/db"
     level: "all"
     stdout: true
   default:

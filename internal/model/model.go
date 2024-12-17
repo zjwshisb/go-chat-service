@@ -1,7 +1,7 @@
 package model
 
 import (
-	"gf-chat/api"
+	"gf-chat/api/v1"
 	"gf-chat/internal/model/entity"
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -57,7 +57,7 @@ type CustomerChatFile struct {
 
 type CustomerChatSetting struct {
 	entity.CustomerChatSettings
-	Options []api.Option `json:"options"`
+	Options []v1.Option `json:"options"`
 }
 
 type User struct {

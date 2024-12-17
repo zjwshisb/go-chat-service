@@ -1,7 +1,7 @@
 package chat
 
 import (
-	api "gf-chat/api/v1/backend"
+	"gf-chat/api/v1"
 	"github.com/duke-git/lancet/v2/slice"
 	"sync"
 	"time"
@@ -29,7 +29,7 @@ type connManager interface {
 	Run()
 	Destroy()
 	Ping()
-	SendAction(act *api.ChatAction, conn ...iWsConn)
+	SendAction(act *v1.ChatAction, conn ...iWsConn)
 	ReceiveMessage(cm *chatConnMessage)
 	GetTypes() string
 	NoticeRead(customerId uint, uid uint, msgIds []uint)
@@ -109,7 +109,7 @@ func (m *manager) NoticeRepeatConnect(user IChatUser, newUuid string) {
 func (m *manager) NoticeLocalRepeatConnect(user IChatUser, newUuid string) {
 	oldConn, ok := m.GetConn(user.GetCustomerId(), user.GetPrimaryKey())
 	if ok && oldConn.GetUuid() != newUuid {
-		m.SendAction(newMoreThanOneAction(), oldConn)
+		m.SendAction(action.newMoreThanOne(), oldConn)
 	}
 }
 
@@ -151,7 +151,7 @@ func (m *manager) IsLocalOnline(customerId uint, uid uint) bool {
 }
 
 // SendAction 给客户端发送消息
-func (m *manager) SendAction(a *api.ChatAction, clients ...iWsConn) {
+func (m *manager) SendAction(a *v1.ChatAction, clients ...iWsConn) {
 	for _, c := range clients {
 		c.Deliver(a)
 	}
@@ -237,8 +237,8 @@ func (m *manager) Register(conn *websocket.Conn, user IChatUser, platform string
 func (m *manager) NoticeRead(customerId, adminId uint, msgIds []uint) {
 	conn, exist := m.GetConn(customerId, adminId)
 	if exist {
-		action := newReadActionAction(msgIds)
-		m.SendAction(action, conn)
+		act := action.newReadAction(msgIds)
+		m.SendAction(act, conn)
 	}
 }
 
@@ -251,7 +251,7 @@ func (m *manager) Ping() {
 	for {
 		select {
 		case <-ticker.C:
-			ping := newPingAction()
+			ping := action.newPing()
 			for _, s := range m.shard {
 				conns := s.getAll()
 				m.SendAction(ping, conns...)

@@ -2,7 +2,7 @@ package backend
 
 import (
 	"context"
-	baseApi "gf-chat/api"
+	baseApi "gf-chat/api/v1"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
@@ -175,7 +175,7 @@ func (c cChat) User(ctx context.Context, _ *api.UserListReq) (res *baseApi.Norma
 				Avatar:      "",
 				Online:      service.Chat().IsOnline(user.CustomerId, user.Id, "user"),
 				Platform:    service.Chat().GetPlatform(user.CustomerId, user.Id, "user"),
-				Messages:    make([]api.ChatMessage, 0),
+				Messages:    make([]baseApi.ChatMessage, 0),
 			}
 			lastMsg, exist := slice.FindBy(lastMessages, func(index int, item *model.CustomerChatMessage) bool {
 				return item.UserId == user.Id
@@ -217,7 +217,7 @@ func (c cChat) UserInfo(ctx context.Context, _ *api.GetUserChatInfoReq) (res *ba
 	return baseApi.NewResp(info), nil
 }
 
-func (c cChat) TransferMessage(ctx context.Context, _ *api.TransferMessageReq) (res *baseApi.NormalRes[[]*api.ChatMessage], err error) {
+func (c cChat) TransferMessage(ctx context.Context, _ *api.TransferMessageReq) (res *baseApi.NormalRes[[]*baseApi.ChatMessage], err error) {
 	transfer, err := service.ChatTransfer().First(ctx, do.CustomerChatTransfers{
 		Id:        ghttp.RequestFromCtx(ctx).GetRouter("id"),
 		ToAdminId: service.AdminCtx().GetId(ctx),
@@ -235,21 +235,21 @@ func (c cChat) TransferMessage(ctx context.Context, _ *api.TransferMessageReq) (
 	if err != nil {
 		return
 	}
-	apiMessage := slice.Map(messages, func(index int, item *model.CustomerChatMessage) *api.ChatMessage {
+	apiMessage := slice.Map(messages, func(index int, item *model.CustomerChatMessage) *baseApi.ChatMessage {
 		i, _ := service.ChatMessage().ToApi(ctx, item)
 		return i
 	})
 	return baseApi.NewResp(apiMessage), nil
 }
 
-func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseApi.NormalRes[[]*api.ChatMessage], err error) {
+func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseApi.NormalRes[[]*baseApi.ChatMessage], err error) {
 	admin := service.AdminCtx().GetUser(ctx)
 	settings, err := service.Admin().FindSetting(ctx, admin.Id, true)
 	if err != nil {
 		return
 	}
 	admin.Setting = settings
-	r := make([]*api.ChatMessage, 0)
+	r := make([]*baseApi.ChatMessage, 0)
 	w := g.Map{
 		"user_id":  req.Uid,
 		"admin_id": admin.Id,

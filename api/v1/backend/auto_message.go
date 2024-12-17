@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"gf-chat/api"
+	"gf-chat/api/v1"
 	"github.com/gogf/gf/v2/os/gtime"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -9,7 +9,7 @@ import (
 
 type AutoMessageListReq struct {
 	g.Meta `path:"/auto-messages" tags:"后台快捷回复" method:"get" summary:"获取快捷回复详情"`
-	api.Paginate
+	v1.Paginate
 	Type string `json:"type"`
 	Name string `json:"name"`
 }

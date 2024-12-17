@@ -6,6 +6,7 @@ import (
 	"gf-chat/internal/trait"
 
 	"context"
+
 	"github.com/gogf/gf/v2/net/ghttp"
 )
 
@@ -22,6 +23,7 @@ type (
 		GetApiSetting(ctx context.Context, admin *model.CustomerAdmin) (*api.CurrentAdminSetting, error)
 		GenSetting(ctx context.Context, admin *model.CustomerAdmin) (*model.CustomerAdminChatSetting, error)
 		GetAdminsWithSetting(ctx context.Context, where any) (res []*model.CustomerAdmin, err error)
+		UpdateLastOnline(ctx context.Context, adminId uint) error
 	}
 )
 

@@ -1,7 +1,7 @@
 package setup
 
 import (
-	"gf-chat/api"
+	"gf-chat/api/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	options1 = []api.Option{
+	options1 = []v1.Option{
 		{
 			Label: "是",
 			Value: "1",
@@ -23,7 +23,7 @@ var (
 			Value: "0",
 		},
 	}
-	options2 = []api.Option{
+	options2 = []v1.Option{
 		{
 			Label: "5分钟",
 			Value: "5",
@@ -80,7 +80,7 @@ var (
 				Type:        "image",
 				Description: "系统回复消息以及客服没有设置头像时的默认头像",
 			},
-			Options: []api.Option{},
+			Options: []v1.Option{},
 		},
 		{
 			CustomerChatSettings: entity.CustomerChatSettings{
@@ -90,7 +90,7 @@ var (
 				Type:        "text",
 				Description: "系统回复消息以及客服没有设置名称时的默认名称",
 			},
-			Options: []api.Option{},
+			Options: []v1.Option{},
 		},
 	}
 

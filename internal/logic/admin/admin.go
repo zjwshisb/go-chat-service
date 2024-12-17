@@ -17,6 +17,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -120,6 +121,13 @@ func (s *sAdmin) GenSetting(ctx context.Context, admin *model.CustomerAdmin) (*m
 	}
 	setting.Id = gconv.Uint(id)
 	return setting, nil
+}
+
+func (s *sAdmin) UpdateLastOnline(ctx context.Context, adminId uint) error {
+	_, err := dao.CustomerChatSettings.Ctx(ctx).Where("admin_id", adminId).Update(do.CustomerAdminChatSettings{
+		LastOnline: gtime.Now(),
+	})
+	return err
 }
 
 func (s *sAdmin) UpdateSetting(ctx context.Context, admin *model.CustomerAdmin, form api.CurrentAdminSettingForm) (err error) {

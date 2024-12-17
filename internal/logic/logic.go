@@ -17,6 +17,7 @@ import (
 	_ "gf-chat/internal/logic/chattransfer"
 	_ "gf-chat/internal/logic/file"
 	_ "gf-chat/internal/logic/jwt"
+	_ "gf-chat/internal/logic/platform"
 	_ "gf-chat/internal/logic/setup"
 	_ "gf-chat/internal/logic/user"
 	_ "gf-chat/internal/logic/userCtx"

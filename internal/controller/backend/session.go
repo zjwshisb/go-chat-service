@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	baseApi "gf-chat/api"
+	baseApi "gf-chat/api/v1"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
@@ -143,7 +143,7 @@ func (c cSession) Show(ctx context.Context, _ *api.SessionDetailReq) (res *baseA
 	if err != nil {
 		return
 	}
-	message := make([]*api.ChatMessage, len(relations))
+	message := make([]*baseApi.ChatMessage, len(relations))
 	for index, i := range relations {
 		msg, err := service.ChatMessage().ToApi(ctx, i)
 		if err != nil {

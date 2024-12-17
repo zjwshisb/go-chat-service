@@ -1,14 +1,14 @@
 package backend
 
 import (
-	"gf-chat/api"
+	"gf-chat/api/v1"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
 type AutoRuleListReq struct {
 	g.Meta `path:"/auto-rules" tags:"后台自动回复规则" method:"get" summary:"获取自动回复规则"`
-	api.Paginate
+	v1.Paginate
 	ReplyType string `json:"reply_type"`
 	Name      string `json:"name"`
 	MatchType string `json:"match_type"`

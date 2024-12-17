@@ -1,13 +1,13 @@
 package chat
 
 import (
-	"errors"
-	api "gf-chat/api/v1/backend"
+	"gf-chat/api/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
 	"github.com/duke-git/lancet/v2/slice"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/util/guid"
 	"sync"
 	"unicode/utf8"
@@ -24,7 +24,7 @@ type iWsConn interface {
 	SendMsg()
 	Close()
 	Run()
-	Deliver(action *api.ChatAction)
+	Deliver(action *v1.ChatAction)
 	GetUserId() uint
 	GetUser() IChatUser
 	GetUuid() string
@@ -35,8 +35,8 @@ type iWsConn interface {
 
 type client struct {
 	Conn        *websocket.Conn
-	CloseSignal chan interface{}     // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
-	Send        chan *api.ChatAction // 发送的消息chan
+	CloseSignal chan interface{}    // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
+	Send        chan *v1.ChatAction // 发送的消息chan
 	sync.Once
 	Manager  connManager
 	User     IChatUser
@@ -50,7 +50,7 @@ func newClient(conn *websocket.Conn, user IChatUser, platform string) *client {
 	return &client{
 		Conn:        conn,
 		CloseSignal: make(chan interface{}),
-		Send:        make(chan *api.ChatAction, 100),
+		Send:        make(chan *v1.ChatAction, 100),
 		Once:        sync.Once{},
 		User:        user,
 		Uuid:        guid.S(),
@@ -102,7 +102,7 @@ func (c *client) Close() {
 // 发送消息验证
 func (c *client) validate(data map[string]interface{}) error {
 	if !c.Limiter.Allow() {
-		return errors.New("发送过于频繁，请慢一些")
+		return gerror.New("发送过于频繁，请慢一些")
 	}
 	content, exist := data["content"]
 	if exist {
@@ -110,37 +110,37 @@ func (c *client) validate(data map[string]interface{}) error {
 		if ok {
 			length := utf8.RuneCountInString(s)
 			if length == 0 {
-				return errors.New("请勿发送空内容")
+				return gerror.New("请勿发送空内容")
 			}
 			if length > 512 {
-				return errors.New("内容长度必须小于512个字符")
+				return gerror.New("内容长度必须小于512个字符")
 			}
 		}
 	}
 	reqId, exist := data["req_id"]
 	if !exist {
-		return errors.New("消息不合法")
+		return gerror.New("消息不合法")
 	}
 	idStr, ok := reqId.(string)
 	if ok {
 		length := len(idStr)
 		if length <= 0 || length > 20 {
-			return errors.New("消息不合法")
+			return gerror.New("消息不合法")
 		}
 	} else {
-		return errors.New("消息不合法")
+		return gerror.New("消息不合法")
 	}
 	types, exist := data["type"]
 	if !exist {
-		return errors.New("消息不合法")
+		return gerror.New("消息不合法")
 	}
 	typeStr, ok := types.(string)
 	if !ok {
-		return errors.New("消息不合法")
+		return gerror.New("消息不合法")
 
 	}
 	if !c.isTypeValid(typeStr) {
-		return errors.New("消息不合法")
+		return gerror.New("消息不合法")
 	}
 	return nil
 }
@@ -175,9 +175,10 @@ func (c *client) ReadMsg() {
 			return
 		case msgStr := <-msg:
 			ctx := gctx.New()
-			act, err := unMarshalAction(msgStr)
+			act, err := action.unMarshal(msgStr)
+			g.Log("ws").Debug(ctx, msgStr)
 			if err != nil {
-				g.Log().Error(ctx, err)
+				g.Log().Errorf(ctx, "%+v", err)
 				break
 			}
 			data, ok := act.Data.(map[string]interface{})
@@ -186,13 +187,13 @@ func (c *client) ReadMsg() {
 			}
 			err = c.validate(data)
 			if err != nil {
-				c.Deliver(newErrorMessageAction(err.Error()))
+				c.Deliver(action.newErrorMessage(err.Error()))
 			} else {
 				switch act.Action {
 				case consts.ActionSendMessage:
-					msg, err := getMessage(act)
+					msg, err := action.getMessage(act)
 					if err != nil {
-						g.Log().Error(ctx, err)
+						g.Log().Errorf(ctx, "%+v", err)
 						break
 					}
 					iu := c.GetUser()
@@ -218,7 +219,7 @@ func (c *client) ReadMsg() {
 }
 
 // Deliver 投递消息
-func (c *client) Deliver(act *api.ChatAction) {
+func (c *client) Deliver(act *v1.ChatAction) {
 	c.Send <- act
 }
 
@@ -228,14 +229,14 @@ func (c *client) SendMsg() {
 		select {
 		case act := <-c.Send:
 			ctx := gctx.New()
-			msgByte, err := marshalAction(ctx, *act)
+			msgByte, err := action.marshal(ctx, *act)
 			if err != nil {
-				g.Log().Error(ctx, err)
+				g.Log().Errorf(ctx, "%+v", err)
 				break
 			}
 			err = c.Conn.WriteMessage(websocket.TextMessage, msgByte)
 			if err != nil {
-				g.Log().Error(ctx, err)
+				g.Log().Errorf(ctx, "%+v", err)
 				c.Close()
 				return
 			}
@@ -254,7 +255,7 @@ func (c *client) SendMsg() {
 						SendAt: gtime.Now(),
 					})
 					if err != nil {
-						g.Log().Error(ctx, err)
+						g.Log().Errorf(ctx, "%+v", err)
 					}
 				}
 

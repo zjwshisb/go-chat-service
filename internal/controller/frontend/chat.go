@@ -2,8 +2,7 @@ package frontend
 
 import (
 	"context"
-	baseApi "gf-chat/api"
-	"gf-chat/api/v1/backend"
+	baseApi "gf-chat/api/v1"
 	api "gf-chat/api/v1/frontend"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
@@ -22,7 +21,7 @@ var CChat = &cChat{}
 type cChat struct {
 }
 
-func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *baseApi.NormalRes[[]*backend.ChatMessage], err error) {
+func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *baseApi.NormalRes[[]*baseApi.ChatMessage], err error) {
 	uid := service.UserCtx().GetUser(ctx).Id
 	w := g.Map{
 		"user_id": uid,
@@ -40,7 +39,7 @@ func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *baseA
 	}))
 	admins, err := service.Admin().GetAdminsWithSetting(ctx, do.CustomerAdmins{Id: adminIds})
 	adminToMessageId := make(map[uint][]uint)
-	r := make([]*backend.ChatMessage, 0, len(messages))
+	r := make([]*baseApi.ChatMessage, 0, len(messages))
 	for _, item := range messages {
 		item.User = user
 		if item.AdminId > 0 {

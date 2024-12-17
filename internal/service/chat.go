@@ -4,13 +4,14 @@ import (
 	"context"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/model"
+
 	"github.com/gorilla/websocket"
 )
 
 type (
 	IChat interface {
 		Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (*api.ChatUser, error)
-		Register(ctx context.Context, u any, conn *websocket.Conn) error
+		Register(u any, conn *websocket.Conn, platform string) error
 		IsOnline(customerId uint, uid uint, t string) bool
 		BroadcastWaitingUser(ctx context.Context, customerId uint) error
 		UpdateAdminSetting(admin *model.CustomerAdmin)

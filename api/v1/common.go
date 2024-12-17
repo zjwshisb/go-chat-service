@@ -1,4 +1,6 @@
-package api
+package v1
+
+import "github.com/gogf/gf/v2/os/gtime"
 
 type ListRes[T any] struct {
 	NormalRes[[]T]
@@ -74,4 +76,26 @@ func NewResp[T any](data T) *NormalRes[T] {
 		Data:    data,
 		Code:    0,
 	}
+}
+
+type ChatMessage struct {
+	Id         uint        `json:"id"`
+	UserId     uint        `json:"user_id"`
+	AdminId    uint        `json:"admin_id"`
+	AdminName  string      `json:"admin_name"`
+	Type       string      `json:"type"`
+	Content    string      `json:"content"`
+	ReceivedAT *gtime.Time `json:"received_at"`
+	Source     uint        `json:"source"`
+	ReqId      string      `json:"req_id"`
+	IsSuccess  bool        `json:"is_success"`
+	IsRead     bool        `json:"is_read"`
+	Avatar     string      `json:"avatar"`
+	Username   string      `json:"username"`
+}
+
+type ChatAction struct {
+	Data   any    `json:"data"`
+	Time   int64  `json:"time"`
+	Action string `json:"action"`
 }
