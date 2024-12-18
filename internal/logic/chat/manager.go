@@ -224,7 +224,7 @@ func (m *manager) Unregister(conn iWsConn) {
 // 集群模式下，如果不在本机则投递一个消息
 func (m *manager) Register(conn *websocket.Conn, user IChatUser, platform string) {
 	client := newClient(conn, user, platform)
-	client.Manager = m
+	client.manager = m
 	timer := time.After(1 * time.Second)
 	m.NoticeRepeatConnect(client.GetUser(), client.GetUuid())
 	m.AddConn(client)

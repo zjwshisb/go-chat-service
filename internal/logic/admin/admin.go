@@ -124,7 +124,7 @@ func (s *sAdmin) GenSetting(ctx context.Context, admin *model.CustomerAdmin) (*m
 }
 
 func (s *sAdmin) UpdateLastOnline(ctx context.Context, adminId uint) error {
-	_, err := dao.CustomerChatSettings.Ctx(ctx).Where("admin_id", adminId).Update(do.CustomerAdminChatSettings{
+	_, err := dao.CustomerAdminChatSettings.Ctx(ctx).Where("admin_id", adminId).Update(do.CustomerAdminChatSettings{
 		LastOnline: gtime.Now(),
 	})
 	return err

@@ -34,55 +34,55 @@ type iWsConn interface {
 }
 
 type client struct {
-	Conn        *websocket.Conn
-	CloseSignal chan interface{}    // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
-	Send        chan *v1.ChatAction // 发送的消息chan
+	conn        *websocket.Conn
+	closeSignal chan interface{}    // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
+	send        chan *v1.ChatAction // 发送的消息chan
 	sync.Once
-	Manager  connManager
-	User     IChatUser
-	Uuid     string
-	Created  *gtime.Time
-	Limiter  *rate.Limiter
-	Platform string
+	manager  connManager
+	user     IChatUser
+	uuid     string
+	created  *gtime.Time
+	limiter  *rate.Limiter
+	platform string
 }
 
 func newClient(conn *websocket.Conn, user IChatUser, platform string) *client {
 	return &client{
-		Conn:        conn,
-		CloseSignal: make(chan interface{}),
-		Send:        make(chan *v1.ChatAction, 100),
+		conn:        conn,
+		closeSignal: make(chan interface{}),
+		send:        make(chan *v1.ChatAction, 100),
 		Once:        sync.Once{},
-		User:        user,
-		Uuid:        guid.S(),
-		Created:     gtime.Now(),
-		Limiter:     rate.NewLimiter(5, 10),
-		Platform:    platform,
+		user:        user,
+		uuid:        guid.S(),
+		created:     gtime.Now(),
+		limiter:     rate.NewLimiter(5, 10),
+		platform:    platform,
 	}
 }
 
 func (c *client) CreateTime() *gtime.Time {
-	return c.Created
+	return c.created
 }
 
 func (c *client) GetCustomerId() uint {
-	return c.User.GetCustomerId()
+	return c.user.GetCustomerId()
 }
 
 // GetUuid 每个连接的unique id
 func (c *client) GetUuid() string {
-	return c.Uuid
+	return c.uuid
 }
 
 func (c *client) GetPlatform() string {
-	return c.Platform
+	return c.platform
 }
 
 func (c *client) GetUser() IChatUser {
-	return c.User
+	return c.user
 }
 
 func (c *client) GetUserId() uint {
-	return c.User.GetPrimaryKey()
+	return c.user.GetPrimaryKey()
 }
 
 func (c *client) Run() {
@@ -93,15 +93,15 @@ func (c *client) Run() {
 // Close 幂等close方法 关闭连接，相关清理
 func (c *client) Close() {
 	c.Once.Do(func() {
-		close(c.CloseSignal)
-		_ = c.Conn.Close()
-		c.Manager.Unregister(c)
+		close(c.closeSignal)
+		_ = c.conn.Close()
+		c.manager.Unregister(c)
 	})
 }
 
 // 发送消息验证
 func (c *client) validate(data map[string]interface{}) error {
-	if !c.Limiter.Allow() {
+	if !c.limiter.Allow() {
 		return gerror.New("发送过于频繁，请慢一些")
 	}
 	content, exist := data["content"]
@@ -121,13 +121,13 @@ func (c *client) validate(data map[string]interface{}) error {
 	if !exist {
 		return gerror.New("消息不合法")
 	}
-	idStr, ok := reqId.(string)
-	if ok {
-		length := len(idStr)
-		if length <= 0 || length > 20 {
-			return gerror.New("消息不合法")
-		}
-	} else {
+	reqIdStr, ok := reqId.(string)
+	if !ok {
+		return gerror.New("消息不合法")
+
+	}
+	length := len(reqIdStr)
+	if length <= 0 || length > 20 {
 		return gerror.New("消息不合法")
 	}
 	types, exist := data["type"]
@@ -137,7 +137,6 @@ func (c *client) validate(data map[string]interface{}) error {
 	typeStr, ok := types.(string)
 	if !ok {
 		return gerror.New("消息不合法")
-
 	}
 	if !c.isTypeValid(typeStr) {
 		return gerror.New("消息不合法")
@@ -162,7 +161,7 @@ func (c *client) ReadMsg() {
 	var msg = make(chan []byte, 50)
 	for {
 		go func() {
-			_, message, err := c.Conn.ReadMessage()
+			_, message, err := c.conn.ReadMessage()
 			// 读消息失败说明连接异常，调用close方法
 			if err != nil {
 				c.Close()
@@ -171,7 +170,7 @@ func (c *client) ReadMsg() {
 			}
 		}()
 		select {
-		case <-c.CloseSignal:
+		case <-c.closeSignal:
 			return
 		case msgStr := <-msg:
 			ctx := gctx.New()
@@ -207,7 +206,7 @@ func (c *client) ReadMsg() {
 					}
 					msg.CustomerId = c.GetCustomerId()
 					msg.ReceivedAt = gtime.Now()
-					c.Manager.ReceiveMessage(&chatConnMessage{
+					c.manager.ReceiveMessage(&chatConnMessage{
 						Msg:  msg,
 						Conn: c,
 					})
@@ -220,21 +219,21 @@ func (c *client) ReadMsg() {
 
 // Deliver 投递消息
 func (c *client) Deliver(act *v1.ChatAction) {
-	c.Send <- act
+	c.send <- act
 }
 
 // SendMsg 发消息
 func (c *client) SendMsg() {
 	for {
 		select {
-		case act := <-c.Send:
+		case act := <-c.send:
 			ctx := gctx.New()
 			msgByte, err := action.marshal(ctx, *act)
 			if err != nil {
 				g.Log().Errorf(ctx, "%+v", err)
 				break
 			}
-			err = c.Conn.WriteMessage(websocket.TextMessage, msgByte)
+			err = c.conn.WriteMessage(websocket.TextMessage, msgByte)
 			if err != nil {
 				g.Log().Errorf(ctx, "%+v", err)
 				c.Close()
@@ -261,7 +260,7 @@ func (c *client) SendMsg() {
 
 			default:
 			}
-		case <-c.CloseSignal:
+		case <-c.closeSignal:
 			return
 		}
 	}

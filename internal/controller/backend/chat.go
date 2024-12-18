@@ -47,7 +47,7 @@ func (c cChat) Read(ctx context.Context, req *api.MessageReadReq) (res *baseApi.
 	if err != nil {
 		return
 	}
-	if message.SendAt == nil {
+	if message.ReadAt == nil {
 		_, err = service.ChatMessage().ToRead(ctx, message.Id)
 		if err != nil {
 			return
@@ -260,7 +260,7 @@ func (c cChat) Message(ctx context.Context, req *api.GetMessageReq) (res *baseAp
 	}
 	messages, err := service.ChatMessage().All(ctx, w, g.Slice{
 		model.CustomerChatMessage{}.User,
-	}, "id desc")
+	}, "id desc", 50)
 	if err != nil {
 		return
 	}

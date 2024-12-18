@@ -108,7 +108,7 @@ func (c *cOption) FileType(_ context.Context, _ *api.OptionFileTypeReq) (res *ba
 	return baseApi.NewOptionResp(consts.UserAllowMessageType), nil
 }
 
-func (c *cOption) SessionStatus(_ context.Context, _ *api.OptionSessionStatus) (res *baseApi.OptionRes, err error) {
+func (c *cOption) SessionStatus(_ context.Context, _ *api.OptionSessionStatusReq) (res *baseApi.OptionRes, err error) {
 	options := []baseApi.Option{
 		{
 			Label: "已取消",

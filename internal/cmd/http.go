@@ -21,6 +21,10 @@ var (
 		Name:  "http",
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
+			_, err = g.Redis().Do(ctx, "ping")
+			if err != nil {
+				panic(err)
+			}
 			s := g.Server()
 			controller.RegisterRouter(s)
 			go func() {

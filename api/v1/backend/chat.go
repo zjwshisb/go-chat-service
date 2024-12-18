@@ -110,6 +110,7 @@ type ChatTransfer struct {
 	CreatedAt     *gtime.Time `json:"created_at"`
 	AcceptedAt    *gtime.Time `json:"accepted_at"`
 	CanceledAt    *gtime.Time `json:"canceled_at"`
+	Status        string      `json:"status"`
 }
 
 type ChatUser struct {
@@ -130,19 +131,8 @@ type ChatSimpleUser struct {
 	Username string `json:"username"`
 }
 
-type MessageRes []*v1.ChatMessage
-
-type UserListRes []ChatUser
-
-type AcceptRes struct {
-	User ChatUser
-}
-
 type UserInfoItem struct {
 	Name        string
 	Label       string
 	Description string
-}
-type UserInfoRes struct {
-	Phone string `json:"phone"`
 }

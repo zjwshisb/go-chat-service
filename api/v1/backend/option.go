@@ -23,6 +23,6 @@ type OptionFileTypeReq struct {
 	g.Meta `path:"/options/file-types" tags:"选项" method:"get" summary:"文件类型"`
 }
 
-type OptionSessionStatus struct {
+type OptionSessionStatusReq struct {
 	g.Meta `path:"/options/session-status" tags:"选项" method:"get" summary:"会话状态"`
 }

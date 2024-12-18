@@ -60,6 +60,10 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	if err != nil {
 		return
 	}
+	session.User, err = service.User().Find(ctx, session.UserId)
+	if err != nil {
+		return
+	}
 	if session.CanceledAt != nil {
 		return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, "该用户已被取消")
 	}

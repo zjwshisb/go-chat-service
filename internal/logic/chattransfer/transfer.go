@@ -39,6 +39,7 @@ func (s *sChatTransfer) ToApi(relation *model.CustomerChatTransfer) api.ChatTran
 	formName := ""
 	toName := ""
 	username := ""
+	status := "待接入"
 	if relation.FormAdmin != nil {
 		formName = relation.FormAdmin.Username
 	}
@@ -47,6 +48,12 @@ func (s *sChatTransfer) ToApi(relation *model.CustomerChatTransfer) api.ChatTran
 	}
 	if relation.User != nil {
 		username = relation.User.Username
+	}
+	if relation.CanceledAt != nil {
+		status = "已取消"
+	}
+	if relation.AcceptedAt != nil {
+		status = "已接入"
 	}
 	return api.ChatTransfer{
 		Id:            relation.Id,
@@ -60,6 +67,7 @@ func (s *sChatTransfer) ToApi(relation *model.CustomerChatTransfer) api.ChatTran
 		CreatedAt:     relation.CreatedAt,
 		AcceptedAt:    relation.AcceptedAt,
 		CanceledAt:    relation.CanceledAt,
+		Status:        status,
 	}
 }
 
