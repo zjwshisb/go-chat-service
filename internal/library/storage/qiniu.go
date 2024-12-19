@@ -10,6 +10,7 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gfile"
+	"github.com/qiniu/go-sdk/v7/auth"
 	"github.com/qiniu/go-sdk/v7/auth/qbox"
 	"github.com/qiniu/go-sdk/v7/storage"
 	"strings"
@@ -48,6 +49,13 @@ func (s *qiniuAdapter) Url(path string) string {
 }
 func (s *qiniuAdapter) ThumbUrl(path string) string {
 	return s.Url(path)
+}
+func (s *qiniuAdapter) Delete(path string) error {
+	m := storage.NewBucketManager(&auth.Credentials{
+		AccessKey: s.ak,
+		SecretKey: []byte(s.sk),
+	}, nil)
+	return m.Delete(s.bucket, path)
 }
 func (s *qiniuAdapter) SaveUpload(ctx context.Context, file *ghttp.UploadFile, relativePath string) (*model.CustomerChatFile, error) {
 	formUploader := storage.NewFormUploader(&storage.Config{})

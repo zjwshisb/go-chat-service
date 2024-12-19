@@ -9,6 +9,7 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gctx"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -43,6 +44,10 @@ func (s *localAdapter) Url(path string) string {
 }
 func (s *localAdapter) ThumbUrl(path string) string {
 	return s.Url(path)
+}
+func (s *localAdapter) Delete(path string) error {
+	dir := s.serverRoot + pathSeparator + path
+	return os.Remove(dir)
 }
 
 func (s *localAdapter) SaveUpload(_ context.Context, file *ghttp.UploadFile, relativePath string) (files *model.CustomerChatFile, err error) {

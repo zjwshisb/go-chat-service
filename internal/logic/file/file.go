@@ -61,3 +61,11 @@ func (s *sFile) ToApi(file *model.CustomerChatFile) *api.File {
 	}
 	return apiFile
 }
+
+func (s *sFile) RemoveFile(ctx context.Context, file *model.CustomerChatFile) error {
+	err := s.Delete(ctx, file.Id)
+	if err != nil {
+		return err
+	}
+	return storage.Disk(file.Disk).Delete(file.Path)
+}

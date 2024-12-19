@@ -15,6 +15,7 @@ type (
 		FindAnd2Api(ctx context.Context, id any) (apiFile *api.File, err error)
 		Url(file *model.CustomerChatFile) string
 		ThumbUrl(file *model.CustomerChatFile) string
+		RemoveFile(ctx context.Context, file *model.CustomerChatFile) error
 	}
 )
 

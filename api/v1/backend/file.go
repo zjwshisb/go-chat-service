@@ -20,9 +20,10 @@ type FileListReq struct {
 }
 
 type FileStoreReq struct {
-	g.Meta `path:"/files" tags:"后台文件管理" mine:"multipart/form-data" method:"post" summary:"上传文件"`
-	File   *ghttp.UploadFile `json:"file" p:"file" type:"file" v:"required|file" dc:"文件"`
-	Pid    uint              `json:"pid" v:"file-dir"`
+	g.Meta     `path:"/files" tags:"后台文件管理" mine:"multipart/form-data" method:"post" summary:"上传文件"`
+	File       *ghttp.UploadFile `json:"file" p:"file" type:"file" v:"required|file" dc:"文件"`
+	Pid        uint              `json:"pid" v:"file-dir"`
+	IsResource bool              `json:"resource"`
 }
 
 type FileDirStoreReq struct {

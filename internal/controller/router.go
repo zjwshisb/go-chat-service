@@ -45,6 +45,7 @@ func RegisterRouter(s *ghttp.Server) {
 						backend.COption,
 						backend.CWs,
 						backend.CChat,
+						backend.CChatFile,
 					)
 				})
 			})

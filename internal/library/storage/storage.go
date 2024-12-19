@@ -23,6 +23,7 @@ type Adapter interface {
 	Url(path string) string
 	ThumbUrl(path string) string
 	SaveUpload(ctx context.Context, file *ghttp.UploadFile, relativePath string) (*model.CustomerChatFile, error)
+	Delete(path string) error
 }
 
 func FileType(file multipart.File) (string, error) {

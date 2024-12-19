@@ -25,6 +25,7 @@ func (c cFile) Index(ctx context.Context, req *api.FileListReq) (res *baseApi.Li
 	where := do.CustomerChatFiles{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		ParentId:   req.DirId,
+		IsResource: 1,
 	}
 	files, err := service.File().All(ctx, where, nil, "id desc")
 	if err != nil {
@@ -75,10 +76,15 @@ func (c cFile) Store(ctx context.Context, req *api.FileStoreReq) (res *baseApi.N
 	if err != nil {
 		return nil, err
 	}
+	isResource := 0
+	if req.IsResource {
+		isResource = 1
+	}
 	fileModel.Type = fileType
 	fileModel.ParentId = req.Pid
 	fileModel.CustomerId = service.AdminCtx().GetCustomerId(ctx)
 	fileModel.FromId = service.AdminCtx().GetId(ctx)
+	fileModel.IsResource = isResource
 	fileModel.FromModel = "admin"
 	_, err = service.File().Insert(ctx, fileModel)
 	if err != nil {
