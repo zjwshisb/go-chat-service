@@ -5,15 +5,6 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 )
 
-type File struct {
-	Id       uint   `json:"id"`
-	Path     string `json:"path"`
-	Url      string `json:"url"`
-	ThumbUrl string `json:"thumb_url"`
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-}
-
 type FileListReq struct {
 	g.Meta `path:"/files" tags:"后台文件管理" method:"get" summary:"文件列表"`
 	DirId  uint `json:"dir_id"`
@@ -39,4 +30,13 @@ type FileUpdateReq struct {
 
 type FileDeleteReq struct {
 	g.Meta `path:"/files/:id" tags:"后台文件管理" method:"delete" summary:"删除文件"`
+}
+
+type File struct {
+	Id       uint   `json:"id"`
+	Path     string `json:"path"`
+	Url      string `json:"url"`
+	ThumbUrl string `json:"thumb_url"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
 }

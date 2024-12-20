@@ -276,7 +276,7 @@ func (s sChat) Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toI
 	return service.ChatTransfer().Create(ctx, fromAdmin.Id, admin.Id, userId, remark)
 }
 
-func (s sChat) GetOnlineAdmin(customerId uint) []api.ChatSimpleUser {
+func (s sChat) GetOnlineAdmins(customerId uint) []api.ChatSimpleUser {
 	conns := s.admin.GetAllConn(customerId)
 	res := make([]api.ChatSimpleUser, len(conns))
 	for index, c := range conns {
@@ -288,7 +288,7 @@ func (s sChat) GetOnlineAdmin(customerId uint) []api.ChatSimpleUser {
 	return res
 }
 
-func (s sChat) GetOnlineUser(customerId uint) []api.ChatSimpleUser {
+func (s sChat) GetOnlineUsers(customerId uint) []api.ChatSimpleUser {
 	conns := s.user.GetAllConn(customerId)
 	res := make([]api.ChatSimpleUser, len(conns))
 	for index, c := range conns {
@@ -298,6 +298,23 @@ func (s sChat) GetOnlineUser(customerId uint) []api.ChatSimpleUser {
 		}
 	}
 	return res
+}
+func (s sChat) GetWaitingUsers(ctx context.Context, customerId uint) (res []api.ChatSimpleUser, err error) {
+	ids, err := manual.getAllList(ctx, customerId)
+	if err != nil {
+		return
+	}
+	users, err := service.User().All(ctx, do.Users{
+		Id: ids,
+	}, nil, nil)
+
+	res = slice.Map(users, func(index int, item *model.User) api.ChatSimpleUser {
+		return api.ChatSimpleUser{
+			Id:       item.Id,
+			Username: item.Username,
+		}
+	})
+	return
 }
 
 func (s sChat) RemoveManual(ctx context.Context, uid uint, customerId uint) error {

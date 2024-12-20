@@ -7,18 +7,22 @@ import (
 type DashboardOnlineReq struct {
 	g.Meta `path:"/dashboard/online-info" tags:"dashboard" method:"get" summary:"获取在线信息"`
 }
-
-type DashboardOnlineUserReq struct {
-	g.Meta `path:"/dashboard/online-users" tags:"dashboard" method:"get" summary:"获取在线用户列表"`
+type DashboardWaitingUserReq struct {
+	g.Meta `path:"/dashboard/waiting-users" tags:"dashboard" method:"get" summary:"获取等待用户列表"`
 }
-type DashboardOnlineAdminReq struct {
-	g.Meta `path:"/dashboard/online-admins" tags:"dashboard" method:"get" summary:"获取在线客服列表"`
+type DashboardOnlineUserInfoReq struct {
+	g.Meta `path:"/dashboard/online-user-info" tags:"dashboard" method:"get" summary:"获取在线用户列表"`
+}
+type DashboardAdminInfoReq struct {
+	g.Meta `path:"/dashboard/admin-info" tags:"dashboard" method:"get" summary:"获取在线客服列表"`
 }
 
-type DashboardOnlineUserRes []ChatSimpleUser
+type DashboardAdminInfo struct {
+	Admins []ChatSimpleUser `json:"admins"`
+	Total  int              `json:"total"`
+}
 
-type DashboardOnlineRes struct {
-	UserCount        uint `json:"user_count"`
-	WaitingUserCount uint `json:"waiting_user_count"`
-	AdminCount       uint `json:"admin_count"`
+type DashboardOnlineUserInfo struct {
+	Users       []ChatSimpleUser `json:"users"`
+	ActiveCount int              `json:"active_count"`
 }

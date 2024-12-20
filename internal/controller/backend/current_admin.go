@@ -13,9 +13,9 @@ var CCurrentAdmin = &cCurrentAdmin{}
 type cCurrentAdmin struct {
 }
 
-func (c *cCurrentAdmin) Index(ctx context.Context, _ *api.CurrentAdminInfoReq) (res *baseApi.NormalRes[api.CurrentAdminRes], err error) {
+func (c *cCurrentAdmin) Index(ctx context.Context, _ *api.CurrentAdminInfoReq) (res *baseApi.NormalRes[api.CurrentAdmin], err error) {
 	admin := service.AdminCtx().GetUser(ctx)
-	res = baseApi.NewResp(api.CurrentAdminRes{
+	res = baseApi.NewResp(api.CurrentAdmin{
 		Id:         admin.Id,
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		Username:   admin.Username,

@@ -2,6 +2,12 @@ package v1
 
 import "github.com/gogf/gf/v2/os/gtime"
 
+type NormalRes[T any] struct {
+	Code    int  `json:"code"    dc:"Error code"`
+	Data    T    `json:"data,omitempty"   dc:"Result data for certain request according API definition"`
+	Success bool `json:"success" dc:"Is Success"`
+}
+
 type ListRes[T any] struct {
 	NormalRes[[]T]
 	Total int `json:"total"`
@@ -21,12 +27,6 @@ type OptionRes struct {
 type Option struct {
 	Value any    `json:"value"`
 	Label string `json:"label"`
-}
-
-type NormalRes[T any] struct {
-	Code    int  `json:"code"    dc:"Error code"`
-	Data    T    `json:"data"    dc:"Result data for certain request according API definition"`
-	Success bool `json:"success" dc:"Is Success"`
 }
 
 type FailRes struct {

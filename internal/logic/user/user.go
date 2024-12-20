@@ -13,6 +13,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -31,6 +32,14 @@ type sUser struct {
 
 func (s *sUser) GetInfo(ctx context.Context, user *model.User) ([]api.UserInfoItem, error) {
 	return make([]api.UserInfoItem, 0), nil
+}
+
+func (s *sUser) GetActiveCount(ctx context.Context, date *gtime.Time) (count int, err error) {
+	count, err = dao.CustomerChatMessages.Ctx(ctx).Group("user_id").
+		WhereGTE("created_at", date.StartOfDay().String()).
+		WhereLTE("created_at", date.EndOfDay().String()).
+		Fields("user_id").Count()
+	return
 }
 
 func (s *sUser) Login(ctx context.Context, request *ghttp.Request) (user *model.User, token string, err error) {

@@ -1,7 +1,6 @@
 package frontend
 
 import (
-	"gf-chat/api/v1"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 )
@@ -44,5 +43,3 @@ type ChatMessageReq struct {
 	Id       uint `p:"id"`
 	PageSize int  `d:"20"`
 }
-
-type ChatMessageRes []*v1.ChatMessage

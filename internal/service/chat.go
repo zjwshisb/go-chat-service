@@ -19,8 +19,9 @@ type (
 		Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) error
 		GetOnlineCount(ctx context.Context, customerId uint) (api.ChatOnlineCount, error)
 		GetPlatform(customerId uint, uid uint, t string) string
-		GetOnlineAdmin(customerId uint) []api.ChatSimpleUser
-		GetOnlineUser(customerId uint) []api.ChatSimpleUser
+		GetOnlineAdmins(customerId uint) []api.ChatSimpleUser
+		GetOnlineUsers(customerId uint) []api.ChatSimpleUser
+		GetWaitingUsers(ctx context.Context, customerId uint) ([]api.ChatSimpleUser, error)
 		NoticeRate(msg *model.CustomerChatMessage)
 		NoticeUserRead(customerId uint, uid uint, msgIds []uint)
 		NoticeTransfer(ctx context.Context, customer uint, admin uint) error

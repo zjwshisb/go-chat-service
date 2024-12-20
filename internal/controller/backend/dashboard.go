@@ -2,8 +2,11 @@ package backend
 
 import (
 	"context"
+	v1 "gf-chat/api/v1"
 	api "gf-chat/api/v1/backend"
+	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/os/gtime"
 )
 
 var CDashboard = &cDashboard{}
@@ -11,33 +14,36 @@ var CDashboard = &cDashboard{}
 type cDashboard struct {
 }
 
-func (c cDashboard) OnlineAdmin(ctx context.Context, _ *api.DashboardOnlineAdminReq) (*api.DashboardOnlineUserRes, error) {
-	res := api.DashboardOnlineUserRes{}
-	user := service.Chat().GetOnlineAdmin(service.AdminCtx().GetCustomerId(ctx))
-	for _, u := range user {
-		res = append(res, u)
-	}
-	return &res, nil
-}
-
-func (c cDashboard) OnlineUser(ctx context.Context, _ *api.DashboardOnlineUserReq) (*api.DashboardOnlineUserRes, error) {
-	res := api.DashboardOnlineUserRes{}
-	user := service.Chat().GetOnlineUser(service.AdminCtx().GetCustomerId(ctx))
-	for _, u := range user {
-		res = append(res, u)
-	}
-	return &res, nil
-}
-
-func (c cDashboard) OnlineInfo(ctx context.Context, _ *api.DashboardOnlineReq) (res *api.DashboardOnlineRes, err error) {
-	count, err := service.Chat().GetOnlineCount(ctx, service.AdminCtx().GetCustomerId(ctx))
+func (c cDashboard) AdminInfo(ctx context.Context, _ *api.DashboardAdminInfoReq) (res *v1.NormalRes[api.DashboardAdminInfo], err error) {
+	user := service.Chat().GetOnlineAdmins(service.AdminCtx().GetCustomerId(ctx))
+	total, err := service.Admin().Count(ctx, do.CustomerAdmins{
+		CustomerId: service.AdminCtx().GetCustomerId(ctx),
+	})
 	if err != nil {
 		return
 	}
-	res = &api.DashboardOnlineRes{
-		UserCount:        count.User,
-		WaitingUserCount: count.Waiting,
-		AdminCount:       count.Admin,
+	res = v1.NewResp(api.DashboardAdminInfo{
+		Admins: user,
+		Total:  total,
+	})
+	return
+}
+
+func (c cDashboard) WaitingUser(ctx context.Context, _ *api.DashboardWaitingUserReq) (res *v1.NormalRes[[]api.ChatSimpleUser], err error) {
+	user, err := service.Chat().GetWaitingUsers(ctx, service.AdminCtx().GetCustomerId(ctx))
+	if err != nil {
+		return
 	}
+	res = v1.NewResp(user)
+	return
+}
+
+func (c cDashboard) OnlineUserInfo(ctx context.Context, _ *api.DashboardOnlineUserInfoReq) (res *v1.NormalRes[api.DashboardOnlineUserInfo], err error) {
+	users := service.Chat().GetOnlineUsers(service.AdminCtx().GetCustomerId(ctx))
+	count, err := service.User().GetActiveCount(ctx, gtime.Now())
+	res = v1.NewResp(api.DashboardOnlineUserInfo{
+		Users:       users,
+		ActiveCount: count,
+	})
 	return
 }

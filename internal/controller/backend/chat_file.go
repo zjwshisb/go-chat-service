@@ -69,8 +69,8 @@ func (f cChatFile) Index(ctx context.Context, req *api.ChatFileListReq) (res *v1
 			UserName:  userName,
 		}
 	})
-
-	return v1.NewListResp(files, paginator.Total), nil
+	res = v1.NewListResp(files, paginator.Total)
+	return
 }
 
 func (f cChatFile) Delete(ctx context.Context, _ *api.ChatFileDeleteReq) (res *v1.NilRes, err error) {

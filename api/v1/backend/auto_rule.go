@@ -14,18 +14,6 @@ type AutoRuleListReq struct {
 	MatchType string `json:"match_type"`
 	IsOpen    *bool  `json:"is_open"`
 }
-
-type AutoRuleForm struct {
-	Name      string   `json:"name"  v:"required|max-length:32|unique:customer_chat_auto_rules,name#||已存在相同名字的规则"`
-	Match     string   `json:"match"  v:"required"`
-	MatchType string   `json:"match_type"  v:"required|auto-rule-match-type"`
-	ReplyType string   `json:"reply_type"  v:"required|auto-rule-reply-type"`
-	MessageId uint     `json:"message_id" v:"required-if:reply_type,message|exists:customer_chat_auto_messages"`
-	IsOpen    bool     `json:"is_open" p:"is_open" v:"boolean"`
-	Sort      uint     `json:"sort" p:"sort" v:"required|max:10000|min:0"`
-	Scenes    []string `json:"scenes" p:"scenes" v:"required-if:reply_type,message|foreach|auto-rule-scene"`
-}
-
 type AutoRuleStoreReq struct {
 	g.Meta `path:"/auto-rules" tags:"后台自动回复规则" method:"post" summary:"新增自动回复规则"`
 	AutoRuleForm
@@ -41,6 +29,17 @@ type AutoRuleDeleteReq struct {
 
 type AutoRuleFormReq struct {
 	g.Meta `path:"/auto-rules/:id/form" tags:"后台自动回复规则" method:"get" summary:"获取自动回复规则表单"`
+}
+
+type AutoRuleForm struct {
+	Name      string   `json:"name"  v:"required|max-length:32|unique:customer_chat_auto_rules,name#||已存在相同名字的规则"`
+	Match     string   `json:"match"  v:"required"`
+	MatchType string   `json:"match_type"  v:"required|auto-rule-match-type"`
+	ReplyType string   `json:"reply_type"  v:"required|auto-rule-reply-type"`
+	MessageId uint     `json:"message_id" v:"required-if:reply_type,message|exists:customer_chat_auto_messages"`
+	IsOpen    bool     `json:"is_open" p:"is_open" v:"boolean"`
+	Sort      uint     `json:"sort" p:"sort" v:"required|max:10000|min:0"`
+	Scenes    []string `json:"scenes" p:"scenes" v:"required-if:reply_type,message|foreach|auto-rule-scene"`
 }
 
 type AutoRule struct {

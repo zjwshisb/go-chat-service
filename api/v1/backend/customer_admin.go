@@ -11,19 +11,10 @@ type CustomerAdminDetailReq struct {
 	Month  string `json:"month" v:"required" p:"month"`
 }
 
-type CustomerAdminDetailRes struct {
-}
-
 type CustomerAdminListReq struct {
 	g.Meta   `path:"/admins" tags:"后台管理员" method:"get" summary:"获取管理员列表"`
 	Username string `json:"username"`
 	v1.Paginate
-}
-
-type CustomerAdminStoreReq struct {
-	g.Meta   `path:"/admins" tags:"后台管理员" method:"get" summary:"获取管理员列表"`
-	Username string `json:"username"`
-	Password string `json:"password"`
 }
 
 type CustomerAdmin struct {

@@ -17,9 +17,17 @@ type AutoMessageListReq struct {
 type AutoMessageFormReq struct {
 	g.Meta `path:"/auto-messages/:id/form" tags:"后台快捷回复" method:"get" summary:"获取编辑表单数据"`
 }
-
-type AutoMessageFormRes struct {
+type AutoMessageStoreReq struct {
+	g.Meta `path:"/auto-messages" tags:"后台快捷回复" method:"post" summary:"新增快捷回复"`
 	AutoMessageForm
+}
+
+type AutoMessageUpdateReq struct {
+	g.Meta `path:"/auto-messages/:id" tags:"后台快捷回复" method:"put" summary:"修改快捷回复"`
+	AutoMessageForm
+}
+type AutoMessageDeleteReq struct {
+	g.Meta `path:"/auto-messages/:id" tags:"后台快捷回复" method:"delete" summary:"删除快捷回复"`
 }
 
 type AutoMessageOriginNavigator struct {
@@ -40,19 +48,6 @@ type AutoMessageForm struct {
 	Content   string                `json:"content" v:"required-if:type,text|max-length:512"`
 	Navigator *AutoMessageNavigator `json:"navigator" v:"required-if:type,navigator"`
 	File      *File                 `json:"file" v:"auto-message-file|api-file"`
-}
-
-type AutoMessageStoreReq struct {
-	g.Meta `path:"/auto-messages" tags:"后台快捷回复" method:"post" summary:"新增快捷回复"`
-	AutoMessageForm
-}
-
-type AutoMessageUpdateReq struct {
-	g.Meta `path:"/auto-messages/:id" tags:"后台快捷回复" method:"put" summary:"修改快捷回复"`
-	AutoMessageForm
-}
-type AutoMessageDeleteReq struct {
-	g.Meta `path:"/auto-messages/:id" tags:"后台快捷回复" method:"delete" summary:"删除快捷回复"`
 }
 
 type AutoMessage struct {

@@ -35,7 +35,7 @@ func (c *cAutoMessage) Index(ctx context.Context, req *api.AutoMessageListReq) (
 	return
 }
 
-func (c *cAutoMessage) Form(ctx context.Context, _ *api.AutoMessageFormReq) (res *baseApi.NormalRes[api.AutoMessageFormRes], err error) {
+func (c *cAutoMessage) Form(ctx context.Context, _ *api.AutoMessageFormReq) (res *baseApi.NormalRes[api.AutoMessageForm], err error) {
 	id := g.RequestFromCtx(ctx).GetRouter("id").Val()
 	message, err := service.AutoMessage().First(ctx, do.CustomerChatAutoMessages{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -44,11 +44,9 @@ func (c *cAutoMessage) Form(ctx context.Context, _ *api.AutoMessageFormReq) (res
 	if err != nil {
 		return
 	}
-	form := api.AutoMessageFormRes{
-		AutoMessageForm: api.AutoMessageForm{
-			Name: message.Name,
-			Type: message.Type,
-		},
+	form := api.AutoMessageForm{
+		Name: message.Name,
+		Type: message.Type,
 	}
 	apiMessage, err := service.AutoMessage().ToApi(ctx, message, nil)
 	if err != nil {

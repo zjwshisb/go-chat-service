@@ -67,9 +67,9 @@ type ReqIdRes struct {
 }
 
 type ChatOnlineCount struct {
-	Admin   uint
-	User    uint
-	Waiting uint
+	Admin   uint `json:"admin"`
+	User    uint `json:"user"`
+	Waiting uint `json:"waiting"`
 }
 
 type ChatWaitingUser struct {
@@ -135,4 +135,9 @@ type UserInfoItem struct {
 	Name        string
 	Label       string
 	Description string
+}
+
+type ChatConnectReq struct {
+	g.Meta `path:"/ws" tags:"后台websocket链接" method:"get" summary:"连接websocket服务"`
+	Token  string `v:"required" dc:"认证token"`
 }
