@@ -17,7 +17,6 @@ type (
 		UpdateAdminSetting(admin *model.CustomerAdmin)
 		RemoveManual(ctx context.Context, uid uint, customerId uint) error
 		Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) error
-		GetOnlineCount(ctx context.Context, customerId uint) (api.ChatOnlineCount, error)
 		GetPlatform(customerId uint, uid uint, t string) string
 		GetOnlineAdmins(customerId uint) []api.ChatSimpleUser
 		GetOnlineUsers(customerId uint) []api.ChatSimpleUser

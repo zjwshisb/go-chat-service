@@ -114,16 +114,15 @@ type ChatTransfer struct {
 }
 
 type ChatUser struct {
-	Id           uint             `json:"id"`
-	Username     string           `json:"username"`
-	LastChatTime *gtime.Time      `json:"last_chat_time"`
-	Disabled     bool             `json:"disabled"`
-	Online       bool             `json:"online"`
-	LastMessage  *v1.ChatMessage  `json:"last_message"`
-	Unread       uint             `json:"unread"`
-	Avatar       string           `json:"avatar"`
-	Platform     string           `json:"platform"`
-	Messages     []v1.ChatMessage `json:"messages"`
+	Id           uint            `json:"id"`
+	Username     string          `json:"username"`
+	LastChatTime *gtime.Time     `json:"last_chat_time"`
+	Disabled     bool            `json:"disabled"`
+	Online       bool            `json:"online"`
+	LastMessage  *v1.ChatMessage `json:"last_message"`
+	Unread       uint            `json:"unread"`
+	Avatar       string          `json:"avatar"`
+	Platform     string          `json:"platform"`
 }
 
 type ChatSimpleUser struct {

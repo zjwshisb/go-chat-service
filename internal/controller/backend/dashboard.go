@@ -29,12 +29,15 @@ func (c cDashboard) AdminInfo(ctx context.Context, _ *api.DashboardAdminInfoReq)
 	return
 }
 
-func (c cDashboard) WaitingUser(ctx context.Context, _ *api.DashboardWaitingUserReq) (res *v1.NormalRes[[]api.ChatSimpleUser], err error) {
+func (c cDashboard) WaitingUserInfo(ctx context.Context, _ *api.DashboardWaitingUserInfoReq) (res *v1.NormalRes[api.DashboardWaitingUserInfo], err error) {
 	user, err := service.Chat().GetWaitingUsers(ctx, service.AdminCtx().GetCustomerId(ctx))
 	if err != nil {
 		return
 	}
-	res = v1.NewResp(user)
+	res = v1.NewResp(api.DashboardWaitingUserInfo{
+		Users:      user,
+		TodayTotal: 0,
+	})
 	return
 }
 

@@ -13,7 +13,6 @@ import (
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
 	"github.com/duke-git/lancet/v2/slice"
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/grand"
@@ -82,12 +81,13 @@ func (s *sChatMessage) GenReqId() string {
 }
 
 func (s *sChatMessage) ToRead(ctx context.Context, id any) (int64, error) {
-	return s.Update(ctx, g.Map{
-		"read_at is null": nil,
-		"id":              id,
-	}, do.CustomerChatMessages{
+	l, err := s.Dao.Ctx(ctx).WhereNull("read_at").WherePri(id).Update(&do.CustomerChatMessages{
 		ReadAt: gtime.Now(),
 	})
+	if err != nil {
+		return 0, err
+	}
+	return l.RowsAffected()
 }
 
 func (s *sChatMessage) GetAdminName(ctx context.Context, model *model.CustomerChatMessage) (avatar string, err error) {

@@ -88,7 +88,7 @@ func (c cChat) RemoveUser(ctx context.Context, _ *api.RemoveUserReq) (res *baseA
 	id := ghttp.RequestFromCtx(ctx).GetRouter("id")
 	session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
 		UserId:  id,
-		AdminId: id,
+		AdminId: admin.Id,
 	}, "id desc")
 	if err != nil {
 		return
@@ -175,7 +175,6 @@ func (c cChat) User(ctx context.Context, _ *api.UserListReq) (res *baseApi.Norma
 				Avatar:      "",
 				Online:      service.Chat().IsOnline(user.CustomerId, user.Id, "user"),
 				Platform:    service.Chat().GetPlatform(user.CustomerId, user.Id, "user"),
-				Messages:    make([]baseApi.ChatMessage, 0),
 			}
 			lastMsg, exist := slice.FindBy(lastMessages, func(index int, item *model.CustomerChatMessage) bool {
 				return item.UserId == user.Id

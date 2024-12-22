@@ -74,6 +74,7 @@ func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 		_ = f.Close()
 	}()
 	uploadFileType, err := storage.FileType(f)
+	g.Dump(uploadFileType)
 	if err != nil {
 		return err
 	}

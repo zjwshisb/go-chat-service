@@ -67,8 +67,7 @@ func (s *userManager) DeliveryMessage(ctx context.Context, message *model.Custom
 
 // NoticeQueueLocation 等待人数
 func (s *userManager) NoticeQueueLocation(ctx context.Context, conn iWsConn) (err error) {
-	uid := conn.GetUserId()
-	uTime, err := manual.getAddTime(ctx, uid, conn.GetCustomerId())
+	uTime, err := manual.getAddTime(ctx, conn.GetUserId(), conn.GetCustomerId())
 	if err != nil {
 		return
 	}
@@ -82,7 +81,14 @@ func (s *userManager) NoticeQueueLocation(ctx context.Context, conn iWsConn) (er
 }
 
 func (s *userManager) BroadcastQueueLocation(ctx context.Context, customerId uint) error {
-	return s.BroadcastLocalQueueLocation(ctx, customerId)
+	isSHowQueue, err := service.ChatSetting().GetIsUserShowQueue(ctx, customerId)
+	if err != nil {
+		return err
+	}
+	if isSHowQueue {
+		return s.BroadcastLocalQueueLocation(ctx, customerId)
+	}
+	return nil
 }
 
 // BroadcastLocalQueueLocation 广播前面等待人数

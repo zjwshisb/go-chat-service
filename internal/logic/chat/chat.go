@@ -160,10 +160,6 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	if err != nil {
 		return
 	}
-	apiMessages := slice.Map(messages, func(index int, item *model.CustomerChatMessage) v1.ChatMessage {
-		m, _ := service.ChatMessage().ToApi(ctx, item)
-		return *m
-	})
 	user := &api.ChatUser{
 		Id:           session.User.Id,
 		Username:     session.User.Username,
@@ -174,7 +170,6 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		Unread:       uint(unRead),
 		Avatar:       "",
 		Platform:     platform,
-		Messages:     apiMessages,
 	}
 	return user, nil
 
@@ -212,19 +207,6 @@ func (s sChat) IsOnline(customerId uint, uid uint, t string) bool {
 
 func (s sChat) BroadcastWaitingUser(ctx context.Context, customerId uint) error {
 	return s.admin.broadcastWaitingUser(ctx, customerId)
-}
-
-func (s sChat) GetOnlineCount(ctx context.Context, customerId uint) (res api.ChatOnlineCount, err error) {
-	waiting, err := manual.getCount(ctx, customerId)
-	if err != nil {
-		return
-	}
-	res = api.ChatOnlineCount{
-		Admin:   s.admin.GetOnlineTotal(customerId),
-		User:    s.user.GetOnlineTotal(customerId),
-		Waiting: waiting,
-	}
-	return
 }
 
 func (s sChat) GetPlatform(customerId, uid uint, t string) string {
@@ -304,8 +286,8 @@ func (s sChat) GetWaitingUsers(ctx context.Context, customerId uint) (res []api.
 	if err != nil {
 		return
 	}
-	users, err := service.User().All(ctx, do.Users{
-		Id: ids,
+	users, err := service.User().All(ctx, g.Map{
+		"id": ids,
 	}, nil, nil)
 
 	res = slice.Map(users, func(index int, item *model.User) api.ChatSimpleUser {

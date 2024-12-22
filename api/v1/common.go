@@ -4,7 +4,7 @@ import "github.com/gogf/gf/v2/os/gtime"
 
 type NormalRes[T any] struct {
 	Code    int  `json:"code"    dc:"Error code"`
-	Data    T    `json:"data,omitempty"   dc:"Result data for certain request according API definition"`
+	Data    T    `json:"data"   dc:"Result data for certain request according API definition"`
 	Success bool `json:"success" dc:"Is Success"`
 }
 

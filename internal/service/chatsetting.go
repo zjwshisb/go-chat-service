@@ -14,6 +14,7 @@ type (
 		// GetIsAutoTransferManual 是否自动转接人工客服
 		GetIsAutoTransferManual(ctx context.Context, customerId uint) (b bool, err error)
 		RemoveCache(ctx context.Context, customerId uint) error
+		GetIsUserShowQueue(ctx context.Context, customerId uint) (isShow bool, err error)
 	}
 )
 

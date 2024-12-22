@@ -2,6 +2,7 @@ package chattransfer
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	api "gf-chat/api/v1/backend"
 	"gf-chat/internal/consts"
@@ -11,7 +12,6 @@ import (
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
-
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -204,5 +204,17 @@ func (s *sChatTransfer) IsInTransfer(ctx context.Context, customerId uint, uid u
 // AddUser 添加用户到转接列表中
 func (s *sChatTransfer) addUser(ctx context.Context, customerId, uid, adminId uint) (err error) {
 	_, err = g.Redis().Do(ctx, "hSet", s.userKey(customerId), uid, adminId)
+	return
+}
+
+func (s *sChatTransfer) FirstActive(ctx context.Context, where any) (transfer *model.CustomerChatTransfer, err error) {
+	err = s.Dao.Ctx(ctx).WhereNull("canceled_at").WhereNull("accepted_at").Where(where).Scan(&transfer)
+	if err != nil {
+		return
+	}
+	if transfer == nil {
+		err = sql.ErrNoRows
+		return
+	}
 	return
 }

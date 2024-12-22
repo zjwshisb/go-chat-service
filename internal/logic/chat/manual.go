@@ -19,13 +19,13 @@ var manual = &sManual{}
 type sManual struct {
 }
 
-func (s sManual) manualKey(gid uint) string {
-	return fmt.Sprintf(manualUserKey, gid)
+func (s sManual) manualKey(customerId uint) string {
+	return fmt.Sprintf(manualUserKey, customerId)
 }
 
 // AddToManualSet 加入到待人工接入sortSet
-func (s sManual) addToSet(ctx context.Context, uid uint, gid uint) error {
-	_, err := g.Redis().Do(ctx, "zadd", s.manualKey(gid), time.Now().Unix(), uid)
+func (s sManual) addToSet(ctx context.Context, uid uint, customerId uint) error {
+	_, err := g.Redis().Do(ctx, "zadd", s.manualKey(customerId), time.Now().Unix(), uid)
 	return err
 }
 
@@ -99,12 +99,7 @@ func (s sManual) getAddTime(ctx context.Context, uid uint, customerId uint) (tim
 
 // GetAll 获取所有待人工接入ids
 func (s sManual) getAllList(ctx context.Context, customerId uint) (uids []uint, err error) {
-	val, err := g.Redis().Do(ctx, "ZRangeByScore", s.manualKey(customerId), &redis.ZRangeBy{
-		Min:    "-inf",
-		Max:    "+info",
-		Offset: 0,
-		Count:  0,
-	})
+	val, err := g.Redis().ZRange(ctx, s.manualKey(customerId), 0, -1)
 	if err != nil {
 		return
 	}

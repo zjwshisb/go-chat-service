@@ -63,7 +63,25 @@ func (s *sChatSetting) GetName(ctx context.Context, customerId uint) (name strin
 	return v.String(), nil
 
 }
-
+func (s *sChatSetting) GetIsUserShowQueue(ctx context.Context, customerId uint) (isShow bool, err error) {
+	v, err := cache.Def.GetOrSetFunc(ctx, fmt.Sprintf(avatarCacheKey, customerId), func(ctx context.Context) (r any, err error) {
+		setting, err := s.First(ctx, do.CustomerChatSettings{
+			CustomerId: customerId,
+			Name:       consts.ChatSettingShowQueue,
+		})
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return false, nil
+			}
+			return
+		}
+		return setting.Value == "1", nil
+	}, time.Minute*10)
+	if err != nil {
+		return
+	}
+	return v.Bool(), nil
+}
 func (s *sChatSetting) GetAvatar(ctx context.Context, customerId uint) (name string, err error) {
 	v, err := cache.Def.GetOrSetFunc(ctx, fmt.Sprintf(avatarCacheKey, customerId), func(ctx context.Context) (r any, err error) {
 		setting, err := s.First(ctx, do.CustomerChatSettings{
