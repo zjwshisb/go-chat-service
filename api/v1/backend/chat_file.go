@@ -16,7 +16,7 @@ type ChatFileDeleteReq struct {
 }
 
 type ChatFile struct {
-	*File
+	*v1.File
 	AdminName string      `json:"admin_name"`
 	UserName  string      `json:"user_name"`
 	CreatedAt *gtime.Time `json:"created_at"`

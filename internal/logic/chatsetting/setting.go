@@ -29,6 +29,8 @@ const (
 	nameCacheKey     = "customer:%d:setting:name"
 	avatarCacheKey   = "customer:%d:setting:avatar"
 	transferCacheKey = "customer:%d:setting:transfer"
+	readCacheKey     = "customer:%d:setting:read"
+	queueCacheKey    = "customer:%d:setting:queue"
 )
 
 type sChatSetting struct {
@@ -40,6 +42,8 @@ func (s *sChatSetting) RemoveCache(ctx context.Context, customerId uint) error {
 		fmt.Sprintf(nameCacheKey, customerId),
 		fmt.Sprintf(avatarCacheKey, customerId),
 		fmt.Sprintf(transferCacheKey, customerId),
+		fmt.Sprintf(readCacheKey, customerId),
+		fmt.Sprintf(queueCacheKey, customerId),
 	)
 	return err
 }
@@ -63,8 +67,27 @@ func (s *sChatSetting) GetName(ctx context.Context, customerId uint) (name strin
 	return v.String(), nil
 
 }
+func (s *sChatSetting) GetIsUserShowRead(ctx context.Context, customerId uint) (isShow bool, err error) {
+	v, err := cache.Def.GetOrSetFunc(ctx, fmt.Sprintf(readCacheKey, customerId), func(ctx context.Context) (r any, err error) {
+		setting, err := s.First(ctx, do.CustomerChatSettings{
+			CustomerId: customerId,
+			Name:       consts.ChatSettingShowRead,
+		})
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return false, nil
+			}
+			return
+		}
+		return setting.Value == "1", nil
+	}, time.Minute*10)
+	if err != nil {
+		return
+	}
+	return v.Bool(), nil
+}
 func (s *sChatSetting) GetIsUserShowQueue(ctx context.Context, customerId uint) (isShow bool, err error) {
-	v, err := cache.Def.GetOrSetFunc(ctx, fmt.Sprintf(avatarCacheKey, customerId), func(ctx context.Context) (r any, err error) {
+	v, err := cache.Def.GetOrSetFunc(ctx, fmt.Sprintf(queueCacheKey, customerId), func(ctx context.Context) (r any, err error) {
 		setting, err := s.First(ctx, do.CustomerChatSettings{
 			CustomerId: customerId,
 			Name:       consts.ChatSettingShowQueue,

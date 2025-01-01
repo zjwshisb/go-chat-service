@@ -5,6 +5,7 @@ import (
 	baseApi "gf-chat/api/v1"
 	api "gf-chat/api/v1/frontend"
 	"gf-chat/internal/consts"
+	"gf-chat/internal/library/storage"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
@@ -19,6 +20,58 @@ import (
 var CChat = &cChat{}
 
 type cChat struct {
+}
+
+func (c cChat) Setting(ctx context.Context, _ *api.SettingReq) (res *baseApi.NormalRes[*api.SettingRes], err error) {
+	customerId := service.UserCtx().GetCustomerId(ctx)
+	isShowQueue, err := service.ChatSetting().GetIsUserShowQueue(ctx, customerId)
+	if err != nil {
+		return
+	}
+	isShowRead, err := service.ChatSetting().GetIsUserShowRead(ctx, customerId)
+	if err != nil {
+		return
+	}
+	return baseApi.NewResp(&api.SettingRes{
+		IsShowQueue: isShowQueue,
+		IsShowRead:  isShowRead,
+	}), nil
+}
+
+func (c cChat) File(ctx context.Context, req *api.FileStoreReq) (res *baseApi.NormalRes[*baseApi.File], err error) {
+	var parent *model.CustomerChatFile
+	request := g.RequestFromCtx(ctx)
+	dirVal := request.GetCtxVar("file-dir")
+	if p, ok := dirVal.Interface().(*model.CustomerChatFile); ok {
+		parent = p
+	}
+	file, err := req.File.Open()
+	if err != nil {
+		return
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+	fileType, _ := storage.FileType(file)
+	relativePath := ""
+	if parent != nil {
+		relativePath = parent.Path
+	}
+	fileModel, err := storage.Disk().SaveUpload(ctx, req.File, relativePath)
+	if err != nil {
+		return nil, err
+	}
+	fileModel.Type = fileType
+	fileModel.ParentId = 0
+	fileModel.CustomerId = service.UserCtx().GetCustomerId(ctx)
+	fileModel.FromId = service.UserCtx().GetId(ctx)
+	fileModel.IsResource = 0
+	fileModel.FromModel = "user"
+	_, err = service.File().Insert(ctx, fileModel)
+	if err != nil {
+		return
+	}
+	return baseApi.NewResp(service.File().ToApi(fileModel)), nil
 }
 
 func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *baseApi.NormalRes[[]*baseApi.ChatMessage], err error) {

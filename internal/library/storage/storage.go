@@ -19,6 +19,11 @@ var DefaultFileSize = map[string]int{
 	consts.FileTypeAudio: 5 * 1024 * 1024,
 }
 
+var (
+	local = newLocal()
+	qiniu = newQiniu()
+)
+
 type Adapter interface {
 	Url(path string) string
 	ThumbUrl(path string) string
@@ -33,7 +38,6 @@ func FileType(file multipart.File) (string, error) {
 		return "", err
 	}
 	mimetype := http.DetectContentType(buffer)
-	g.Dump(mimetype)
 	index := strings.Index(mimetype, "/")
 	if index < 0 {
 		return "", gerror.New("不支持的文件类型")
@@ -57,10 +61,10 @@ func Disk(storages ...string) Adapter {
 	var adapter Adapter
 	switch disk {
 	case consts.StorageQiniu:
-		adapter = newQiniu()
+		adapter = qiniu
 		break
 	case consts.StorageLocal:
-		adapter = newLocal()
+		adapter = local
 		break
 	default:
 		panic("暂不支持该存储引擎:" + disk)

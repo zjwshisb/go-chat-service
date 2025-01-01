@@ -8,7 +8,6 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gctx"
-	"log"
 	"os"
 	"strings"
 )
@@ -19,7 +18,8 @@ func newLocal() *localAdapter {
 	ctx := gctx.New()
 	serverRootVar, err := g.Cfg().Get(ctx, "server.serverRoot")
 	if err != nil {
-		log.Fatal(err)
+		g.Log().Errorf(ctx, "%+v", err)
+		return nil
 	}
 	serverRoot := serverRootVar.String()
 	if strings.HasSuffix(serverRoot, pathSeparator) {
@@ -39,6 +39,7 @@ func (s *localAdapter) Url(path string) string {
 	host, err := g.Config().Get(ctx, "app.host")
 	if err != nil {
 		g.Log().Error(ctx)
+		return ""
 	}
 	return host.String() + pathSeparator + path
 }

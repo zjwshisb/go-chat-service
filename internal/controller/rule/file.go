@@ -2,7 +2,7 @@ package rule
 
 import (
 	"context"
-	api "gf-chat/api/v1/backend"
+	"gf-chat/api/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/library/storage"
 	"gf-chat/internal/model/do"
@@ -104,7 +104,7 @@ func apiFile(ctx context.Context, in gvalid.RuleFuncInput) error {
 	if in.Value.String() == "" {
 		return nil
 	}
-	var apiFile *api.File
+	var apiFile *v1.File
 	err := in.Value.Scan(&apiFile)
 	if err != nil {
 		return UnSupportFileError

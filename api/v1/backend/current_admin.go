@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"gf-chat/api/v1"
 	"github.com/gogf/gf/v2/frame/g"
 )
 
@@ -38,10 +39,10 @@ type CurrentAdminSetting struct {
 }
 
 type CurrentAdminSettingForm struct {
-	Background     *File  `json:"background" v:"api-file:image"`
-	IsAutoAccept   bool   `json:"is_auto_accept" v:"boolean"`
-	WelcomeContent string `json:"welcome_content" v:"max-length:512"`
-	OfflineContent string `json:"offline_content" v:"max-length:512"`
-	Name           string `json:"name" v:"max-length:20"`
-	Avatar         *File  `json:"avatar" v:"api-file:image"`
+	Background     *v1.File `json:"background" v:"api-file:image"`
+	IsAutoAccept   bool     `json:"is_auto_accept" v:"boolean"`
+	WelcomeContent string   `json:"welcome_content" v:"max-length:512"`
+	OfflineContent string   `json:"offline_content" v:"max-length:512"`
+	Name           string   `json:"name" v:"max-length:20"`
+	Avatar         *v1.File `json:"avatar" v:"api-file:image"`
 }

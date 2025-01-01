@@ -31,12 +31,3 @@ type FileUpdateReq struct {
 type FileDeleteReq struct {
 	g.Meta `path:"/files/:id" tags:"后台文件管理" method:"delete" summary:"删除文件"`
 }
-
-type File struct {
-	Id       uint   `json:"id"`
-	Path     string `json:"path"`
-	Url      string `json:"url"`
-	ThumbUrl string `json:"thumb_url"`
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-}

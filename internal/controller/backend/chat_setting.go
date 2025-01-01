@@ -97,7 +97,7 @@ func (c *cChatSetting) Update(ctx context.Context, req *api.ChatSettingUpdateReq
 			err = gerror.NewCode(gcode.CodeValidationFailed, "无效的选项")
 		}
 	case consts.ChatSettingTypeImage:
-		var apiFile *api.File
+		var apiFile *baseApi.File
 		err = json.Unmarshal(gconv.Bytes(req.Value), &apiFile)
 		if err == nil {
 			var file *model.CustomerChatFile

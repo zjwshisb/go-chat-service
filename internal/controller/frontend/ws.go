@@ -26,19 +26,6 @@ var CWs = &cWs{}
 type cWs struct {
 }
 
-func (c cWs) Image(ctx context.Context, req *frontend.ChatImageReq) (res *frontend.ChatImageRes, err error) {
-	//path := fmt.Sprintf("chat/%d/user", service.UserCtx().GetCustomerId(ctx))
-	//r, err := service.Qiniu().Save(ctx, req.File, path)
-	//if err != nil {
-	//	return nil, gerror.NewCode(gcode.CodeBusinessValidationFailed, err.Error())
-	//}
-	//return &frontend.ChatImageRes{
-	//	Url:  r.Url,
-	//	Path: r.Path,
-	//}, nil
-	return nil, nil
-}
-
 func (c cWs) Connect(ctx context.Context, _ *frontend.ChatConnectReq) (res *baseApi.NilRes, err error) {
 	request := ghttp.RequestFromCtx(ctx)
 	conn, err := update.Upgrade(request.Response.Writer, request.Request, nil)

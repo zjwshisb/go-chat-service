@@ -37,9 +37,9 @@ type AutoMessageOriginNavigator struct {
 }
 
 type AutoMessageNavigator struct {
-	Url   string `json:"url" v:"required-if:type,navigator|max-length:512"`
-	Title string `json:"title" v:"required-if:type,navigator|max-length:32"`
-	Image *File  `json:"image" v:"required-if:type,navigator|api-file:image"`
+	Url   string   `json:"url" v:"required-if:type,navigator|max-length:512"`
+	Title string   `json:"title" v:"required-if:type,navigator|max-length:32"`
+	Image *v1.File `json:"image" v:"required-if:type,navigator|api-file:image"`
 }
 
 type AutoMessageForm struct {
@@ -47,7 +47,7 @@ type AutoMessageForm struct {
 	Name      string                `json:"name" v:"required|max-length:32|unique:customer_chat_auto_messages,name#||已存在相同名字的消息"`
 	Content   string                `json:"content" v:"required-if:type,text|max-length:512"`
 	Navigator *AutoMessageNavigator `json:"navigator" v:"required-if:type,navigator"`
-	File      *File                 `json:"file" v:"auto-message-file|api-file"`
+	File      *v1.File              `json:"file" v:"auto-message-file|api-file"`
 }
 
 type AutoMessage struct {
@@ -55,7 +55,7 @@ type AutoMessage struct {
 	Name      string                `json:"name"`
 	Type      string                `json:"type"`
 	Content   string                `json:"content"`
-	File      *File                 `json:"file"`
+	File      *v1.File              `json:"file"`
 	Navigator *AutoMessageNavigator `json:"navigator"`
 	CreatedAt *gtime.Time           `json:"created_at"`
 	UpdatedAt *gtime.Time           `json:"updated_at"`

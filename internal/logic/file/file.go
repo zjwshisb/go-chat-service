@@ -2,7 +2,7 @@ package file
 
 import (
 	"context"
-	api "gf-chat/api/v1/backend"
+	"gf-chat/api/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/library/storage"
@@ -40,7 +40,7 @@ func (s *sFile) ThumbUrl(file *model.CustomerChatFile) string {
 	return storage.Disk(file.Disk).ThumbUrl(file.Path)
 }
 
-func (s *sFile) FindAnd2Api(ctx context.Context, id any) (apiFile *api.File, err error) {
+func (s *sFile) FindAnd2Api(ctx context.Context, id any) (apiFile *v1.File, err error) {
 	file, err := s.Find(ctx, id)
 	if err != nil {
 		return
@@ -48,8 +48,8 @@ func (s *sFile) FindAnd2Api(ctx context.Context, id any) (apiFile *api.File, err
 	apiFile = s.ToApi(file)
 	return
 }
-func (s *sFile) ToApi(file *model.CustomerChatFile) *api.File {
-	apiFile := &api.File{
+func (s *sFile) ToApi(file *model.CustomerChatFile) *v1.File {
+	apiFile := &v1.File{
 		Id:   file.Id,
 		Path: file.Path,
 		Name: file.Name,

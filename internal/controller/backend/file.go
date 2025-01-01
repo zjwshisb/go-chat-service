@@ -21,7 +21,7 @@ var CImage = &cFile{}
 type cFile struct {
 }
 
-func (c cFile) Index(ctx context.Context, req *api.FileListReq) (res *baseApi.ListRes[*api.File], err error) {
+func (c cFile) Index(ctx context.Context, req *api.FileListReq) (res *baseApi.ListRes[*baseApi.File], err error) {
 	where := do.CustomerChatFiles{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 		ParentId:   req.DirId,
@@ -36,11 +36,11 @@ func (c cFile) Index(ctx context.Context, req *api.FileListReq) (res *baseApi.Li
 		return
 	}
 
-	apiFiles := slice.Map(files, func(index int, item *model.CustomerChatFile) *api.File {
+	apiFiles := slice.Map(files, func(index int, item *model.CustomerChatFile) *baseApi.File {
 		return service.File().ToApi(item)
 	})
 	// 目录排到最前面
-	slice.SortBy(apiFiles, func(item1, item2 *api.File) bool {
+	slice.SortBy(apiFiles, func(item1, item2 *baseApi.File) bool {
 		if item1.Type == consts.FileTypeDir && item2.Type != consts.FileTypeDir {
 			return true
 		}
@@ -53,7 +53,7 @@ func (c cFile) Index(ctx context.Context, req *api.FileListReq) (res *baseApi.Li
 	return baseApi.NewListResp(apiFiles, count), nil
 }
 
-func (c cFile) Store(ctx context.Context, req *api.FileStoreReq) (res *baseApi.NormalRes[*api.File], err error) {
+func (c cFile) Store(ctx context.Context, req *api.FileStoreReq) (res *baseApi.NormalRes[*baseApi.File], err error) {
 	var parent *model.CustomerChatFile
 	request := g.RequestFromCtx(ctx)
 	dirVal := request.GetCtxVar("file-dir")
@@ -92,7 +92,7 @@ func (c cFile) Store(ctx context.Context, req *api.FileStoreReq) (res *baseApi.N
 	}
 	return baseApi.NewResp(service.File().ToApi(fileModel)), nil
 }
-func (c cFile) Update(ctx context.Context, req *api.FileUpdateReq) (res *baseApi.NormalRes[*api.File], err error) {
+func (c cFile) Update(ctx context.Context, req *api.FileUpdateReq) (res *baseApi.NormalRes[*baseApi.File], err error) {
 	file, err := service.File().First(ctx, do.CustomerChatFiles{
 		Id:         g.RequestFromCtx(ctx).GetRouter("id").Uint(),
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
@@ -128,7 +128,7 @@ func (c cFile) Update(ctx context.Context, req *api.FileUpdateReq) (res *baseApi
 	return baseApi.NewResp(service.File().ToApi(file)), nil
 }
 
-func (c cFile) StoreDir(ctx context.Context, req *api.FileDirStoreReq) (res *baseApi.NormalRes[*api.File], err error) {
+func (c cFile) StoreDir(ctx context.Context, req *api.FileDirStoreReq) (res *baseApi.NormalRes[*baseApi.File], err error) {
 	request := g.RequestFromCtx(ctx)
 	var parent *model.CustomerChatFile
 	dirVal := request.GetCtxVar("file-dir")

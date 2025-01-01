@@ -99,3 +99,12 @@ type ChatAction struct {
 	Time   int64  `json:"time"`
 	Action string `json:"action"`
 }
+
+type File struct {
+	Id       uint   `json:"id"`
+	Path     string `json:"path"`
+	Url      string `json:"url"`
+	ThumbUrl string `json:"thumb_url"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+}
