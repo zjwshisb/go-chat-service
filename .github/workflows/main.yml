@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -27,3 +26,12 @@ jobs:
           port: ${{ secrets.PORT }}
           source: "gf-chat"
           target: "/home/chat"
+      - name: restart service
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ secrets.PORT }}
+        script: |
+          supervisorctl restart all    
