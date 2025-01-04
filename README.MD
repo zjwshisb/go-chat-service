@@ -2,8 +2,8 @@
 
 ### 介绍
 基于golang，ant-design-pro，Taro实现的在线客服IM系统，通过websocket实现消息接受发送。  
-使用GoFrame进行了重构，更易于二次开发。旧版本在分支old上
-集群部署开发中。
+使用GoFrame进行了重构，更易于二次开发。  
+旧版本在分支old上。   
 - [客服前端代码](https://github.com/zjwshisb/service-frontend)
 - [用户端前端代码](https://github.com/zjwshisb/service-user)
 
@@ -29,7 +29,8 @@ go run main.go http # 启动服务
 - [x] 客服转接功能
 - [x] 多开提醒(重复登录，多个tab等)
 - [X] 多租户
- 
+- [ ] 集群部署 
+
 持续完善中...
 
 ### 演示地址
@@ -37,7 +38,7 @@ go run main.go http # 启动服务
 用户端(移动端): [http://120.77.242.145/mobile](http://120.77.242.145/mobile)  
 账号: user(1-20) #user1-user20  
 密码: user(1-20) #user1-user20  
-客服端(pc): [http://120.77.242.145/server](http://119.29.196.153/admin)  
+客服端(pc): [http://120.77.242.145/server](http://120.77.242.145/server)  
 账号: admin(1-20) #admin1-admin20  
 密码: admin(1-20) #admin1-admin20
 
