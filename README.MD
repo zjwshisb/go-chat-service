@@ -36,11 +36,11 @@ go run main.go http # 启动服务
 ### 演示地址
 
 用户端(移动端): [http://120.77.242.145/mobile](http://120.77.242.145/mobile)  
-账号: user(1-20) #user1-user20  
-密码: user(1-20) #user1-user20  
+账号: user(0-19) #user0-user19  
+密码: user(0-19) #user1-user19  
 客服端(pc): [http://120.77.242.145/server](http://120.77.242.145/server)  
-账号: admin(1-20) #admin1-admin20  
-密码: admin(1-20) #admin1-admin20
+账号: admin(0-19) #admin1-admin19  
+密码: admin(0-19) #admin1-admin19
 
 ### 更新日志
 
