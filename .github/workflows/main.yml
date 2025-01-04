@@ -15,7 +15,7 @@ jobs:
         with:
           go-version: '1.23'
       - name: Build
-        run: go build -v  && ls -al
+        run: CGO_ENABLED=0 go build
       - name: Test
         run: echo ${{ secrets.HOST }}
       - name: scp
