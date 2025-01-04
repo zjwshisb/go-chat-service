@@ -26,11 +26,15 @@ var (
 				panic(err)
 			}
 			s := g.Server()
+			g.Dump(1)
 			controller.RegisterRouter(s)
+			g.Dump(2)
 			go func() {
 				cron.Run()
 			}()
 			s.Run()
+			g.Dump(3)
+
 			return nil
 		},
 	}
