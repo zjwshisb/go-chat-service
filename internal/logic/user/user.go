@@ -47,6 +47,7 @@ func (s *sUser) Login(ctx context.Context, request *ghttp.Request) (user *model.
 	password := request.Get("password")
 	user, err = s.First(ctx, do.Users{Username: username.String()})
 	if err != nil {
+		err = gerror.NewCode(gcode.CodeValidationFailed, "账号或密码错误")
 		return
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), password.Bytes())
