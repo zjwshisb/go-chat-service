@@ -1,9 +1,3 @@
-logger:
-  path: "D:\\code\\kfbackend\\storage\\log\\"
-  file: "{Y-m-d}.log"
-  ws:
-    path: "D:\\code\\kfbackend\\storage\\log\\ws"
-    level: "debug"
 storage:
   default: 'local'
   qiniu:
@@ -13,20 +7,20 @@ storage:
     bucket: ""
 app:
   jwtSecret: ""
-  host: "127.0.0.1:8080"
+  host: "http://127.0.0.1:8080"
 server:
-  address: ""
-  serverRoot: ""
+  address: ":8080"
+  serverRoot: "storage"
   openapiPath: "/api.json"
   swaggerPath: "/swagger"
 database:
   logger:
-    path: "./storage/log/db"
+    path: "./storage/sql"
     level: "all"
     stdout: true
   default:
     type: "mysql"
-    link: "root:123456@tcp(127.0.0.1:3306)/dev?loc=Local&parseTime=true"
+    link: "root:zjw8837533@tcp(120.77.242.145:3306)/testchat?loc=Local&parseTime=true"
     debug: true
     charset: "utf8mb4"
 redis:
@@ -34,4 +28,8 @@ redis:
   default:
     address: 127.0.0.1:6379
     pass:
-    db: 5
+    db: 6
+logger:
+  path:    "./storage/log"
+  level:   "all"
+  stdout:  true

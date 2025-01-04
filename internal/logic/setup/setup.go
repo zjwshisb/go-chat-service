@@ -7,8 +7,8 @@ import (
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
-
 	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 )
 
@@ -21,24 +21,6 @@ var (
 		{
 			Label: "否",
 			Value: "0",
-		},
-	}
-	options2 = []v1.Option{
-		{
-			Label: "5分钟",
-			Value: "5",
-		},
-		{
-			Label: "10分钟",
-			Value: "10",
-		},
-		{
-			Label: "30分钟",
-			Value: "30",
-		},
-		{
-			Label: "60分钟",
-			Value: "60",
 		},
 	}
 	settings = []model.CustomerChatSetting{
@@ -123,18 +105,27 @@ func (s *sSetup) Setup(ctx gctx.Ctx, customerId uint) {
 	for _, setting := range settings {
 		m, _ := service.ChatSetting().First(ctx, do.CustomerChatSettings{
 			Name:       setting.Name,
-			CustomerId: setting.CustomerId,
+			CustomerId: customerId,
 		})
 		if m != nil {
-			m.CustomerId = customerId
-		} else {
 			m.Description = setting.Description
 			m.Title = setting.Title
+			_, err := service.ChatSetting().UpdatePri(ctx, m.Id, do.CustomerChatSettings{
+				Description: setting.Description,
+				Title:       setting.Title,
+			})
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			m = &setting
+			m.CustomerId = customerId
+			_, err := service.ChatSetting().Save(ctx, m)
+			if err != nil {
+				panic(err)
+			}
 		}
-		_, err := service.ChatSetting().Save(ctx, m)
-		if err != nil {
-			panic(err)
-		}
+
 	}
 	for _, rule := range rules {
 		exists, err := service.AutoRule().Exists(ctx, do.CustomerChatAutoRules{
@@ -147,7 +138,8 @@ func (s *sSetup) Setup(ctx gctx.Ctx, customerId uint) {
 		}
 		if !exists {
 			rule.CustomerId = customerId
-			_, err = service.AutoRule().Save(ctx, rules)
+			g.Dump(rule)
+			_, err = service.AutoRule().Save(ctx, rule)
 			if err != nil {
 				panic(err)
 			}

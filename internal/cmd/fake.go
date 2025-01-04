@@ -43,6 +43,7 @@ var Fake = &gcmd.Command{
 				panic(err)
 			}
 		}
+		service.Setup().Setup(ctx, 1)
 		return nil
 	},
 }
