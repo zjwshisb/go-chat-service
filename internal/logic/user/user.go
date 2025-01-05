@@ -31,7 +31,17 @@ type sUser struct {
 }
 
 func (s *sUser) GetInfo(ctx context.Context, user *model.User) ([]api.UserInfoItem, error) {
-	return make([]api.UserInfoItem, 0), nil
+	r := make([]api.UserInfoItem, 0)
+	r = append(r, api.UserInfoItem{
+		Label:       "用户名",
+		Name:        "username",
+		Description: user.Username,
+	}, api.UserInfoItem{
+		Label:       "注册时间",
+		Name:        "created_at",
+		Description: user.CreatedAt.String(),
+	})
+	return r, nil
 }
 
 func (s *sUser) GetActiveCount(ctx context.Context, date *gtime.Time) (count int, err error) {

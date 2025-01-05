@@ -4,8 +4,10 @@ import (
 	"context"
 	v1 "gf-chat/api/v1"
 	api "gf-chat/api/v1/backend"
+	"gf-chat/internal/consts"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
@@ -34,9 +36,18 @@ func (c cDashboard) WaitingUserInfo(ctx context.Context, _ *api.DashboardWaiting
 	if err != nil {
 		return
 	}
+	total, err := service.ChatSession().Count(ctx, g.Map{
+		"queried_at >=": gtime.Now().StartOfDay().String(),
+		"queried_at <=": gtime.Now().EndOfDay().String(),
+		"customer_id":   service.AdminCtx().GetCustomerId(ctx),
+		"type":          consts.ChatSessionTypeNormal,
+	})
+	if err != nil {
+		return
+	}
 	res = v1.NewResp(api.DashboardWaitingUserInfo{
 		Users:      user,
-		TodayTotal: 0,
+		TodayTotal: total,
 	})
 	return
 }

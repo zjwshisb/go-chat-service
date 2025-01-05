@@ -39,11 +39,12 @@ func (s *sAdmin) Login(ctx context.Context, request *ghttp.Request) (admin *mode
 	password := request.Get("password")
 	admin, err = s.First(ctx, do.CustomerAdmins{Username: username.String()})
 	if err != nil {
+		err = gerror.NewCode(gcode.CodeBusinessValidationFailed, "账号或密码错误")
 		return
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(admin.Password), password.Bytes())
 	if err != nil {
-		err = gerror.NewCode(gcode.CodeValidationFailed, "账号或密码错误")
+		err = gerror.NewCode(gcode.CodeBusinessValidationFailed, "账号或密码错误")
 		return
 	}
 	canAccess := s.CanAccess(admin)

@@ -131,9 +131,9 @@ type ChatSimpleUser struct {
 }
 
 type UserInfoItem struct {
-	Name        string
-	Label       string
-	Description string
+	Name        string `json:"name"`
+	Label       string `json:"label"`
+	Description string `json:"description"`
 }
 
 type ChatConnectReq struct {
