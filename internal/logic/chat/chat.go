@@ -42,8 +42,8 @@ func (s sChat) run() {
 	s.user.run()
 }
 
-func (s sChat) UpdateAdminSetting(admin *model.CustomerAdmin) {
-	s.admin.updateSetting(admin)
+func (s sChat) UpdateAdminSetting(ctx context.Context, admin *model.CustomerAdmin) {
+	s.admin.updateSetting(ctx, admin)
 }
 
 // NoticeTransfer 发送转接通知
@@ -175,22 +175,20 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 
 }
 
-func (s sChat) Register(u any, conn *websocket.Conn, platform string) error {
+func (s sChat) Register(ctx context.Context, u any, conn *websocket.Conn, platform string) error {
 	switch u.(type) {
 	case *model.CustomerAdmin:
 		uu, _ := u.(*model.CustomerAdmin)
 		e := &admin{
 			uu,
 		}
-		s.admin.Register(conn, e, platform)
-		return nil
+		return s.admin.Register(ctx, conn, e, platform)
 	case *model.User:
 		uu, _ := u.(*model.User)
 		e := &user{
 			uu,
 		}
-		s.user.Register(conn, e, platform)
-		return nil
+		return s.user.Register(ctx, conn, e, platform)
 	}
 	return gerror.New("无效的用户模型")
 }

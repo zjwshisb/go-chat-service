@@ -9,6 +9,7 @@ import (
 	"gf-chat/internal/service"
 	"github.com/duke-git/lancet/v2/maputil"
 	"github.com/duke-git/lancet/v2/slice"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
@@ -25,8 +26,9 @@ func newAdminManager() *adminManager {
 			types:        TypeAdmin,
 		},
 	}
-	adminM.onRegister = adminM.registerHook
-	adminM.onUnRegister = adminM.unregisterHook
+	adminM.on(eventRegister, adminM.onRegister)
+	adminM.on(eventUnRegister, adminM.onUnRegister)
+	adminM.on(eventMessage, adminM.handleMessage)
 	return adminM
 }
 
@@ -34,12 +36,7 @@ type adminManager struct {
 	*manager
 }
 
-func (m *adminManager) run() {
-	m.Run()
-	go m.handleReceiveMessage()
-}
-
-// DeliveryMessage
+// deliveryMessage
 // 投递消息
 // 查询admin是否在线，是则直接投递
 // 最后则说明admin不在线，处理离线逻辑
@@ -52,27 +49,14 @@ func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerC
 		}
 		adminConn.Deliver(action.newReceive(msg))
 		return nil
-	}
-	return m.handleOffline(ctx, msg, userConn)
-}
-
-// 从管道接受消息并处理
-func (m *adminManager) handleReceiveMessage() {
-	for {
-		payload := <-m.connMessages
-		go func() {
-			ctx := gctx.New()
-			err := m.handleMessage(ctx, payload)
-			if err != nil {
-				g.Log().Errorf(ctx, "%+v", err)
-			}
-		}()
+	} else {
+		return m.handleOffline(ctx, msg, userConn)
 	}
 }
 
-func (m *adminManager) sendWaiting(admin *model.CustomerAdmin, user IChatUser) {
-
-}
+//func (m *adminManager) sendWaiting(admin *model.CustomerAdmin, user IChatUser) {
+//
+//}
 
 func (m *adminManager) sendOffline(admin *model.CustomerAdmin, msg *model.CustomerChatMessage) {
 
@@ -99,7 +83,7 @@ func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerCha
 		if err != nil {
 			return err
 		}
-		err = userM.DeliveryMessage(ctx, message)
+		err = userM.deliveryMessage(ctx, message)
 		if err != nil {
 			return err
 		}
@@ -109,18 +93,18 @@ func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerCha
 }
 
 // 处理消息
-func (m *adminManager) handleMessage(ctx context.Context, payload *chatConnMessage) error {
-	msg := payload.Msg
-	conn := payload.Conn
+func (m *adminManager) handleMessage(ctx context.Context, arg eventArg) error {
+	msg := arg.msg
+	conn := arg.conn
 	if msg.UserId > 0 {
-		if !service.ChatRelation().IsUserValid(ctx, conn.GetUserId(), msg.UserId) {
+		if !service.ChatRelation().IsUserValid(ctx, msg.AdminId, msg.UserId) {
 			conn.Deliver(action.newErrorMessage("该用户已失效，无法发送消息"))
-			return gerror.New("该用户已失效，无法发送消息")
+			return gerror.NewCode(gcode.CodeValidationFailed, "该用户已失效，无法发送消息")
 		}
 		session, _ := service.ChatSession().FirstActive(ctx, msg.UserId, conn.GetUserId(), nil)
 		if session == nil {
 			conn.Deliver(action.newErrorMessage("无效的用户"))
-			return gerror.New("无效的用户")
+			return gerror.NewCode(gcode.CodeValidationFailed, "无效的用户")
 		}
 		msg.AdminId = conn.GetUserId()
 		msg.Source = consts.MessageSourceAdmin
@@ -132,38 +116,38 @@ func (m *adminManager) handleMessage(ctx context.Context, payload *chatConnMessa
 		_ = service.ChatRelation().UpdateUser(ctx, msg.AdminId, msg.UserId)
 		// 服务器回执d
 		conn.Deliver(action.newReceipt(msg))
-		return userM.DeliveryMessage(ctx, msg)
+		return userM.deliveryMessage(ctx, msg)
 	}
 	return nil
 }
 
-func (m *adminManager) registerHook(conn iWsConn) {
-	ctx := gctx.New()
-	err := m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
+func (m *adminManager) onRegister(ctx context.Context, arg eventArg) error {
+	err := m.broadcastOnlineAdmins(ctx, arg.conn.GetCustomerId())
 	if err != nil {
-		g.Log().Errorf(ctx, "%+v", err)
+		return err
 	}
-	err = m.broadcastWaitingUser(ctx, conn.GetCustomerId())
+	err = m.broadcastWaitingUser(ctx, arg.conn.GetCustomerId())
 	if err != nil {
-		g.Log().Errorf(ctx, "%+v", err)
+		return err
 	}
-	err = m.noticeUserTransfer(ctx, conn.GetCustomerId(), conn.GetUserId())
+	err = m.noticeUserTransfer(ctx, arg.conn.GetCustomerId(), arg.conn.GetUserId())
 	if err != nil {
-		g.Log().Errorf(ctx, "%+v", err)
+		return err
 	}
+	return nil
 }
 
 // conn断开连接后，更新admin的最后在线时间
-func (m *adminManager) unregisterHook(conn iWsConn) {
-	ctx := gctx.New()
-	err := service.Admin().UpdateLastOnline(ctx, conn.GetUserId())
+func (m *adminManager) onUnRegister(ctx context.Context, arg eventArg) error {
+	err := service.Admin().UpdateLastOnline(ctx, arg.conn.GetUserId())
 	if err != nil {
-		g.Log().Errorf(ctx, "%+v", err)
+		return err
 	}
-	err = m.broadcastOnlineAdmins(ctx, conn.GetCustomerId())
+	err = m.broadcastOnlineAdmins(ctx, arg.conn.GetCustomerId())
 	if err != nil {
-		g.Log().Errorf(ctx, "%+v", err)
+		return err
 	}
+	return nil
 }
 
 func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint) error {
@@ -336,12 +320,12 @@ func (m *adminManager) noticeUpdateSetting(customerId uint, setting *api.Current
 }
 
 // UpdateSetting 更新设置
-func (m *adminManager) updateSetting(a *model.CustomerAdmin) {
+func (m *adminManager) updateSetting(ctx context.Context, a *model.CustomerAdmin) {
 	conn, exist := m.GetConn(a.CustomerId, a.Id)
 	if exist {
 		u, ok := conn.GetUser().(*admin)
 		if ok {
-			setting, err := service.Admin().FindSetting(gctx.New(), a.Id, true)
+			setting, err := service.Admin().FindSetting(ctx, a.Id, true)
 			if err == nil {
 				u.Entity.Setting = setting
 			}

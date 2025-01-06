@@ -29,7 +29,7 @@ func (c *cCurrentAdmin) UpdateSetting(ctx context.Context, req *api.CurrentAdmin
 	if err != nil {
 		return
 	}
-	service.Chat().UpdateAdminSetting(service.AdminCtx().GetUser(ctx))
+	service.Chat().UpdateAdminSetting(ctx, service.AdminCtx().GetUser(ctx))
 	return baseApi.NewNilResp(), nil
 }
 

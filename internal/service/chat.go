@@ -11,10 +11,10 @@ import (
 type (
 	IChat interface {
 		Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (*api.ChatUser, error)
-		Register(u any, conn *websocket.Conn, platform string) error
+		Register(ctx context.Context, u any, conn *websocket.Conn, platform string) error
 		IsOnline(customerId uint, uid uint, t string) bool
 		BroadcastWaitingUser(ctx context.Context, customerId uint) error
-		UpdateAdminSetting(admin *model.CustomerAdmin)
+		UpdateAdminSetting(ctx context.Context, admin *model.CustomerAdmin)
 		RemoveManual(ctx context.Context, uid uint, customerId uint) error
 		Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) error
 		GetPlatform(customerId uint, uid uint, t string) string

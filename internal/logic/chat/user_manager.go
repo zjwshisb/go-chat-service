@@ -16,7 +16,6 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/os/gcache"
-	"github.com/gogf/gf/v2/os/gctx"
 )
 
 func newUserManager() *userManager {
@@ -27,8 +26,9 @@ func newUserManager() *userManager {
 			types:        "user",
 		},
 	}
-	userM.onRegister = userM.registerHook
-	userM.onUnRegister = userM.unRegisterHook
+	userM.on(eventRegister, userM.onRegister)
+	userM.on(eventUnRegister, userM.unRegisterHook)
+	userM.on(eventMessage, userM.handleMessage)
 	return userM
 }
 
@@ -36,16 +36,11 @@ type userManager struct {
 	*manager
 }
 
-func (s *userManager) run() {
-	s.Run()
-	go s.handleReceiveMessage()
-}
-
-// DeliveryMessage 投递消息
+// deliveryMessage 投递消息
 // 查询user是否在本机上，是则直接投递
 // 查询user当前server，如果存在则投递到该channel上
 // 最后则说明user不在线，处理相关逻辑
-func (s *userManager) DeliveryMessage(ctx context.Context, message *model.CustomerChatMessage) error {
+func (s *userManager) deliveryMessage(ctx context.Context, message *model.CustomerChatMessage) error {
 	userConn, exist := s.GetConn(message.CustomerId, message.UserId)
 	switch message.Type {
 	case consts.MessageTypeRate:
@@ -65,8 +60,8 @@ func (s *userManager) DeliveryMessage(ctx context.Context, message *model.Custom
 	return s.handleOffline(ctx, message)
 }
 
-// NoticeQueueLocation 等待人数
-func (s *userManager) NoticeQueueLocation(ctx context.Context, conn iWsConn) (err error) {
+// noticeQueueLocation 等待人数
+func (s *userManager) noticeQueueLocation(ctx context.Context, conn iWsConn) (err error) {
 	uTime, err := manual.getAddTime(ctx, conn.GetUserId(), conn.GetCustomerId())
 	if err != nil {
 		return
@@ -80,23 +75,23 @@ func (s *userManager) NoticeQueueLocation(ctx context.Context, conn iWsConn) (er
 	return
 }
 
-func (s *userManager) BroadcastQueueLocation(ctx context.Context, customerId uint) error {
+func (s *userManager) broadcastQueueLocation(ctx context.Context, customerId uint) error {
 	isSHowQueue, err := service.ChatSetting().GetIsUserShowQueue(ctx, customerId)
 	if err != nil {
 		return err
 	}
 	if isSHowQueue {
-		return s.BroadcastLocalQueueLocation(ctx, customerId)
+		return s.broadcastLocalQueueLocation(ctx, customerId)
 	}
 	return nil
 }
 
-// BroadcastLocalQueueLocation 广播前面等待人数
-func (s *userManager) BroadcastLocalQueueLocation(ctx context.Context, customerId uint) error {
+// broadcastLocalQueueLocation 广播前面等待人数
+func (s *userManager) broadcastLocalQueueLocation(ctx context.Context, customerId uint) error {
 	conns := s.GetAllConn(customerId)
 	for _, conn := range conns {
 		if manual.isInSet(ctx, conn.GetUserId(), conn.GetCustomerId()) {
-			err := s.NoticeQueueLocation(ctx, conn)
+			err := s.noticeQueueLocation(ctx, conn)
 			if err != nil {
 				return err
 			}
@@ -106,20 +101,6 @@ func (s *userManager) BroadcastLocalQueueLocation(ctx context.Context, customerI
 	return nil
 }
 
-// 从conn接受消息并处理
-func (s *userManager) handleReceiveMessage() {
-	for {
-		payload := <-s.connMessages
-		go func() {
-			ctx := gctx.New()
-			err := s.handleMessage(ctx, payload)
-			if err != nil {
-				g.Log().Errorf(ctx, "%+v", err)
-			}
-		}()
-	}
-}
-
 // 处理离线逻辑
 func (s *userManager) handleOffline(ctx context.Context, msg *model.CustomerChatMessage) error {
 	// todo
@@ -127,9 +108,9 @@ func (s *userManager) handleOffline(ctx context.Context, msg *model.CustomerChat
 }
 
 // 处理消息
-func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessage) (err error) {
-	msg := payload.Msg
-	conn := payload.Conn
+func (s *userManager) handleMessage(ctx context.Context, arg eventArg) (err error) {
+	msg := arg.msg
+	conn := arg.conn
 	msg.Source = consts.MessageSourceUser
 	msg.UserId = conn.GetUserId()
 	msg.AdminId = service.ChatRelation().GetUserValidAdmin(ctx, msg.UserId)
@@ -216,7 +197,7 @@ func (s *userManager) handleMessage(ctx context.Context, payload *chatConnMessag
 					if err != nil {
 						return
 					}
-					err = s.BroadcastQueueLocation(ctx, conn.GetCustomerId())
+					err = s.broadcastQueueLocation(ctx, conn.GetCustomerId())
 					if err != nil {
 						return
 					}
@@ -285,25 +266,23 @@ func (s *userManager) triggerEnterEvent(ctx context.Context, conn iWsConn) (err 
 	return
 }
 
-func (s *userManager) unRegisterHook(conn iWsConn) {
-	adminM.noticeUserOffline(conn.GetUser())
+func (s *userManager) unRegisterHook(ctx context.Context, arg eventArg) error {
+	adminM.noticeUserOffline(arg.conn.GetUser())
+	return nil
 }
 
 // 链接建立后的额外操作
 // 如果已经在待接入人工列表中，则推送当前队列位置
 // 如果不在待接入人工列表中且没有设置客服，则触发进入事件
-func (s *userManager) registerHook(conn iWsConn) {
-	ctx := gctx.New()
-	adminM.noticeUserOnline(ctx, conn)
+func (s *userManager) onRegister(ctx context.Context, arg eventArg) error {
+	adminM.noticeUserOnline(ctx, arg.conn)
 	var err error
-	if manual.isInSet(ctx, conn.GetUserId(), conn.GetCustomerId()) {
-		err = s.NoticeQueueLocation(ctx, conn)
+	if manual.isInSet(ctx, arg.conn.GetUserId(), arg.conn.GetCustomerId()) {
+		err = s.noticeQueueLocation(ctx, arg.conn)
 	} else {
-		err = s.triggerEnterEvent(ctx, conn)
+		err = s.triggerEnterEvent(ctx, arg.conn)
 	}
-	if err != nil {
-		g.Log().Errorf(ctx, "%+v", err)
-	}
+	return err
 }
 
 // 加入人工列表
@@ -333,7 +312,7 @@ func (s *userManager) addToManual(ctx context.Context, user IChatUser) (session 
 					if err != nil {
 						return nil, err
 					}
-					err = s.DeliveryMessage(ctx, message)
+					err = s.deliveryMessage(ctx, message)
 					if err != nil {
 						return nil, err
 					}
@@ -362,7 +341,7 @@ func (s *userManager) addToManual(ctx context.Context, user IChatUser) (session 
 	if err != nil {
 		return nil, err
 	}
-	err = s.DeliveryMessage(ctx, message)
+	err = s.deliveryMessage(ctx, message)
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +396,7 @@ func (s *userManager) triggerMessageEvent(ctx context.Context, scene string, mes
 			if err != nil {
 				return
 			}
-			err = s.BroadcastQueueLocation(ctx, message.CustomerId)
+			err = s.broadcastQueueLocation(ctx, message.CustomerId)
 			if err != nil {
 				return
 			}

@@ -34,7 +34,7 @@ func (c cWs) Connect(ctx context.Context, _ *frontend.ChatConnectReq) (res *base
 		return
 	}
 	user := service.UserCtx().GetUser(ctx)
-	err = service.Chat().Register(user, conn, service.Platform().GetPlatform(ctx))
+	err = service.Chat().Register(ctx, user, conn, service.Platform().GetPlatform(ctx))
 	if err != nil {
 		return
 	}
