@@ -41,6 +41,7 @@ func (s *sAutoRule) Form2Do(form api.AutoRuleForm) *do.CustomerChatAutoRules {
 		updateData.Scenes = form.Scenes
 	}
 	if form.ReplyType == consts.AutoRuleReplyTypeTransfer {
+		updateData.MessageId = 0
 		updateData.Scenes = []string{consts.AutoRuleSceneNotAccepted}
 	}
 	return updateData

@@ -50,12 +50,15 @@ func HandlerResponse(r *ghttp.Request) {
 			})
 			return
 		} else if code == gcode.CodeBusinessValidationFailed {
+			r.Response.WriteJson(v1.NewFailResp(msg, code.Code()))
 			// 业务错误
 		} else {
 			// 非正常错误，记录一下
 			g.Log().Error(r.Context(), err)
 		}
-		r.Response.WriteJson(v1.NewFailResp(msg, code.Code()))
+		r.Response.WriteStatus(http.StatusInternalServerError, g.MapStrStr{
+			"message": "internal server error",
+		})
 		return
 	} else if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
 		msg = http.StatusText(r.Response.Status)
