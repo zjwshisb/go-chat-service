@@ -17,6 +17,7 @@ type (
 		// Create 创建转接
 		Create(ctx context.Context, fromAdminId uint, toId uint, uid uint, remark string) error
 		GetUserTransferId(ctx context.Context, customerId uint, uid uint) (uint, error)
+		RemoveUser(ctx context.Context, customerId, uid uint) error
 		IsInTransfer(ctx context.Context, customerId uint, uid uint) (bool, error)
 		FirstActive(ctx context.Context, where any) (transfer *model.CustomerChatTransfer, err error)
 	}

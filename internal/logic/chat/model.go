@@ -4,13 +4,13 @@ import (
 	"gf-chat/internal/model"
 )
 
-type IChatUser interface {
-	GetUser() any
-	GetPrimaryKey() uint
-	GetUsername() string
-	GetAvatarUrl() string
-	GetCustomerId() uint
-	AccessTo(user IChatUser) bool
+type iChatUser interface {
+	getUser() any
+	getPrimaryKey() uint
+	getUsername() string
+	getAvatarUrl() string
+	getCustomerId() uint
+	accessTo(user iChatUser) bool
 }
 
 type chatConnMessage struct {
@@ -22,27 +22,27 @@ type user struct {
 	Entity *model.User
 }
 
-func (u user) GetUser() any {
+func (u user) getUser() any {
 	return u.Entity
 }
 
-func (u user) GetPrimaryKey() uint {
+func (u user) getPrimaryKey() uint {
 	return u.Entity.Id
 }
 
-func (u user) GetCustomerId() uint {
+func (u user) getCustomerId() uint {
 	return u.Entity.CustomerId
 }
 
-func (u user) GetAvatarUrl() string {
+func (u user) getAvatarUrl() string {
 	return ""
 }
 
-func (u user) GetUsername() string {
+func (u user) getUsername() string {
 	return u.Entity.Username
 }
 
-func (u user) AccessTo(user IChatUser) bool {
+func (u user) accessTo(user iChatUser) bool {
 	return true
 }
 
@@ -50,26 +50,26 @@ type admin struct {
 	Entity *model.CustomerAdmin
 }
 
-func (u admin) GetUser() any {
+func (u admin) getUser() any {
 	return u.Entity
 }
 
-func (u admin) GetPrimaryKey() uint {
+func (u admin) getPrimaryKey() uint {
 	return u.Entity.Id
 }
 
-func (u admin) GetCustomerId() uint {
+func (u admin) getCustomerId() uint {
 	return u.Entity.CustomerId
 }
 
-func (u admin) GetAvatarUrl() string {
+func (u admin) getAvatarUrl() string {
 	return ""
 }
 
-func (u admin) GetUsername() string {
+func (u admin) getUsername() string {
 	return u.Entity.Username
 }
 
-func (u admin) AccessTo(user IChatUser) bool {
+func (u admin) accessTo(user iChatUser) bool {
 	return true
 }

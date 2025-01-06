@@ -94,7 +94,7 @@ func (s *sChatTransfer) Cancel(ctx context.Context, transfer *model.CustomerChat
 	if err != nil {
 		return
 	}
-	err = s.removeUser(ctx, transfer.CustomerId, transfer.UserId)
+	err = s.RemoveUser(ctx, transfer.CustomerId, transfer.UserId)
 	if err != nil {
 		return
 	}
@@ -120,7 +120,7 @@ func (s *sChatTransfer) Accept(ctx context.Context, transfer *model.CustomerChat
 	if err != nil {
 		return err
 	}
-	return s.removeUser(ctx, transfer.CustomerId, transfer.UserId)
+	return s.RemoveUser(ctx, transfer.CustomerId, transfer.UserId)
 }
 
 // Create 创建转接
@@ -179,7 +179,7 @@ func (s *sChatTransfer) userKey(customerId uint) string {
 }
 
 // RemoveUser 在转接列表中移除user
-func (s *sChatTransfer) removeUser(ctx context.Context, customerId, uid uint) error {
+func (s *sChatTransfer) RemoveUser(ctx context.Context, customerId, uid uint) error {
 	_, err := g.Redis().Do(ctx, "hDel", s.userKey(customerId), uid)
 	return err
 }

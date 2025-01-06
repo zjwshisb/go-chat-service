@@ -113,11 +113,11 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	if err != nil {
 		return
 	}
-	userConn, online := s.user.GetConn(session.CustomerId, session.UserId)
+	userConn, online := s.user.getConn(session.CustomerId, session.UserId)
 	platform := ""
 	if online {
 		// 服务提醒
-		platform = userConn.GetPlatform()
+		platform = userConn.getPlatform()
 		chatName, _ := service.Admin().GetChatName(ctx, &admin)
 		notice := service.ChatMessage().NewNotice(session,
 			chatName+"为您服务")
@@ -165,7 +165,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		Username:     session.User.Username,
 		LastChatTime: gtime.Now(),
 		Disabled:     false,
-		Online:       userM.IsOnline(session.CustomerId, session.UserId),
+		Online:       userM.isOnline(session.CustomerId, session.UserId),
 		LastMessage:  lastMsg,
 		Unread:       uint(unRead),
 		Avatar:       "",
@@ -182,23 +182,23 @@ func (s sChat) Register(ctx context.Context, u any, conn *websocket.Conn, platfo
 		e := &admin{
 			uu,
 		}
-		return s.admin.Register(ctx, conn, e, platform)
+		return s.admin.register(ctx, conn, e, platform)
 	case *model.User:
 		uu, _ := u.(*model.User)
 		e := &user{
 			uu,
 		}
-		return s.user.Register(ctx, conn, e, platform)
+		return s.user.register(ctx, conn, e, platform)
 	}
 	return gerror.New("无效的用户模型")
 }
 
 func (s sChat) IsOnline(customerId uint, uid uint, t string) bool {
 	if t == "user" {
-		return s.user.IsOnline(customerId, uid)
+		return s.user.isOnline(customerId, uid)
 	}
 	if t == "admin" {
-		return s.admin.IsOnline(customerId, uid)
+		return s.admin.isOnline(customerId, uid)
 	}
 	return false
 }
@@ -211,13 +211,13 @@ func (s sChat) GetPlatform(customerId, uid uint, t string) string {
 	var conn iWsConn
 	var online bool
 	if t == "admin" {
-		conn, online = s.admin.GetConn(customerId, uid)
+		conn, online = s.admin.getConn(customerId, uid)
 	}
 	if t == "user" {
-		conn, online = s.user.GetConn(customerId, uid)
+		conn, online = s.user.getConn(customerId, uid)
 	}
 	if online {
-		return conn.GetPlatform()
+		return conn.getPlatform()
 	}
 	return ""
 }
@@ -227,11 +227,11 @@ func (s sChat) NoticeRate(msg *model.CustomerChatMessage) {
 }
 
 func (s sChat) NoticeUserRead(customerId, uid uint, msgIds []uint) {
-	s.admin.NoticeRead(customerId, uid, msgIds)
+	s.admin.noticeRead(customerId, uid, msgIds)
 }
 
 func (s sChat) NoticeAdminRead(customerId, uid uint, msgIds []uint) {
-	s.user.NoticeRead(customerId, uid, msgIds)
+	s.user.noticeRead(customerId, uid, msgIds)
 }
 
 func (s sChat) Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) (err error) {
@@ -257,24 +257,24 @@ func (s sChat) Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toI
 }
 
 func (s sChat) GetOnlineAdmins(customerId uint) []api.ChatSimpleUser {
-	conns := s.admin.GetAllConn(customerId)
+	conns := s.admin.getAllConn(customerId)
 	res := make([]api.ChatSimpleUser, len(conns))
 	for index, c := range conns {
 		res[index] = api.ChatSimpleUser{
-			Id:       c.GetUserId(),
-			Username: c.GetUser().GetUsername(),
+			Id:       c.getUserId(),
+			Username: c.getUser().getUsername(),
 		}
 	}
 	return res
 }
 
 func (s sChat) GetOnlineUsers(customerId uint) []api.ChatSimpleUser {
-	conns := s.user.GetAllConn(customerId)
+	conns := s.user.getAllConn(customerId)
 	res := make([]api.ChatSimpleUser, len(conns))
 	for index, c := range conns {
 		res[index] = api.ChatSimpleUser{
-			Id:       c.GetUserId(),
-			Username: c.GetUser().GetUsername(),
+			Id:       c.getUserId(),
+			Username: c.getUser().getUsername(),
 		}
 	}
 	return res

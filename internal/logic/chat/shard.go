@@ -32,7 +32,7 @@ func (s *shard) get(uid uint) (conn iWsConn, exist bool) {
 func (s *shard) set(conn iWsConn) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	s.m[conn.GetUserId()] = conn
+	s.m[conn.getUserId()] = conn
 }
 func (s *shard) remove(uid uint) {
 	s.mutex.Lock()

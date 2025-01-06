@@ -20,17 +20,17 @@ import (
 )
 
 type iWsConn interface {
-	ReadMsg()
-	SendMsg()
-	Close()
-	Run()
-	Deliver(action *v1.ChatAction)
-	GetUserId() uint
-	GetUser() IChatUser
-	GetUuid() string
-	GetPlatform() string
-	GetCustomerId() uint
-	CreateTime() *gtime.Time
+	readMsg()
+	sendMsg()
+	close()
+	run()
+	deliver(action *v1.ChatAction)
+	getUserId() uint
+	getUser() iChatUser
+	getUuid() string
+	getPlatform() string
+	getCustomerId() uint
+	createTime() *gtime.Time
 }
 
 type client struct {
@@ -39,14 +39,14 @@ type client struct {
 	send        chan *v1.ChatAction // 发送的消息chan
 	sync.Once
 	manager  connManager
-	user     IChatUser
+	user     iChatUser
 	uuid     string
 	created  *gtime.Time
 	limiter  *rate.Limiter
 	platform string
 }
 
-func newClient(conn *websocket.Conn, user IChatUser, platform string) *client {
+func newClient(conn *websocket.Conn, user iChatUser, platform string) *client {
 	return &client{
 		conn:        conn,
 		closeSignal: make(chan interface{}),
@@ -60,42 +60,42 @@ func newClient(conn *websocket.Conn, user IChatUser, platform string) *client {
 	}
 }
 
-func (c *client) CreateTime() *gtime.Time {
+func (c *client) createTime() *gtime.Time {
 	return c.created
 }
 
-func (c *client) GetCustomerId() uint {
-	return c.user.GetCustomerId()
+func (c *client) getCustomerId() uint {
+	return c.user.getCustomerId()
 }
 
 // GetUuid 每个连接的unique id
-func (c *client) GetUuid() string {
+func (c *client) getUuid() string {
 	return c.uuid
 }
 
-func (c *client) GetPlatform() string {
+func (c *client) getPlatform() string {
 	return c.platform
 }
 
-func (c *client) GetUser() IChatUser {
+func (c *client) getUser() iChatUser {
 	return c.user
 }
 
-func (c *client) GetUserId() uint {
-	return c.user.GetPrimaryKey()
+func (c *client) getUserId() uint {
+	return c.user.getPrimaryKey()
 }
 
-func (c *client) Run() {
-	go c.ReadMsg()
-	go c.SendMsg()
+func (c *client) run() {
+	go c.readMsg()
+	go c.sendMsg()
 }
 
 // Close 幂等close方法 关闭连接，相关清理
-func (c *client) Close() {
+func (c *client) close() {
 	c.Once.Do(func() {
 		close(c.closeSignal)
 		_ = c.conn.Close()
-		c.manager.Unregister(c)
+		c.manager.unregister(c)
 	})
 }
 
@@ -157,14 +157,14 @@ func (c *client) isTypeValid(t string) bool {
 }
 
 // ReadMsg 从websocket读消息
-func (c *client) ReadMsg() {
+func (c *client) readMsg() {
 	var msg = make(chan []byte, 50)
 	for {
 		go func() {
 			_, message, err := c.conn.ReadMessage()
 			// 读消息失败说明连接异常，调用close方法
 			if err != nil {
-				c.Close()
+				c.close()
 			} else {
 				msg <- message
 			}
@@ -175,7 +175,6 @@ func (c *client) ReadMsg() {
 		case msgStr := <-msg:
 			ctx := gctx.New()
 			act, err := action.unMarshal(msgStr)
-			g.Log("ws").Debug(ctx, msgStr)
 			if err != nil {
 				g.Log().Errorf(ctx, "%+v", err)
 				break
@@ -186,30 +185,31 @@ func (c *client) ReadMsg() {
 			}
 			err = c.validate(data)
 			if err != nil {
-				c.Deliver(action.newErrorMessage(err.Error()))
+				c.deliver(action.newErrorMessage(err.Error()))
 			} else {
 				switch act.Action {
 				case consts.ActionSendMessage:
 					msg, err := action.getMessage(act)
 					if err != nil {
 						g.Log().Errorf(ctx, "%+v", err)
-						break
+					} else {
+						iu := c.getUser()
+						switch iu.(type) {
+						case *admin:
+							u := iu.(*admin)
+							msg.Admin = u.Entity
+						case *user:
+							u := iu.(*user)
+							msg.User = u.Entity
+						}
+						msg.CustomerId = c.getCustomerId()
+						msg.ReceivedAt = gtime.Now()
+						c.manager.receiveMessage(&chatConnMessage{
+							Msg:  msg,
+							Conn: c,
+						})
 					}
-					iu := c.GetUser()
-					switch iu.(type) {
-					case *admin:
-						u := iu.(*admin)
-						msg.Admin = u.Entity
-					case *user:
-						u := iu.(*user)
-						msg.User = u.Entity
-					}
-					msg.CustomerId = c.GetCustomerId()
-					msg.ReceivedAt = gtime.Now()
-					c.manager.receiveMessage(&chatConnMessage{
-						Msg:  msg,
-						Conn: c,
-					})
+
 				}
 			}
 
@@ -218,12 +218,12 @@ func (c *client) ReadMsg() {
 }
 
 // Deliver 投递消息
-func (c *client) Deliver(act *v1.ChatAction) {
+func (c *client) deliver(act *v1.ChatAction) {
 	c.send <- act
 }
 
 // SendMsg 发消息
-func (c *client) SendMsg() {
+func (c *client) sendMsg() {
 	for {
 		select {
 		case act := <-c.send:
@@ -236,28 +236,29 @@ func (c *client) SendMsg() {
 			err = c.conn.WriteMessage(websocket.TextMessage, msgByte)
 			if err != nil {
 				g.Log().Errorf(ctx, "%+v", err)
-				c.Close()
+				c.close()
 				return
 			}
 			switch act.Action {
 			case consts.ActionMoreThanOne:
-				c.Close()
+				c.close()
 			case consts.ActionOtherLogin:
-				c.Close()
+				c.close()
 			case consts.ActionReceiveMessage:
 				msg, ok := act.Data.(*model.CustomerChatMessage)
 				if !ok {
-					break
-				}
-				if msg.SendAt == nil {
-					_, err := service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
-						SendAt: gtime.Now(),
-					})
-					if err != nil {
-						g.Log().Errorf(ctx, "%+v", err)
+					err = gerror.New("action.data is not a message model")
+					g.Log().Errorf(ctx, "%+v", err)
+				} else {
+					if msg.SendAt == nil {
+						_, err := service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
+							SendAt: gtime.Now(),
+						})
+						if err != nil {
+							g.Log().Errorf(ctx, "%+v", err)
+						}
 					}
 				}
-
 			default:
 			}
 		case <-c.closeSignal:

@@ -22,17 +22,17 @@ type eventHandle = func(ctx context.Context, arg eventArg) error
 
 type connContainer interface {
 	addConn(conn iWsConn)
-	GetConn(customerId uint, uid uint) (iWsConn, bool)
-	NoticeRepeatConnect(user IChatUser, newUid string)
-	GetAllConn(customerId uint) []iWsConn
-	GetOnlineTotal(customerId uint) uint
-	ConnExist(customerId uint, uid uint) bool
-	Register(ctx context.Context, conn *websocket.Conn, user IChatUser, platform string) error
-	Unregister(connect iWsConn)
-	removeConn(user IChatUser)
-	IsOnline(customerId uint, uid uint) bool
-	IsLocalOnline(customerId uint, uid uint) bool
-	GetOnlineUserIds(gid uint) []uint
+	getConn(customerId uint, uid uint) (iWsConn, bool)
+	noticeRepeatConnect(user iChatUser, newUid string)
+	getAllConn(customerId uint) []iWsConn
+	getOnlineTotal(customerId uint) uint
+	connExist(customerId uint, uid uint) bool
+	register(ctx context.Context, conn *websocket.Conn, user iChatUser, platform string) error
+	unregister(connect iWsConn)
+	removeConn(user iChatUser)
+	isOnline(customerId uint, uid uint) bool
+	isLocalOnline(customerId uint, uid uint) bool
+	getOnlineUserIds(gid uint) []uint
 }
 
 type connManager interface {
@@ -42,8 +42,7 @@ type connManager interface {
 	SendAction(act *v1.ChatAction, conn ...iWsConn)
 	receiveMessage(cm *chatConnMessage)
 	handleReceiveMessage()
-	GetTypes() string
-	NoticeRead(customerId uint, uid uint, msgIds []uint)
+	noticeRead(customerId uint, uid uint, msgIds []uint)
 }
 
 type eventArg struct {
@@ -52,11 +51,11 @@ type eventArg struct {
 }
 
 type manager struct {
-	shardCount   uint                     // 分组数量
+	shardCount   uint                     // 分组数量, 默认 10
 	shard        []*shard                 // 分组切片
 	connMessages chan *chatConnMessage    // 接受从conn所读取消息的chan
 	events       map[string][]eventHandle // 事件
-	types        string                   //类型
+	pingDuration time.Duration            // default to 10 seconds
 }
 
 // 注册事件
@@ -79,10 +78,6 @@ func (m *manager) trigger(ctx context.Context, name string, arg eventArg) error 
 		}
 	}
 	return nil
-}
-
-func (m *manager) GetTypes() string {
-	return m.types
 }
 
 func (m *manager) getMod(customerId uint) uint {
@@ -116,19 +111,19 @@ func (m *manager) handleReceiveMessage() {
 }
 
 // NoticeRepeatConnect 重复链接
-func (m *manager) NoticeRepeatConnect(user IChatUser, newUuid string) {
+func (m *manager) noticeRepeatConnect(user iChatUser, newUuid string) {
 	m.NoticeLocalRepeatConnect(user, newUuid)
 }
 
-func (m *manager) NoticeLocalRepeatConnect(user IChatUser, newUuid string) {
-	oldConn, ok := m.GetConn(user.GetCustomerId(), user.GetPrimaryKey())
-	if ok && oldConn.GetUuid() != newUuid {
+func (m *manager) NoticeLocalRepeatConnect(user iChatUser, newUuid string) {
+	oldConn, ok := m.getConn(user.getCustomerId(), user.getPrimaryKey())
+	if ok && oldConn.getUuid() != newUuid {
 		m.SendAction(action.newMoreThanOne(), oldConn)
 	}
 }
 
 // GetOnlineUserIds 获取groupId对应的在线userIds
-func (m *manager) GetOnlineUserIds(gid uint) []uint {
+func (m *manager) getOnlineUserIds(gid uint) []uint {
 	return m.GetLocalOnlineUserIds(gid)
 }
 
@@ -137,8 +132,8 @@ func (m *manager) GetLocalOnlineUserIds(gid uint) []uint {
 	allConn := s.getAll()
 	ids := make([]uint, 0)
 	for _, conn := range allConn {
-		if conn.GetCustomerId() == gid {
-			ids = append(ids, conn.GetUserId())
+		if conn.getCustomerId() == gid {
+			ids = append(ids, conn.getUserId())
 		}
 	}
 	return ids
@@ -151,55 +146,55 @@ func (m *manager) GetLocalOnlineTotal(customerId uint) uint {
 }
 
 // GetOnlineTotal 获取groupId对应在线客户端数量
-func (m *manager) GetOnlineTotal(customerId uint) uint {
+func (m *manager) getOnlineTotal(customerId uint) uint {
 	return m.GetLocalOnlineTotal(customerId)
 }
 
 // IsOnline 用户是否在线
-func (m *manager) IsOnline(customerId uint, uid uint) bool {
-	return m.IsLocalOnline(customerId, uid)
+func (m *manager) isOnline(customerId uint, uid uint) bool {
+	return m.isLocalOnline(customerId, uid)
 }
 
-func (m *manager) IsLocalOnline(customerId uint, uid uint) bool {
-	return m.ConnExist(customerId, uid)
+func (m *manager) isLocalOnline(customerId uint, uid uint) bool {
+	return m.connExist(customerId, uid)
 }
 
 // SendAction 给客户端发送消息
 func (m *manager) SendAction(a *v1.ChatAction, clients ...iWsConn) {
 	for _, c := range clients {
-		c.Deliver(a)
+		c.deliver(a)
 	}
 }
 
 // ConnExist 连接是否存在
-func (m *manager) ConnExist(customerId uint, uid uint) bool {
-	_, exist := m.GetConn(customerId, uid)
+func (m *manager) connExist(customerId uint, uid uint) bool {
+	_, exist := m.getConn(customerId, uid)
 	return exist
 }
 
 // GetConn 获取客户端
-func (m *manager) GetConn(customerId, uid uint) (iWsConn, bool) {
+func (m *manager) getConn(customerId, uid uint) (iWsConn, bool) {
 	s := m.getSpread(customerId)
 	return s.get(uid)
 }
 
 // AddConn 添加客户端
 func (m *manager) addConn(conn iWsConn) {
-	s := m.getSpread(conn.GetCustomerId())
+	s := m.getSpread(conn.getCustomerId())
 	s.set(conn)
 }
 
 // RemoveConn 移除客户端
-func (m *manager) removeConn(user IChatUser) {
-	s := m.getSpread(user.GetCustomerId())
-	s.remove(user.GetPrimaryKey())
+func (m *manager) removeConn(user iChatUser) {
+	s := m.getSpread(user.getCustomerId())
+	s.remove(user.getPrimaryKey())
 }
 
 // GetAllConn 获取所有客户端
-func (m *manager) GetAllConn(customerId uint) (conns []iWsConn) {
+func (m *manager) getAllConn(customerId uint) (conns []iWsConn) {
 	s := m.getSpread(customerId)
 	conns = slice.Filter(s.getAll(), func(index int, item iWsConn) bool {
-		return item.GetCustomerId() == customerId
+		return item.getCustomerId() == customerId
 	})
 	return
 }
@@ -215,18 +210,18 @@ func (m *manager) GetAllConnCount() uint {
 func (m *manager) GetTotalConn() []iWsConn {
 	conns := make([]iWsConn, 0)
 	for gid := range m.shard {
-		conns = append(conns, m.GetAllConn(uint(gid))...)
+		conns = append(conns, m.getAllConn(uint(gid))...)
 	}
 	return conns
 }
 
 // Unregister 客户端注销
-func (m *manager) Unregister(conn iWsConn) {
+func (m *manager) unregister(conn iWsConn) {
 	ctx := gctx.New()
-	existConn, exist := m.GetConn(conn.GetCustomerId(), conn.GetUserId())
+	existConn, exist := m.getConn(conn.getCustomerId(), conn.getUserId())
 	if exist {
 		if existConn == conn {
-			m.removeConn(conn.GetUser())
+			m.removeConn(conn.getUser())
 			err := m.trigger(ctx, eventUnRegister, eventArg{
 				conn: conn,
 			})
@@ -240,21 +235,21 @@ func (m *manager) Unregister(conn iWsConn) {
 // Register 客户端注册
 // 先处理是否重复连接
 // 集群模式下，如果不在本机则投递一个消息
-func (m *manager) Register(ctx context.Context, conn *websocket.Conn, user IChatUser, platform string) error {
+func (m *manager) register(ctx context.Context, conn *websocket.Conn, user iChatUser, platform string) error {
 	client := newClient(conn, user, platform)
 	client.manager = m
 	timer := time.After(1 * time.Second)
-	m.NoticeRepeatConnect(client.GetUser(), client.GetUuid())
+	m.noticeRepeatConnect(client.getUser(), client.getUuid())
 	m.addConn(client)
-	client.Run()
+	client.run()
 	<-timer
 	err := m.trigger(ctx, eventRegister, eventArg{
 		conn: client,
 	})
 	return err
 }
-func (m *manager) NoticeRead(customerId, adminId uint, msgIds []uint) {
-	conn, exist := m.GetConn(customerId, adminId)
+func (m *manager) noticeRead(customerId, adminId uint, msgIds []uint) {
+	conn, exist := m.getConn(customerId, adminId)
 	if exist {
 		act := action.newReadAction(msgIds)
 		m.SendAction(act, conn)
@@ -266,7 +261,11 @@ func (m *manager) NoticeRead(customerId, adminId uint, msgIds []uint) {
 // 客户端因意外断开链接，服务器没有关闭事件，无法得知连接已关闭
 // 通过心跳发送""字符串，如果发送失败，则调用conn的close方法执行清理
 func (m *manager) ping() {
-	ticker := time.NewTicker(time.Second * 10)
+	duration := m.pingDuration
+	if duration == 0 {
+		duration = time.Second * 10
+	}
+	ticker := time.NewTicker(duration)
 	for {
 		select {
 		case <-ticker.C:
@@ -280,9 +279,13 @@ func (m *manager) ping() {
 }
 
 func (m *manager) run() {
-	m.shard = make([]*shard, m.shardCount)
+	count := m.shardCount
+	if count == 0 {
+		count = 10
+	}
+	m.shard = make([]*shard, count)
 	var i uint
-	for i = 0; i < m.shardCount; i++ {
+	for i = 0; i < count; i++ {
 		m.shard[i] = &shard{
 			m:     make(map[uint]iWsConn),
 			mutex: &sync.RWMutex{},

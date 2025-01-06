@@ -90,7 +90,6 @@ type ChatSimpleMessage struct {
 }
 
 type ChatCustomerAdmin struct {
-	Avatar        string `json:"avatar"`
 	Username      string `json:"username"`
 	Online        bool   `json:"online"`
 	Id            uint   `json:"id"`
