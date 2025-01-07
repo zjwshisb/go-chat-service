@@ -8,7 +8,6 @@ import (
 	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
 	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 )
 
@@ -138,7 +137,6 @@ func (s *sSetup) Setup(ctx gctx.Ctx, customerId uint) {
 		}
 		if !exists {
 			rule.CustomerId = customerId
-			g.Dump(rule)
 			_, err = service.AutoRule().Save(ctx, rule)
 			if err != nil {
 				panic(err)

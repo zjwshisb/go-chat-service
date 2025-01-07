@@ -18,10 +18,10 @@ import (
 )
 
 func init() {
-	service.RegisterChatSession(new())
+	service.RegisterChatSession(newSChatSession())
 }
 
-func new() *sChatSession {
+func newSChatSession() *sChatSession {
 	return &sChatSession{
 		trait.Curd[model.CustomerChatSession]{
 			Dao: &dao.CustomerChatSessions,
@@ -56,11 +56,11 @@ func (s *sChatSession) Cancel(ctx context.Context, session *model.CustomerChatSe
 
 // Close 关闭会话
 func (s *sChatSession) Close(ctx context.Context, session *model.CustomerChatSession, isRemoveUser bool, updateTime bool) (err error) {
-	if session.BrokenAt != nil {
-		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "会话关闭，请勿重复操作")
-	}
 	if session.AcceptedAt == nil {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "未接入会话无法断开")
+	}
+	if session.BrokenAt != nil {
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "会话关闭，请勿重复操作")
 	}
 	_, err = s.UpdatePri(ctx, session.Id, do.CustomerChatSessions{
 		BrokenAt: gtime.Now(),

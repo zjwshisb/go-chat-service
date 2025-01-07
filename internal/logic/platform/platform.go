@@ -15,6 +15,7 @@ type sPlatform struct {
 }
 
 // GetPlatform 获取用户的平台
+// todo
 func (p sPlatform) GetPlatform(ctx context.Context) string {
 	request := g.RequestFromCtx(ctx)
 	_ = request.GetHeader("aaa")

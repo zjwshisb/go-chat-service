@@ -346,17 +346,7 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 	if err != nil {
 		return nil, err
 	}
-	// 没有客服在线则发送公众号消息
-	go func() {
-		if onlineServerCount == 0 {
-			admins, _ := service.Admin().All(ctx, do.CustomerAdmins{
-				CustomerId: user.getCustomerId(),
-			}, nil, nil)
-			for _, admin := range admins {
-				adminM.sendWaiting(admin, user)
-			}
-		}
-	}()
+
 	return
 }
 

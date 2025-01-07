@@ -7,6 +7,7 @@ import (
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/gogf/gf/v2/os/gtime"
 	"sync"
 	"time"
 
@@ -263,7 +264,7 @@ func (m *manager) noticeRead(customerId, adminId uint, msgIds []uint) {
 func (m *manager) ping() {
 	duration := m.pingDuration
 	if duration == 0 {
-		duration = time.Second * 10
+		duration = time.Second * 60
 	}
 	ticker := time.NewTicker(duration)
 	for {
@@ -272,7 +273,15 @@ func (m *manager) ping() {
 			ping := action.newPing()
 			for _, s := range m.shard {
 				conns := s.getAll()
-				m.SendAction(ping, conns...)
+				for _, conn := range conns {
+					// 如果连接超过60分钟没有活动，则关闭连接
+					duration := gtime.Now().Second() - conn.getLastActive().Second()
+					if duration > 60*60 {
+						conn.close()
+					} else {
+						m.SendAction(ping, conn)
+					}
+				}
 			}
 		}
 	}

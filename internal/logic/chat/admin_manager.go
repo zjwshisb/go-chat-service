@@ -53,10 +53,6 @@ func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerC
 	}
 }
 
-func (m *adminManager) sendWaiting(admin *model.CustomerAdmin, user iChatUser) {
-
-}
-
 func (m *adminManager) sendOffline(admin *model.CustomerAdmin, msg *model.CustomerChatMessage) {
 
 }
@@ -100,8 +96,8 @@ func (m *adminManager) handleMessage(ctx context.Context, arg eventArg) error {
 			conn.deliver(action.newErrorMessage("该用户已失效，无法发送消息"))
 			return gerror.NewCode(gcode.CodeValidationFailed, "该用户已失效，无法发送消息")
 		}
-		session, _ := service.ChatSession().FirstActive(ctx, msg.UserId, conn.getUserId(), nil)
-		if session == nil {
+		session, err := service.ChatSession().FirstActive(ctx, msg.UserId, conn.getUserId(), nil)
+		if err != nil {
 			conn.deliver(action.newErrorMessage("无效的用户"))
 			return gerror.NewCode(gcode.CodeValidationFailed, "无效的用户")
 		}
@@ -268,18 +264,6 @@ func (m *adminManager) noticeLocalUserOnline(ctx context.Context, uid uint, plat
 		}
 	}
 }
-
-//func (m *adminManager) noticeRepeatConnect(admin iChatUser) {
-//	m.noticeLocalRepeatConnect(admin)
-//}
-//
-//
-//func (m *adminManager) noticeLocalRepeatConnect(admin iChatUser) {
-//	conn, exist := m.getConn(admin.getCustomerId(), admin.getPrimaryKey())
-//	if exist && conn.getUuid() != m.GetUserUuid(admin) {
-//		m.SendAction(NewOtherLogin(), conn)
-//	}
-//}
 
 func (m *adminManager) noticeUserTransfer(ctx context.Context, customerId, adminId uint) error {
 	return m.noticeLocalUserTransfer(ctx, customerId, adminId)

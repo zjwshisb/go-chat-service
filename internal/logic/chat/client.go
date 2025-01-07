@@ -30,6 +30,7 @@ type iWsConn interface {
 	getUuid() string
 	getPlatform() string
 	getCustomerId() uint
+	getLastActive() *gtime.Time
 	createTime() *gtime.Time
 }
 
@@ -38,12 +39,13 @@ type client struct {
 	closeSignal chan interface{}    // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
 	send        chan *v1.ChatAction // 发送的消息chan
 	sync.Once
-	manager  connManager
-	user     iChatUser
-	uuid     string
-	created  *gtime.Time
-	limiter  *rate.Limiter
-	platform string
+	manager    connManager
+	user       iChatUser
+	uuid       string
+	created    *gtime.Time
+	limiter    *rate.Limiter
+	lastActive *gtime.Time
+	platform   string
 }
 
 func newClient(conn *websocket.Conn, user iChatUser, platform string) *client {
@@ -57,9 +59,12 @@ func newClient(conn *websocket.Conn, user iChatUser, platform string) *client {
 		created:     gtime.Now(),
 		limiter:     rate.NewLimiter(5, 10),
 		platform:    platform,
+		lastActive:  gtime.Now(),
 	}
 }
-
+func (c *client) getLastActive() *gtime.Time {
+	return c.lastActive
+}
 func (c *client) createTime() *gtime.Time {
 	return c.created
 }
@@ -208,8 +213,8 @@ func (c *client) readMsg() {
 							Msg:  msg,
 							Conn: c,
 						})
+						c.lastActive = gtime.Now()
 					}
-
 				}
 			}
 
