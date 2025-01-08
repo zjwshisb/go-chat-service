@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	api "gf-chat/api/v1/backend"
+	api "gf-chat/api/backend/v1"
 	"gf-chat/internal/model"
 
 	"github.com/gorilla/websocket"
@@ -12,19 +12,20 @@ type (
 	IChat interface {
 		Accept(ctx context.Context, admin model.CustomerAdmin, sessionId uint) (*api.ChatUser, error)
 		Register(ctx context.Context, u any, conn *websocket.Conn, platform string) error
-		IsOnline(customerId uint, uid uint, t string) bool
 		BroadcastWaitingUser(ctx context.Context, customerId uint) error
 		UpdateAdminSetting(ctx context.Context, admin *model.CustomerAdmin)
 		RemoveManual(ctx context.Context, uid uint, customerId uint) error
 		Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) error
-		GetPlatform(customerId uint, uid uint, t string) string
-		GetOnlineAdmins(customerId uint) []api.ChatSimpleUser
-		GetOnlineUsers(customerId uint) []api.ChatSimpleUser
+		GetOnlineAdmins(ctx context.Context, customerId uint) ([]api.ChatSimpleUser, error)
+		GetOnlineUsers(ctx context.Context, customerId uint) ([]api.ChatSimpleUser, error)
 		GetWaitingUsers(ctx context.Context, customerId uint) ([]api.ChatSimpleUser, error)
 		NoticeRate(msg *model.CustomerChatMessage)
-		NoticeUserRead(customerId uint, uid uint, msgIds []uint)
+		NoticeRead(ctx context.Context, customerId, uid uint, msgIds []uint, t string, forceLocal ...bool) error
 		NoticeTransfer(ctx context.Context, customer uint, admin uint) error
-		NoticeAdminRead(customerId uint, uid uint, msgIds []uint)
+		GetConnInfo(ctx context.Context, customerId, uid uint, t string, forceLocal ...bool) (exist bool, platform string)
+		DeliveryAdminMessage(ctx context.Context, msgId uint) error
+		DeliveryUserMessage(ctx context.Context, msgId uint) error
+		GetOnlineUserIds(ctx context.Context, customerId uint, types string, forceLocal ...bool) ([]uint, error)
 	}
 )
 

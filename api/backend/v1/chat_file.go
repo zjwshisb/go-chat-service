@@ -1,7 +1,7 @@
-package backend
+package v1
 
 import (
-	v1 "gf-chat/api/v1"
+	v1 "gf-chat/api"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )

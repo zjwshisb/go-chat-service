@@ -1,7 +1,7 @@
-package backend
+package v1
 
 import (
-	"gf-chat/api/v1"
+	"gf-chat/api"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
@@ -113,15 +113,15 @@ type ChatTransfer struct {
 }
 
 type ChatUser struct {
-	Id           uint            `json:"id"`
-	Username     string          `json:"username"`
-	LastChatTime *gtime.Time     `json:"last_chat_time"`
-	Disabled     bool            `json:"disabled"`
-	Online       bool            `json:"online"`
-	LastMessage  *v1.ChatMessage `json:"last_message"`
-	Unread       uint            `json:"unread"`
-	Avatar       string          `json:"avatar"`
-	Platform     string          `json:"platform"`
+	Id           uint             `json:"id"`
+	Username     string           `json:"username"`
+	LastChatTime *gtime.Time      `json:"last_chat_time"`
+	Disabled     bool             `json:"disabled"`
+	Online       bool             `json:"online"`
+	LastMessage  *api.ChatMessage `json:"last_message"`
+	Unread       uint             `json:"unread"`
+	Avatar       string           `json:"avatar"`
+	Platform     string           `json:"platform"`
 }
 
 type ChatSimpleUser struct {

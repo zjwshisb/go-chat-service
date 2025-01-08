@@ -3,7 +3,7 @@ package autorule
 import (
 	"context"
 	"database/sql"
-	api "gf-chat/api/v1/backend"
+	api "gf-chat/api/backend/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/trait"

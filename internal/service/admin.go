@@ -1,7 +1,7 @@
 package service
 
 import (
-	api "gf-chat/api/v1/backend"
+	api "gf-chat/api/backend/v1"
 	"gf-chat/internal/model"
 	"gf-chat/internal/trait"
 

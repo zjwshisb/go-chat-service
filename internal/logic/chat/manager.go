@@ -2,12 +2,18 @@ package chat
 
 import (
 	"context"
-	"gf-chat/api/v1"
+	"fmt"
+	"gf-chat/api"
+	v1 "gf-chat/api/chat/v1"
 	"gf-chat/internal/model"
+	"gf-chat/internal/service"
 	"github.com/duke-git/lancet/v2/slice"
+	"github.com/gogf/gf/v2/container/garray"
+	"github.com/gogf/gf/v2/database/gredis"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
 	"sync"
 	"time"
 
@@ -17,6 +23,8 @@ import (
 const eventRegister = "register"
 const eventUnRegister = "unregister"
 const eventMessage = "message"
+
+const userServer = "%s:user:%d:server"
 
 // 返回err会停止后续事件的执行
 type eventHandle = func(ctx context.Context, arg eventArg) error
@@ -31,24 +39,36 @@ type connContainer interface {
 	register(ctx context.Context, conn *websocket.Conn, user iChatUser, platform string) error
 	unregister(connect iWsConn)
 	removeConn(user iChatUser)
-	isOnline(customerId uint, uid uint) bool
-	isLocalOnline(customerId uint, uid uint) bool
-	getOnlineUserIds(gid uint) []uint
+	getOnlineUserIds(ctx context.Context, gid uint, forceLocal ...bool) ([]uint, error)
+	setUserServer(ctx context.Context, uid uint, server string) error
+	getUserServer(ctx context.Context, uid uint) (string, error)
+	getConnInfo(ctx context.Context, customerId, uid uint, forceLocal ...bool) (bool, string)
 }
 
 type connManager interface {
 	connContainer
 	run()
 	ping()
-	SendAction(act *v1.ChatAction, conn ...iWsConn)
+	SendAction(act *api.ChatAction, conn ...iWsConn)
 	receiveMessage(cm *chatConnMessage)
 	handleReceiveMessage()
-	noticeRead(customerId uint, uid uint, msgIds []uint)
+	noticeRead(ctx context.Context, customerId uint, uid uint, msgIds []uint, forceLocal ...bool) error
 }
 
 type eventArg struct {
 	conn iWsConn
 	msg  *model.CustomerChatMessage
+}
+
+func newManager(shareCount uint, msgCount int, pingDuration time.Duration, cluster bool, types string) *manager {
+	return &manager{
+		shardCount:   shareCount,
+		connMessages: make(chan *chatConnMessage, msgCount),
+		events:       nil,
+		pingDuration: pingDuration,
+		cluster:      cluster,
+		types:        types,
+	}
 }
 
 type manager struct {
@@ -57,6 +77,8 @@ type manager struct {
 	connMessages chan *chatConnMessage    // 接受从conn所读取消息的chan
 	events       map[string][]eventHandle // 事件
 	pingDuration time.Duration            // default to 10 seconds
+	cluster      bool
+	types        string
 }
 
 // 注册事件
@@ -79,6 +101,32 @@ func (m *manager) trigger(ctx context.Context, name string, arg eventArg) error 
 		}
 	}
 	return nil
+}
+
+func (m *manager) userServerKey(id uint) string {
+	return fmt.Sprintf(userServer, m.types, id)
+}
+
+func (m *manager) setUserServer(ctx context.Context, uid uint, server string) error {
+	var expired int64 = 60 * 60 * 24
+	_, err := g.Redis().Set(ctx, m.userServerKey(uid), server, gredis.SetOption{
+		TTLOption: gredis.TTLOption{
+			EX: &expired,
+		},
+	})
+	return err
+}
+
+func (m *manager) getUserServer(ctx context.Context, uid uint) (string, error) {
+	val, err := g.Redis().Get(ctx, m.userServerKey(uid))
+	if err != nil {
+		return "", err
+	}
+	return val.String(), nil
+}
+func (m *manager) removeUserServer(ctx context.Context, uid uint) error {
+	_, err := g.Redis().Del(ctx, m.userServerKey(uid))
+	return err
 }
 
 func (m *manager) getMod(customerId uint) uint {
@@ -123,21 +171,42 @@ func (m *manager) NoticeLocalRepeatConnect(user iChatUser, newUuid string) {
 	}
 }
 
-// GetOnlineUserIds 获取groupId对应的在线userIds
-func (m *manager) getOnlineUserIds(gid uint) []uint {
-	return m.GetLocalOnlineUserIds(gid)
+func (m *manager) isCallLocal(forceLocal ...bool) bool {
+	local := false
+	if len(forceLocal) > 0 {
+		local = forceLocal[0]
+	}
+	return local || !m.cluster
 }
 
-func (m *manager) GetLocalOnlineUserIds(gid uint) []uint {
-	s := m.getSpread(gid)
-	allConn := s.getAll()
-	ids := make([]uint, 0)
-	for _, conn := range allConn {
-		if conn.getCustomerId() == gid {
-			ids = append(ids, conn.getUserId())
+func (m *manager) getOnlineUserIds(ctx context.Context, customerId uint, forceLocal ...bool) ([]uint, error) {
+	if m.isCallLocal(forceLocal...) {
+		s := m.getSpread(customerId)
+		allConn := s.getAll()
+		ids := make([]uint, 0)
+		for _, conn := range allConn {
+			if conn.getCustomerId() == customerId {
+				ids = append(ids, conn.getUserId())
+			}
 		}
+		return ids, nil
 	}
-	return ids
+	idArr := garray.NewIntArray(true)
+	err := service.Grpc().CallAll(ctx, func(client v1.ChatClient) {
+		r, err := client.GetOnlineUserIds(ctx, &v1.GetOnlineUserIdsRequest{
+			CustomerId: uint32(customerId),
+			Type:       m.types,
+		})
+		if err != nil {
+			g.Log().Errorf(ctx, "%+v", err)
+		} else {
+			idArr.Append(gconv.Ints(r.Uid)...)
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	return gconv.Uints(idArr.Slice()), nil
 }
 
 // GetLocalOnlineTotal 获取本地groupId对应在线客户端数量
@@ -152,16 +221,13 @@ func (m *manager) getOnlineTotal(customerId uint) uint {
 }
 
 // IsOnline 用户是否在线
-func (m *manager) isOnline(customerId uint, uid uint) bool {
-	return m.isLocalOnline(customerId, uid)
-}
 
 func (m *manager) isLocalOnline(customerId uint, uid uint) bool {
 	return m.connExist(customerId, uid)
 }
 
 // SendAction 给客户端发送消息
-func (m *manager) SendAction(a *v1.ChatAction, clients ...iWsConn) {
+func (m *manager) SendAction(a *api.ChatAction, clients ...iWsConn) {
 	for _, c := range clients {
 		c.deliver(a)
 	}
@@ -177,6 +243,30 @@ func (m *manager) connExist(customerId uint, uid uint) bool {
 func (m *manager) getConn(customerId, uid uint) (iWsConn, bool) {
 	s := m.getSpread(customerId)
 	return s.get(uid)
+}
+
+func (m *manager) getConnInfo(ctx context.Context, customerId, uid uint, forceLocal ...bool) (bool, string) {
+	if m.isCallLocal(forceLocal...) {
+		conn, exist := m.getConn(customerId, uid)
+		if exist {
+			return true, conn.getPlatform()
+		} else {
+			return false, ""
+		}
+	}
+	server, _ := m.getUserServer(ctx, uid)
+	if server != "" {
+		r, err := service.Grpc().Client(server).GetConnInfo(ctx, &v1.GetConnInfoRequest{
+			UserId:     uint32(uid),
+			CustomerId: uint32(customerId),
+			Type:       m.types,
+		})
+		if err == nil {
+			return r.Exist, r.Platform
+		}
+		g.Log().Errorf(ctx, "%+v", err)
+	}
+	return false, ""
 }
 
 // AddConn 添加客户端
@@ -223,6 +313,12 @@ func (m *manager) unregister(conn iWsConn) {
 	if exist {
 		if existConn == conn {
 			m.removeConn(conn.getUser())
+			if m.cluster {
+				err := m.removeUserServer(ctx, conn.getUserId())
+				if err != nil {
+					g.Log().Errorf(ctx, "%+v", err)
+				}
+			}
 			err := m.trigger(ctx, eventUnRegister, eventArg{
 				conn: conn,
 			})
@@ -240,8 +336,14 @@ func (m *manager) register(ctx context.Context, conn *websocket.Conn, user iChat
 	client := newClient(conn, user, platform)
 	client.manager = m
 	timer := time.After(1 * time.Second)
-	m.noticeRepeatConnect(client.getUser(), client.getUuid())
 	m.addConn(client)
+	m.noticeRepeatConnect(client.getUser(), client.getUuid())
+	if m.cluster {
+		err := m.setUserServer(ctx, user.getPrimaryKey(), service.Grpc().GetServerName())
+		if err != nil {
+			return err
+		}
+	}
 	client.run()
 	<-timer
 	err := m.trigger(ctx, eventRegister, eventArg{
@@ -249,12 +351,31 @@ func (m *manager) register(ctx context.Context, conn *websocket.Conn, user iChat
 	})
 	return err
 }
-func (m *manager) noticeRead(customerId, adminId uint, msgIds []uint) {
-	conn, exist := m.getConn(customerId, adminId)
-	if exist {
-		act := action.newReadAction(msgIds)
-		m.SendAction(act, conn)
+func (m *manager) noticeRead(ctx context.Context, customerId, uid uint, msgIds []uint, forceLocal ...bool) (err error) {
+	if m.isCallLocal(forceLocal...) {
+		conn, exist := m.getConn(customerId, uid)
+		if exist {
+			act := action.newReadAction(msgIds)
+			m.SendAction(act, conn)
+		}
+		return nil
 	}
+	server, err := m.getUserServer(ctx, uid)
+	if err != nil {
+		return err
+	}
+	if server != "" {
+		_, err = service.Grpc().Client(server).NoticeRead(ctx, &v1.NoticeReadRequest{
+			CustomerId: uint32(customerId),
+			UserId:     uint32(uid),
+			MsgId:      gconv.Uint32s(msgIds),
+			Type:       m.types,
+		})
+		if err != nil {
+			return
+		}
+	}
+	return nil
 }
 
 // Ping

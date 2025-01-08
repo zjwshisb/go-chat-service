@@ -1,7 +1,7 @@
-package backend
+package v1
 
 import (
-	"gf-chat/api/v1"
+	"gf-chat/api"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
@@ -16,13 +16,13 @@ type ChatSettingUpdateReq struct {
 }
 
 type ChatSetting struct {
-	Id          uint        `json:"id"`
-	Name        string      `json:"name"`
-	Value       any         `json:"value"`
-	Options     []v1.Option `json:"options"`
-	Title       string      `json:"title"`
-	Type        string      `json:"type"`
-	Description string      `json:"description"`
-	CreatedAt   *gtime.Time `json:"created_at"`
-	UpdatedAt   *gtime.Time `json:"updated_at"`
+	Id          uint         `json:"id"`
+	Name        string       `json:"name"`
+	Value       any          `json:"value"`
+	Options     []api.Option `json:"options"`
+	Title       string       `json:"title"`
+	Type        string       `json:"type"`
+	Description string       `json:"description"`
+	CreatedAt   *gtime.Time  `json:"created_at"`
+	UpdatedAt   *gtime.Time  `json:"updated_at"`
 }

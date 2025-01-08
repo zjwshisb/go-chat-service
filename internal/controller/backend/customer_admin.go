@@ -2,8 +2,9 @@ package backend
 
 import (
 	"context"
-	baseApi "gf-chat/api/v1"
-	api "gf-chat/api/v1/backend"
+	baseApi "gf-chat/api"
+	api "gf-chat/api/backend/v1"
+	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
 	"github.com/gogf/gf/v2/frame/g"
@@ -29,7 +30,7 @@ func (cAdmin cCustomerAdmin) Index(ctx context.Context, req *api.CustomerAdminLi
 		return
 	}
 	item := slice.Map(p.Items, func(_ int, item *model.CustomerAdmin) api.CustomerAdmin {
-		online := service.Chat().IsOnline(item.CustomerId, item.Id, "admin")
+		online, _ := service.Chat().GetConnInfo(ctx, item.CustomerId, item.Id, consts.WsTypeAdmin)
 		var lastOnline *gtime.Time
 		if item.Setting != nil && item.Setting.LastOnline != nil {
 			lastOnline = item.Setting.LastOnline

@@ -1,7 +1,7 @@
-package backend
+package v1
 
 import (
-	"gf-chat/api/v1"
+	"gf-chat/api"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
@@ -14,7 +14,7 @@ type CustomerAdminDetailReq struct {
 type CustomerAdminListReq struct {
 	g.Meta   `path:"/admins" tags:"后台管理员" method:"get" summary:"获取管理员列表"`
 	Username string `json:"username"`
-	v1.Paginate
+	api.Paginate
 }
 
 type CustomerAdmin struct {

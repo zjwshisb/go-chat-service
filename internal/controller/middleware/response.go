@@ -3,7 +3,7 @@ package middleware
 import (
 	"database/sql"
 	"errors"
-	"gf-chat/api/v1"
+	"gf-chat/api"
 	"net/http"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -50,7 +50,7 @@ func HandlerResponse(r *ghttp.Request) {
 			})
 			return
 		} else if code == gcode.CodeBusinessValidationFailed {
-			r.Response.WriteJson(v1.NewFailResp(msg, code.Code()))
+			r.Response.WriteJson(api.NewFailResp(msg, code.Code()))
 			// 业务错误
 		} else {
 			// 非正常错误，记录一下

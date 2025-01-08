@@ -2,7 +2,8 @@ package chat
 
 import (
 	"context"
-	api "gf-chat/api/v1/backend"
+	"gf-chat/api/backend/v1"
+	grpc "gf-chat/api/chat/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -17,13 +18,9 @@ import (
 	"time"
 )
 
-func newAdminManager() *adminManager {
+func newAdminManager(cluster bool) *adminManager {
 	adminM = &adminManager{
-		&manager{
-			shardCount:   10,
-			connMessages: make(chan *chatConnMessage, 100),
-			pingDuration: time.Second * 10,
-		},
+		newManager(10, 100, time.Minute, cluster, consts.WsTypeAdmin),
 	}
 	adminM.on(eventRegister, adminM.onRegister)
 	adminM.on(eventUnRegister, adminM.onUnRegister)
@@ -35,22 +32,30 @@ type adminManager struct {
 	*manager
 }
 
-// deliveryMessage
 // 投递消息
-// 查询admin是否在线，是则直接投递
-// 最后则说明admin不在线，处理离线逻辑
-func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerChatMessage, userConn iWsConn) error {
+func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerChatMessage) error {
+	if !m.cluster {
+		return m.deliveryLocalMessage(msg)
+	}
+	server, err := m.getUserServer(ctx, msg.AdminId)
+	if err != nil {
+		return err
+	}
+	if server != "" {
+		_, err = service.Grpc().Client(server).SendAdminMessage(ctx, &grpc.SendAdminMessageRequest{MsgId: uint32(msg.Id)})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *adminManager) deliveryLocalMessage(msg *model.CustomerChatMessage) error {
 	adminConn, exist := m.getConn(msg.CustomerId, msg.AdminId)
 	if exist { // admin在线
-		err := userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOnline, msg, userConn)
-		if err != nil {
-			return nil
-		}
 		adminConn.deliver(action.newReceive(msg))
-		return nil
-	} else {
-		return m.handleOffline(ctx, msg, userConn)
 	}
+	return nil
 }
 
 func (m *adminManager) sendOffline(admin *model.CustomerAdmin, msg *model.CustomerChatMessage) {
@@ -157,7 +162,7 @@ func (m *adminManager) broadcastLocalWaitingUser(ctx context.Context, customerId
 	sessionIds := slice.Map(sessions, func(index int, item *model.CustomerChatSession) uint {
 		return item.Id
 	})
-	userMap := make(map[uint]*api.ChatWaitingUser)
+	userMap := make(map[uint]*v1.ChatWaitingUser)
 	messages, err := service.ChatMessage().All(ctx, do.CustomerChatMessages{
 		Source:    consts.MessageSourceUser,
 		SessionId: sessionIds,
@@ -166,19 +171,19 @@ func (m *adminManager) broadcastLocalWaitingUser(ctx context.Context, customerId
 		return
 	}
 	for _, session := range sessions {
-		userMap[session.UserId] = &api.ChatWaitingUser{
+		userMap[session.UserId] = &v1.ChatWaitingUser{
 			Username:     session.User.Username,
 			Avatar:       "",
 			UserId:       session.User.Id,
 			MessageCount: 0,
 			Description:  "",
-			Messages:     make([]api.ChatSimpleMessage, 0),
+			Messages:     make([]v1.ChatSimpleMessage, 0),
 			LastTime:     session.QueriedAt,
 			SessionId:    session.Id,
 		}
 	}
 	for _, m := range messages {
-		userMap[m.UserId].Messages = append(userMap[m.UserId].Messages, api.ChatSimpleMessage{
+		userMap[m.UserId].Messages = append(userMap[m.UserId].Messages, v1.ChatSimpleMessage{
 			Type:    m.Type,
 			Time:    m.ReceivedAt,
 			Content: m.Content,
@@ -207,14 +212,14 @@ func (m *adminManager) broadcastLocalOnlineAdmins(ctx context.Context, customerI
 	if err != nil {
 		return err
 	}
-	data := make([]api.ChatCustomerAdmin, 0, len(admins))
+	data := make([]v1.ChatCustomerAdmin, 0, len(admins))
 	for _, c := range admins {
 		conn, online := m.getConn(customerId, c.Id)
 		platform := ""
 		if online {
 			platform = conn.getPlatform()
 		}
-		data = append(data, api.ChatCustomerAdmin{
+		data = append(data, v1.ChatCustomerAdmin{
 			Username:      c.Username,
 			Online:        online,
 			Id:            c.Id,
@@ -285,7 +290,7 @@ func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, 
 		if err != nil {
 			return err
 		}
-		data := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) api.ChatTransfer {
+		data := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) v1.ChatTransfer {
 			return service.ChatTransfer().ToApi(item)
 		})
 		client.deliver(action.newUserTransfer(data))
@@ -294,7 +299,7 @@ func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, 
 }
 
 // NoticeUpdateSetting admin修改设置后通知conn 更新admin的设置信息
-func (m *adminManager) noticeUpdateSetting(customerId uint, setting *api.CurrentAdminSetting) {
+func (m *adminManager) noticeUpdateSetting(customerId uint, setting *v1.CurrentAdminSetting) {
 	//m.updateSetting(customerId, setting)
 }
 

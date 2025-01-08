@@ -2,8 +2,8 @@ package chat
 
 import (
 	"context"
-	"gf-chat/api/v1"
-	api "gf-chat/api/v1/backend"
+	api2 "gf-chat/api"
+	api "gf-chat/api/backend/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -25,16 +25,18 @@ func init() {
 
 func newChat() *sChat {
 	m := &sChat{
-		admin: newAdminManager(),
-		user:  newUserManager(),
+		admin:   newAdminManager(service.Grpc().IsOpen()),
+		user:    newUserManager(service.Grpc().IsOpen()),
+		cluster: service.Grpc().IsOpen(),
 	}
 	m.run()
 	return m
 }
 
 type sChat struct {
-	admin *adminManager
-	user  *userManager
+	admin   *adminManager
+	user    *userManager
+	cluster bool
 }
 
 func (s sChat) run() {
@@ -113,11 +115,9 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	if err != nil {
 		return
 	}
-	userConn, online := s.user.getConn(session.CustomerId, session.UserId)
-	platform := ""
+	online, platform := s.user.getConnInfo(ctx, session.CustomerId, session.UserId)
 	if online {
 		// 服务提醒
-		platform = userConn.getPlatform()
 		chatName, _ := service.Admin().GetChatName(ctx, &admin)
 		notice := service.ChatMessage().NewNotice(session,
 			chatName+"为您服务")
@@ -125,9 +125,13 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		if err != nil {
 			return
 		}
-		s.user.SendAction(action.newReceive(notice), userConn)
+		err = s.user.deliveryMessage(ctx, notice)
+		if err != nil {
+			return
+		}
+		var welcomeMsg *model.CustomerChatMessage
 		// 欢迎语
-		welcomeMsg, err := service.ChatMessage().NewWelcome(ctx, &admin)
+		welcomeMsg, err = service.ChatMessage().NewWelcome(ctx, &admin)
 		if err != nil {
 			return nil, err
 		}
@@ -138,12 +142,14 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 			if err != nil {
 				return nil, err
 			}
-			action := action.newReceive(welcomeMsg)
-			s.user.SendAction(action, userConn)
+			err = s.user.deliveryMessage(ctx, welcomeMsg)
+			if err != nil {
+				return
+			}
 		}
 	}
 	messagesLength := len(messages)
-	var lastMsg *v1.ChatMessage
+	var lastMsg *api2.ChatMessage
 	if messagesLength > 0 {
 		lastMessage := messages[0]
 		v, err := service.ChatMessage().ToApi(ctx, lastMessage)
@@ -165,7 +171,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		Username:     session.User.Username,
 		LastChatTime: gtime.Now(),
 		Disabled:     false,
-		Online:       userM.isOnline(session.CustomerId, session.UserId),
+		Online:       online,
 		LastMessage:  lastMsg,
 		Unread:       uint(unRead),
 		Avatar:       "",
@@ -192,46 +198,31 @@ func (s sChat) Register(ctx context.Context, u any, conn *websocket.Conn, platfo
 	}
 	return gerror.New("无效的用户模型")
 }
-
-func (s sChat) IsOnline(customerId uint, uid uint, t string) bool {
-	if t == "user" {
-		return s.user.isOnline(customerId, uid)
+func (s sChat) GetConnInfo(ctx context.Context, customerId, uid uint, t string, forceLocal ...bool) (exist bool, platform string) {
+	if t == consts.WsTypeAdmin {
+		return s.admin.getConnInfo(ctx, customerId, uid, forceLocal...)
 	}
-	if t == "admin" {
-		return s.admin.isOnline(customerId, uid)
+	if t == consts.WsTypeUser {
+		return s.user.getConnInfo(ctx, customerId, uid, forceLocal...)
 	}
-	return false
+	return false, ""
 }
 
 func (s sChat) BroadcastWaitingUser(ctx context.Context, customerId uint) error {
 	return s.admin.broadcastWaitingUser(ctx, customerId)
 }
 
-func (s sChat) GetPlatform(customerId, uid uint, t string) string {
-	var conn iWsConn
-	var online bool
-	if t == "admin" {
-		conn, online = s.admin.getConn(customerId, uid)
-	}
-	if t == "user" {
-		conn, online = s.user.getConn(customerId, uid)
-	}
-	if online {
-		return conn.getPlatform()
-	}
-	return ""
-}
-
 func (s sChat) NoticeRate(msg *model.CustomerChatMessage) {
 	s.admin.noticeRate(msg)
 }
 
-func (s sChat) NoticeUserRead(customerId, uid uint, msgIds []uint) {
-	s.admin.noticeRead(customerId, uid, msgIds)
-}
-
-func (s sChat) NoticeAdminRead(customerId, uid uint, msgIds []uint) {
-	s.user.noticeRead(customerId, uid, msgIds)
+func (s sChat) NoticeRead(ctx context.Context, customerId, uid uint, msgIds []uint, t string, forceLocal ...bool) error {
+	if t == consts.WsTypeAdmin {
+		return s.admin.noticeRead(ctx, customerId, uid, msgIds, forceLocal...)
+	} else if t == consts.WsTypeUser {
+		return s.user.noticeRead(ctx, customerId, uid, msgIds, forceLocal...)
+	}
+	return nil
 }
 
 func (s sChat) Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) (err error) {
@@ -256,28 +247,54 @@ func (s sChat) Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toI
 	return service.ChatTransfer().Create(ctx, fromAdmin.Id, admin.Id, userId, remark)
 }
 
-func (s sChat) GetOnlineAdmins(customerId uint) []api.ChatSimpleUser {
-	conns := s.admin.getAllConn(customerId)
-	res := make([]api.ChatSimpleUser, len(conns))
-	for index, c := range conns {
+func (s sChat) GetOnlineAdmins(ctx context.Context, customerId uint) ([]api.ChatSimpleUser, error) {
+	ids, err := s.admin.getOnlineUserIds(ctx, customerId)
+	if err != nil {
+		return nil, err
+	}
+	users, err := service.Admin().All(ctx, do.Users{
+		Id: ids,
+	}, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]api.ChatSimpleUser, len(users))
+	for index, u := range users {
 		res[index] = api.ChatSimpleUser{
-			Id:       c.getUserId(),
-			Username: c.getUser().getUsername(),
+			Id:       u.Id,
+			Username: u.Username,
 		}
 	}
-	return res
+	return res, nil
 }
 
-func (s sChat) GetOnlineUsers(customerId uint) []api.ChatSimpleUser {
-	conns := s.user.getAllConn(customerId)
-	res := make([]api.ChatSimpleUser, len(conns))
-	for index, c := range conns {
+func (s sChat) GetOnlineUserIds(ctx context.Context, customerId uint, types string, forceLocal ...bool) ([]uint, error) {
+	if types == consts.WsTypeUser {
+		return s.user.getOnlineUserIds(ctx, customerId, forceLocal...)
+	} else {
+		return s.admin.getOnlineUserIds(ctx, customerId, forceLocal...)
+	}
+}
+
+func (s sChat) GetOnlineUsers(ctx context.Context, customerId uint) ([]api.ChatSimpleUser, error) {
+	ids, err := s.user.getOnlineUserIds(ctx, customerId)
+	if err != nil {
+		return nil, err
+	}
+	users, err := service.User().All(ctx, do.Users{
+		Id: ids,
+	}, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]api.ChatSimpleUser, len(users))
+	for index, u := range users {
 		res[index] = api.ChatSimpleUser{
-			Id:       c.getUserId(),
-			Username: c.getUser().getUsername(),
+			Id:       u.Id,
+			Username: u.Username,
 		}
 	}
-	return res
+	return res, nil
 }
 func (s sChat) GetWaitingUsers(ctx context.Context, customerId uint) (res []api.ChatSimpleUser, err error) {
 	ids, err := manual.getAllList(ctx, customerId)
@@ -299,4 +316,20 @@ func (s sChat) GetWaitingUsers(ctx context.Context, customerId uint) (res []api.
 
 func (s sChat) RemoveManual(ctx context.Context, uid uint, customerId uint) error {
 	return manual.removeFromSet(ctx, uid, customerId)
+}
+
+func (s sChat) DeliveryUserMessage(ctx context.Context, msgId uint) error {
+	msg, err := service.ChatMessage().Find(ctx, msgId)
+	if err != nil {
+		return err
+	}
+	return s.user.deliveryLocalMessage(ctx, msg)
+}
+
+func (s sChat) DeliveryAdminMessage(ctx context.Context, msgId uint) error {
+	msg, err := service.ChatMessage().Find(ctx, msgId)
+	if err != nil {
+		return err
+	}
+	return s.admin.deliveryLocalMessage(msg)
 }

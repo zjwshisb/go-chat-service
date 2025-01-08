@@ -2,8 +2,8 @@ package backend
 
 import (
 	"context"
-	v1 "gf-chat/api/v1"
-	api "gf-chat/api/v1/backend"
+	v1 "gf-chat/api"
+	api "gf-chat/api/backend/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
@@ -17,7 +17,7 @@ type cDashboard struct {
 }
 
 func (c cDashboard) AdminInfo(ctx context.Context, _ *api.DashboardAdminInfoReq) (res *v1.NormalRes[api.DashboardAdminInfo], err error) {
-	user := service.Chat().GetOnlineAdmins(service.AdminCtx().GetCustomerId(ctx))
+	user, err := service.Chat().GetOnlineAdmins(ctx, service.AdminCtx().GetCustomerId(ctx))
 	total, err := service.Admin().Count(ctx, do.CustomerAdmins{
 		CustomerId: service.AdminCtx().GetCustomerId(ctx),
 	})
@@ -53,7 +53,10 @@ func (c cDashboard) WaitingUserInfo(ctx context.Context, _ *api.DashboardWaiting
 }
 
 func (c cDashboard) OnlineUserInfo(ctx context.Context, _ *api.DashboardOnlineUserInfoReq) (res *v1.NormalRes[api.DashboardOnlineUserInfo], err error) {
-	users := service.Chat().GetOnlineUsers(service.AdminCtx().GetCustomerId(ctx))
+	users, err := service.Chat().GetOnlineUsers(ctx, service.AdminCtx().GetCustomerId(ctx))
+	if err != nil {
+		return
+	}
 	count, err := service.User().GetActiveCount(ctx, gtime.Now())
 	res = v1.NewResp(api.DashboardOnlineUserInfo{
 		Users:       users,

@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package chat;
+
+option go_package = "gf-chat/api/chat/v1";
+
+service Chat {
+  rpc GetOnlineUserIds(GetOnlineUserIdsRequest) returns (GetOnlineUserIdsReply);
+  rpc GetConnInfo(GetConnInfoRequest) returns (GetConnInfoReply);
+  rpc SendUserMessage(SendUserMessageRequest) returns (SendUserMessageReply);
+  rpc SendAdminMessage(SendAdminMessageRequest) returns (SendAdminMessageReply);
+  rpc NoticeRead(NoticeReadRequest) returns (NoticeReadReply);
+}
+
+message GetOnlineUserIdsRequest {
+  uint32 customer_id = 1;
+  string type = 2;
+}
+
+message GetOnlineUserIdsReply {
+  repeated uint32 uid = 1;
+}
+
+
+
+message GetConnInfoRequest {
+  uint32 user_id = 1;
+  uint32 customer_id = 2;
+  string type = 3;
+}
+
+message GetConnInfoReply {
+  bool exist = 1;
+  string platform = 2;
+}
+
+message SendUserMessageRequest {
+  uint32 msg_id = 1;
+}
+
+message SendUserMessageReply {
+}
+
+message SendAdminMessageRequest {
+  uint32 msg_id = 1;
+}
+
+message SendAdminMessageReply {
+}
+
+message NoticeReadRequest {
+  repeated uint32 msg_id = 1;
+  uint32 user_id = 2;
+  uint32 customer_id = 3;
+  string type = 4;
+}
+message NoticeReadReply {
+}

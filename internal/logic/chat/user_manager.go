@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	grpc "gf-chat/api/chat/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -18,13 +19,9 @@ import (
 	"github.com/gogf/gf/v2/os/gcache"
 )
 
-func newUserManager() *userManager {
+func newUserManager(cluster bool) *userManager {
 	userM = &userManager{
-		&manager{
-			shardCount:   10,
-			connMessages: make(chan *chatConnMessage, 100),
-			pingDuration: time.Second * 10,
-		},
+		newManager(10, 100, time.Minute, cluster, consts.WsTypeUser),
 	}
 	userM.on(eventRegister, userM.onRegister)
 	userM.on(eventUnRegister, userM.unRegisterHook)
@@ -36,11 +33,24 @@ type userManager struct {
 	*manager
 }
 
-// deliveryMessage 投递消息
-// 查询user是否在本机上，是则直接投递
-// 查询user当前server，如果存在则投递到该channel上
-// 最后则说明user不在线，处理相关逻辑
 func (s *userManager) deliveryMessage(ctx context.Context, message *model.CustomerChatMessage) error {
+	if !s.cluster {
+		return s.deliveryLocalMessage(ctx, message)
+	}
+	server, err := s.getUserServer(ctx, message.UserId)
+	if err != nil {
+		return err
+	}
+	if server != "" {
+		_, err = service.Grpc().Client(server).SendUserMessage(ctx, &grpc.SendUserMessageRequest{MsgId: uint32(message.Id)})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *userManager) deliveryLocalMessage(ctx context.Context, message *model.CustomerChatMessage) error {
 	userConn, exist := s.getConn(message.CustomerId, message.UserId)
 	switch message.Type {
 	case consts.MessageTypeRate:
@@ -55,9 +65,8 @@ func (s *userManager) deliveryMessage(ctx context.Context, message *model.Custom
 	}
 	if exist {
 		userConn.deliver(action.newReceive(message))
-		return nil
 	}
-	return s.handleOffline(ctx, message)
+	return nil
 }
 
 // noticeQueueLocation 等待人数
@@ -101,12 +110,6 @@ func (s *userManager) broadcastLocalQueueLocation(ctx context.Context, customerI
 	return nil
 }
 
-// 处理离线逻辑
-func (s *userManager) handleOffline(ctx context.Context, msg *model.CustomerChatMessage) error {
-	// todo
-	return nil
-}
-
 // 处理消息
 func (s *userManager) handleMessage(ctx context.Context, arg eventArg) (err error) {
 	msg := arg.msg
@@ -138,7 +141,21 @@ func (s *userManager) handleMessage(ctx context.Context, arg eventArg) (err erro
 		if err != nil {
 			return err
 		}
-		return adminM.deliveryMessage(ctx, msg, conn)
+		adminOnline, _ := adminM.getConnInfo(ctx, msg.CustomerId, msg.AdminId)
+		if adminOnline {
+			g.Dump(adminOnline)
+			err = userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOnline, msg, conn)
+			if err != nil {
+				return err
+			}
+			return adminM.deliveryMessage(ctx, msg)
+		} else {
+			err = adminM.handleOffline(ctx, msg, conn)
+			if err != nil {
+				return err
+			}
+		}
+
 	} else {
 		// 触发自动回复事件
 		err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneNotAccepted, msg, conn)
@@ -313,7 +330,7 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 					if err != nil {
 						return nil, err
 					}
-					err = s.deliveryMessage(ctx, message)
+					err = s.deliveryLocalMessage(ctx, message)
 					if err != nil {
 						return nil, err
 					}
@@ -342,7 +359,7 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 	if err != nil {
 		return nil, err
 	}
-	err = s.deliveryMessage(ctx, message)
+	err = s.deliveryLocalMessage(ctx, message)
 	if err != nil {
 		return nil, err
 	}
