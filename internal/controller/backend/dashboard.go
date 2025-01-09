@@ -57,7 +57,7 @@ func (c cDashboard) OnlineUserInfo(ctx context.Context, _ *api.DashboardOnlineUs
 	if err != nil {
 		return
 	}
-	count, err := service.User().GetActiveCount(ctx, gtime.Now())
+	count, err := service.User().GetActiveCount(ctx, service.AdminCtx().GetCustomerId(ctx), gtime.Now())
 	res = v1.NewResp(api.DashboardOnlineUserInfo{
 		Users:       users,
 		ActiveCount: count,

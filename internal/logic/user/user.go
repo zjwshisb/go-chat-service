@@ -44,9 +44,10 @@ func (s *sUser) GetInfo(ctx context.Context, user *model.User) ([]api.UserInfoIt
 	return r, nil
 }
 
-func (s *sUser) GetActiveCount(ctx context.Context, date *gtime.Time) (count int, err error) {
+func (s *sUser) GetActiveCount(ctx context.Context, customerId uint, date *gtime.Time) (count int, err error) {
 	count, err = dao.CustomerChatMessages.Ctx(ctx).Group("user_id").
 		WhereGTE("created_at", date.StartOfDay().String()).
+		Where("customer_id", customerId).
 		WhereLTE("created_at", date.EndOfDay().String()).
 		Fields("user_id").Count()
 	return
