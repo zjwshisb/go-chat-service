@@ -12,6 +12,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gorilla/websocket"
 )
@@ -24,10 +25,12 @@ func init() {
 }
 
 func newChat() *sChat {
+	config, _ := g.Config().Get(gctx.New(), "grpc.open", false)
+	cluster := config.Bool()
 	m := &sChat{
-		admin:   newAdminManager(service.Grpc().IsOpen()),
-		user:    newUserManager(service.Grpc().IsOpen()),
-		cluster: service.Grpc().IsOpen(),
+		admin:   newAdminManager(cluster),
+		user:    newUserManager(cluster),
+		cluster: cluster,
 	}
 	m.run()
 	return m
@@ -44,13 +47,21 @@ func (s sChat) run() {
 	s.user.run()
 }
 
-func (s sChat) UpdateAdminSetting(ctx context.Context, admin *model.CustomerAdmin) {
-	s.admin.updateSetting(ctx, admin)
+func (s sChat) UpdateAdminSetting(ctx context.Context, id uint, forceLocal ...bool) error {
+	return s.admin.updateSetting(ctx, id, forceLocal...)
 }
 
 // NoticeTransfer 发送转接通知
-func (s sChat) NoticeTransfer(ctx context.Context, customer, admin uint) error {
-	return s.admin.noticeUserTransfer(ctx, customer, admin)
+func (s sChat) NoticeTransfer(ctx context.Context, customer, admin uint, forceLocal ...bool) error {
+	return s.admin.noticeUserTransfer(ctx, customer, admin, forceLocal...)
+}
+
+func (s sChat) NoticeUserOnline(ctx context.Context, uid uint, platform string, forceLocal ...bool) error {
+	return s.admin.noticeUserOnline(ctx, uid, platform, forceLocal...)
+}
+
+func (s sChat) NoticeUserOffline(ctx context.Context, uid uint, forceLocal ...bool) error {
+	return s.admin.noticeUserOffline(ctx, uid, forceLocal...)
 }
 
 // Accept 接入用户
@@ -208,14 +219,26 @@ func (s sChat) GetConnInfo(ctx context.Context, customerId, uid uint, t string, 
 	return false, ""
 }
 
-func (s sChat) BroadcastWaitingUser(ctx context.Context, customerId uint) error {
-	return s.admin.broadcastWaitingUser(ctx, customerId)
+func (s sChat) BroadcastWaitingUser(ctx context.Context, customerId uint, forceLocal ...bool) error {
+	return s.admin.broadcastWaitingUser(ctx, customerId, forceLocal...)
 }
+func (s sChat) BroadcastOnlineAdmins(ctx context.Context, customerId uint, forceLocal ...bool) error {
+	return s.admin.broadcastOnlineAdmins(ctx, customerId, forceLocal...)
+}
+func (s sChat) BroadcastQueueLocation(ctx context.Context, customerId uint, forceLocal ...bool) error {
+	return s.user.broadcastQueueLocation(ctx, customerId, forceLocal...)
 
+}
 func (s sChat) NoticeRate(msg *model.CustomerChatMessage) {
 	s.admin.noticeRate(msg)
 }
-
+func (s sChat) NoticeRepeatConnect(ctx context.Context, uid, customerId uint, newUuid string, t string, forceLocal ...bool) error {
+	if t == consts.WsTypeUser {
+		return s.user.noticeRepeatConnect(ctx, uid, customerId, newUuid, forceLocal...)
+	} else {
+		return s.admin.noticeRepeatConnect(ctx, uid, customerId, newUuid, forceLocal...)
+	}
+}
 func (s sChat) NoticeRead(ctx context.Context, customerId, uid uint, msgIds []uint, t string, forceLocal ...bool) error {
 	if t == consts.WsTypeAdmin {
 		return s.admin.noticeRead(ctx, customerId, uid, msgIds, forceLocal...)
@@ -277,7 +300,7 @@ func (s sChat) GetOnlineUserIds(ctx context.Context, customerId uint, types stri
 }
 
 func (s sChat) GetOnlineUsers(ctx context.Context, customerId uint) ([]api.ChatSimpleUser, error) {
-	ids, err := s.user.getOnlineUserIds(ctx, customerId)
+	ids, err := s.GetOnlineUserIds(ctx, customerId, consts.WsTypeUser)
 	if err != nil {
 		return nil, err
 	}
@@ -318,18 +341,14 @@ func (s sChat) RemoveManual(ctx context.Context, uid uint, customerId uint) erro
 	return manual.removeFromSet(ctx, uid, customerId)
 }
 
-func (s sChat) DeliveryUserMessage(ctx context.Context, msgId uint) error {
+func (s sChat) DeliveryMessage(ctx context.Context, msgId uint, types string, forceLocal ...bool) error {
 	msg, err := service.ChatMessage().Find(ctx, msgId)
 	if err != nil {
 		return err
 	}
-	return s.user.deliveryLocalMessage(ctx, msg)
-}
-
-func (s sChat) DeliveryAdminMessage(ctx context.Context, msgId uint) error {
-	msg, err := service.ChatMessage().Find(ctx, msgId)
-	if err != nil {
-		return err
+	if types == consts.WsTypeAdmin {
+		return s.admin.deliveryMessage(ctx, msg, forceLocal...)
+	} else {
+		return s.user.deliveryMessage(ctx, msg, forceLocal...)
 	}
-	return s.admin.deliveryLocalMessage(msg)
 }

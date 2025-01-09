@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	err := cmd.Main.AddCommand(cmd.Http, cmd.Init, cmd.Migrate, cmd.Fake, cmd.Rpc)
+	err := cmd.Main.AddCommand(cmd.Http, cmd.Init, cmd.Migrate, cmd.Fake)
 	if err != nil {
 		log.Fatal(err)
 	}

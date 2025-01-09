@@ -10,9 +10,11 @@ type (
 	IGrpc interface {
 		GetServerName() string
 		IsOpen() bool
-		Client(name string) v1.ChatClient
+		Client(ctx context.Context, name string) v1.ChatClient
 		GetServers(ctx context.Context, inputConfig ...gsvc.SearchInput) ([]gsvc.Service, error)
 		CallAll(ctx context.Context, fn func(client v1.ChatClient)) error
+		RegisterResolver(ctx context.Context)
+		StartServer()
 	}
 )
 

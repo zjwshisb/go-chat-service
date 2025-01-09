@@ -20,11 +20,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Chat_GetOnlineUserIds_FullMethodName = "/chat.Chat/GetOnlineUserIds"
-	Chat_GetConnInfo_FullMethodName      = "/chat.Chat/GetConnInfo"
-	Chat_SendUserMessage_FullMethodName  = "/chat.Chat/SendUserMessage"
-	Chat_SendAdminMessage_FullMethodName = "/chat.Chat/SendAdminMessage"
-	Chat_NoticeRead_FullMethodName       = "/chat.Chat/NoticeRead"
+	Chat_GetOnlineUserIds_FullMethodName       = "/chat.Chat/GetOnlineUserIds"
+	Chat_GetConnInfo_FullMethodName            = "/chat.Chat/GetConnInfo"
+	Chat_SendMessage_FullMethodName            = "/chat.Chat/SendMessage"
+	Chat_NoticeRead_FullMethodName             = "/chat.Chat/NoticeRead"
+	Chat_UpdateAdminSetting_FullMethodName     = "/chat.Chat/UpdateAdminSetting"
+	Chat_BroadcastWaitingUser_FullMethodName   = "/chat.Chat/BroadcastWaitingUser"
+	Chat_BroadcastOnlineAdmins_FullMethodName  = "/chat.Chat/BroadcastOnlineAdmins"
+	Chat_BroadcastQueueLocation_FullMethodName = "/chat.Chat/BroadcastQueueLocation"
+	Chat_NoticeTransfer_FullMethodName         = "/chat.Chat/NoticeTransfer"
+	Chat_NoticeUserOnline_FullMethodName       = "/chat.Chat/NoticeUserOnline"
+	Chat_NoticeUserOffline_FullMethodName      = "/chat.Chat/NoticeUserOffline"
+	Chat_NoticeRepeatConnect_FullMethodName    = "/chat.Chat/NoticeRepeatConnect"
 )
 
 // ChatClient is the client API for Chat service.
@@ -33,9 +40,16 @@ const (
 type ChatClient interface {
 	GetOnlineUserIds(ctx context.Context, in *GetOnlineUserIdsRequest, opts ...grpc.CallOption) (*GetOnlineUserIdsReply, error)
 	GetConnInfo(ctx context.Context, in *GetConnInfoRequest, opts ...grpc.CallOption) (*GetConnInfoReply, error)
-	SendUserMessage(ctx context.Context, in *SendUserMessageRequest, opts ...grpc.CallOption) (*SendUserMessageReply, error)
-	SendAdminMessage(ctx context.Context, in *SendAdminMessageRequest, opts ...grpc.CallOption) (*SendAdminMessageReply, error)
+	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*NilReply, error)
 	NoticeRead(ctx context.Context, in *NoticeReadRequest, opts ...grpc.CallOption) (*NoticeReadReply, error)
+	UpdateAdminSetting(ctx context.Context, in *UpdateAdminSettingRequest, opts ...grpc.CallOption) (*NilReply, error)
+	BroadcastWaitingUser(ctx context.Context, in *BroadcastWaitingUserRequest, opts ...grpc.CallOption) (*NilReply, error)
+	BroadcastOnlineAdmins(ctx context.Context, in *BroadcastOnlineAdminsRequest, opts ...grpc.CallOption) (*NilReply, error)
+	BroadcastQueueLocation(ctx context.Context, in *BroadcastQueueLocationRequest, opts ...grpc.CallOption) (*NilReply, error)
+	NoticeTransfer(ctx context.Context, in *NoticeTransferRequest, opts ...grpc.CallOption) (*NilReply, error)
+	NoticeUserOnline(ctx context.Context, in *NoticeUserOnlineRequest, opts ...grpc.CallOption) (*NilReply, error)
+	NoticeUserOffline(ctx context.Context, in *NoticeUserOfflineRequest, opts ...grpc.CallOption) (*NilReply, error)
+	NoticeRepeatConnect(ctx context.Context, in *NoticeRepeatConnectRequest, opts ...grpc.CallOption) (*NilReply, error)
 }
 
 type chatClient struct {
@@ -66,20 +80,10 @@ func (c *chatClient) GetConnInfo(ctx context.Context, in *GetConnInfoRequest, op
 	return out, nil
 }
 
-func (c *chatClient) SendUserMessage(ctx context.Context, in *SendUserMessageRequest, opts ...grpc.CallOption) (*SendUserMessageReply, error) {
+func (c *chatClient) SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*NilReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SendUserMessageReply)
-	err := c.cc.Invoke(ctx, Chat_SendUserMessage_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *chatClient) SendAdminMessage(ctx context.Context, in *SendAdminMessageRequest, opts ...grpc.CallOption) (*SendAdminMessageReply, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SendAdminMessageReply)
-	err := c.cc.Invoke(ctx, Chat_SendAdminMessage_FullMethodName, in, out, cOpts...)
+	out := new(NilReply)
+	err := c.cc.Invoke(ctx, Chat_SendMessage_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -96,15 +100,102 @@ func (c *chatClient) NoticeRead(ctx context.Context, in *NoticeReadRequest, opts
 	return out, nil
 }
 
+func (c *chatClient) UpdateAdminSetting(ctx context.Context, in *UpdateAdminSettingRequest, opts ...grpc.CallOption) (*NilReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NilReply)
+	err := c.cc.Invoke(ctx, Chat_UpdateAdminSetting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatClient) BroadcastWaitingUser(ctx context.Context, in *BroadcastWaitingUserRequest, opts ...grpc.CallOption) (*NilReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NilReply)
+	err := c.cc.Invoke(ctx, Chat_BroadcastWaitingUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatClient) BroadcastOnlineAdmins(ctx context.Context, in *BroadcastOnlineAdminsRequest, opts ...grpc.CallOption) (*NilReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NilReply)
+	err := c.cc.Invoke(ctx, Chat_BroadcastOnlineAdmins_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatClient) BroadcastQueueLocation(ctx context.Context, in *BroadcastQueueLocationRequest, opts ...grpc.CallOption) (*NilReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NilReply)
+	err := c.cc.Invoke(ctx, Chat_BroadcastQueueLocation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatClient) NoticeTransfer(ctx context.Context, in *NoticeTransferRequest, opts ...grpc.CallOption) (*NilReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NilReply)
+	err := c.cc.Invoke(ctx, Chat_NoticeTransfer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatClient) NoticeUserOnline(ctx context.Context, in *NoticeUserOnlineRequest, opts ...grpc.CallOption) (*NilReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NilReply)
+	err := c.cc.Invoke(ctx, Chat_NoticeUserOnline_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatClient) NoticeUserOffline(ctx context.Context, in *NoticeUserOfflineRequest, opts ...grpc.CallOption) (*NilReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NilReply)
+	err := c.cc.Invoke(ctx, Chat_NoticeUserOffline_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatClient) NoticeRepeatConnect(ctx context.Context, in *NoticeRepeatConnectRequest, opts ...grpc.CallOption) (*NilReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NilReply)
+	err := c.cc.Invoke(ctx, Chat_NoticeRepeatConnect_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServer is the server API for Chat service.
 // All implementations must embed UnimplementedChatServer
 // for forward compatibility.
 type ChatServer interface {
 	GetOnlineUserIds(context.Context, *GetOnlineUserIdsRequest) (*GetOnlineUserIdsReply, error)
 	GetConnInfo(context.Context, *GetConnInfoRequest) (*GetConnInfoReply, error)
-	SendUserMessage(context.Context, *SendUserMessageRequest) (*SendUserMessageReply, error)
-	SendAdminMessage(context.Context, *SendAdminMessageRequest) (*SendAdminMessageReply, error)
+	SendMessage(context.Context, *SendMessageRequest) (*NilReply, error)
 	NoticeRead(context.Context, *NoticeReadRequest) (*NoticeReadReply, error)
+	UpdateAdminSetting(context.Context, *UpdateAdminSettingRequest) (*NilReply, error)
+	BroadcastWaitingUser(context.Context, *BroadcastWaitingUserRequest) (*NilReply, error)
+	BroadcastOnlineAdmins(context.Context, *BroadcastOnlineAdminsRequest) (*NilReply, error)
+	BroadcastQueueLocation(context.Context, *BroadcastQueueLocationRequest) (*NilReply, error)
+	NoticeTransfer(context.Context, *NoticeTransferRequest) (*NilReply, error)
+	NoticeUserOnline(context.Context, *NoticeUserOnlineRequest) (*NilReply, error)
+	NoticeUserOffline(context.Context, *NoticeUserOfflineRequest) (*NilReply, error)
+	NoticeRepeatConnect(context.Context, *NoticeRepeatConnectRequest) (*NilReply, error)
 	mustEmbedUnimplementedChatServer()
 }
 
@@ -121,14 +212,35 @@ func (UnimplementedChatServer) GetOnlineUserIds(context.Context, *GetOnlineUserI
 func (UnimplementedChatServer) GetConnInfo(context.Context, *GetConnInfoRequest) (*GetConnInfoReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetConnInfo not implemented")
 }
-func (UnimplementedChatServer) SendUserMessage(context.Context, *SendUserMessageRequest) (*SendUserMessageReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendUserMessage not implemented")
-}
-func (UnimplementedChatServer) SendAdminMessage(context.Context, *SendAdminMessageRequest) (*SendAdminMessageReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendAdminMessage not implemented")
+func (UnimplementedChatServer) SendMessage(context.Context, *SendMessageRequest) (*NilReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendMessage not implemented")
 }
 func (UnimplementedChatServer) NoticeRead(context.Context, *NoticeReadRequest) (*NoticeReadReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NoticeRead not implemented")
+}
+func (UnimplementedChatServer) UpdateAdminSetting(context.Context, *UpdateAdminSettingRequest) (*NilReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateAdminSetting not implemented")
+}
+func (UnimplementedChatServer) BroadcastWaitingUser(context.Context, *BroadcastWaitingUserRequest) (*NilReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BroadcastWaitingUser not implemented")
+}
+func (UnimplementedChatServer) BroadcastOnlineAdmins(context.Context, *BroadcastOnlineAdminsRequest) (*NilReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BroadcastOnlineAdmins not implemented")
+}
+func (UnimplementedChatServer) BroadcastQueueLocation(context.Context, *BroadcastQueueLocationRequest) (*NilReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BroadcastQueueLocation not implemented")
+}
+func (UnimplementedChatServer) NoticeTransfer(context.Context, *NoticeTransferRequest) (*NilReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NoticeTransfer not implemented")
+}
+func (UnimplementedChatServer) NoticeUserOnline(context.Context, *NoticeUserOnlineRequest) (*NilReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NoticeUserOnline not implemented")
+}
+func (UnimplementedChatServer) NoticeUserOffline(context.Context, *NoticeUserOfflineRequest) (*NilReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NoticeUserOffline not implemented")
+}
+func (UnimplementedChatServer) NoticeRepeatConnect(context.Context, *NoticeRepeatConnectRequest) (*NilReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NoticeRepeatConnect not implemented")
 }
 func (UnimplementedChatServer) mustEmbedUnimplementedChatServer() {}
 func (UnimplementedChatServer) testEmbeddedByValue()              {}
@@ -187,38 +299,20 @@ func _Chat_GetConnInfo_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Chat_SendUserMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendUserMessageRequest)
+func _Chat_SendMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendMessageRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChatServer).SendUserMessage(ctx, in)
+		return srv.(ChatServer).SendMessage(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Chat_SendUserMessage_FullMethodName,
+		FullMethod: Chat_SendMessage_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServer).SendUserMessage(ctx, req.(*SendUserMessageRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Chat_SendAdminMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendAdminMessageRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChatServer).SendAdminMessage(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Chat_SendAdminMessage_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServer).SendAdminMessage(ctx, req.(*SendAdminMessageRequest))
+		return srv.(ChatServer).SendMessage(ctx, req.(*SendMessageRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -241,6 +335,150 @@ func _Chat_NoticeRead_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Chat_UpdateAdminSetting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAdminSettingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).UpdateAdminSetting(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Chat_UpdateAdminSetting_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).UpdateAdminSetting(ctx, req.(*UpdateAdminSettingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chat_BroadcastWaitingUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BroadcastWaitingUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).BroadcastWaitingUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Chat_BroadcastWaitingUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).BroadcastWaitingUser(ctx, req.(*BroadcastWaitingUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chat_BroadcastOnlineAdmins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BroadcastOnlineAdminsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).BroadcastOnlineAdmins(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Chat_BroadcastOnlineAdmins_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).BroadcastOnlineAdmins(ctx, req.(*BroadcastOnlineAdminsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chat_BroadcastQueueLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BroadcastQueueLocationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).BroadcastQueueLocation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Chat_BroadcastQueueLocation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).BroadcastQueueLocation(ctx, req.(*BroadcastQueueLocationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chat_NoticeTransfer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NoticeTransferRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).NoticeTransfer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Chat_NoticeTransfer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).NoticeTransfer(ctx, req.(*NoticeTransferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chat_NoticeUserOnline_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NoticeUserOnlineRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).NoticeUserOnline(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Chat_NoticeUserOnline_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).NoticeUserOnline(ctx, req.(*NoticeUserOnlineRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chat_NoticeUserOffline_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NoticeUserOfflineRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).NoticeUserOffline(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Chat_NoticeUserOffline_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).NoticeUserOffline(ctx, req.(*NoticeUserOfflineRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chat_NoticeRepeatConnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NoticeRepeatConnectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).NoticeRepeatConnect(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Chat_NoticeRepeatConnect_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).NoticeRepeatConnect(ctx, req.(*NoticeRepeatConnectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Chat_ServiceDesc is the grpc.ServiceDesc for Chat service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -257,16 +495,44 @@ var Chat_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Chat_GetConnInfo_Handler,
 		},
 		{
-			MethodName: "SendUserMessage",
-			Handler:    _Chat_SendUserMessage_Handler,
-		},
-		{
-			MethodName: "SendAdminMessage",
-			Handler:    _Chat_SendAdminMessage_Handler,
+			MethodName: "SendMessage",
+			Handler:    _Chat_SendMessage_Handler,
 		},
 		{
 			MethodName: "NoticeRead",
 			Handler:    _Chat_NoticeRead_Handler,
+		},
+		{
+			MethodName: "UpdateAdminSetting",
+			Handler:    _Chat_UpdateAdminSetting_Handler,
+		},
+		{
+			MethodName: "BroadcastWaitingUser",
+			Handler:    _Chat_BroadcastWaitingUser_Handler,
+		},
+		{
+			MethodName: "BroadcastOnlineAdmins",
+			Handler:    _Chat_BroadcastOnlineAdmins_Handler,
+		},
+		{
+			MethodName: "BroadcastQueueLocation",
+			Handler:    _Chat_BroadcastQueueLocation_Handler,
+		},
+		{
+			MethodName: "NoticeTransfer",
+			Handler:    _Chat_NoticeTransfer_Handler,
+		},
+		{
+			MethodName: "NoticeUserOnline",
+			Handler:    _Chat_NoticeUserOnline_Handler,
+		},
+		{
+			MethodName: "NoticeUserOffline",
+			Handler:    _Chat_NoticeUserOffline_Handler,
+		},
+		{
+			MethodName: "NoticeRepeatConnect",
+			Handler:    _Chat_NoticeRepeatConnect_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

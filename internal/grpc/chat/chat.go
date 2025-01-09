@@ -27,22 +27,6 @@ func (*Controller) GetConnInfo(ctx context.Context, req *rpcApi.GetConnInfoReque
 	}, nil
 }
 
-func (*Controller) SendUserMessage(ctx context.Context, req *v1.SendUserMessageRequest) (res *v1.SendUserMessageReply, err error) {
-	err = service.Chat().DeliveryUserMessage(ctx, uint(req.MsgId))
-	if err != nil {
-		return
-	}
-	return &v1.SendUserMessageReply{}, nil
-}
-
-func (*Controller) SendAdminMessage(ctx context.Context, req *v1.SendAdminMessageRequest) (res *v1.SendAdminMessageReply, err error) {
-	err = service.Chat().DeliveryAdminMessage(ctx, uint(req.MsgId))
-	if err != nil {
-		return
-	}
-	return &v1.SendAdminMessageReply{}, nil
-}
-
 func (*Controller) NoticeRead(ctx context.Context, req *v1.NoticeReadRequest) (res *v1.NoticeReadReply, err error) {
 	err = service.Chat().NoticeRead(ctx, uint(req.CustomerId), uint(req.UserId), gconv.Uints(req.MsgId), req.Type, true)
 	if err != nil {
@@ -54,4 +38,76 @@ func (*Controller) NoticeRead(ctx context.Context, req *v1.NoticeReadRequest) (r
 func (*Controller) GetOnlineUserIds(ctx context.Context, req *v1.GetOnlineUserIdsRequest) (res *v1.GetOnlineUserIdsReply, err error) {
 	ids, err := service.Chat().GetOnlineUserIds(ctx, uint(req.CustomerId), req.Type, true)
 	return &v1.GetOnlineUserIdsReply{Uid: gconv.Uint32s(ids)}, nil
+}
+
+func (*Controller) SendMessage(ctx context.Context, req *v1.SendMessageRequest) (res *v1.NilReply, err error) {
+	err = service.Chat().DeliveryMessage(ctx, uint(req.MsgId), req.Type, true)
+	if err != nil {
+		return
+	}
+	return &v1.NilReply{}, nil
+}
+
+func (*Controller) UpdateAdminSetting(ctx context.Context, req *v1.UpdateAdminSettingRequest) (res *v1.NilReply, err error) {
+	err = service.Chat().UpdateAdminSetting(ctx, uint(req.Id), true)
+	if err != nil {
+		return
+	}
+	return &v1.NilReply{}, nil
+}
+
+func (*Controller) BroadcastWaitingUser(ctx context.Context, req *v1.BroadcastWaitingUserRequest) (res *v1.NilReply, err error) {
+	err = service.Chat().BroadcastWaitingUser(ctx, uint(req.CustomerId), true)
+	if err != nil {
+		return
+	}
+	return &v1.NilReply{}, nil
+}
+
+func (*Controller) NoticeTransfer(ctx context.Context, req *v1.NoticeTransferRequest) (res *v1.NilReply, err error) {
+	err = service.Chat().NoticeTransfer(ctx, uint(req.CustomerId), uint(req.AdminId), true)
+	if err != nil {
+		return
+	}
+	return &v1.NilReply{}, nil
+}
+
+func (*Controller) NoticeUserOnline(ctx context.Context, req *v1.NoticeUserOnlineRequest) (res *v1.NilReply, err error) {
+	err = service.Chat().NoticeUserOnline(ctx, uint(req.UserId), req.Platform, true)
+	if err != nil {
+		return
+	}
+	return &v1.NilReply{}, nil
+}
+
+func (*Controller) NoticeUserOffline(ctx context.Context, req *v1.NoticeUserOfflineRequest) (res *v1.NilReply, err error) {
+	err = service.Chat().NoticeUserOffline(ctx, uint(req.UserId), true)
+	if err != nil {
+		return
+	}
+	return &v1.NilReply{}, nil
+}
+
+func (*Controller) BroadcastOnlineAdmins(ctx context.Context, req *v1.BroadcastOnlineAdminsRequest) (res *v1.NilReply, err error) {
+	err = service.Chat().BroadcastOnlineAdmins(ctx, uint(req.CustomerId), true)
+	if err != nil {
+		return
+	}
+	return &v1.NilReply{}, nil
+}
+
+func (*Controller) BroadcastQueueLocation(ctx context.Context, req *v1.BroadcastQueueLocationRequest) (res *v1.NilReply, err error) {
+	err = service.Chat().BroadcastQueueLocation(ctx, uint(req.CustomerId), true)
+	if err != nil {
+		return
+	}
+	return &v1.NilReply{}, nil
+}
+
+func (*Controller) NoticeRepeatConnect(ctx context.Context, req *v1.NoticeRepeatConnectRequest) (res *v1.NilReply, err error) {
+	err = service.Chat().NoticeRepeatConnect(ctx, uint(req.UserId), uint(req.CustomerId), req.Type, req.NewUid, true)
+	if err != nil {
+		return
+	}
+	return &v1.NilReply{}, nil
 }

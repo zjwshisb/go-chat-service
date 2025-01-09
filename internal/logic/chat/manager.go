@@ -32,7 +32,7 @@ type eventHandle = func(ctx context.Context, arg eventArg) error
 type connContainer interface {
 	addConn(conn iWsConn)
 	getConn(customerId uint, uid uint) (iWsConn, bool)
-	noticeRepeatConnect(user iChatUser, newUid string)
+	noticeRepeatConnect(ctx context.Context, uid, customerId uint, newUuid string, forceLocal ...bool) error
 	getAllConn(customerId uint) []iWsConn
 	getOnlineTotal(customerId uint) uint
 	connExist(customerId uint, uid uint) bool
@@ -160,15 +160,44 @@ func (m *manager) handleReceiveMessage() {
 }
 
 // NoticeRepeatConnect 重复链接
-func (m *manager) noticeRepeatConnect(user iChatUser, newUuid string) {
-	m.NoticeLocalRepeatConnect(user, newUuid)
+func (m *manager) noticeRepeatConnect(ctx context.Context, uid, customerId uint, newUuid string, forceLocal ...bool) error {
+	userLocal, server, err := m.isUserLocal(ctx, uid)
+	if err != nil {
+		return err
+	}
+	if m.isCallLocal(forceLocal...) || userLocal {
+		oldConn, ok := m.getConn(customerId, uid)
+		if ok && oldConn.getUuid() != newUuid {
+			m.SendAction(action.newMoreThanOne(), oldConn)
+		}
+		return nil
+	} else if server != "" {
+		rpcClient := service.Grpc().Client(ctx, server)
+		if rpcClient != nil {
+			_, err = rpcClient.NoticeRepeatConnect(ctx, &v1.NoticeRepeatConnectRequest{
+				UserId:     uint32(uid),
+				CustomerId: uint32(customerId),
+				NewUid:     newUuid,
+				Type:       m.types,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
-func (m *manager) NoticeLocalRepeatConnect(user iChatUser, newUuid string) {
-	oldConn, ok := m.getConn(user.getCustomerId(), user.getPrimaryKey())
-	if ok && oldConn.getUuid() != newUuid {
-		m.SendAction(action.newMoreThanOne(), oldConn)
+// 判断用户是否在本地服务上，可以省一次rpc调用
+func (m *manager) isUserLocal(ctx context.Context, id uint) (bool, string, error) {
+	if !m.cluster {
+		return true, "", nil
 	}
+	server, err := m.getUserServer(ctx, id)
+	if err != nil {
+		return false, "", err
+	}
+	return server != service.Grpc().GetServerName(), server, nil
 }
 
 func (m *manager) isCallLocal(forceLocal ...bool) bool {
@@ -190,23 +219,24 @@ func (m *manager) getOnlineUserIds(ctx context.Context, customerId uint, forceLo
 			}
 		}
 		return ids, nil
-	}
-	idArr := garray.NewIntArray(true)
-	err := service.Grpc().CallAll(ctx, func(client v1.ChatClient) {
-		r, err := client.GetOnlineUserIds(ctx, &v1.GetOnlineUserIdsRequest{
-			CustomerId: uint32(customerId),
-			Type:       m.types,
+	} else {
+		idArr := garray.NewIntArray(true)
+		err := service.Grpc().CallAll(ctx, func(client v1.ChatClient) {
+			r, err := client.GetOnlineUserIds(ctx, &v1.GetOnlineUserIdsRequest{
+				CustomerId: uint32(customerId),
+				Type:       m.types,
+			})
+			if err != nil {
+				g.Log().Errorf(ctx, "%+v", err)
+			} else {
+				idArr.Append(gconv.Ints(r.Uid)...)
+			}
 		})
 		if err != nil {
-			g.Log().Errorf(ctx, "%+v", err)
-		} else {
-			idArr.Append(gconv.Ints(r.Uid)...)
+			return nil, err
 		}
-	})
-	if err != nil {
-		return nil, err
+		return gconv.Uints(idArr.Slice()), nil
 	}
-	return gconv.Uints(idArr.Slice()), nil
 }
 
 // GetLocalOnlineTotal 获取本地groupId对应在线客户端数量
@@ -246,7 +276,8 @@ func (m *manager) getConn(customerId, uid uint) (iWsConn, bool) {
 }
 
 func (m *manager) getConnInfo(ctx context.Context, customerId, uid uint, forceLocal ...bool) (bool, string) {
-	if m.isCallLocal(forceLocal...) {
+	userLocal, server, _ := m.isUserLocal(ctx, uid)
+	if m.isCallLocal(forceLocal...) || userLocal {
 		conn, exist := m.getConn(customerId, uid)
 		if exist {
 			return true, conn.getPlatform()
@@ -254,17 +285,19 @@ func (m *manager) getConnInfo(ctx context.Context, customerId, uid uint, forceLo
 			return false, ""
 		}
 	}
-	server, _ := m.getUserServer(ctx, uid)
 	if server != "" {
-		r, err := service.Grpc().Client(server).GetConnInfo(ctx, &v1.GetConnInfoRequest{
-			UserId:     uint32(uid),
-			CustomerId: uint32(customerId),
-			Type:       m.types,
-		})
-		if err == nil {
-			return r.Exist, r.Platform
+		rpcClient := service.Grpc().Client(ctx, server)
+		if rpcClient != nil {
+			r, err := rpcClient.GetConnInfo(ctx, &v1.GetConnInfoRequest{
+				UserId:     uint32(uid),
+				CustomerId: uint32(customerId),
+				Type:       m.types,
+			})
+			if err == nil {
+				return r.Exist, r.Platform
+			}
+			g.Log().Errorf(ctx, "%+v", err)
 		}
-		g.Log().Errorf(ctx, "%+v", err)
 	}
 	return false, ""
 }
@@ -336,8 +369,11 @@ func (m *manager) register(ctx context.Context, conn *websocket.Conn, user iChat
 	client := newClient(conn, user, platform)
 	client.manager = m
 	timer := time.After(1 * time.Second)
+	err := m.noticeRepeatConnect(ctx, user.getPrimaryKey(), user.getCustomerId(), client.getUuid())
+	if err != nil {
+		return err
+	}
 	m.addConn(client)
-	m.noticeRepeatConnect(client.getUser(), client.getUuid())
 	if m.cluster {
 		err := m.setUserServer(ctx, user.getPrimaryKey(), service.Grpc().GetServerName())
 		if err != nil {
@@ -346,13 +382,17 @@ func (m *manager) register(ctx context.Context, conn *websocket.Conn, user iChat
 	}
 	client.run()
 	<-timer
-	err := m.trigger(ctx, eventRegister, eventArg{
+	err = m.trigger(ctx, eventRegister, eventArg{
 		conn: client,
 	})
 	return err
 }
 func (m *manager) noticeRead(ctx context.Context, customerId, uid uint, msgIds []uint, forceLocal ...bool) (err error) {
-	if m.isCallLocal(forceLocal...) {
+	userLocal, server, err := m.isUserLocal(ctx, uid)
+	if err != nil {
+		return err
+	}
+	if m.isCallLocal(forceLocal...) || userLocal {
 		conn, exist := m.getConn(customerId, uid)
 		if exist {
 			act := action.newReadAction(msgIds)
@@ -360,20 +400,20 @@ func (m *manager) noticeRead(ctx context.Context, customerId, uid uint, msgIds [
 		}
 		return nil
 	}
-	server, err := m.getUserServer(ctx, uid)
-	if err != nil {
-		return err
-	}
 	if server != "" {
-		_, err = service.Grpc().Client(server).NoticeRead(ctx, &v1.NoticeReadRequest{
-			CustomerId: uint32(customerId),
-			UserId:     uint32(uid),
-			MsgId:      gconv.Uint32s(msgIds),
-			Type:       m.types,
-		})
-		if err != nil {
-			return
+		rpcClient := service.Grpc().Client(ctx, server)
+		if rpcClient != nil {
+			_, err = rpcClient.NoticeRead(ctx, &v1.NoticeReadRequest{
+				CustomerId: uint32(customerId),
+				UserId:     uint32(uid),
+				MsgId:      gconv.Uint32s(msgIds),
+				Type:       m.types,
+			})
+			if err != nil {
+				return err
+			}
 		}
+
 	}
 	return nil
 }
