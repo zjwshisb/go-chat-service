@@ -5,6 +5,8 @@ gfcli:
     dao:
     - link:     "mysql:root:zjw8837533@tcp(120.77.242.145:3306)/chat?loc=Local&parseTime=true"
       jsonCase: "SnakeScreaming"
+    pb:
+      c : "internal/grpc"
   run:
     path:  "./bin"
     extra: ""

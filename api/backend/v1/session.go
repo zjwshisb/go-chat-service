@@ -1,7 +1,7 @@
-package backend
+package v1
 
 import (
-	"gf-chat/api/v1"
+	"gf-chat/api"
 	"github.com/gogf/gf/v2/os/gtime"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -9,7 +9,7 @@ import (
 
 type SessionListReq struct {
 	g.Meta `path:"/chat-sessions" tags:"客服对话" method:"get" summary:"客户对话列表"`
-	v1.Paginate
+	api.Paginate
 	QueriedAt map[string]string `p:"queried" dc:"消息类型"`
 	Username  string            `dc:"用户手机号"`
 	AdminName string            `dc:"客服名称"`
@@ -29,8 +29,8 @@ type SessionDetailReq struct {
 }
 
 type SessionDetail struct {
-	Messages []*v1.ChatMessage `json:"messages"`
-	Session  ChatSession       `json:"session"`
+	Messages []*api.ChatMessage `json:"messages"`
+	Session  ChatSession        `json:"session"`
 }
 
 type ChatSession struct {

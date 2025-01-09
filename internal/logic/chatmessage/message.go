@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	baseApi "gf-chat/api/v1"
+	baseApi "gf-chat/api"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"

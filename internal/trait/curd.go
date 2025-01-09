@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"gf-chat/api/v1"
+	"gf-chat/api"
 	"gf-chat/internal/model"
 
 	"github.com/gogf/gf/v2/database/gdb"
@@ -17,7 +17,7 @@ type ICurd[R any] interface {
 	Find(ctx ctx, primaryKey any) (model *R, err error)
 	All(ctx ctx, where any, with []any, order any, limit ...int) (items []*R, err error)
 	First(ctx ctx, where any, order ...any) (model *R, err error)
-	Paginate(ctx ctx, where any, p v1.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error)
+	Paginate(ctx ctx, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error)
 	Update(ctx ctx, where any, data any) (count int64, err error)
 	UpdatePri(ctx ctx, where any, data any) (count int64, err error)
 	Exists(ctx ctx, where any) (exists bool, err error)
@@ -112,7 +112,7 @@ func (c Curd[R]) UpdatePri(ctx ctx, primaryKey any, data any) (count int64, err 
 	return
 }
 
-func (c Curd[R]) SimplePaginate(ctx context.Context, where any, p v1.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error) {
+func (c Curd[R]) SimplePaginate(ctx context.Context, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error) {
 	query := c.Dao.Ctx(ctx)
 	if where != nil {
 		query = query.Where(where)
@@ -134,7 +134,7 @@ func (c Curd[R]) SimplePaginate(ctx context.Context, where any, p v1.Paginate, w
 	}, nil
 }
 
-func (c Curd[R]) Paginate(ctx context.Context, where any, p v1.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error) {
+func (c Curd[R]) Paginate(ctx context.Context, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error) {
 	query := c.Dao.Ctx(ctx)
 	if where != nil {
 		query = query.Where(where)

@@ -2,8 +2,8 @@ package frontend
 
 import (
 	"context"
-	baseApi "gf-chat/api/v1"
-	"gf-chat/api/v1/frontend"
+	baseApi "gf-chat/api"
+	"gf-chat/api/frontend/v1"
 	"gf-chat/internal/service"
 	"net/http"
 
@@ -26,7 +26,7 @@ var CWs = &cWs{}
 type cWs struct {
 }
 
-func (c cWs) Connect(ctx context.Context, _ *frontend.ChatConnectReq) (res *baseApi.NilRes, err error) {
+func (c cWs) Connect(ctx context.Context, _ *v1.ChatConnectReq) (res *baseApi.NilRes, err error) {
 	request := ghttp.RequestFromCtx(ctx)
 	conn, err := update.Upgrade(request.Response.Writer, request.Request, nil)
 	if err != nil {

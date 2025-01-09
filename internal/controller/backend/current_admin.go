@@ -2,8 +2,8 @@ package backend
 
 import (
 	"context"
-	baseApi "gf-chat/api/v1"
-	api "gf-chat/api/v1/backend"
+	baseApi "gf-chat/api"
+	api "gf-chat/api/backend/v1"
 	"gf-chat/internal/service"
 	"github.com/gogf/gf/v2/net/ghttp"
 )
@@ -29,7 +29,10 @@ func (c *cCurrentAdmin) UpdateSetting(ctx context.Context, req *api.CurrentAdmin
 	if err != nil {
 		return
 	}
-	service.Chat().UpdateAdminSetting(ctx, service.AdminCtx().GetUser(ctx))
+	err = service.Chat().UpdateAdminSetting(ctx, admin.Id)
+	if err != nil {
+		return
+	}
 	return baseApi.NewNilResp(), nil
 }
 

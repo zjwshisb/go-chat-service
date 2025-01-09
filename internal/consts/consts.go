@@ -1,7 +1,7 @@
 package consts
 
 import (
-	"gf-chat/api/v1"
+	"gf-chat/api"
 )
 
 const (
@@ -22,7 +22,7 @@ var MessageTypeFileTypes = []string{
 	MessageTypePdf,
 }
 
-var UserAllowMessageType = []v1.Option{
+var UserAllowMessageType = []api.Option{
 	{
 		Label: "文本",
 		Value: MessageTypeText,
@@ -135,3 +135,6 @@ const (
 	PlatformWeapp = "weapp"
 	PlatformApp   = "app"
 )
+
+const WsTypeAdmin = "admin"
+const WsTypeUser = "user"

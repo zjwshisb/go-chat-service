@@ -33,3 +33,12 @@ logger:
   path:    "./storage/log"
   level:   "all"
   stdout:  true
+grpc:
+  open: true # 是否开启grpc服务
+  logPath:          "./storage/grpc"
+  logStdout:        true
+  errorLogEnabled:  true
+  accessLogEnabled: true
+  errorStack:       true
+etcd:
+  host: "127.0.0.1:2379@root:123456"

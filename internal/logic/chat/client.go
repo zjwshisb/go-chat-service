@@ -1,7 +1,7 @@
 package chat
 
 import (
-	"gf-chat/api/v1"
+	"gf-chat/api"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -24,7 +24,7 @@ type iWsConn interface {
 	sendMsg()
 	close()
 	run()
-	deliver(action *v1.ChatAction)
+	deliver(action *api.ChatAction)
 	getUserId() uint
 	getUser() iChatUser
 	getUuid() string
@@ -36,8 +36,8 @@ type iWsConn interface {
 
 type client struct {
 	conn        *websocket.Conn
-	closeSignal chan interface{}    // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
-	send        chan *v1.ChatAction // 发送的消息chan
+	closeSignal chan interface{}     // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
+	send        chan *api.ChatAction // 发送的消息chan
 	sync.Once
 	manager    connManager
 	user       iChatUser
@@ -52,7 +52,7 @@ func newClient(conn *websocket.Conn, user iChatUser, platform string) *client {
 	return &client{
 		conn:        conn,
 		closeSignal: make(chan interface{}),
-		send:        make(chan *v1.ChatAction, 100),
+		send:        make(chan *api.ChatAction, 100),
 		Once:        sync.Once{},
 		user:        user,
 		uuid:        guid.S(),
@@ -223,7 +223,7 @@ func (c *client) readMsg() {
 }
 
 // Deliver 投递消息
-func (c *client) deliver(act *v1.ChatAction) {
+func (c *client) deliver(act *api.ChatAction) {
 	c.send <- act
 }
 

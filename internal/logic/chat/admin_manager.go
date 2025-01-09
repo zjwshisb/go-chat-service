@@ -2,7 +2,8 @@ package chat
 
 import (
 	"context"
-	api "gf-chat/api/v1/backend"
+	"gf-chat/api/backend/v1"
+	grpc "gf-chat/api/chat/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -17,13 +18,9 @@ import (
 	"time"
 )
 
-func newAdminManager() *adminManager {
+func newAdminManager(cluster bool) *adminManager {
 	adminM = &adminManager{
-		&manager{
-			shardCount:   10,
-			connMessages: make(chan *chatConnMessage, 100),
-			pingDuration: time.Second * 10,
-		},
+		newManager(10, 100, time.Minute, cluster, consts.WsTypeAdmin),
 	}
 	adminM.on(eventRegister, adminM.onRegister)
 	adminM.on(eventUnRegister, adminM.onUnRegister)
@@ -35,26 +32,32 @@ type adminManager struct {
 	*manager
 }
 
-// deliveryMessage
 // 投递消息
-// 查询admin是否在线，是则直接投递
-// 最后则说明admin不在线，处理离线逻辑
-func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerChatMessage, userConn iWsConn) error {
-	adminConn, exist := m.getConn(msg.CustomerId, msg.AdminId)
-	if exist { // admin在线
-		err := userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOnline, msg, userConn)
-		if err != nil {
-			return nil
-		}
-		adminConn.deliver(action.newReceive(msg))
-		return nil
-	} else {
-		return m.handleOffline(ctx, msg, userConn)
+func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerChatMessage, forceLocal ...bool) error {
+	userLocal, server, err := m.isUserLocal(ctx, msg.AdminId)
+	if err != nil {
+		return err
 	}
-}
-
-func (m *adminManager) sendOffline(admin *model.CustomerAdmin, msg *model.CustomerChatMessage) {
-
+	if m.isCallLocal(forceLocal...) || userLocal {
+		adminConn, exist := m.getConn(msg.CustomerId, msg.AdminId)
+		if exist { // admin在线
+			adminConn.deliver(action.newReceive(msg))
+		}
+		return nil
+	}
+	if server != "" {
+		rpcClient := service.Grpc().Client(ctx, server)
+		if rpcClient != nil {
+			_, err = rpcClient.SendMessage(ctx, &grpc.SendMessageRequest{
+				MsgId: uint32(msg.Id),
+				Type:  consts.WsTypeAdmin,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // 处理离线消息
@@ -83,7 +86,6 @@ func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerCha
 			return err
 		}
 	}
-	m.sendOffline(admin, msg)
 	return nil
 }
 
@@ -145,86 +147,101 @@ func (m *adminManager) onUnRegister(ctx context.Context, arg eventArg) error {
 	return nil
 }
 
-func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint) error {
-	return m.broadcastLocalWaitingUser(ctx, customerId)
-}
-
-func (m *adminManager) broadcastLocalWaitingUser(ctx context.Context, customerId uint) (err error) {
-	sessions, err := service.ChatSession().GetUnAccepts(ctx, customerId)
-	if err != nil {
-		return
-	}
-	sessionIds := slice.Map(sessions, func(index int, item *model.CustomerChatSession) uint {
-		return item.Id
-	})
-	userMap := make(map[uint]*api.ChatWaitingUser)
-	messages, err := service.ChatMessage().All(ctx, do.CustomerChatMessages{
-		Source:    consts.MessageSourceUser,
-		SessionId: sessionIds,
-	}, nil, "id")
-	if err != nil {
-		return
-	}
-	for _, session := range sessions {
-		userMap[session.UserId] = &api.ChatWaitingUser{
-			Username:     session.User.Username,
-			Avatar:       "",
-			UserId:       session.User.Id,
-			MessageCount: 0,
-			Description:  "",
-			Messages:     make([]api.ChatSimpleMessage, 0),
-			LastTime:     session.QueriedAt,
-			SessionId:    session.Id,
+func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint, forceLocal ...bool) (err error) {
+	if m.isCallLocal(forceLocal...) {
+		sessions, err := service.ChatSession().GetUnAccepts(ctx, customerId)
+		if err != nil {
+			return err
 		}
-	}
-	for _, m := range messages {
-		userMap[m.UserId].Messages = append(userMap[m.UserId].Messages, api.ChatSimpleMessage{
-			Type:    m.Type,
-			Time:    m.ReceivedAt,
-			Content: m.Content,
+		sessionIds := slice.Map(sessions, func(index int, item *model.CustomerChatSession) uint {
+			return item.Id
 		})
-		userMap[m.UserId].MessageCount += 1
-	}
+		userMap := make(map[uint]*v1.ChatWaitingUser)
+		messages, err := service.ChatMessage().All(ctx, do.CustomerChatMessages{
+			Source:    consts.MessageSourceUser,
+			SessionId: sessionIds,
+		}, nil, "id")
+		if err != nil {
+			return err
+		}
+		for _, session := range sessions {
+			userMap[session.UserId] = &v1.ChatWaitingUser{
+				Username:     session.User.Username,
+				Avatar:       "",
+				UserId:       session.User.Id,
+				MessageCount: 0,
+				Description:  "",
+				Messages:     make([]v1.ChatSimpleMessage, 0),
+				LastTime:     session.QueriedAt,
+				SessionId:    session.Id,
+			}
+		}
+		for _, m := range messages {
+			userMap[m.UserId].Messages = append(userMap[m.UserId].Messages, v1.ChatSimpleMessage{
+				Type:    m.Type,
+				Time:    m.ReceivedAt,
+				Content: m.Content,
+			})
+			userMap[m.UserId].MessageCount += 1
+		}
 
-	waitingUser := maputil.Values(userMap)
-	sort.Slice(waitingUser, func(i, j int) bool {
-		return waitingUser[i].LastTime.Unix() > waitingUser[j].LastTime.Unix()
-	})
-	adminConns := m.getAllConn(customerId)
-	act := action.newWaitingUsers(waitingUser)
-	m.SendAction(act, adminConns...)
-	return
-}
-
-func (m *adminManager) broadcastOnlineAdmins(ctx context.Context, gid uint) error {
-	return m.broadcastLocalOnlineAdmins(ctx, gid)
-}
-
-func (m *adminManager) broadcastLocalOnlineAdmins(ctx context.Context, customerId uint) error {
-	admins, err := service.Admin().All(ctx, do.CustomerAdmins{
-		CustomerId: customerId,
-	}, nil, nil)
-	if err != nil {
+		waitingUser := maputil.Values(userMap)
+		sort.Slice(waitingUser, func(i, j int) bool {
+			return waitingUser[i].LastTime.Unix() > waitingUser[j].LastTime.Unix()
+		})
+		adminConns := m.getAllConn(customerId)
+		act := action.newWaitingUsers(waitingUser)
+		m.SendAction(act, adminConns...)
+		return nil
+	} else {
+		err := service.Grpc().CallAll(ctx, func(client grpc.ChatClient) {
+			_, err := client.BroadcastWaitingUser(ctx, &grpc.BroadcastWaitingUserRequest{
+				CustomerId: uint32(customerId),
+			})
+			if err != nil {
+				g.Log().Errorf(ctx, "%+v", err)
+			}
+		})
 		return err
 	}
-	data := make([]api.ChatCustomerAdmin, 0, len(admins))
-	for _, c := range admins {
-		conn, online := m.getConn(customerId, c.Id)
-		platform := ""
-		if online {
-			platform = conn.getPlatform()
+}
+func (m *adminManager) broadcastOnlineAdmins(ctx context.Context, customerId uint, forceLocal ...bool) error {
+	if m.isCallLocal(forceLocal...) {
+		admins, err := service.Admin().All(ctx, do.CustomerAdmins{
+			CustomerId: customerId,
+		}, nil, nil)
+		if err != nil {
+			return err
 		}
-		data = append(data, api.ChatCustomerAdmin{
-			Username:      c.Username,
-			Online:        online,
-			Id:            c.Id,
-			AcceptedCount: service.ChatRelation().GetActiveCount(ctx, c.Id),
-			Platform:      platform,
+		data := make([]v1.ChatCustomerAdmin, 0, len(admins))
+		for _, c := range admins {
+			conn, online := m.getConn(customerId, c.Id)
+			platform := ""
+			if online {
+				platform = conn.getPlatform()
+			}
+			data = append(data, v1.ChatCustomerAdmin{
+				Username:      c.Username,
+				Online:        online,
+				Id:            c.Id,
+				AcceptedCount: service.ChatRelation().GetActiveCount(ctx, c.Id),
+				Platform:      platform,
+			})
+		}
+		conns := m.getAllConn(customerId)
+		m.SendAction(action.newAdmins(data), conns...)
+		return nil
+	} else {
+		err := service.Grpc().CallAll(ctx, func(client grpc.ChatClient) {
+			_, err := client.BroadcastOnlineAdmins(ctx, &grpc.BroadcastOnlineAdminsRequest{
+				CustomerId: uint32(customerId),
+			})
+			if err != nil {
+				g.Log().Errorf(ctx, "%+v", err)
+			}
 		})
+		return err
 	}
-	conns := m.getAllConn(customerId)
-	m.SendAction(action.newAdmins(data), conns...)
-	return nil
 }
 
 func (m *adminManager) noticeRate(message *model.CustomerChatMessage) {
@@ -235,79 +252,139 @@ func (m *adminManager) noticeRate(message *model.CustomerChatMessage) {
 	}
 }
 
-func (m *adminManager) noticeUserOffline(user iChatUser) {
-	m.noticeLocalUserOffline(user.getPrimaryKey())
-}
-
-func (m *adminManager) noticeLocalUserOffline(uid uint) {
-	adminId := service.ChatRelation().GetUserValidAdmin(gctx.New(), uid)
-	admin, _ := service.Admin().First(gctx.New(), do.CustomerAdmins{Id: adminId})
-	if admin != nil {
-		conn, exist := m.getConn(admin.CustomerId, admin.Id)
+func (m *adminManager) noticeUserOffline(ctx context.Context, uid uint, forceLocal ...bool) (err error) {
+	adminId := service.ChatRelation().GetUserValidAdmin(ctx, uid)
+	adminModel, err := service.Admin().Find(gctx.New(), adminId)
+	if err != nil {
+		return
+	}
+	adminLocal, server, err := m.isUserLocal(ctx, adminModel.Id)
+	if m.isCallLocal(forceLocal...) || adminLocal {
+		conn, exist := m.getConn(adminModel.CustomerId, adminModel.Id)
 		if exist {
 			m.SendAction(action.newUserOffline(uid), conn)
 		}
-	}
-}
-
-func (m *adminManager) noticeUserOnline(ctx context.Context, conn iWsConn) {
-	m.noticeLocalUserOnline(ctx, conn.getUserId(), conn.getPlatform())
-}
-
-func (m *adminManager) noticeLocalUserOnline(ctx context.Context, uid uint, platform string) {
-	adminId := service.ChatRelation().GetUserValidAdmin(ctx, uid)
-	admin, _ := service.Admin().First(ctx, do.CustomerAdmins{Id: adminId})
-	if admin != nil {
-		conn, exist := m.getConn(admin.CustomerId, admin.Id)
-		if exist {
-			m.SendAction(action.newUserOnline(uid, platform), conn)
+		return nil
+	} else if server != "" {
+		rpcClient := service.Grpc().Client(ctx, server)
+		if rpcClient != nil {
+			_, err = rpcClient.NoticeUserOffline(ctx, &grpc.NoticeUserOfflineRequest{
+				UserId: uint32(uid),
+			})
+			if err != nil {
+				return err
+			}
 		}
-	}
-}
-
-func (m *adminManager) noticeUserTransfer(ctx context.Context, customerId, adminId uint) error {
-	return m.noticeLocalUserTransfer(ctx, customerId, adminId)
-}
-
-func (m *adminManager) noticeLocalUserTransfer(ctx context.Context, customerId, adminId uint) error {
-	client, exist := m.getConn(customerId, adminId)
-	if exist {
-		transfers, err := service.ChatTransfer().All(ctx, g.Map{
-			"to_admin_id":         adminId,
-			"accepted_at is null": nil,
-			"canceled_at is null": nil,
-		}, g.Slice{
-			model.CustomerChatTransfer{}.ToAdmin,
-			model.CustomerChatTransfer{}.FormAdmin,
-			model.CustomerChatTransfer{}.ToSession,
-			model.CustomerChatTransfer{}.User,
-		}, nil)
-		if err != nil {
-			return err
-		}
-		data := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) api.ChatTransfer {
-			return service.ChatTransfer().ToApi(item)
-		})
-		client.deliver(action.newUserTransfer(data))
 	}
 	return nil
 }
 
-// NoticeUpdateSetting admin修改设置后通知conn 更新admin的设置信息
-func (m *adminManager) noticeUpdateSetting(customerId uint, setting *api.CurrentAdminSetting) {
-	//m.updateSetting(customerId, setting)
-}
-
-// UpdateSetting 更新设置
-func (m *adminManager) updateSetting(ctx context.Context, a *model.CustomerAdmin) {
-	conn, exist := m.getConn(a.CustomerId, a.Id)
-	if exist {
-		u, ok := conn.getUser().(*admin)
-		if ok {
-			setting, err := service.Admin().FindSetting(ctx, a.Id, true)
-			if err == nil {
-				u.Entity.Setting = setting
+func (m *adminManager) noticeUserOnline(ctx context.Context, uid uint, platform string, forceLocal ...bool) (err error) {
+	adminId := service.ChatRelation().GetUserValidAdmin(ctx, uid)
+	adminModel, err := service.Admin().First(ctx, do.CustomerAdmins{Id: adminId})
+	if err != nil {
+		return
+	}
+	adminLocal, server, err := m.isUserLocal(ctx, adminModel.Id)
+	if err != nil {
+		return
+	}
+	if m.isCallLocal(forceLocal...) || adminLocal {
+		conn, exist := m.getConn(adminModel.CustomerId, adminModel.Id)
+		if exist {
+			m.SendAction(action.newUserOnline(uid, platform), conn)
+		}
+		return nil
+	} else if server != "" {
+		rpcClient := service.Grpc().Client(ctx, server)
+		if rpcClient != nil {
+			_, err = rpcClient.NoticeUserOnline(ctx, &grpc.NoticeUserOnlineRequest{
+				UserId:   uint32(uid),
+				Platform: platform,
+			})
+			if err != nil {
+				return err
 			}
 		}
 	}
+	return nil
+}
+
+func (m *adminManager) noticeUserTransfer(ctx context.Context, customerId, adminId uint, forceLocal ...bool) error {
+	userLocal, server, err := m.isUserLocal(ctx, adminId)
+	if err != nil {
+		return err
+	}
+	if m.isCallLocal(forceLocal...) || userLocal {
+		client, exist := m.getConn(customerId, adminId)
+		if exist {
+			transfers, err := service.ChatTransfer().All(ctx, g.Map{
+				"to_admin_id":         adminId,
+				"accepted_at is null": nil,
+				"canceled_at is null": nil,
+			}, g.Slice{
+				model.CustomerChatTransfer{}.ToAdmin,
+				model.CustomerChatTransfer{}.FormAdmin,
+				model.CustomerChatTransfer{}.ToSession,
+				model.CustomerChatTransfer{}.User,
+			}, nil)
+			if err != nil {
+				return err
+			}
+			data := slice.Map(transfers, func(index int, item *model.CustomerChatTransfer) v1.ChatTransfer {
+				return service.ChatTransfer().ToApi(item)
+			})
+			client.deliver(action.newUserTransfer(data))
+		}
+		return nil
+	}
+	if server != "" {
+		rpcClient := service.Grpc().Client(ctx, server)
+		if rpcClient != nil {
+			_, err = rpcClient.NoticeTransfer(ctx, &grpc.NoticeTransferRequest{
+				CustomerId: uint32(customerId),
+				AdminId:    uint32(adminId),
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// UpdateSetting 更新设置
+func (m *adminManager) updateSetting(ctx context.Context, id uint, forceLocal ...bool) error {
+	u, err := service.Admin().Find(ctx, id)
+	if err != nil {
+		return err
+	}
+	userLocal, server, _ := m.isUserLocal(ctx, id)
+	if m.isCallLocal(forceLocal...) || userLocal {
+		conn, exist := m.getConn(u.CustomerId, u.Id)
+		if exist {
+			iu, ok := conn.getUser().(*admin)
+			if ok {
+				setting, err := service.Admin().FindSetting(ctx, u.Id, true)
+				if err != nil {
+					return err
+				}
+				iu.Entity.Setting = setting
+			}
+		}
+		return nil
+	}
+	if server != "" {
+		rpcClient := service.Grpc().Client(ctx, server)
+		if rpcClient != nil {
+			_, err := rpcClient.UpdateAdminSetting(ctx, &grpc.UpdateAdminSettingRequest{
+				Id: uint32(u.Id),
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+
 }

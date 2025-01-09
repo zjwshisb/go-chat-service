@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	api "gf-chat/api/v1/backend"
+	api "gf-chat/api/backend/v1"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/trait"

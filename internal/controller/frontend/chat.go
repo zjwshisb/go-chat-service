@@ -2,8 +2,8 @@ package frontend
 
 import (
 	"context"
-	baseApi "gf-chat/api/v1"
-	api "gf-chat/api/v1/frontend"
+	baseApi "gf-chat/api"
+	api "gf-chat/api/frontend/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/library/storage"
 	"gf-chat/internal/model"
@@ -124,7 +124,10 @@ func (c cChat) Message(ctx context.Context, req *api.ChatMessageReq) (res *baseA
 				g.Log().Error(ctx, err)
 			}
 			if adminId > 0 {
-				service.Chat().NoticeUserRead(customer, adminId, ids)
+				err = service.Chat().NoticeRead(ctx, customer, adminId, ids, consts.WsTypeAdmin)
+				if err != nil {
+					g.Log().Error(ctx, err)
+				}
 			}
 		}
 
@@ -148,7 +151,10 @@ func (c cChat) Read(ctx context.Context, req *api.ChatReadReq) (res *baseApi.Nil
 		if err != nil {
 			return
 		}
-		service.Chat().NoticeUserRead(user.CustomerId, message.AdminId, msgIds)
+		err = service.Chat().NoticeRead(ctx, user.CustomerId, message.AdminId, msgIds, consts.WsTypeAdmin)
+		if err != nil {
+			return
+		}
 	}
 	return baseApi.NewNilResp(), nil
 }
