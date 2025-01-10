@@ -248,28 +248,6 @@ func (s sChat) NoticeRead(ctx context.Context, customerId, uid uint, msgIds []ui
 	return nil
 }
 
-func (s sChat) Transfer(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) (err error) {
-	user, err := service.User().First(ctx, do.Users{
-		CustomerId: fromAdmin.CustomerId,
-		Id:         userId,
-	})
-	if err != nil {
-		return
-	}
-	admin, err := service.Admin().First(ctx, do.CustomerAdmins{
-		CustomerId: fromAdmin.CustomerId,
-		Id:         toId,
-	})
-	if err != nil {
-		return err
-	}
-	isValid := service.ChatRelation().IsUserValid(ctx, fromAdmin.Id, user.Id)
-	if !isValid {
-		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "用户已失效，无法转接")
-	}
-	return service.ChatTransfer().Create(ctx, fromAdmin.Id, admin.Id, userId, remark)
-}
-
 func (s sChat) GetOnlineAdmins(ctx context.Context, customerId uint) ([]api.ChatSimpleUser, error) {
 	ids, err := s.admin.getOnlineUserIds(ctx, customerId)
 	if err != nil {

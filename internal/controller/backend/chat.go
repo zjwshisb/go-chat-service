@@ -77,7 +77,7 @@ func (c cChat) CancelTransfer(ctx context.Context, _ *v1.CancelTransferReq) (res
 
 func (c cChat) Transfer(ctx context.Context, req *v1.StoreTransferReq) (res *baseApi.NilRes, err error) {
 	admin := service.AdminCtx().GetUser(ctx)
-	err = service.Chat().Transfer(ctx, admin, req.ToId, req.UserId, req.Remark)
+	err = service.ChatTransfer().Create(ctx, admin, req.ToId, req.UserId, req.Remark)
 	if err != nil {
 		return
 	}

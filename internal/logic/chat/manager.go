@@ -34,8 +34,6 @@ type connContainer interface {
 	getConn(customerId uint, uid uint) (iWsConn, bool)
 	noticeRepeatConnect(ctx context.Context, uid, customerId uint, newUuid string, forceLocal ...bool) error
 	getAllConn(customerId uint) []iWsConn
-	getOnlineTotal(customerId uint) uint
-	connExist(customerId uint, uid uint) bool
 	register(ctx context.Context, conn *websocket.Conn, user iChatUser, platform string) error
 	unregister(connect iWsConn)
 	removeConn(user iChatUser)
@@ -103,10 +101,12 @@ func (m *manager) trigger(ctx context.Context, name string, arg eventArg) error 
 	return nil
 }
 
+// 保存用户websocket连接所在服务的redis key,
 func (m *manager) userServerKey(id uint) string {
 	return fmt.Sprintf(userServer, m.types, id)
 }
 
+// 设置用户websocket所在服务名称
 func (m *manager) setUserServer(ctx context.Context, uid uint, server string) error {
 	var expired int64 = 60 * 60 * 24
 	_, err := g.Redis().Set(ctx, m.userServerKey(uid), server, gredis.SetOption{
@@ -117,6 +117,7 @@ func (m *manager) setUserServer(ctx context.Context, uid uint, server string) er
 	return err
 }
 
+// 获取用户websocket所在服务名称
 func (m *manager) getUserServer(ctx context.Context, uid uint) (string, error) {
 	val, err := g.Redis().Get(ctx, m.userServerKey(uid))
 	if err != nil {
@@ -124,6 +125,8 @@ func (m *manager) getUserServer(ctx context.Context, uid uint) (string, error) {
 	}
 	return val.String(), nil
 }
+
+// 移除用户websocket所在服务名称
 func (m *manager) removeUserServer(ctx context.Context, uid uint) error {
 	_, err := g.Redis().Del(ctx, m.userServerKey(uid))
 	return err
@@ -159,7 +162,7 @@ func (m *manager) handleReceiveMessage() {
 	}
 }
 
-// NoticeRepeatConnect 重复链接
+// websocket重复链接，通知旧的连接并关闭
 func (m *manager) noticeRepeatConnect(ctx context.Context, uid, customerId uint, newUuid string, forceLocal ...bool) error {
 	userLocal, server, err := m.isUserLocal(ctx, uid)
 	if err != nil {
@@ -197,7 +200,7 @@ func (m *manager) isUserLocal(ctx context.Context, id uint) (bool, string, error
 	if err != nil {
 		return false, "", err
 	}
-	return server != service.Grpc().GetServerName(), server, nil
+	return server == service.Grpc().GetServerName(), server, nil
 }
 
 func (m *manager) isCallLocal(forceLocal ...bool) bool {
@@ -245,28 +248,11 @@ func (m *manager) GetLocalOnlineTotal(customerId uint) uint {
 	return s.getTotalCount()
 }
 
-// GetOnlineTotal 获取groupId对应在线客户端数量
-func (m *manager) getOnlineTotal(customerId uint) uint {
-	return m.GetLocalOnlineTotal(customerId)
-}
-
-// IsOnline 用户是否在线
-
-func (m *manager) isLocalOnline(customerId uint, uid uint) bool {
-	return m.connExist(customerId, uid)
-}
-
 // SendAction 给客户端发送消息
 func (m *manager) SendAction(a *api.ChatAction, clients ...iWsConn) {
 	for _, c := range clients {
 		c.deliver(a)
 	}
-}
-
-// ConnExist 连接是否存在
-func (m *manager) connExist(customerId uint, uid uint) bool {
-	_, exist := m.getConn(customerId, uid)
-	return exist
 }
 
 // GetConn 获取客户端
@@ -323,23 +309,6 @@ func (m *manager) getAllConn(customerId uint) (conns []iWsConn) {
 	return
 }
 
-func (m *manager) GetAllConnCount() uint {
-	var count uint
-	for gid := range m.shard {
-		count += m.GetLocalOnlineTotal(uint(gid))
-	}
-	return count
-}
-
-func (m *manager) GetTotalConn() []iWsConn {
-	conns := make([]iWsConn, 0)
-	for gid := range m.shard {
-		conns = append(conns, m.getAllConn(uint(gid))...)
-	}
-	return conns
-}
-
-// Unregister 客户端注销
 func (m *manager) unregister(conn iWsConn) {
 	ctx := gctx.New()
 	existConn, exist := m.getConn(conn.getCustomerId(), conn.getUserId())
@@ -362,9 +331,6 @@ func (m *manager) unregister(conn iWsConn) {
 	}
 }
 
-// Register 客户端注册
-// 先处理是否重复连接
-// 集群模式下，如果不在本机则投递一个消息
 func (m *manager) register(ctx context.Context, conn *websocket.Conn, user iChatUser, platform string) error {
 	client := newClient(conn, user, platform)
 	client.manager = m

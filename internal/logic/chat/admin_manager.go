@@ -24,7 +24,7 @@ func newAdminManager(cluster bool) *adminManager {
 	}
 	adminM.on(eventRegister, adminM.onRegister)
 	adminM.on(eventUnRegister, adminM.onUnRegister)
-	adminM.on(eventMessage, adminM.handleMessage)
+	adminM.on(eventMessage, adminM.onMessage)
 	return adminM
 }
 
@@ -90,7 +90,7 @@ func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerCha
 }
 
 // 处理消息
-func (m *adminManager) handleMessage(ctx context.Context, arg eventArg) error {
+func (m *adminManager) onMessage(ctx context.Context, arg eventArg) error {
 	msg := arg.msg
 	conn := arg.conn
 	if msg.UserId > 0 {
@@ -194,7 +194,7 @@ func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint
 		m.SendAction(act, adminConns...)
 		return nil
 	} else {
-		err := service.Grpc().CallAll(ctx, func(client grpc.ChatClient) {
+		err = service.Grpc().CallAll(ctx, func(client grpc.ChatClient) {
 			_, err := client.BroadcastWaitingUser(ctx, &grpc.BroadcastWaitingUserRequest{
 				CustomerId: uint32(customerId),
 			})
@@ -202,7 +202,7 @@ func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint
 				g.Log().Errorf(ctx, "%+v", err)
 			}
 		})
-		return err
+		return nil
 	}
 }
 func (m *adminManager) broadcastOnlineAdmins(ctx context.Context, customerId uint, forceLocal ...bool) error {

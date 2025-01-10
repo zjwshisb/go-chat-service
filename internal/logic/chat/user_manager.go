@@ -24,8 +24,8 @@ func newUserManager(cluster bool) *userManager {
 		newManager(10, 100, time.Minute, cluster, consts.WsTypeUser),
 	}
 	userM.on(eventRegister, userM.onRegister)
-	userM.on(eventUnRegister, userM.unRegisterHook)
-	userM.on(eventMessage, userM.handleMessage)
+	userM.on(eventUnRegister, userM.onUnRegister)
+	userM.on(eventMessage, userM.onMessage)
 	return userM
 }
 
@@ -38,7 +38,7 @@ func (s *userManager) deliveryMessage(ctx context.Context, message *model.Custom
 	if err != nil {
 		return err
 	}
-	if !s.isCallLocal(forceLocal...) || userLocal {
+	if s.isCallLocal(forceLocal...) || userLocal {
 		userConn, exist := s.getConn(message.CustomerId, message.UserId)
 		switch message.Type {
 		case consts.MessageTypeRate:
@@ -130,7 +130,7 @@ func (s *userManager) broadcastQueueLocation(ctx context.Context, customerId uin
 }
 
 // 处理消息
-func (s *userManager) handleMessage(ctx context.Context, arg eventArg) (err error) {
+func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 	msg := arg.msg
 	conn := arg.conn
 	msg.Source = consts.MessageSourceUser
@@ -302,7 +302,7 @@ func (s *userManager) triggerEnterEvent(ctx context.Context, conn iWsConn) (err 
 	return
 }
 
-func (s *userManager) unRegisterHook(ctx context.Context, arg eventArg) error {
+func (s *userManager) onUnRegister(ctx context.Context, arg eventArg) error {
 	return adminM.noticeUserOffline(ctx, arg.conn.getUser().getPrimaryKey())
 }
 
@@ -328,8 +328,11 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 		err = gerror.New("is in")
 		return
 	}
-	onlineServerCount := adminM.getOnlineTotal(user.getCustomerId())
-	if onlineServerCount == 0 { // 如果没有在线客服
+	onlineAdminIds, err := adminM.getOnlineUserIds(ctx, user.getCustomerId())
+	if err != nil {
+		return
+	}
+	if len(onlineAdminIds) == 0 { // 如果没有在线客服
 		rule, _ := service.AutoRule().GetSystemOne(ctx, user.getCustomerId(), consts.AutoRuleMatchAdminAllOffLine)
 		if rule != nil {
 			switch rule.ReplyType {
@@ -374,7 +377,7 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 		return
 	}
 	message := service.ChatMessage().NewNotice(session, "正在为你转接人工客服")
-	_, err = service.ChatMessage().Save(ctx, message)
+	message, err = service.ChatMessage().Insert(ctx, message)
 	if err != nil {
 		return nil, err
 	}

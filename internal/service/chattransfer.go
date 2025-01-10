@@ -15,7 +15,7 @@ type (
 		Cancel(ctx context.Context, transfer *model.CustomerChatTransfer) error
 		Accept(ctx context.Context, transfer *model.CustomerChatTransfer) error
 		// Create 创建转接
-		Create(ctx context.Context, fromAdminId uint, toId uint, uid uint, remark string) error
+		Create(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) error
 		GetUserTransferId(ctx context.Context, customerId uint, uid uint) (uint, error)
 		RemoveUser(ctx context.Context, customerId, uid uint) error
 		IsInTransfer(ctx context.Context, customerId uint, uid uint) (bool, error)

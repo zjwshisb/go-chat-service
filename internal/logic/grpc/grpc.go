@@ -23,10 +23,12 @@ var open bool
 
 func init() {
 	name = random.RandString(20)
-	service.RegisterGrpc(&sGrpc{})
 
 	config, _ := g.Config().Get(gctx.New(), "grpc.open", false)
 	open = config.Bool()
+
+	service.RegisterGrpc(&sGrpc{})
+
 }
 
 type sGrpc struct {
@@ -56,6 +58,7 @@ func (s *sGrpc) StartServer() {
 	server.Run()
 }
 
+// RegisterResolver 注册服务发现
 func (s *sGrpc) RegisterResolver(ctx context.Context) {
 	etcdConfig, err := g.Config().Get(ctx, "etcd.host")
 	if err != nil {
@@ -64,6 +67,7 @@ func (s *sGrpc) RegisterResolver(ctx context.Context) {
 	grpcx.Resolver.Register(etcd.New(etcdConfig.String()))
 }
 
+// Client 获取对应服务客户端
 func (s *sGrpc) Client(ctx context.Context, name string) v1.ChatClient {
 	servers, err := s.GetServers(ctx)
 	if err != nil {
@@ -82,6 +86,7 @@ func (s *sGrpc) Client(ctx context.Context, name string) v1.ChatClient {
 	return v1.NewChatClient(conn)
 }
 
+// CallAll 异步请求所有服务
 func (s *sGrpc) CallAll(ctx context.Context, fn func(client v1.ChatClient)) error {
 	server, err := s.GetServers(ctx)
 	if err != nil {
@@ -99,6 +104,7 @@ func (s *sGrpc) CallAll(ctx context.Context, fn func(client v1.ChatClient)) erro
 	return nil
 }
 
+// GetServers 获取所有服务
 func (s *sGrpc) GetServers(ctx context.Context, inputConfig ...gsvc.SearchInput) ([]gsvc.Service, error) {
 	input := gsvc.SearchInput{}
 	if len(inputConfig) > 0 {

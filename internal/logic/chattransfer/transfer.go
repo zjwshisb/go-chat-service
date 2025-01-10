@@ -3,6 +3,7 @@ package chattransfer
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	api "gf-chat/api/backend/v1"
 	"gf-chat/internal/consts"
@@ -124,8 +125,26 @@ func (s *sChatTransfer) Accept(ctx context.Context, transfer *model.CustomerChat
 }
 
 // Create 创建转接
-func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint, remark string) (err error) {
-	session, err := service.ChatSession().FirstActive(ctx, uid, fromAdminId, nil)
+func (s *sChatTransfer) Create(ctx context.Context, fromAdmin *model.CustomerAdmin, toId uint, userId uint, remark string) (err error) {
+	_, err = service.User().First(ctx, do.Users{
+		CustomerId: fromAdmin.CustomerId,
+		Id:         userId,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "无效的用户")
+	}
+	_, err = service.Admin().First(ctx, do.CustomerAdmins{
+		CustomerId: fromAdmin.CustomerId,
+		Id:         toId,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "无效的客服")
+	}
+	isValid := service.ChatRelation().IsUserValid(ctx, fromAdmin.Id, userId)
+	if !isValid {
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "用户已失效，无法转接")
+	}
+	session, err := service.ChatSession().FirstActive(ctx, userId, fromAdmin.Id, nil)
 	if err != nil {
 		return err
 	}
@@ -142,7 +161,7 @@ func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint,
 			CustomerId: session.CustomerId,
 			AdminId:    toId,
 			Type:       consts.ChatSessionTypeTransfer,
-			UserId:     uid,
+			UserId:     userId,
 		},
 	}
 	newSession, err = service.ChatSession().Insert(ctx, newSession)
@@ -151,11 +170,11 @@ func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint,
 	}
 	transfer := &model.CustomerChatTransfer{
 		CustomerChatTransfers: entity.CustomerChatTransfers{
-			UserId:        uid,
+			UserId:        userId,
 			FromSessionId: session.Id,
 			ToSessionId:   newSession.Id,
 			CustomerId:    session.CustomerId,
-			FromAdminId:   fromAdminId,
+			FromAdminId:   fromAdmin.Id,
 			ToAdminId:     toId,
 			Remark:        remark,
 		},
@@ -164,7 +183,7 @@ func (s *sChatTransfer) Create(ctx context.Context, fromAdminId, toId, uid uint,
 	if err != nil {
 		return
 	}
-	err = s.addUser(ctx, session.CustomerId, uid, toId)
+	err = s.addUser(ctx, session.CustomerId, userId, toId)
 	if err != nil {
 		return
 	}
