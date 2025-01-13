@@ -64,6 +64,7 @@ func (c cChat) CancelTransfer(ctx context.Context, _ *v1.CancelTransferReq) (res
 	admin := service.AdminCtx().GetUser(ctx)
 	transfer, err := service.ChatTransfer().First(ctx, g.Map{
 		"to_admin_id": admin.Id,
+		"id":          ghttp.RequestFromCtx(ctx).GetRouter("id").Int(),
 	})
 	if err != nil {
 		return

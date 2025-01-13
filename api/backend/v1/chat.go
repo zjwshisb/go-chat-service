@@ -84,6 +84,7 @@ type ChatWaitingUser struct {
 }
 
 type ChatSimpleMessage struct {
+	Id      uint        `json:"id"`
 	Type    string      `json:"type"`
 	Time    *gtime.Time `json:"time"`
 	Content string      `json:"content"`

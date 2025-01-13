@@ -160,7 +160,7 @@ func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint
 		messages, err := service.ChatMessage().All(ctx, do.CustomerChatMessages{
 			Source:    consts.MessageSourceUser,
 			SessionId: sessionIds,
-		}, nil, "id")
+		}, nil, "id desc")
 		if err != nil {
 			return err
 		}
@@ -178,6 +178,7 @@ func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint
 		}
 		for _, m := range messages {
 			userMap[m.UserId].Messages = append(userMap[m.UserId].Messages, v1.ChatSimpleMessage{
+				Id:      m.Id,
 				Type:    m.Type,
 				Time:    m.ReceivedAt,
 				Content: m.Content,

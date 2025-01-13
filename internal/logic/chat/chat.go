@@ -2,7 +2,7 @@ package chat
 
 import (
 	"context"
-	api2 "gf-chat/api"
+	baseApi "gf-chat/api"
 	api "gf-chat/api/backend/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
@@ -160,14 +160,13 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 		}
 	}
 	messagesLength := len(messages)
-	var lastMsg *api2.ChatMessage
+	var lastMsg *baseApi.ChatMessage
 	if messagesLength > 0 {
 		lastMessage := messages[0]
-		v, err := service.ChatMessage().ToApi(ctx, lastMessage)
+		lastMsg, err = service.ChatMessage().ToApi(ctx, lastMessage)
 		if err != nil {
 			return nil, err
 		}
-		lastMsg = v
 	}
 	err = service.ChatRelation().AddUser(ctx, admin.Id, session.UserId)
 	if err != nil {
