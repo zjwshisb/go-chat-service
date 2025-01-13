@@ -43,7 +43,7 @@ type (
 		// RemoveUserAdmin RemoveAdmin 移除用户客服
 		RemoveUserAdmin(ctx gctx.Ctx, uid uint) (err error)
 		// GetUserValidAdmin GetValidAdmin 获取用户客服
-		GetUserValidAdmin(ctx gctx.Ctx, uid uint) uint
+		GetUserValidAdmin(ctx gctx.Ctx, uid uint) (uint, error)
 	}
 )
 

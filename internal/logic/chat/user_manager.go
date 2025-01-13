@@ -135,7 +135,7 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 	conn := arg.conn
 	msg.Source = consts.MessageSourceUser
 	msg.UserId = conn.getUserId()
-	msg.AdminId = service.ChatRelation().GetUserValidAdmin(ctx, msg.UserId)
+	msg.AdminId, _ = service.ChatRelation().GetUserValidAdmin(ctx, msg.UserId)
 	msg, err = service.ChatMessage().Insert(ctx, msg)
 	if err != nil {
 		return
@@ -258,7 +258,8 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 
 // 触发进入事件，只有没有对应客服的情况下触发，10分钟内多触发一次
 func (s *userManager) triggerEnterEvent(ctx context.Context, conn iWsConn) (err error) {
-	if service.ChatRelation().GetUserValidAdmin(ctx, conn.getUserId()) > 0 {
+	adminId, err := service.ChatRelation().GetUserValidAdmin(ctx, conn.getUserId())
+	if adminId > 0 {
 		return
 	}
 	cacheKey := fmt.Sprintf("welcome:%d", conn.getUserId())

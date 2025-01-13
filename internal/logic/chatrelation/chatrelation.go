@@ -6,6 +6,7 @@ import (
 	"gf-chat/internal/service"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/util/gconv"
+	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -160,16 +161,22 @@ func (s *sChatRelation) RemoveUserAdmin(ctx gctx.Ctx, uid uint) (err error) {
 }
 
 // GetUserValidAdmin GetValidAdmin 获取用户客服
-func (s *sChatRelation) GetUserValidAdmin(ctx gctx.Ctx, uid uint) uint {
-	val, err := g.Redis().Do(ctx, "HGet", user2AdminHashKey, uid)
-	if err == nil {
-		adminId := val.Uint()
-		limitTime := s.GetLimitTime(ctx, adminId, uid)
-		if limitTime > time.Now().Unix() {
-			return val.Uint()
-		}
+func (s *sChatRelation) GetUserValidAdmin(ctx gctx.Ctx, uid uint) (uint, error) {
+	val, err := g.Redis().HGet(ctx, user2AdminHashKey, strconv.Itoa(int(uid)))
+	if err != nil {
+		return 0, err
+	}
+	if val.IsNil() {
+		return 0, nil
+	}
+	adminId := val.Uint()
+	limitTime := s.GetLimitTime(ctx, adminId, uid)
+	if limitTime > time.Now().Unix() {
+		return val.Uint(), nil
+	} else {
 		// 无效了直接清除掉
 		_ = s.RemoveUserAdmin(ctx, uid)
+		return 0, nil
 	}
-	return 0
+
 }

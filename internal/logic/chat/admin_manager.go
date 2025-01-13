@@ -253,57 +253,65 @@ func (m *adminManager) noticeRate(message *model.CustomerChatMessage) {
 }
 
 func (m *adminManager) noticeUserOffline(ctx context.Context, uid uint, forceLocal ...bool) (err error) {
-	adminId := service.ChatRelation().GetUserValidAdmin(ctx, uid)
-	adminModel, err := service.Admin().Find(gctx.New(), adminId)
+	adminId, err := service.ChatRelation().GetUserValidAdmin(ctx, uid)
 	if err != nil {
 		return
 	}
-	adminLocal, server, err := m.isUserLocal(ctx, adminModel.Id)
-	if m.isCallLocal(forceLocal...) || adminLocal {
-		conn, exist := m.getConn(adminModel.CustomerId, adminModel.Id)
-		if exist {
-			m.SendAction(action.newUserOffline(uid), conn)
+	if adminId > 0 {
+		adminModel, err := service.Admin().Find(gctx.New(), adminId)
+		if err != nil {
+			return err
 		}
-		return nil
-	} else if server != "" {
-		rpcClient := service.Grpc().Client(ctx, server)
-		if rpcClient != nil {
-			_, err = rpcClient.NoticeUserOffline(ctx, &grpc.NoticeUserOfflineRequest{
-				UserId: uint32(uid),
-			})
-			if err != nil {
-				return err
+		adminLocal, server, err := m.isUserLocal(ctx, adminModel.Id)
+		if m.isCallLocal(forceLocal...) || adminLocal {
+			conn, exist := m.getConn(adminModel.CustomerId, adminModel.Id)
+			if exist {
+				m.SendAction(action.newUserOffline(uid), conn)
+			}
+			return nil
+		} else if server != "" {
+			rpcClient := service.Grpc().Client(ctx, server)
+			if rpcClient != nil {
+				_, err = rpcClient.NoticeUserOffline(ctx, &grpc.NoticeUserOfflineRequest{
+					UserId: uint32(uid),
+				})
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
+
 	return nil
 }
 
 func (m *adminManager) noticeUserOnline(ctx context.Context, uid uint, platform string, forceLocal ...bool) (err error) {
-	adminId := service.ChatRelation().GetUserValidAdmin(ctx, uid)
-	adminModel, err := service.Admin().First(ctx, do.CustomerAdmins{Id: adminId})
-	if err != nil {
-		return
-	}
-	adminLocal, server, err := m.isUserLocal(ctx, adminModel.Id)
-	if err != nil {
-		return
-	}
-	if m.isCallLocal(forceLocal...) || adminLocal {
-		conn, exist := m.getConn(adminModel.CustomerId, adminModel.Id)
-		if exist {
-			m.SendAction(action.newUserOnline(uid, platform), conn)
+	adminId, err := service.ChatRelation().GetUserValidAdmin(ctx, uid)
+	if adminId > 0 {
+		adminModel, err := service.Admin().First(ctx, do.CustomerAdmins{Id: adminId})
+		if err != nil {
+			return err
 		}
-		return nil
-	} else if server != "" {
-		rpcClient := service.Grpc().Client(ctx, server)
-		if rpcClient != nil {
-			_, err = rpcClient.NoticeUserOnline(ctx, &grpc.NoticeUserOnlineRequest{
-				UserId:   uint32(uid),
-				Platform: platform,
-			})
-			if err != nil {
-				return err
+		adminLocal, server, err := m.isUserLocal(ctx, adminModel.Id)
+		if err != nil {
+			return err
+		}
+		if m.isCallLocal(forceLocal...) || adminLocal {
+			conn, exist := m.getConn(adminModel.CustomerId, adminModel.Id)
+			if exist {
+				m.SendAction(action.newUserOnline(uid, platform), conn)
+			}
+			return nil
+		} else if server != "" {
+			rpcClient := service.Grpc().Client(ctx, server)
+			if rpcClient != nil {
+				_, err = rpcClient.NoticeUserOnline(ctx, &grpc.NoticeUserOnlineRequest{
+					UserId:   uint32(uid),
+					Platform: platform,
+				})
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
