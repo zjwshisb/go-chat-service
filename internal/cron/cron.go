@@ -18,7 +18,11 @@ func Run() {
 			g.Log().Errorf(ctx, "%+v", err)
 		}
 		for _, admin := range admins {
-			invalidIds := service.ChatRelation().GetInvalidUsers(ctx, admin.Id)
+			invalidIds, err := service.Chat().GetInvalidUsers(ctx, admin.Id)
+			if err != nil {
+				g.Log().Errorf(ctx, "%+v", err)
+				return
+			}
 			if len(invalidIds) > 0 {
 				sessions, err := service.ChatSession().All(ctx, g.Map{
 					"user_id":           invalidIds,

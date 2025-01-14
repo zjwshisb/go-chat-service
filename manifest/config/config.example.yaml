@@ -42,3 +42,8 @@ grpc:
   errorStack:       true
 etcd:
   host: "127.0.0.1:2379@root:123456"
+websocket:
+  logger:
+    path: "./storage/sql"
+    level: "all"
+    stdout: false

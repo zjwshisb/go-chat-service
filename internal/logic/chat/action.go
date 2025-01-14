@@ -13,12 +13,12 @@ import (
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
-var action = &iaction{}
+var action = &iAction{}
 
-type iaction struct {
+type iAction struct {
 }
 
-func (a iaction) getMessage(action *api.ChatAction) (message *model.CustomerChatMessage, err error) {
+func (a iAction) getMessage(action *api.ChatAction) (message *model.CustomerChatMessage, err error) {
 	if action.Action == consts.ActionSendMessage {
 		message = &model.CustomerChatMessage{}
 		err = gconv.Struct(action.Data, message)
@@ -28,14 +28,14 @@ func (a iaction) getMessage(action *api.ChatAction) (message *model.CustomerChat
 	return
 }
 
-func (a iaction) unMarshal(b []byte) (action *api.ChatAction, err error) {
+func (a iAction) unMarshal(b []byte) (action *api.ChatAction, err error) {
 	action = &api.ChatAction{}
 	err = json.Unmarshal(b, action)
 	return
 }
-func (a iaction) marshal(ctx context.Context, action api.ChatAction) (b []byte, err error) {
+func (a iAction) marshal(ctx context.Context, action api.ChatAction) (b []byte, err error) {
 	if action.Action == consts.ActionPing {
-		return []byte(""), nil
+		return []byte("ping"), nil
 	}
 	if action.Action == consts.ActionReceiveMessage {
 		msg, ok := action.Data.(*model.CustomerChatMessage)
@@ -53,14 +53,14 @@ func (a iaction) marshal(ctx context.Context, action api.ChatAction) (b []byte, 
 	return
 }
 
-func (a iaction) newReceive(msg *model.CustomerChatMessage) *api.ChatAction {
+func (a iAction) newReceive(msg *model.CustomerChatMessage) *api.ChatAction {
 	return &api.ChatAction{
 		Action: consts.ActionReceiveMessage,
 		Time:   time.Now().Unix(),
 		Data:   msg,
 	}
 }
-func (a iaction) newReceipt(msg *model.CustomerChatMessage) (act *api.ChatAction) {
+func (a iAction) newReceipt(msg *model.CustomerChatMessage) (act *api.ChatAction) {
 	data := make(map[string]interface{})
 	data["user_id"] = msg.UserId
 	data["req_id"] = msg.ReqId
@@ -72,14 +72,14 @@ func (a iaction) newReceipt(msg *model.CustomerChatMessage) (act *api.ChatAction
 	}
 	return
 }
-func (a iaction) newAdmins(d any) (act *api.ChatAction) {
+func (a iAction) newAdmins(d any) (act *api.ChatAction) {
 	return &api.ChatAction{
 		Action: consts.ActionAdmins,
 		Time:   time.Now().Unix(),
 		Data:   d,
 	}
 }
-func (a iaction) newUserOnline(uid uint, platform string) *api.ChatAction {
+func (a iAction) newUserOnline(uid uint, platform string) *api.ChatAction {
 	data := make(map[string]interface{})
 	data["user_id"] = uid
 	data["platform"] = platform
@@ -89,7 +89,7 @@ func (a iaction) newUserOnline(uid uint, platform string) *api.ChatAction {
 		Data:   data,
 	}
 }
-func (a iaction) newUserOffline(uid uint) *api.ChatAction {
+func (a iAction) newUserOffline(uid uint) *api.ChatAction {
 	data := make(map[string]interface{})
 	data["user_id"] = uid
 	return &api.ChatAction{
@@ -98,46 +98,46 @@ func (a iaction) newUserOffline(uid uint) *api.ChatAction {
 		Data:   data,
 	}
 }
-func (a iaction) newMoreThanOne() *api.ChatAction {
+func (a iAction) newMoreThanOne() *api.ChatAction {
 	return &api.ChatAction{
 		Action: consts.ActionMoreThanOne,
 		Time:   time.Now().Unix(),
 	}
 }
-func (a iaction) newOtherLogin() *api.ChatAction {
+func (a iAction) newOtherLogin() *api.ChatAction {
 	return &api.ChatAction{
 		Action: consts.ActionOtherLogin,
 		Time:   time.Now().Unix(),
 	}
 }
-func (a iaction) newPing() *api.ChatAction {
+func (a iAction) newPing() *api.ChatAction {
 	return &api.ChatAction{
 		Action: consts.ActionPing,
 		Time:   time.Now().Unix(),
 	}
 }
-func (a iaction) newWaitingUsers(i interface{}) *api.ChatAction {
+func (a iAction) newWaitingUsers(i interface{}) *api.ChatAction {
 	return &api.ChatAction{
 		Action: consts.ActionWaitingUser,
 		Time:   time.Now().Unix(),
 		Data:   i,
 	}
 }
-func (a iaction) newWaitingUserCount(count uint) *api.ChatAction {
+func (a iAction) newWaitingUserCount(count uint) *api.ChatAction {
 	return &api.ChatAction{
 		Data:   count,
 		Time:   time.Now().Unix(),
 		Action: consts.ActionWaitingUserCount,
 	}
 }
-func (a iaction) newUserTransfer(i interface{}) *api.ChatAction {
+func (a iAction) newUserTransfer(i interface{}) *api.ChatAction {
 	return &api.ChatAction{
 		Data:   i,
 		Time:   time.Now().Unix(),
 		Action: consts.ActionUserTransfer,
 	}
 }
-func (a iaction) newErrorMessage(msg string) *api.ChatAction {
+func (a iAction) newErrorMessage(msg string) *api.ChatAction {
 	return &api.ChatAction{
 		Data:   msg,
 		Time:   time.Now().Unix(),
@@ -145,14 +145,14 @@ func (a iaction) newErrorMessage(msg string) *api.ChatAction {
 	}
 }
 
-func (a iaction) newReadAction(msgIds []uint) *api.ChatAction {
+func (a iAction) newReadAction(msgIds []uint) *api.ChatAction {
 	return &api.ChatAction{
 		Data:   msgIds,
 		Time:   time.Now().Unix(),
 		Action: consts.ActionRead,
 	}
 }
-func (a iaction) newRateAction(message *model.CustomerChatMessage) *api.ChatAction {
+func (a iAction) newRateAction(message *model.CustomerChatMessage) *api.ChatAction {
 	data := make(map[string]interface{})
 	data["msg_id"] = message.Id
 	data["rate"] = message.Content

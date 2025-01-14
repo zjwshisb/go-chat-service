@@ -7,12 +7,13 @@ import (
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
 	"github.com/duke-git/lancet/v2/slice"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/guid"
 	"sync"
 	"unicode/utf8"
 
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gorilla/websocket"
@@ -107,7 +108,7 @@ func (c *client) close() {
 // 发送消息验证
 func (c *client) validate(data map[string]interface{}) error {
 	if !c.limiter.Allow() {
-		return gerror.New("发送过于频繁，请慢一些")
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "发送过于频繁，请慢一些")
 	}
 	content, exist := data["content"]
 	if exist {
@@ -115,36 +116,36 @@ func (c *client) validate(data map[string]interface{}) error {
 		if ok {
 			length := utf8.RuneCountInString(s)
 			if length == 0 {
-				return gerror.New("请勿发送空内容")
+				return gerror.NewCode(gcode.CodeBusinessValidationFailed, "请勿发送空内容")
 			}
 			if length > 512 {
-				return gerror.New("内容长度必须小于512个字符")
+				return gerror.NewCode(gcode.CodeBusinessValidationFailed, "内容长度必须小于512个字符")
 			}
 		}
 	}
 	reqId, exist := data["req_id"]
 	if !exist {
-		return gerror.New("消息不合法")
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "消息不合法")
 	}
 	reqIdStr, ok := reqId.(string)
 	if !ok {
-		return gerror.New("消息不合法")
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "消息不合法")
 
 	}
 	length := len(reqIdStr)
 	if length <= 0 || length > 20 {
-		return gerror.New("消息不合法")
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "消息不合法")
 	}
 	types, exist := data["type"]
 	if !exist {
-		return gerror.New("消息不合法")
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "消息不合法")
 	}
 	typeStr, ok := types.(string)
 	if !ok {
-		return gerror.New("消息不合法")
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "消息不合法")
 	}
 	if !c.isTypeValid(typeStr) {
-		return gerror.New("消息不合法")
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "消息不合法")
 	}
 	return nil
 }
@@ -180,11 +181,12 @@ func (c *client) readMsg() {
 		case msgStr := <-msg:
 			ctx := gctx.New()
 			act, err := action.unMarshal(msgStr)
+			log.Debug(ctx, "read", msgStr)
 			if err != nil {
-				g.Log().Errorf(ctx, "%+v", err)
+				log.Errorf(ctx, "%+v", err)
 				break
 			}
-			data, ok := act.Data.(map[string]interface{})
+			data, ok := act.Data.(g.Map)
 			if !ok {
 				break
 			}
@@ -196,7 +198,7 @@ func (c *client) readMsg() {
 				case consts.ActionSendMessage:
 					msg, err := action.getMessage(act)
 					if err != nil {
-						g.Log().Errorf(ctx, "%+v", err)
+						log.Errorf(ctx, "%+v", err)
 					} else {
 						iu := c.getUser()
 						switch iu.(type) {
@@ -234,13 +236,14 @@ func (c *client) sendMsg() {
 		case act := <-c.send:
 			ctx := gctx.New()
 			msgByte, err := action.marshal(ctx, *act)
+			log.Debug(ctx, "send", string(msgByte))
 			if err != nil {
-				g.Log().Errorf(ctx, "%+v", err)
+				log.Errorf(ctx, "%+v", err)
 				break
 			}
 			err = c.conn.WriteMessage(websocket.TextMessage, msgByte)
 			if err != nil {
-				g.Log().Errorf(ctx, "%+v", err)
+				log.Errorf(ctx, "%+v", err)
 				c.close()
 				return
 			}
@@ -253,14 +256,14 @@ func (c *client) sendMsg() {
 				msg, ok := act.Data.(*model.CustomerChatMessage)
 				if !ok {
 					err = gerror.New("action.data is not a message model")
-					g.Log().Errorf(ctx, "%+v", err)
+					log.Errorf(ctx, "%+v", err)
 				} else {
 					if msg.SendAt == nil {
 						_, err := service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
 							SendAt: gtime.Now(),
 						})
 						if err != nil {
-							g.Log().Errorf(ctx, "%+v", err)
+							log.Errorf(ctx, "%+v", err)
 						}
 					}
 				}

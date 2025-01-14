@@ -95,7 +95,7 @@ func (c cChat) RemoveUser(ctx context.Context, _ *v1.RemoveUserReq) (res *baseAp
 	if err != nil {
 		return
 	}
-	err = service.ChatRelation().RemoveUser(ctx, admin.Id, gconv.Uint(id))
+	err = service.Chat().RemoveUser(ctx, admin.Id, gconv.Uint(id))
 	if err != nil {
 		return
 	}
@@ -110,7 +110,10 @@ func (c cChat) RemoveUser(ctx context.Context, _ *v1.RemoveUserReq) (res *baseAp
 
 func (c cChat) RemoveInvalidUser(ctx context.Context, _ *v1.RemoveAllUserReq) (res *baseApi.NormalRes[v1.RemoveAllUserRes], err error) {
 	admin := service.AdminCtx().GetUser(ctx)
-	ids := service.ChatRelation().GetInvalidUsers(ctx, admin.Id)
+	ids, err := service.Chat().GetInvalidUsers(ctx, admin.Id)
+	if err != nil {
+		return
+	}
 	resIds := make([]uint, 0, len(ids))
 	for _, id := range ids {
 		session, err := service.ChatSession().First(ctx, do.CustomerChatSessions{
@@ -131,7 +134,10 @@ func (c cChat) RemoveInvalidUser(ctx context.Context, _ *v1.RemoveAllUserReq) (r
 
 func (c cChat) User(ctx context.Context, _ *v1.UserListReq) (res *baseApi.NormalRes[[]v1.ChatUser], err error) {
 	admin := service.AdminCtx().GetUser(ctx)
-	ids, times := service.ChatRelation().GetUsersWithLimitTime(ctx, gconv.Uint(admin.Id))
+	ids, times, err := service.Chat().GetUsersWithLimitTime(ctx, gconv.Uint(admin.Id))
+	if err != nil {
+		return
+	}
 	users, err := service.User().All(ctx, do.Users{
 		Id:         ids,
 		CustomerId: admin.CustomerId,
@@ -161,7 +167,7 @@ func (c cChat) User(ctx context.Context, _ *v1.UserListReq) (res *baseApi.Normal
 		disabled := limitTime <= time.Now().Unix()
 		if count > 50 && disabled {
 			go func() {
-				_ = service.ChatRelation().RemoveUser(ctx, admin.Id, id)
+				_ = service.Chat().RemoveUser(ctx, admin.Id, id)
 			}()
 			continue
 		}
@@ -195,7 +201,11 @@ func (c cChat) User(ctx context.Context, _ *v1.UserListReq) (res *baseApi.Normal
 			if exist {
 				cu.Unread = useUnread.Count
 			}
-			cu.LastChatTime = gtime.NewFromTimeStamp(int64(service.ChatRelation().GetLastChatTime(ctx, admin.Id, cu.Id)))
+			t, err := service.Chat().GetUserLastChatTime(ctx, admin.Id, cu.Id)
+			if err != nil {
+				return nil, err
+			}
+			cu.LastChatTime = gtime.NewFromTimeStamp(int64(t))
 			items = append(items, cu)
 		}
 	}

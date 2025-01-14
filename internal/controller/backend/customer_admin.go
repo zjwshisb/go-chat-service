@@ -35,11 +35,15 @@ func (cAdmin cCustomerAdmin) Index(ctx context.Context, req *api.CustomerAdminLi
 		if item.Setting != nil && item.Setting.LastOnline != nil {
 			lastOnline = item.Setting.LastOnline
 		}
+		count, err := service.Chat().GetActiveUserCount(ctx, item.Id)
+		if err != nil {
+			g.Log().Errorf(ctx, "%+v", err)
+		}
 		return api.CustomerAdmin{
 			Id:            item.Id,
 			Username:      item.Username,
 			Online:        online,
-			AcceptedCount: service.ChatRelation().GetActiveCount(ctx, item.Id),
+			AcceptedCount: count,
 			LastOnline:    lastOnline,
 			UpdatedAt:     item.UpdatedAt,
 			CreatedAt:     item.CreatedAt,

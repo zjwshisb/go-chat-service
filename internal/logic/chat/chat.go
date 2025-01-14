@@ -15,6 +15,7 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gorilla/websocket"
+	"time"
 )
 
 var adminM *adminManager
@@ -45,6 +46,39 @@ type sChat struct {
 func (s sChat) run() {
 	s.admin.run()
 	s.user.run()
+}
+
+// GetUsersWithLimitTime 获取所有user以及对应的有效期
+func (s sChat) GetUsersWithLimitTime(ctx gctx.Ctx, adminId uint) (uids []uint, times []int64, err error) {
+	return relation.getUsersWithLimitTime(ctx, adminId)
+}
+
+func (s sChat) GetInvalidUsers(ctx gctx.Ctx, adminId uint) ([]uint, error) {
+	return relation.getInvalidUsers(ctx, adminId)
+}
+func (s sChat) UpdateUserLimitTime(ctx gctx.Ctx, adminId uint, uid uint, duration int64) error {
+	return relation.updateLimitTime(ctx, adminId, uid, duration)
+}
+
+func (s sChat) IsUserValid(ctx gctx.Ctx, adminId uint, uid uint) (bool, error) {
+	b, err := relation.getLimitTime(ctx, adminId, uid)
+	if err != nil {
+		return false, err
+	}
+	return b > time.Now().Unix(), nil
+}
+func (s sChat) GetActiveUserCount(ctx gctx.Ctx, adminId uint) (uint, error) {
+	return relation.getActiveCount(ctx, adminId)
+}
+func (s sChat) GetUserLimitTime(ctx gctx.Ctx, adminId uint, uid uint) (int64, error) {
+	return relation.getLimitTime(ctx, adminId, uid)
+}
+func (s sChat) GetUserLastChatTime(ctx gctx.Ctx, adminId uint, uid uint) (uint, error) {
+	return relation.getLastChatTime(ctx, adminId, uid)
+}
+
+func (s sChat) RemoveUser(ctx gctx.Ctx, adminId uint, uid uint) (err error) {
+	return relation.removeUser(ctx, adminId, uid)
 }
 
 func (s sChat) UpdateAdminSetting(ctx context.Context, id uint, forceLocal ...bool) error {
@@ -168,7 +202,7 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 			return nil, err
 		}
 	}
-	err = service.ChatRelation().AddUser(ctx, admin.Id, session.UserId)
+	err = relation.addUser(ctx, admin.Id, session.UserId)
 	if err != nil {
 		return
 	}

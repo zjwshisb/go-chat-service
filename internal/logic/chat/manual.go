@@ -2,11 +2,11 @@ package chat
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/gogf/gf/v2/database/gredis"
+	"github.com/gogf/gf/v2/util/gconv"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/gogf/gf/v2/frame/g"
 )
 
@@ -14,91 +14,69 @@ const (
 	manualUserKey = "user:%d:manual"
 )
 
-var manual = &sManual{}
+var manual = &iManual{}
 
-type sManual struct {
+type iManual struct {
 }
 
-func (s sManual) manualKey(customerId uint) string {
+func (s iManual) manualKey(customerId uint) string {
 	return fmt.Sprintf(manualUserKey, customerId)
 }
 
 // AddToManualSet 加入到待人工接入sortSet
-func (s sManual) addToSet(ctx context.Context, uid uint, customerId uint) error {
-	_, err := g.Redis().Do(ctx, "zadd", s.manualKey(customerId), time.Now().Unix(), uid)
+func (s iManual) addToSet(ctx context.Context, uid uint, customerId uint) error {
+	_, err := g.Redis().ZAdd(ctx, s.manualKey(customerId), nil, gredis.ZAddMember{
+		Score:  float64(time.Now().Unix()),
+		Member: gconv.String(uid),
+	})
 	return err
 }
 
-// IsInManualSet 是否在待人工接入列表中
-func (s sManual) isInSet(ctx context.Context, uid uint, customerId uint) bool {
-	val, err := g.Redis().Do(ctx, "zrank", s.manualKey(customerId), uid)
-	// key在sort set 中不存在
-	if errors.Is(err, redis.Nil) {
-		return false
+// 是否在待人工接入列表中
+func (s iManual) isInSet(ctx context.Context, uid uint, customerId uint) (bool, error) {
+	val, err := g.Redis().ZScore(ctx, s.manualKey(customerId), uid)
+	if err != nil {
+		return false, err
 	}
-	// sort set 的key 不存在
-	if val.Val() == nil {
-		return false
+	if val == 0 {
+		return false, nil
 	}
-	if val.Val() == 0 {
-		return false
-	}
-	return true
+
+	return true, nil
 }
 
 // RemoveManual 从待人工接入列表中移除
-func (s sManual) removeFromSet(ctx context.Context, uid uint, customerId uint) error {
-	_, err := g.Redis().Do(ctx, "ZRem", s.manualKey(customerId), uid)
+func (s iManual) removeFromSet(ctx context.Context, uid uint, customerId uint) error {
+	_, err := g.Redis().ZRem(ctx, s.manualKey(customerId), uid)
 	return err
 }
 
 // GetTotalCount 获取待人工接入的数量
-func (s sManual) getCount(ctx context.Context, customerId uint) (count uint, err error) {
-	val, err := g.Redis().Do(ctx, "ZCard", s.manualKey(customerId))
+func (s iManual) getCount(ctx context.Context, customerId uint) (count uint, err error) {
+	val, err := g.Redis().ZCard(ctx, s.manualKey(customerId))
 	if err != nil {
 		return
 	}
-	count = val.Uint()
-	return
+	return gconv.Uint(val), nil
 }
 
 // GetCountByTime 获取指定时间的数量
-func (s sManual) getCountByTime(ctx context.Context, customerId uint, min string, max string) (count uint, err error) {
-	val, err := g.Redis().Do(ctx, "ZCount", s.manualKey(customerId), min, max)
+func (s iManual) getCountByTime(ctx context.Context, customerId uint, min string, max string) (count uint, err error) {
+	val, err := g.Redis().ZCount(ctx, s.manualKey(customerId), min, max)
 	if err != nil {
 		return
 	}
-	count = val.Uint()
-	return
-}
-
-// GetManualByTime 通过加入时间获取
-func (s sManual) getListByTime(ctx context.Context, customerId uint, min string, max string) (uids []uint, err error) {
-	val, err := g.Redis().Do(ctx, "ZRangeByScore", s.manualKey(customerId), &redis.ZRangeBy{
-		Min:    min,
-		Max:    max,
-		Offset: 0,
-		Count:  0,
-	})
-	if err != nil {
-		return
-	}
-	uids = val.Uints()
-	return
+	return gconv.Uint(val), nil
 }
 
 // GetManualTime 获取加入时间
-func (s sManual) getAddTime(ctx context.Context, uid uint, customerId uint) (time float64, err error) {
-	val, err := g.Redis().Do(ctx, "ZScore", s.manualKey(customerId), uid)
-	if err != nil {
-		return
-	}
-	time = val.Float64()
+func (s iManual) getAddTime(ctx context.Context, uid uint, customerId uint) (time float64, err error) {
+	time, err = g.Redis().ZScore(ctx, s.manualKey(customerId), uid)
 	return
 }
 
 // GetAll 获取所有待人工接入ids
-func (s sManual) getAllList(ctx context.Context, customerId uint) (uids []uint, err error) {
+func (s iManual) getAllList(ctx context.Context, customerId uint) (uids []uint, err error) {
 	val, err := g.Redis().ZRange(ctx, s.manualKey(customerId), 0, -1)
 	if err != nil {
 		return
@@ -107,8 +85,8 @@ func (s sManual) getAllList(ctx context.Context, customerId uint) (uids []uint, 
 	return
 }
 
-func (s sManual) getList(ctx context.Context, customerId uint, Offset, count uint) (uids []uint, err error) {
-	val, err := g.Redis().Do(ctx, "ZRangeByScore", s.manualKey(customerId), Offset, count)
+func (s iManual) getList(ctx context.Context, customerId uint, Offset, count uint) (uids []uint, err error) {
+	val, err := g.Redis().ZRange(ctx, s.manualKey(customerId), int64(Offset), int64(count), gredis.ZRangeOption{WithScores: true})
 	if err != nil {
 		return
 	}

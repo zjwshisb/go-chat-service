@@ -123,6 +123,9 @@ func (m *manager) getUserServer(ctx context.Context, uid uint) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if val.IsNil() {
+		return "", err
+	}
 	return val.String(), nil
 }
 
@@ -156,7 +159,7 @@ func (m *manager) handleReceiveMessage() {
 				msg:  payload.Msg,
 			})
 			if err != nil {
-				g.Log().Errorf(ctx, "%+v", err)
+				log.Errorf(ctx, "%+v", err)
 			}
 		}()
 	}
@@ -230,7 +233,7 @@ func (m *manager) getOnlineUserIds(ctx context.Context, customerId uint, forceLo
 				Type:       m.types,
 			})
 			if err != nil {
-				g.Log().Errorf(ctx, "%+v", err)
+				log.Errorf(ctx, "%+v", err)
 			} else {
 				idArr.Append(gconv.Ints(r.Uid)...)
 			}
@@ -282,7 +285,7 @@ func (m *manager) getConnInfo(ctx context.Context, customerId, uid uint, forceLo
 			if err == nil {
 				return r.Exist, r.Platform
 			}
-			g.Log().Errorf(ctx, "%+v", err)
+			log.Errorf(ctx, "%+v", err)
 		}
 	}
 	return false, ""
@@ -318,14 +321,14 @@ func (m *manager) unregister(conn iWsConn) {
 			if m.cluster {
 				err := m.removeUserServer(ctx, conn.getUserId())
 				if err != nil {
-					g.Log().Errorf(ctx, "%+v", err)
+					log.Errorf(ctx, "%+v", err)
 				}
 			}
 			err := m.trigger(ctx, eventUnRegister, eventArg{
 				conn: conn,
 			})
 			if err != nil {
-				g.Log().Errorf(ctx, "%+v", err)
+				log.Errorf(ctx, "%+v", err)
 			}
 		}
 	}

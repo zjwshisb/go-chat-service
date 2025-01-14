@@ -94,7 +94,11 @@ func (m *adminManager) onMessage(ctx context.Context, arg eventArg) error {
 	msg := arg.msg
 	conn := arg.conn
 	if msg.UserId > 0 {
-		if !service.ChatRelation().IsUserValid(ctx, conn.getUserId(), msg.UserId) {
+		isValid, err := relation.isUserValid(ctx, conn.getUserId(), msg.UserId)
+		if err != nil {
+			return err
+		}
+		if !isValid {
 			conn.deliver(action.newErrorMessage("该用户已失效，无法发送消息"))
 			return gerror.NewCode(gcode.CodeValidationFailed, "该用户已失效，无法发送消息")
 		}
@@ -110,7 +114,10 @@ func (m *adminManager) onMessage(ctx context.Context, arg eventArg) error {
 		if err != nil {
 			return err
 		}
-		_ = service.ChatRelation().UpdateUser(ctx, msg.AdminId, msg.UserId)
+		err = relation.updateUser(ctx, msg.AdminId, msg.UserId)
+		if err != nil {
+			return err
+		}
 		// 服务器回执d
 		conn.deliver(action.newReceipt(msg))
 		return userM.deliveryMessage(ctx, msg)
@@ -200,7 +207,7 @@ func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint
 				CustomerId: uint32(customerId),
 			})
 			if err != nil {
-				g.Log().Errorf(ctx, "%+v", err)
+				log.Errorf(ctx, "%+v", err)
 			}
 		})
 		return nil
@@ -221,11 +228,15 @@ func (m *adminManager) broadcastOnlineAdmins(ctx context.Context, customerId uin
 			if online {
 				platform = conn.getPlatform()
 			}
+			count, err := service.Chat().GetActiveUserCount(ctx, c.Id)
+			if err != nil {
+				return err
+			}
 			data = append(data, v1.ChatCustomerAdmin{
 				Username:      c.Username,
 				Online:        online,
 				Id:            c.Id,
-				AcceptedCount: service.ChatRelation().GetActiveCount(ctx, c.Id),
+				AcceptedCount: count,
 				Platform:      platform,
 			})
 		}
@@ -238,7 +249,7 @@ func (m *adminManager) broadcastOnlineAdmins(ctx context.Context, customerId uin
 				CustomerId: uint32(customerId),
 			})
 			if err != nil {
-				g.Log().Errorf(ctx, "%+v", err)
+				log.Errorf(ctx, "%+v", err)
 			}
 		})
 		return err
@@ -254,7 +265,7 @@ func (m *adminManager) noticeRate(message *model.CustomerChatMessage) {
 }
 
 func (m *adminManager) noticeUserOffline(ctx context.Context, uid uint, forceLocal ...bool) (err error) {
-	adminId, err := service.ChatRelation().GetUserValidAdmin(ctx, uid)
+	adminId, err := relation.getUserValidAdmin(ctx, uid)
 	if err != nil {
 		return
 	}
@@ -287,7 +298,7 @@ func (m *adminManager) noticeUserOffline(ctx context.Context, uid uint, forceLoc
 }
 
 func (m *adminManager) noticeUserOnline(ctx context.Context, uid uint, platform string, forceLocal ...bool) (err error) {
-	adminId, err := service.ChatRelation().GetUserValidAdmin(ctx, uid)
+	adminId, err := relation.getUserValidAdmin(ctx, uid)
 	if adminId > 0 {
 		adminModel, err := service.Admin().First(ctx, do.CustomerAdmins{Id: adminId})
 		if err != nil {

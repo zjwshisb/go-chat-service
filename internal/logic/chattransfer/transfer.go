@@ -17,6 +17,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 func init() {
@@ -140,7 +141,10 @@ func (s *sChatTransfer) Create(ctx context.Context, fromAdmin *model.CustomerAdm
 	if errors.Is(err, sql.ErrNoRows) {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "无效的客服")
 	}
-	isValid := service.ChatRelation().IsUserValid(ctx, fromAdmin.Id, userId)
+	isValid, err := service.Chat().IsUserValid(ctx, fromAdmin.Id, userId)
+	if err != nil {
+		return err
+	}
 	if !isValid {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "用户已失效，无法转接")
 	}
@@ -199,12 +203,12 @@ func (s *sChatTransfer) userKey(customerId uint) string {
 
 // RemoveUser 在转接列表中移除user
 func (s *sChatTransfer) RemoveUser(ctx context.Context, customerId, uid uint) error {
-	_, err := g.Redis().Do(ctx, "hDel", s.userKey(customerId), uid)
+	_, err := g.Redis().HDel(ctx, s.userKey(customerId), gconv.String(uid))
 	return err
 }
 
 func (s *sChatTransfer) GetUserTransferId(ctx context.Context, customerId, uid uint) (id uint, error error) {
-	val, err := g.Redis().Do(ctx, "hGet", s.userKey(customerId), uid)
+	val, err := g.Redis().HGet(ctx, s.userKey(customerId), gconv.String(uid))
 	if err != nil {
 		return
 	}
@@ -220,9 +224,11 @@ func (s *sChatTransfer) IsInTransfer(ctx context.Context, customerId uint, uid u
 	return id != 0, nil
 }
 
-// AddUser 添加用户到转接列表中
+// addUser 添加用户到转接列表中
 func (s *sChatTransfer) addUser(ctx context.Context, customerId, uid, adminId uint) (err error) {
-	_, err = g.Redis().Do(ctx, "hSet", s.userKey(customerId), uid, adminId)
+	_, err = g.Redis().HSet(ctx, s.userKey(customerId), g.Map{
+		gconv.String(uid): adminId,
+	})
 	return
 }
 

@@ -10,7 +10,6 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"strconv"
 	"time"
@@ -105,10 +104,14 @@ func (s *userManager) broadcastQueueLocation(ctx context.Context, customerId uin
 	if s.isCallLocal(forceLocal...) {
 		conns := s.getAllConn(customerId)
 		for _, conn := range conns {
-			if manual.isInSet(ctx, conn.getUserId(), conn.getCustomerId()) {
+			in, err := manual.isInSet(ctx, conn.getUserId(), conn.getCustomerId())
+			if err != nil {
+				return err
+			}
+			if in {
 				err = s.noticeQueueLocation(ctx, conn)
 				if err != nil {
-					return
+					return err
 				}
 			}
 		}
@@ -119,7 +122,7 @@ func (s *userManager) broadcastQueueLocation(ctx context.Context, customerId uin
 				CustomerId: uint32(customerId),
 			})
 			if err != nil {
-				g.Log().Errorf(ctx, "%+v", err)
+				log.Errorf(ctx, "%+v", err)
 			}
 		})
 		if err != nil {
@@ -135,7 +138,7 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 	conn := arg.conn
 	msg.Source = consts.MessageSourceUser
 	msg.UserId = conn.getUserId()
-	msg.AdminId, _ = service.ChatRelation().GetUserValidAdmin(ctx, msg.UserId)
+	msg.AdminId, _ = relation.getUserValidAdmin(ctx, msg.UserId)
 	msg, err = service.ChatMessage().Insert(ctx, msg)
 	if err != nil {
 		return
@@ -149,7 +152,7 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 			return err
 		}
 		// 更新有效时间
-		err = service.ChatRelation().UpdateUser(ctx, msg.AdminId, msg.UserId)
+		err = relation.updateUser(ctx, msg.AdminId, msg.UserId)
 		if err != nil {
 			return err
 		}
@@ -178,7 +181,7 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 		// 触发自动回复事件
 		err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneNotAccepted, msg, conn)
 		if err != nil {
-			g.Log().Errorf(ctx, "%+v", err)
+			log.Errorf(ctx, "%+v", err)
 		}
 		var transferAdminId uint
 		// 转接adminId
@@ -190,35 +193,38 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 		var session *model.CustomerChatSession
 		if transferAdminId == 0 {
 			// 在代人工接入列表中
-			inManual := manual.isInSet(ctx, conn.getUserId(), conn.getCustomerId())
+			inManual, err := manual.isInSet(ctx, conn.getUserId(), conn.getCustomerId())
+			if err != nil {
+				return err
+			}
 			if inManual {
 				session, err = service.ChatSession().FirstNormal(ctx, msg.UserId, 0)
 				if err != nil {
 					_ = manual.removeFromSet(ctx, conn.getUserId(), conn.getCustomerId())
-					return
+					return err
 				}
 				msg.SessionId = session.Id
 				_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
 					SessionId: msg.SessionId,
 				})
 				if err != nil {
-					return
+					return err
 				}
 				err = adminM.broadcastWaitingUser(ctx, conn.getCustomerId())
 				if err != nil {
-					return
+					return err
 				}
 			} else {
 				// 不在代人工接入列表中
 				var isAutoAdd bool
 				isAutoAdd, err = service.ChatSetting().GetIsAutoTransferManual(ctx, conn.getCustomerId())
 				if err != nil {
-					return
+					return err
 				}
 				if isAutoAdd { // 如果自动转人工
 					session, err = s.addToManual(ctx, conn.getUser())
 					if err != nil {
-						return
+						return err
 					}
 					if session != nil {
 						msg.SessionId = session.Id
@@ -227,15 +233,15 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 						})
 					}
 					if err != nil {
-						return
+						return err
 					}
 					err = adminM.broadcastWaitingUser(ctx, conn.getCustomerId())
 					if err != nil {
-						return
+						return err
 					}
 					err = s.broadcastQueueLocation(ctx, conn.getCustomerId())
 					if err != nil {
-						return
+						return err
 					}
 				}
 			}
@@ -258,7 +264,7 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 
 // 触发进入事件，只有没有对应客服的情况下触发，10分钟内多触发一次
 func (s *userManager) triggerEnterEvent(ctx context.Context, conn iWsConn) (err error) {
-	adminId, err := service.ChatRelation().GetUserValidAdmin(ctx, conn.getUserId())
+	adminId, err := relation.getUserValidAdmin(ctx, conn.getUserId())
 	if adminId > 0 {
 		return
 	}
@@ -315,7 +321,11 @@ func (s *userManager) onRegister(ctx context.Context, arg eventArg) (err error) 
 	if err != nil {
 		return nil
 	}
-	if manual.isInSet(ctx, arg.conn.getUserId(), arg.conn.getCustomerId()) {
+	in, err := manual.isInSet(ctx, arg.conn.getUserId(), arg.conn.getCustomerId())
+	if err != nil {
+		return err
+	}
+	if in {
 		err = s.noticeQueueLocation(ctx, arg.conn)
 	} else {
 		err = s.triggerEnterEvent(ctx, arg.conn)
@@ -325,7 +335,11 @@ func (s *userManager) onRegister(ctx context.Context, arg eventArg) (err error) 
 
 // 加入人工列表
 func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session *model.CustomerChatSession, err error) {
-	if manual.isInSet(ctx, user.getPrimaryKey(), user.getCustomerId()) {
+	in, err := manual.isInSet(ctx, user.getPrimaryKey(), user.getCustomerId())
+	if err != nil {
+		return
+	}
+	if in {
 		err = gerror.New("is in")
 		return
 	}

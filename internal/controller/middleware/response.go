@@ -15,7 +15,6 @@ import (
 
 // SuccessResponse
 
-// MiddlewareHandlerResponse is the default middleware handling handler response object and its error.
 func HandlerResponse(r *ghttp.Request) {
 	r.Middleware.Next()
 
@@ -53,8 +52,7 @@ func HandlerResponse(r *ghttp.Request) {
 			r.Response.WriteJson(api.NewFailResp(msg, code.Code()))
 			// 业务错误
 		} else {
-			// 非正常错误，记录一下
-			g.Log().Error(r.Context(), err)
+			g.Log().Errorf(r.Context(), "%+v", err)
 		}
 		r.Response.WriteStatus(http.StatusInternalServerError, g.MapStrStr{
 			"message": "internal server error",

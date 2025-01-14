@@ -1,7 +1,9 @@
 # gochat客服系统
 
 ### 介绍
-基于goframe(v2)，ant-design-pro，Taro实现的在线客服IM系统，通过websocket实现消息接受发送，支持集群部署。
+基于goframe(v2)，ant-design-pro，Taro实现的实时客服IM系统，通过websocket实现消息的推送，接口化设计，易于修改。支持集群部署，
+集群部署情况下，通过grpc实现不同服务器之间的websocket消息传递发送。
+
 
 - [客服前端代码](https://github.com/zjwshisb/service-frontend)
 - [用户端前端代码](https://github.com/zjwshisb/service-user)
@@ -11,7 +13,6 @@
 - redis
 - etcd|polaris|zookeeper(集群部署情况下,默认etcd)
 
-集群部署情况下，通过grpc实现不同服务之间的websocket消息传递发送。
 
 ### 开始
 ```shell
@@ -22,18 +23,19 @@ go run main.go migrate # 迁移数据结构
 go run main.go fake # 假数据填充
 go run main.go http # 启动服务
 ```
+详细参考 [goframe](https://goframe.org/)
 
 ### 功能
 
 - [x] 文字/表情/图片/音频/视频消息发送
 - [x] 自动回复
-- [x] 用户在线状态显示
-- [x] 消息已读未读显示(支持配置开关)
-- [X] 转接人工(支持排队位置显示，支持配置开关)
-- [x] 客服转接功能
+- [x] 用户在线状态显示|通知
+- [x] 消息已读未读显示|通知(支持配置开关)
+- [X] 转接人工(支持排队位置显示|通知，支持配置开关)
+- [x] 客服转接
 - [x] 多开提醒(重复登录，多个tab等)
 - [X] 多租户
-- [x] 文件管理
+- [x] 文件管理(本地,七牛oss)
 
 
 ### 演示地址

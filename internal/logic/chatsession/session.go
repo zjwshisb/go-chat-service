@@ -69,10 +69,10 @@ func (s *sChatSession) Close(ctx context.Context, session *model.CustomerChatSes
 		return
 	}
 	if isRemoveUser {
-		err = service.ChatRelation().RemoveUser(ctx, session.AdminId, session.UserId)
+		err = service.Chat().RemoveUser(ctx, session.AdminId, session.UserId)
 	} else {
 		if updateTime {
-			err = service.ChatRelation().UpdateLimitTime(ctx, session.AdminId, session.UserId, 0)
+			err = service.Chat().UpdateUserLimitTime(ctx, session.AdminId, session.UserId, 0)
 		}
 	}
 	return
