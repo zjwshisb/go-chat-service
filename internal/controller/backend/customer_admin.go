@@ -30,7 +30,7 @@ func (cAdmin cCustomerAdmin) Index(ctx context.Context, req *api.CustomerAdminLi
 		return
 	}
 	item := slice.Map(p.Items, func(_ int, item *model.CustomerAdmin) api.CustomerAdmin {
-		online, _ := service.Chat().GetConnInfo(ctx, item.CustomerId, item.Id, consts.WsTypeAdmin)
+		online, _, _ := service.Chat().GetConnInfo(ctx, item.CustomerId, item.Id, consts.WsTypeAdmin)
 		var lastOnline *gtime.Time
 		if item.Setting != nil && item.Setting.LastOnline != nil {
 			lastOnline = item.Setting.LastOnline

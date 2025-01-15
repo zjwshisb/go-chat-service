@@ -25,7 +25,7 @@ type (
 		GetOnlineUsers(ctx context.Context, customerId uint) ([]api.ChatSimpleUser, error)
 		GetWaitingUsers(ctx context.Context, customerId uint) ([]api.ChatSimpleUser, error)
 		GetOnlineUserIds(ctx context.Context, customerId uint, types string, forceLocal ...bool) ([]uint, error)
-		GetConnInfo(ctx context.Context, customerId, uid uint, t string, forceLocal ...bool) (exist bool, platform string)
+		GetConnInfo(ctx context.Context, customerId, uid uint, t string, forceLocal ...bool) (exist bool, platform string, err error)
 		UpdateAdminSetting(ctx context.Context, id uint, forceLocal ...bool) error
 		RemoveManual(ctx context.Context, uid uint, customerId uint) error
 		DeliveryMessage(ctx context.Context, msgId uint, types string, forceLocal ...bool) error

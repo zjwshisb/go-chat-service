@@ -20,7 +20,10 @@ func Register(s *grpcx.GrpcServer) {
 }
 
 func (*Controller) GetConnInfo(ctx context.Context, req *rpcApi.GetConnInfoRequest) (res *rpcApi.GetConnInfoReply, err error) {
-	exist, platform := service.Chat().GetConnInfo(ctx, uint(req.CustomerId), uint(req.UserId), req.Type, true)
+	exist, platform, err := service.Chat().GetConnInfo(ctx, uint(req.CustomerId), uint(req.UserId), req.Type, true)
+	if err != nil {
+		return
+	}
 	return &rpcApi.GetConnInfoReply{
 		Exist:    exist,
 		Platform: platform,

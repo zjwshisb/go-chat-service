@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	grpc "gf-chat/api/chat/v1"
+	"gf-chat/internal/cache"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -138,7 +139,10 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 	conn := arg.conn
 	msg.Source = consts.MessageSourceUser
 	msg.UserId = conn.getUserId()
-	msg.AdminId, _ = relation.getUserValidAdmin(ctx, msg.UserId)
+	msg.AdminId, err = relation.getUserValidAdmin(ctx, msg.UserId)
+	if err != nil {
+		return err
+	}
 	msg, err = service.ChatMessage().Insert(ctx, msg)
 	if err != nil {
 		return
@@ -163,7 +167,10 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 		if err != nil {
 			return err
 		}
-		adminOnline, _ := adminM.getConnInfo(ctx, msg.CustomerId, msg.AdminId)
+		adminOnline, _, err := adminM.getConnInfo(ctx, msg.CustomerId, msg.AdminId)
+		if err != nil {
+			return err
+		}
 		if adminOnline {
 			err = userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOnline, msg, conn)
 			if err != nil {
@@ -269,7 +276,7 @@ func (s *userManager) triggerEnterEvent(ctx context.Context, conn iWsConn) (err 
 		return
 	}
 	cacheKey := fmt.Sprintf("welcome:%d", conn.getUserId())
-	val, err := gcache.Get(ctx, cacheKey)
+	val, err := cache.Def.Get(ctx, cacheKey)
 	if err != nil {
 		return
 	}
@@ -386,6 +393,9 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 			return nil, err
 		} else {
 			session, err = service.ChatSession().Create(ctx, user.getPrimaryKey(), user.getCustomerId(), consts.ChatSessionTypeNormal)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	if session == nil {

@@ -174,7 +174,10 @@ func (c cChat) User(ctx context.Context, _ *v1.UserListReq) (res *baseApi.Normal
 		count = count + 1
 		user, exist := userMap[id]
 		if exist {
-			online, platform := service.Chat().GetConnInfo(ctx, user.CustomerId, user.Id, consts.WsTypeUser)
+			online, platform, err := service.Chat().GetConnInfo(ctx, user.CustomerId, user.Id, consts.WsTypeUser)
+			if err != nil {
+				return nil, err
+			}
 			cu := v1.ChatUser{
 				Id:          user.Id,
 				Username:    user.Username,

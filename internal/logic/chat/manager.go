@@ -40,7 +40,7 @@ type connContainer interface {
 	getOnlineUserIds(ctx context.Context, gid uint, forceLocal ...bool) ([]uint, error)
 	setUserServer(ctx context.Context, uid uint, server string) error
 	getUserServer(ctx context.Context, uid uint) (string, error)
-	getConnInfo(ctx context.Context, customerId, uid uint, forceLocal ...bool) (bool, string)
+	getConnInfo(ctx context.Context, customerId, uid uint, forceLocal ...bool) (bool, string, error)
 }
 
 type connManager interface {
@@ -264,14 +264,14 @@ func (m *manager) getConn(customerId, uid uint) (iWsConn, bool) {
 	return s.get(uid)
 }
 
-func (m *manager) getConnInfo(ctx context.Context, customerId, uid uint, forceLocal ...bool) (bool, string) {
+func (m *manager) getConnInfo(ctx context.Context, customerId, uid uint, forceLocal ...bool) (bool, string, error) {
 	userLocal, server, _ := m.isUserLocal(ctx, uid)
 	if m.isCallLocal(forceLocal...) || userLocal {
 		conn, exist := m.getConn(customerId, uid)
 		if exist {
-			return true, conn.getPlatform()
+			return true, conn.getPlatform(), nil
 		} else {
-			return false, ""
+			return false, "", nil
 		}
 	}
 	if server != "" {
@@ -282,13 +282,13 @@ func (m *manager) getConnInfo(ctx context.Context, customerId, uid uint, forceLo
 				CustomerId: uint32(customerId),
 				Type:       m.types,
 			})
-			if err == nil {
-				return r.Exist, r.Platform
+			if err != nil {
+				return false, "", err
 			}
-			log.Errorf(ctx, "%+v", err)
+			return r.Exist, r.Platform, nil
 		}
 	}
-	return false, ""
+	return false, "", nil
 }
 
 // AddConn 添加客户端

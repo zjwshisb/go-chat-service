@@ -160,7 +160,10 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 	if err != nil {
 		return
 	}
-	online, platform := s.user.getConnInfo(ctx, session.CustomerId, session.UserId)
+	online, platform, err := s.user.getConnInfo(ctx, session.CustomerId, session.UserId)
+	if err != nil {
+		return
+	}
 	if online {
 		// 服务提醒
 		chatName, _ := service.Admin().GetChatName(ctx, &admin)
@@ -242,14 +245,14 @@ func (s sChat) Register(ctx context.Context, u any, conn *websocket.Conn, platfo
 	}
 	return gerror.New("无效的用户模型")
 }
-func (s sChat) GetConnInfo(ctx context.Context, customerId, uid uint, t string, forceLocal ...bool) (exist bool, platform string) {
+func (s sChat) GetConnInfo(ctx context.Context, customerId, uid uint, t string, forceLocal ...bool) (exist bool, platform string, err error) {
 	if t == consts.WsTypeAdmin {
 		return s.admin.getConnInfo(ctx, customerId, uid, forceLocal...)
 	}
 	if t == consts.WsTypeUser {
 		return s.user.getConnInfo(ctx, customerId, uid, forceLocal...)
 	}
-	return false, ""
+	return false, "", nil
 }
 
 func (s sChat) BroadcastWaitingUser(ctx context.Context, customerId uint, forceLocal ...bool) error {
