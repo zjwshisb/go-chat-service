@@ -6,15 +6,24 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
-type CustomerAdminDetailReq struct {
-	g.Meta `path:"/admins/:id" tags:"后台管理员" method:"get" summary:"获取管理员详情"`
-	Month  string `json:"month" v:"required" p:"month"`
-}
-
 type CustomerAdminListReq struct {
 	g.Meta   `path:"/admins" tags:"后台管理员" method:"get" summary:"获取管理员列表"`
 	Username string `json:"username"`
 	api.Paginate
+}
+
+type StoreCustomerAdminReq struct {
+	g.Meta `path:"/admins" tags:"后台管理员" method:"post" summary:"新增管理员"`
+	CustomerAdminForm
+}
+
+type UpdateCustomerAdminReq struct {
+	g.Meta `path:"/admins/:id" tags:"后台管理员" method:"put" summary:"修改管理员"`
+}
+
+type CustomerAdminForm struct {
+	Username string `json:"username" v:"required|max-length:32|unique:customer_admins,username#||登录账号不可用"`
+	Password string `json:"password" v:"required|max-length:32"`
 }
 
 type CustomerAdmin struct {

@@ -74,7 +74,6 @@ func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 		_ = f.Close()
 	}()
 	uploadFileType, err := storage.FileType(f)
-	g.Dump(uploadFileType)
 	if err != nil {
 		return err
 	}
@@ -90,7 +89,7 @@ func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 	}
 	if allowSize > 0 {
 		if uploadFile.Size > int64(1024*1024*allowSize) {
-			return gerror.Newf("最多允许上传%dM的文件", allowSize)
+			return gerror.NewCodef(gcode.CodeValidationFailed, "最多允许上传%dM的文件", allowSize)
 		}
 	}
 	return nil

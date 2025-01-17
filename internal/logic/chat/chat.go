@@ -243,7 +243,7 @@ func (s sChat) Register(ctx context.Context, u any, conn *websocket.Conn, platfo
 		}
 		return s.user.register(ctx, conn, e, platform)
 	}
-	return gerror.New("无效的用户模型")
+	return gerror.NewCode(gcode.CodeBusinessValidationFailed, "无效的用户模型")
 }
 func (s sChat) GetConnInfo(ctx context.Context, customerId, uid uint, t string, forceLocal ...bool) (exist bool, platform string, err error) {
 	if t == consts.WsTypeAdmin {

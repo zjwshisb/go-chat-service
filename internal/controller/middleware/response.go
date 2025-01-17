@@ -31,15 +31,9 @@ func HandlerResponse(r *ghttp.Request) {
 	)
 	if err != nil {
 		msg = err.Error()
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) || code == gcode.CodeNotFound {
 			r.Response.WriteStatus(http.StatusNotFound, g.MapStrStr{
 				"message": "not found",
-			})
-			return
-		} else if code == gcode.CodeNotFound {
-			// 404错误
-			r.Response.WriteStatus(http.StatusNotFound, g.MapStrStr{
-				"message": msg,
 			})
 			return
 		} else if code == gcode.CodeValidationFailed {

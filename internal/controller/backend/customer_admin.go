@@ -6,8 +6,11 @@ import (
 	api "gf-chat/api/backend/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
+	"gf-chat/internal/model/entity"
 	"gf-chat/internal/service"
+	"github.com/duke-git/lancet/v2/strutil"
 	"github.com/gogf/gf/v2/frame/g"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -16,6 +19,26 @@ import (
 var CCustomerAdmin = cCustomerAdmin{}
 
 type cCustomerAdmin struct {
+}
+
+func (cAdmin cCustomerAdmin) Store(ctx context.Context, req *api.StoreCustomerAdminReq) (res *baseApi.NilRes, err error) {
+	pwd, err := bcrypt.GenerateFromPassword([]byte(strutil.Trim(req.Password)), bcrypt.DefaultCost)
+	if err != nil {
+		return
+	}
+	admin := &model.CustomerAdmin{
+		CustomerAdmins: entity.CustomerAdmins{
+			Username:   strutil.Trim(req.Username),
+			Password:   string(pwd),
+			CustomerId: service.AdminCtx().GetCustomerId(ctx),
+		},
+		Setting: nil,
+	}
+	_, err = service.Admin().Save(ctx, admin)
+	if err != nil {
+		return
+	}
+	return baseApi.NewNilResp(), nil
 }
 
 func (cAdmin cCustomerAdmin) Index(ctx context.Context, req *api.CustomerAdminListReq) (res *baseApi.ListRes[api.CustomerAdmin], err error) {

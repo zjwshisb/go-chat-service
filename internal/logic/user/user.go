@@ -30,7 +30,7 @@ type sUser struct {
 	trait.Curd[model.User]
 }
 
-func (s *sUser) GetInfo(ctx context.Context, user *model.User) ([]api.UserInfoItem, error) {
+func (s *sUser) GetInfo(_ context.Context, user *model.User) ([]api.UserInfoItem, error) {
 	r := make([]api.UserInfoItem, 0)
 	r = append(r, api.UserInfoItem{
 		Label:       "用户名",

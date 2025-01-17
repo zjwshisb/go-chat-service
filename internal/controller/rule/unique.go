@@ -2,7 +2,9 @@ package rule
 
 import (
 	"context"
+	"fmt"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -11,8 +13,7 @@ import (
 )
 
 func init() {
-	name := "unique"
-	gvalid.RegisterRule(name, uniqueRule)
+	gvalid.RegisterRule("unique", uniqueRule)
 }
 
 // UniqueRule unique:users[,name][,id] 唯一验证规则
@@ -48,8 +49,9 @@ func uniqueRule(ctx context.Context, in gvalid.RuleFuncInput) error {
 	if count == 0 {
 		return nil
 	}
+	message := fmt.Sprintf("%s(%s) in %s is duplicate", field, in.Value.String(), tableName)
 	if in.Message != "" {
-		return gerror.New(in.Message)
+		message = in.Message
 	}
-	return gerror.New("name already token by others")
+	return gerror.NewCode(gcode.CodeValidationFailed, message)
 }

@@ -255,7 +255,7 @@ func (c *client) sendMsg() {
 			case consts.ActionReceiveMessage:
 				msg, ok := act.Data.(*model.CustomerChatMessage)
 				if !ok {
-					err = gerror.New("action.data is not a message model")
+					err = gerror.NewCode(gcode.CodeValidationFailed, "action.data is not a message model")
 					log.Errorf(ctx, "%+v", err)
 				} else {
 					if msg.SendAt == nil {

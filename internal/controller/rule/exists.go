@@ -11,8 +11,7 @@ import (
 )
 
 func init() {
-	name := "exists"
-	gvalid.RegisterRule(name, existsRule)
+	gvalid.RegisterRule("exists", existsRule)
 }
 
 // ExistsRule 数据存在验证规则

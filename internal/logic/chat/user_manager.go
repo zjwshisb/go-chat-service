@@ -11,6 +11,7 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/os/gtime"
 	"strconv"
 	"time"
@@ -347,7 +348,7 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 		return
 	}
 	if in {
-		err = gerror.New("is in")
+		err = gerror.NewCode(gcode.CodeBusinessValidationFailed, "is in")
 		return
 	}
 	onlineAdminIds, err := adminM.getOnlineUserIds(ctx, user.getCustomerId())

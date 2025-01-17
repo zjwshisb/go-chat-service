@@ -151,7 +151,7 @@ func (s *sAdmin) UpdateSetting(ctx context.Context, admin *model.CustomerAdmin, 
 			return
 		}
 		if !exists {
-			return gerror.New("无效的图片文件")
+			return gerror.NewCode(gcode.CodeValidationFailed, "无效的图片文件")
 		}
 		updateData.Avatar = form.Avatar.Id
 	}
@@ -167,7 +167,7 @@ func (s *sAdmin) UpdateSetting(ctx context.Context, admin *model.CustomerAdmin, 
 			return
 		}
 		if !exists {
-			return gerror.New("无效的图片文件")
+			return gerror.NewCode(gcode.CodeValidationFailed, "无效的图片文件")
 		}
 		updateData.Background = form.Background.Id
 	}

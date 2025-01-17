@@ -7,6 +7,7 @@ import (
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"time"
 
@@ -18,21 +19,25 @@ var action = &iAction{}
 type iAction struct {
 }
 
+// 从action中提取消息
 func (a iAction) getMessage(action *api.ChatAction) (message *model.CustomerChatMessage, err error) {
 	if action.Action == consts.ActionSendMessage {
 		message = &model.CustomerChatMessage{}
 		err = gconv.Struct(action.Data, message)
 	} else {
-		err = gerror.New("invalid action")
+		err = gerror.NewCode(gcode.CodeValidationFailed, "invalid action")
 	}
 	return
 }
 
+// 自定义json反格式化action
 func (a iAction) unMarshal(b []byte) (action *api.ChatAction, err error) {
 	action = &api.ChatAction{}
 	err = json.Unmarshal(b, action)
 	return
 }
+
+// 定义json格式化action
 func (a iAction) marshal(ctx context.Context, action api.ChatAction) (b []byte, err error) {
 	if action.Action == consts.ActionPing {
 		return []byte("ping"), nil
@@ -40,7 +45,7 @@ func (a iAction) marshal(ctx context.Context, action api.ChatAction) (b []byte, 
 	if action.Action == consts.ActionReceiveMessage {
 		msg, ok := action.Data.(*model.CustomerChatMessage)
 		if !ok {
-			err = gerror.New("param error")
+			err = gerror.NewCode(gcode.CodeValidationFailed, "param error")
 			return
 		}
 		data, err := service.ChatMessage().ToApi(ctx, msg)
@@ -53,6 +58,7 @@ func (a iAction) marshal(ctx context.Context, action api.ChatAction) (b []byte, 
 	return
 }
 
+// 新建一个接收消息的action
 func (a iAction) newReceive(msg *model.CustomerChatMessage) *api.ChatAction {
 	return &api.ChatAction{
 		Action: consts.ActionReceiveMessage,
@@ -60,6 +66,8 @@ func (a iAction) newReceive(msg *model.CustomerChatMessage) *api.ChatAction {
 		Data:   msg,
 	}
 }
+
+// 新建一个回执action
 func (a iAction) newReceipt(msg *model.CustomerChatMessage) (act *api.ChatAction) {
 	data := make(map[string]interface{})
 	data["user_id"] = msg.UserId

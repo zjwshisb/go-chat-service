@@ -125,6 +125,7 @@ func (m *adminManager) onMessage(ctx context.Context, arg eventArg) error {
 	return nil
 }
 
+// 注册事件处理器
 func (m *adminManager) onRegister(ctx context.Context, arg eventArg) error {
 	err := m.broadcastOnlineAdmins(ctx, arg.conn.getCustomerId())
 	if err != nil {
@@ -141,7 +142,7 @@ func (m *adminManager) onRegister(ctx context.Context, arg eventArg) error {
 	return nil
 }
 
-// conn断开连接后，更新admin的最后在线时间
+// 注销事件处理器
 func (m *adminManager) onUnRegister(ctx context.Context, arg eventArg) error {
 	err := service.Admin().UpdateLastOnline(ctx, arg.conn.getUserId())
 	if err != nil {
@@ -154,6 +155,7 @@ func (m *adminManager) onUnRegister(ctx context.Context, arg eventArg) error {
 	return nil
 }
 
+// 广播待接入用户
 func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint, forceLocal ...bool) (err error) {
 	if m.isCallLocal(forceLocal...) {
 		sessions, err := service.ChatSession().GetUnAccepts(ctx, customerId)
@@ -213,6 +215,8 @@ func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint
 		return nil
 	}
 }
+
+// 广播在线客服
 func (m *adminManager) broadcastOnlineAdmins(ctx context.Context, customerId uint, forceLocal ...bool) error {
 	if m.isCallLocal(forceLocal...) {
 		admins, err := service.Admin().All(ctx, do.CustomerAdmins{
@@ -264,6 +268,7 @@ func (m *adminManager) noticeRate(message *model.CustomerChatMessage) {
 	}
 }
 
+// 用户离线通知
 func (m *adminManager) noticeUserOffline(ctx context.Context, uid uint, forceLocal ...bool) (err error) {
 	adminId, err := relation.getUserValidAdmin(ctx, uid)
 	if err != nil {
@@ -297,6 +302,7 @@ func (m *adminManager) noticeUserOffline(ctx context.Context, uid uint, forceLoc
 	return nil
 }
 
+// 用户在线通知
 func (m *adminManager) noticeUserOnline(ctx context.Context, uid uint, platform string, forceLocal ...bool) (err error) {
 	adminId, err := relation.getUserValidAdmin(ctx, uid)
 	if adminId > 0 {
@@ -330,6 +336,7 @@ func (m *adminManager) noticeUserOnline(ctx context.Context, uid uint, platform 
 	return nil
 }
 
+// 用户转接通知
 func (m *adminManager) noticeUserTransfer(ctx context.Context, customerId, adminId uint, forceLocal ...bool) error {
 	userLocal, server, err := m.isUserLocal(ctx, adminId)
 	if err != nil {
@@ -373,7 +380,7 @@ func (m *adminManager) noticeUserTransfer(ctx context.Context, customerId, admin
 	return nil
 }
 
-// UpdateSetting 更新设置
+// 更新设置
 func (m *adminManager) updateSetting(ctx context.Context, id uint, forceLocal ...bool) error {
 	u, err := service.Admin().Find(ctx, id)
 	if err != nil {
