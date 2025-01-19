@@ -49,8 +49,8 @@ go run main.go http # 启动服务
 ### 更新日志
 
 2025.1.4 使用[GOFRAME](https://github.com/gogf/gf)进行了重构  
-2025.1.9 支持集群部署
-2025.1.19 pdf文件消息支持
+2025.1.9 支持集群部署  
+2025.1.19 pdf文件消息
 
 ### LICENSE
 
