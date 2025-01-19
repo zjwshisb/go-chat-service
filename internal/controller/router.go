@@ -12,7 +12,7 @@ func RegisterRouter(s *ghttp.Server) {
 		r.Response.WriteStatus(200, "hello word")
 	})
 	s.Group("/api", func(group *ghttp.RouterGroup) {
-		group.Middleware(middleware.Cors, middleware.HandlerResponse).Group("", func(group *ghttp.RouterGroup) {
+		group.Middleware(middleware.HandlerResponse).Group("", func(group *ghttp.RouterGroup) {
 			group.Group("/user", func(group *ghttp.RouterGroup) {
 				group.Bind(
 					frontend.CUser,

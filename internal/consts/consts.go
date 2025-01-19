@@ -54,10 +54,6 @@ const (
 	ChatSessionTypeTransfer = 1
 )
 
-const WebsocketPlatformWeb = "web"
-const WebsocketPlatformH5 = "h5"
-const WebsocketPlatformMp = "weapp"
-
 const (
 	ActionReceipt          = "receipt"
 	ActionPing             = "ping"
@@ -127,6 +123,7 @@ const (
 	FileTypeImage = "image"
 	FileTypeVideo = "video"
 	FileTypeAudio = "audio"
+	FileTypePdf   = "pdf"
 )
 
 const (

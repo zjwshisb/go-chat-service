@@ -4,6 +4,7 @@ import (
 	"context"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -17,6 +18,7 @@ var DefaultFileSize = map[string]int{
 	consts.FileTypeImage: 5 * 1024 * 1024,
 	consts.FileTypeVideo: 10 * 1024 * 1024,
 	consts.FileTypeAudio: 5 * 1024 * 1024,
+	consts.FileTypePdf:   20 * 1024 * 1024,
 }
 
 var (
@@ -38,13 +40,17 @@ func FileType(file multipart.File) (string, error) {
 		return "", err
 	}
 	mimetype := http.DetectContentType(buffer)
+	g.Dump(mimetype)
 	index := strings.Index(mimetype, "/")
 	if index < 0 {
-		return "", gerror.New("不支持的文件类型")
+		return "", gerror.NewCode(gcode.CodeValidationFailed, "不支持的文件类型")
 	}
 	types := mimetype[:index]
+	if types == "application" {
+		types = mimetype[index+1:]
+	}
 	if _, exist := DefaultFileSize[types]; !exist {
-		return "", gerror.New("不支持的文件类型")
+		return "", gerror.NewCode(gcode.CodeValidationFailed, "不支持的文件类型")
 	}
 	return types, nil
 }

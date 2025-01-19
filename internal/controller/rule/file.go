@@ -22,7 +22,7 @@ func init() {
 }
 
 var (
-	UnSupportFileError = gerror.New("不支持的文件类型")
+	UnSupportFileError = gerror.NewCode(gcode.CodeValidationFailed, "不支持的文件类型")
 )
 
 // v:"file-dir"
@@ -78,6 +78,8 @@ func file(ctx context.Context, in gvalid.RuleFuncInput) error {
 		return err
 	}
 	defaultSize, exist := storage.DefaultFileSize[uploadFileType]
+	g.Dump(allowFileType)
+
 	if !exist {
 		return UnSupportFileError
 	}
