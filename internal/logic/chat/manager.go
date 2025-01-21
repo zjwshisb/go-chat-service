@@ -48,7 +48,7 @@ type connManager interface {
 	run()
 	ping()
 	SendAction(act *api.ChatAction, conn ...iWsConn)
-	handleMessage(conn iWsConn, msg *model.CustomerChatMessage)
+	handleMessage(ctx context.Context, conn iWsConn, msg *model.CustomerChatMessage)
 	noticeRead(ctx context.Context, customerId uint, uid uint, msgIds []uint, forceLocal ...bool) error
 }
 
@@ -140,8 +140,7 @@ func (m *manager) getSpread(customerId uint) *shard {
 	return m.shard[m.getMod(customerId)]
 }
 
-func (m *manager) handleMessage(conn iWsConn, msg *model.CustomerChatMessage) {
-	ctx := gctx.New()
+func (m *manager) handleMessage(ctx context.Context, conn iWsConn, msg *model.CustomerChatMessage) {
 	err := m.trigger(ctx, eventMessage, eventArg{
 		conn: conn,
 		msg:  msg,

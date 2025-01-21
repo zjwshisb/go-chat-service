@@ -211,7 +211,7 @@ func (c *client) readMsg() {
 						}
 						msg.CustomerId = c.getCustomerId()
 						msg.ReceivedAt = gtime.Now()
-						c.manager.handleMessage(c, msg)
+						c.manager.handleMessage(ctx, c, msg)
 						c.lastActive = gtime.Now()
 					}
 				}
