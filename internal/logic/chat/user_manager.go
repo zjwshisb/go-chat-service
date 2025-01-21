@@ -22,7 +22,7 @@ import (
 
 func newUserManager(cluster bool) *userManager {
 	userM = &userManager{
-		newManager(10, 100, time.Minute, cluster, consts.WsTypeUser),
+		newManager(10, time.Minute, cluster, consts.WsTypeUser),
 	}
 	userM.on(eventRegister, userM.onRegister)
 	userM.on(eventUnRegister, userM.onUnRegister)

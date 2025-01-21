@@ -48,8 +48,7 @@ type connManager interface {
 	run()
 	ping()
 	SendAction(act *api.ChatAction, conn ...iWsConn)
-	receiveMessage(cm *chatConnMessage)
-	handleReceiveMessage()
+	handleMessage(conn iWsConn, msg *model.CustomerChatMessage)
 	noticeRead(ctx context.Context, customerId uint, uid uint, msgIds []uint, forceLocal ...bool) error
 }
 
@@ -58,10 +57,9 @@ type eventArg struct {
 	msg  *model.CustomerChatMessage
 }
 
-func newManager(shareCount uint, msgCount int, pingDuration time.Duration, cluster bool, types string) *manager {
+func newManager(shareCount uint, pingDuration time.Duration, cluster bool, types string) *manager {
 	return &manager{
 		shardCount:   shareCount,
-		connMessages: make(chan *chatConnMessage, msgCount),
 		events:       nil,
 		pingDuration: pingDuration,
 		cluster:      cluster,
@@ -72,7 +70,6 @@ func newManager(shareCount uint, msgCount int, pingDuration time.Duration, clust
 type manager struct {
 	shardCount   uint                     // 分组数量, 默认 10
 	shard        []*shard                 // 分组切片
-	connMessages chan *chatConnMessage    // 接受从conn所读取消息的chan
 	events       map[string][]eventHandle // 事件
 	pingDuration time.Duration            // default to 10 seconds
 	cluster      bool
@@ -143,25 +140,14 @@ func (m *manager) getSpread(customerId uint) *shard {
 	return m.shard[m.getMod(customerId)]
 }
 
-// ReceiveMessage 接受消息
-func (m *manager) receiveMessage(cm *chatConnMessage) {
-	m.connMessages <- cm
-}
-
-// 从conn接受消息并处理
-func (m *manager) handleReceiveMessage() {
-	for {
-		payload := <-m.connMessages
-		go func() {
-			ctx := gctx.New()
-			err := m.trigger(ctx, eventMessage, eventArg{
-				conn: payload.Conn,
-				msg:  payload.Msg,
-			})
-			if err != nil {
-				log.Errorf(ctx, "%+v", err)
-			}
-		}()
+func (m *manager) handleMessage(conn iWsConn, msg *model.CustomerChatMessage) {
+	ctx := gctx.New()
+	err := m.trigger(ctx, eventMessage, eventArg{
+		conn: conn,
+		msg:  msg,
+	})
+	if err != nil {
+		log.Errorf(ctx, "%+v", err)
 	}
 }
 
@@ -430,6 +416,5 @@ func (m *manager) run() {
 			mutex: &sync.RWMutex{},
 		}
 	}
-	go m.handleReceiveMessage()
 	go m.ping()
 }

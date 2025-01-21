@@ -20,7 +20,7 @@ import (
 
 func newAdminManager(cluster bool) *adminManager {
 	adminM = &adminManager{
-		newManager(10, 100, time.Minute, cluster, consts.WsTypeAdmin),
+		newManager(10, time.Minute, cluster, consts.WsTypeAdmin),
 	}
 	adminM.on(eventRegister, adminM.onRegister)
 	adminM.on(eventUnRegister, adminM.onUnRegister)
