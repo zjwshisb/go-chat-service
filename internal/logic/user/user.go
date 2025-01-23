@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	api "gf-chat/api/backend/v1"
+	"gf-chat/internal/consts"
 	"gf-chat/internal/dao"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
@@ -49,6 +50,7 @@ func (s *sUser) GetActiveCount(ctx context.Context, customerId uint, date *gtime
 		WhereGTE("created_at", date.StartOfDay().String()).
 		Where("customer_id", customerId).
 		WhereLTE("created_at", date.EndOfDay().String()).
+		Where("source", consts.MessageSourceUser).
 		Fields("user_id").Count()
 	return
 }
