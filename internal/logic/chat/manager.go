@@ -40,6 +40,7 @@ type connContainer interface {
 	getOnlineUserIds(ctx context.Context, gid uint, forceLocal ...bool) ([]uint, error)
 	setUserServer(ctx context.Context, uid uint, server string) error
 	getUserServer(ctx context.Context, uid uint) (string, error)
+	removeUserServer(ctx context.Context, uid uint) error
 	getConnInfo(ctx context.Context, customerId, uid uint, forceLocal ...bool) (bool, string, error)
 }
 
@@ -389,8 +390,8 @@ func (m *manager) ping() {
 			for _, s := range m.shard {
 				conns := s.getAll()
 				for _, conn := range conns {
-					// 如果连接超过60分钟没有活动，则关闭连接
-					duration := gtime.Now().Second() - conn.getLastActive().Second()
+					// 超过60分钟没有活动，则关闭连接，节省资源
+					duration := gtime.Now().Unix() - conn.getLastActive().Unix()
 					if duration > 60*60 {
 						conn.close()
 					} else {

@@ -44,6 +44,7 @@ func HandlerResponse(r *ghttp.Request) {
 			return
 		} else if code == gcode.CodeBusinessValidationFailed {
 			r.Response.WriteJson(api.NewFailResp(msg, code.Code()))
+			return
 			// 业务错误
 		} else {
 			g.Log().Errorf(r.Context(), "%+v", err)

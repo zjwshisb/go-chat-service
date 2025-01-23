@@ -10,7 +10,7 @@
 
 依赖
 - mysql
-- redis
+- redis(6+，低版本可能会出现不兼容)
 - etcd|polaris|zookeeper(集群部署情况下,默认etcd)
 
 
