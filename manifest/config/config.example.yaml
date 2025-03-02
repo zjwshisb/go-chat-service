@@ -20,7 +20,7 @@ database:
     stdout: true
   default:
     type: "mysql"
-    link: "root:zjw8837533@tcp(120.77.242.145:3306)/testchat?loc=Local&parseTime=true"
+    link: "root:123456@tcp(127.0.0.1:3306)/chat?loc=Local&parseTime=true"
     debug: true
     charset: "utf8mb4"
 redis:
