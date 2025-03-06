@@ -11,10 +11,11 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
-	"github.com/gogf/gf/v2/errors/gcode"
-	"github.com/gogf/gf/v2/os/gtime"
 	"strconv"
 	"time"
+
+	"github.com/gogf/gf/v2/errors/gcode"
+	"github.com/gogf/gf/v2/os/gtime"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/os/gcache"
@@ -34,6 +35,23 @@ type userManager struct {
 	*manager
 }
 
+// deliveryMessage delivers a message to the appropriate user connection
+// Returns error if delivery fails
+// deliveryMessage delivers a chat message to a user's websocket connection.
+// It handles both local and remote message delivery in a clustered environment.
+//
+// Parameters:
+// - ctx: The context for the operation
+// - message: The chat message to deliver containing user ID, customer ID etc.
+// - forceLocal: Optional bool to force local delivery even in clustered mode
+//
+// The method:
+// 1. Checks if the target user is connected locally or on a remote server
+// 2. For local users, delivers directly to their websocket connection
+// 3. For remote users, forwards the message via gRPC to the appropriate server
+// 4. Handles special message types like ratings that require additional processing
+//
+// Returns error if message delivery fails
 func (s *userManager) deliveryMessage(ctx context.Context, message *model.CustomerChatMessage, forceLocal ...bool) error {
 	userLocal, server, err := s.isUserLocal(ctx, message.UserId)
 	if err != nil {
@@ -95,6 +113,17 @@ func (s *userManager) noticeQueueLocation(ctx context.Context, conn iWsConn) (er
 	return
 }
 
+// broadcastQueueLocation broadcasts the current queue position to all connected users for a given customer ID.
+// It checks if queue display is enabled for the customer, then either:
+// 1. For local connections: Notifies all connected users of their position in queue
+// 2. For cluster mode: Broadcasts the queue update to all servers via gRPC
+//
+// Parameters:
+//   - ctx: The context for the request
+//   - customerId: ID of the customer whose queue to broadcast
+//   - forceLocal: Optional parameter to force local-only processing even in cluster mode
+//
+// Returns error if the broadcast fails
 func (s *userManager) broadcastQueueLocation(ctx context.Context, customerId uint, forceLocal ...bool) (err error) {
 	isSHowQueue, err := service.ChatSetting().GetIsUserShowQueue(ctx, customerId)
 	if err != nil {
@@ -134,7 +163,19 @@ func (s *userManager) broadcastQueueLocation(ctx context.Context, customerId uin
 	return
 }
 
-// 处理消息
+// onMessage handles incoming messages from users
+// It processes the message by:
+// 1. Setting message source and user ID
+// 2. Getting the valid admin for the user
+// 3. Inserting the message into storage
+// 4. Sending receipt to user
+// 5. Handling message delivery to admin if online, or offline handling if not
+//
+// Parameters:
+//   - ctx: The context for the request
+//   - arg: Event arguments containing the message and connection
+//
+// Returns error if message processing fails
 func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 	msg := arg.msg
 	conn := arg.conn
@@ -341,7 +382,15 @@ func (s *userManager) onRegister(ctx context.Context, arg eventArg) (err error) 
 	return err
 }
 
-// 加入人工列表
+// addToManual adds a user to the manual chat queue and handles the initial setup
+// It checks if the user is already in queue, finds available admins, and handles offline admin scenarios
+// Parameters:
+//   - ctx: The context for the operation
+//   - user: The chat user to add to manual queue
+//
+// Returns:
+//   - session: The created chat session if successful
+//   - error: Error if operation fails
 func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session *model.CustomerChatSession, err error) {
 	in, err := manual.isInSet(ctx, user.getPrimaryKey(), user.getCustomerId())
 	if err != nil {
@@ -415,7 +464,17 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 	return
 }
 
-// 触发事件
+// triggerMessageEvent handles triggering auto-reply rules based on message events.
+// It checks if any auto-reply rules match the given scene and message content,
+// and executes the appropriate action (transfer to manual service or send auto-reply).
+//
+// Parameters:
+//   - ctx: The context for the operation
+//   - scene: The scene identifier for matching rules (e.g. admin online/offline)
+//   - message: The chat message that triggered the event
+//   - userConn: The websocket connection of the user
+//
+// Returns error if any operation fails during rule processing
 func (s *userManager) triggerMessageEvent(ctx context.Context, scene string, message *model.CustomerChatMessage, userConn iWsConn) (err error) {
 	user := userConn.getUser()
 	rules, err := service.AutoRule().AllActive(ctx, user.getCustomerId())

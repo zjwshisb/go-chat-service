@@ -3,10 +3,11 @@ package backend
 import (
 	"context"
 	baseApi "gf-chat/api"
-	"gf-chat/api/backend/v1"
+	v1 "gf-chat/api/backend/v1"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+
 	"github.com/duke-git/lancet/v2/maputil"
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/duke-git/lancet/v2/strutil"
