@@ -6,13 +6,14 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"sync"
+	"unicode/utf8"
+
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/guid"
-	"sync"
-	"unicode/utf8"
 
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -91,12 +92,13 @@ func (c *client) getUserId() uint {
 	return c.user.getPrimaryKey()
 }
 
+// runs the client's read and send message goroutines
 func (c *client) run() {
 	go c.readMsg()
 	go c.sendMsg()
 }
 
-// Close 幂等close方法 关闭连接，相关清理
+// closes the connection and unregisters the client from the manager
 func (c *client) close() {
 	c.Once.Do(func() {
 		close(c.closeSignal)
@@ -105,7 +107,12 @@ func (c *client) close() {
 	})
 }
 
-// 发送消息验证
+// validates a chat message before sending it:
+// - Checks rate limiting to prevent spam
+// - Validates content length (non-empty and under 512 chars)
+// - Validates request ID exists and is valid length (1-20 chars)
+// - Validates message type is allowed
+// Returns error if validation fails
 func (c *client) validate(data map[string]interface{}) error {
 	if !c.limiter.Allow() {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "发送过于频繁，请慢一些")
@@ -162,7 +169,14 @@ func (c *client) isTypeValid(t string) bool {
 	return slice.Contain(allowTypes, t)
 }
 
-// ReadMsg 从websocket读消息
+// readMsg continuously reads messages from the websocket connection.
+// It runs in a goroutine and handles incoming messages by:
+// 1. Reading raw messages from the websocket connection
+// 2. Unmarshaling them into ChatAction objects
+// 3. Validating the message data
+// 4. Processing messages based on their action type (e.g. sending messages)
+// 5. Updating the last active timestamp
+// The method will exit when the connection is closed via the closeSignal channel.
 func (c *client) readMsg() {
 	var msg = make(chan []byte, 50)
 	for {
@@ -201,12 +215,10 @@ func (c *client) readMsg() {
 						log.Errorf(ctx, "%+v", err)
 					} else {
 						iu := c.getUser()
-						switch iu.(type) {
+						switch u := iu.(type) {
 						case *admin:
-							u := iu.(*admin)
 							msg.Admin = u.Entity
 						case *user:
-							u := iu.(*user)
 							msg.User = u.Entity
 						}
 						msg.CustomerId = c.getCustomerId()
@@ -229,7 +241,22 @@ func (c *client) deliver(act *api.ChatAction) {
 	c.send <- act
 }
 
-// SendMsg 发消息
+// sendMsg handles sending messages to the websocket connection. It runs in a separate goroutine and continuously processes messages until closed.
+// It handles:
+// - Receiving ChatAction messages from the client's send channel
+// - Marshaling messages to JSON format before sending
+// - Sending messages over the websocket connection using WriteMessage
+// - Special action handling:
+//   - ActionMoreThanOne: Closes connection when user has multiple active sessions
+//   - ActionOtherLogin: Closes connection when user logs in elsewhere
+//   - ActionReceiveMessage: Updates message send timestamp in database after successful delivery
+//
+// - Graceful shutdown via closeSignal channel
+// - Error handling for marshal/send failures
+// The method blocks until either:
+// 1. An unrecoverable error occurs during message sending
+// 2. The connection is explicitly closed
+// 3. The closeSignal channel receives a shutdown signal
 func (c *client) sendMsg() {
 	for {
 		select {

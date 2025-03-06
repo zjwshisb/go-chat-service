@@ -2,20 +2,21 @@ package chat
 
 import (
 	"context"
-	"gf-chat/api/backend/v1"
+	v1 "gf-chat/api/backend/v1"
 	grpc "gf-chat/api/chat/v1"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"sort"
+	"time"
+
 	"github.com/duke-git/lancet/v2/maputil"
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
-	"sort"
-	"time"
 )
 
 func newAdminManager(cluster bool) *adminManager {
@@ -32,7 +33,8 @@ type adminManager struct {
 	*manager
 }
 
-// 投递消息
+// deliveryMessage delivers a message to the appropriate admin connection
+// Returns error if delivery fails
 func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerChatMessage, forceLocal ...bool) error {
 	userLocal, server, err := m.isUserLocal(ctx, msg.AdminId)
 	if err != nil {
@@ -60,7 +62,8 @@ func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerC
 	return nil
 }
 
-// 处理离线消息
+// handleOffline handles offline messages
+// Returns error if handling fails
 func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerChatMessage, userConn iWsConn) error {
 	err := userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOffline, msg, userConn)
 	if err != nil {
@@ -89,7 +92,8 @@ func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerCha
 	return nil
 }
 
-// 处理消息
+// onMessage handles incoming messages
+// Returns error if handling fails
 func (m *adminManager) onMessage(ctx context.Context, arg eventArg) error {
 	msg := arg.msg
 	conn := arg.conn
@@ -125,7 +129,8 @@ func (m *adminManager) onMessage(ctx context.Context, arg eventArg) error {
 	return nil
 }
 
-// 注册事件处理器
+// onRegister handles admin registration events
+// Returns error if handling fails
 func (m *adminManager) onRegister(ctx context.Context, arg eventArg) error {
 	err := m.broadcastOnlineAdmins(ctx, arg.conn.getCustomerId())
 	if err != nil {
@@ -142,7 +147,8 @@ func (m *adminManager) onRegister(ctx context.Context, arg eventArg) error {
 	return nil
 }
 
-// 注销事件处理器
+// onUnRegister handles admin unregistration events
+// Returns error if handling fails
 func (m *adminManager) onUnRegister(ctx context.Context, arg eventArg) error {
 	err := service.Admin().UpdateLastOnline(ctx, arg.conn.getUserId())
 	if err != nil {
@@ -155,7 +161,8 @@ func (m *adminManager) onUnRegister(ctx context.Context, arg eventArg) error {
 	return nil
 }
 
-// 广播待接入用户
+// broadcastWaitingUser broadcasts waiting users to the appropriate admin connections
+// Returns error if broadcasting fails
 func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint, forceLocal ...bool) (err error) {
 	if m.isCallLocal(forceLocal...) {
 		sessions, err := service.ChatSession().GetUnAccepts(ctx, customerId)
@@ -216,7 +223,8 @@ func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint
 	}
 }
 
-// 广播在线客服
+// broadcastOnlineAdmins broadcasts online admins to the appropriate admin connections
+// Returns error if broadcasting fails
 func (m *adminManager) broadcastOnlineAdmins(ctx context.Context, customerId uint, forceLocal ...bool) error {
 	if m.isCallLocal(forceLocal...) {
 		admins, err := service.Admin().All(ctx, do.CustomerAdmins{
@@ -268,7 +276,8 @@ func (m *adminManager) noticeRate(message *model.CustomerChatMessage) {
 	}
 }
 
-// 用户离线通知
+// noticeUserOffline sends a user offline notification to the appropriate admin connections
+// Returns error if sending fails
 func (m *adminManager) noticeUserOffline(ctx context.Context, uid uint, forceLocal ...bool) (err error) {
 	adminId, err := relation.getUserValidAdmin(ctx, uid)
 	if err != nil {
@@ -302,7 +311,8 @@ func (m *adminManager) noticeUserOffline(ctx context.Context, uid uint, forceLoc
 	return nil
 }
 
-// 用户在线通知
+// noticeUserOnline sends a user online notification to the appropriate admin connections
+// Returns error if sending fails
 func (m *adminManager) noticeUserOnline(ctx context.Context, uid uint, platform string, forceLocal ...bool) (err error) {
 	adminId, err := relation.getUserValidAdmin(ctx, uid)
 	if adminId > 0 {
@@ -336,7 +346,8 @@ func (m *adminManager) noticeUserOnline(ctx context.Context, uid uint, platform 
 	return nil
 }
 
-// 用户转接通知
+// noticeUserTransfer sends a user transfer notification to the appropriate admin connections
+// Returns error if sending fails
 func (m *adminManager) noticeUserTransfer(ctx context.Context, customerId, adminId uint, forceLocal ...bool) error {
 	userLocal, server, err := m.isUserLocal(ctx, adminId)
 	if err != nil {
@@ -380,7 +391,8 @@ func (m *adminManager) noticeUserTransfer(ctx context.Context, customerId, admin
 	return nil
 }
 
-// 更新设置
+// updateSetting updates the setting for an admin
+// Returns error if updating fails
 func (m *adminManager) updateSetting(ctx context.Context, id uint, forceLocal ...bool) error {
 	u, err := service.Admin().Find(ctx, id)
 	if err != nil {

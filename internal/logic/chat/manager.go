@@ -7,6 +7,9 @@ import (
 	v1 "gf-chat/api/chat/v1"
 	"gf-chat/internal/model"
 	"gf-chat/internal/service"
+	"sync"
+	"time"
+
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/container/garray"
 	"github.com/gogf/gf/v2/database/gredis"
@@ -14,8 +17,6 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
-	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -141,6 +142,8 @@ func (m *manager) getSpread(customerId uint) *shard {
 	return m.shard[m.getMod(customerId)]
 }
 
+// handleMessage handles incoming messages
+// Triggers the message event for the given connection and message
 func (m *manager) handleMessage(ctx context.Context, conn iWsConn, msg *model.CustomerChatMessage) {
 	err := m.trigger(ctx, eventMessage, eventArg{
 		conn: conn,
@@ -151,7 +154,17 @@ func (m *manager) handleMessage(ctx context.Context, conn iWsConn, msg *model.Cu
 	}
 }
 
-// websocket重复链接，通知旧的连接并关闭
+// noticeRepeatConnect checks if a user is already connected and sends a notification if they are
+// connecting from multiple locations. It handles both local and remote (cluster) connections.
+//
+// Parameters:
+//   - ctx: Context for the operation
+//   - uid: User ID to check for repeat connections
+//   - customerId: Customer ID the user belongs to
+//   - newUuid: UUID of the new connection attempt
+//   - forceLocal: Optional bool to force local-only check, ignoring cluster
+//
+// Returns error if the check fails
 func (m *manager) noticeRepeatConnect(ctx context.Context, uid, customerId uint, newUuid string, forceLocal ...bool) error {
 	userLocal, server, err := m.isUserLocal(ctx, uid)
 	if err != nil {
@@ -180,7 +193,11 @@ func (m *manager) noticeRepeatConnect(ctx context.Context, uid, customerId uint,
 	return nil
 }
 
-// 判断用户是否在本地服务上，可以省一次rpc调用
+// isUserLocal checks if a user is connected locally or on a remote server
+// Returns:
+// - bool: true if user is local, false otherwise
+// - string: server name if user is remote, empty string otherwise
+// - error: error if retrieval fails
 func (m *manager) isUserLocal(ctx context.Context, id uint) (bool, string, error) {
 	if !m.cluster {
 		return true, "", nil
@@ -192,6 +209,9 @@ func (m *manager) isUserLocal(ctx context.Context, id uint) (bool, string, error
 	return server == service.Grpc().GetServerName(), server, nil
 }
 
+// isCallLocal checks if the local flag is set or if the cluster is disabled
+// Returns:
+// - bool: true if local flag is set or cluster is disabled, false otherwise
 func (m *manager) isCallLocal(forceLocal ...bool) bool {
 	local := false
 	if len(forceLocal) > 0 {
@@ -200,6 +220,8 @@ func (m *manager) isCallLocal(forceLocal ...bool) bool {
 	return local || !m.cluster
 }
 
+// getOnlineUserIds retrieves user IDs of online users for a given customer ID
+// Returns error if retrieval fails
 func (m *manager) getOnlineUserIds(ctx context.Context, customerId uint, forceLocal ...bool) ([]uint, error) {
 	if m.isCallLocal(forceLocal...) {
 		s := m.getSpread(customerId)
@@ -250,6 +272,11 @@ func (m *manager) getConn(customerId, uid uint) (iWsConn, bool) {
 	return s.get(uid)
 }
 
+// getConnInfo retrieves connection information for a given customer ID and user ID
+// Returns:
+// - bool: true if connection exists, false otherwise
+// - string: platform of the connection
+// - error: error if retrieval fails
 func (m *manager) getConnInfo(ctx context.Context, customerId, uid uint, forceLocal ...bool) (bool, string, error) {
 	userLocal, server, _ := m.isUserLocal(ctx, uid)
 	if m.isCallLocal(forceLocal...) || userLocal {
@@ -298,6 +325,8 @@ func (m *manager) getAllConn(customerId uint) (conns []iWsConn) {
 	return
 }
 
+// unregister unregisters a client from the manager
+// Removes the client from the connection map and triggers the unregister event
 func (m *manager) unregister(conn iWsConn) {
 	ctx := gctx.New()
 	existConn, exist := m.getConn(conn.getCustomerId(), conn.getUserId())
@@ -320,6 +349,8 @@ func (m *manager) unregister(conn iWsConn) {
 	}
 }
 
+// register registers a client with the manager
+// Adds the client to the connection map and triggers the register event
 func (m *manager) register(ctx context.Context, conn *websocket.Conn, user iChatUser, platform string) error {
 	client := newClient(conn, user, platform)
 	client.manager = m
@@ -342,6 +373,9 @@ func (m *manager) register(ctx context.Context, conn *websocket.Conn, user iChat
 	})
 	return err
 }
+
+// noticeRead notifies the read action for a given customer ID and user ID
+// Returns error if notification fails
 func (m *manager) noticeRead(ctx context.Context, customerId, uid uint, msgIds []uint, forceLocal ...bool) (err error) {
 	userLocal, server, err := m.isUserLocal(ctx, uid)
 	if err != nil {
@@ -373,10 +407,8 @@ func (m *manager) noticeRead(ctx context.Context, customerId, uid uint, msgIds [
 	return nil
 }
 
-// Ping
-// 给所有客户端发送心跳
-// 客户端因意外断开链接，服务器没有关闭事件，无法得知连接已关闭
-// 通过心跳发送""字符串，如果发送失败，则调用conn的close方法执行清理
+// ping sends ping actions to all connections in the manager
+// It runs in a separate goroutine and sends ping actions every 60 seconds
 func (m *manager) ping() {
 	duration := m.pingDuration
 	if duration == 0 {
@@ -403,6 +435,7 @@ func (m *manager) ping() {
 	}
 }
 
+// run initializes the shard structure and starts the ping goroutine
 func (m *manager) run() {
 	count := m.shardCount
 	if count == 0 {

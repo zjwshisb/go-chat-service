@@ -8,6 +8,8 @@ import (
 	"gf-chat/internal/model"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"time"
+
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -15,7 +17,6 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gorilla/websocket"
-	"time"
 )
 
 var adminM *adminManager
@@ -229,18 +230,12 @@ func (s sChat) Accept(ctx context.Context, admin model.CustomerAdmin, sessionId 
 }
 
 func (s sChat) Register(ctx context.Context, u any, conn *websocket.Conn, platform string) error {
-	switch u.(type) {
+	switch uu := u.(type) {
 	case *model.CustomerAdmin:
-		uu, _ := u.(*model.CustomerAdmin)
-		e := &admin{
-			uu,
-		}
+		e := &admin{uu}
 		return s.admin.register(ctx, conn, e, platform)
 	case *model.User:
-		uu, _ := u.(*model.User)
-		e := &user{
-			uu,
-		}
+		e := &user{uu}
 		return s.user.register(ctx, conn, e, platform)
 	}
 	return gerror.NewCode(gcode.CodeBusinessValidationFailed, "无效的用户模型")

@@ -3,9 +3,10 @@ package chat
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/gogf/gf/v2/database/gredis"
 	"github.com/gogf/gf/v2/util/gconv"
-	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
 )

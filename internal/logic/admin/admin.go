@@ -13,6 +13,7 @@ import (
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
 	"gf-chat/internal/util"
+
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -34,6 +35,8 @@ type sAdmin struct {
 	trait.Curd[model.CustomerAdmin]
 }
 
+// Login authenticates an admin user with username and password, returning the admin model and JWT token if successful.
+// Returns error if authentication fails or admin account is disabled.
 func (s *sAdmin) Login(ctx context.Context, request *ghttp.Request) (admin *model.CustomerAdmin, token string, err error) {
 	username := request.Get("username")
 	password := request.Get("password")
@@ -58,6 +61,9 @@ func (s *sAdmin) Login(ctx context.Context, request *ghttp.Request) (admin *mode
 	}
 	return
 }
+
+// Auth authenticates a user based on their JWT token, returning the admin model and error if authentication fails.
+// Returns error if token is missing or invalid.
 func (s *sAdmin) Auth(ctx g.Ctx, req *ghttp.Request) (admin *model.CustomerAdmin, err error) {
 	token := util.GetRequestToken(req)
 	if token == "" {
@@ -87,6 +93,8 @@ func (s *sAdmin) CanAccess(admin *model.CustomerAdmin) bool {
 	return true
 }
 
+// FindSetting retrieves a customer admin chat setting by admin ID, optionally with file details.
+// Returns error if no setting is found or database query fails.
 func (s *sAdmin) FindSetting(ctx context.Context, adminId uint, withFile bool) (*model.CustomerAdminChatSetting, error) {
 	var setting *model.CustomerAdminChatSetting
 	query := dao.CustomerAdminChatSettings.Ctx(ctx).Where("admin_id", adminId)
@@ -102,6 +110,9 @@ func (s *sAdmin) FindSetting(ctx context.Context, adminId uint, withFile bool) (
 	}
 	return setting, nil
 }
+
+// GenSetting generates a new customer admin chat setting for a given admin.
+// Returns error if database save fails.
 func (s *sAdmin) GenSetting(ctx context.Context, admin *model.CustomerAdmin) (*model.CustomerAdminChatSetting, error) {
 	setting := &model.CustomerAdminChatSetting{
 		CustomerAdminChatSettings: entity.CustomerAdminChatSettings{
@@ -124,6 +135,8 @@ func (s *sAdmin) GenSetting(ctx context.Context, admin *model.CustomerAdmin) (*m
 	return setting, nil
 }
 
+// UpdateLastOnline updates the last online timestamp for a customer admin.
+// Returns error if database update fails.
 func (s *sAdmin) UpdateLastOnline(ctx context.Context, adminId uint) error {
 	_, err := dao.CustomerAdminChatSettings.Ctx(ctx).Where("admin_id", adminId).Update(do.CustomerAdminChatSettings{
 		LastOnline: gtime.Now(),
@@ -131,6 +144,8 @@ func (s *sAdmin) UpdateLastOnline(ctx context.Context, adminId uint) error {
 	return err
 }
 
+// UpdateSetting updates the chat setting for a customer admin.
+// Returns error if database update fails.
 func (s *sAdmin) UpdateSetting(ctx context.Context, admin *model.CustomerAdmin, form api.CurrentAdminSettingForm) (err error) {
 	updateData := do.CustomerAdminChatSettings{
 		Name:           form.Name,
@@ -177,6 +192,9 @@ func (s *sAdmin) UpdateSetting(ctx context.Context, admin *model.CustomerAdmin, 
 	}
 	return
 }
+
+// GetAndFindSetting retrieves a customer admin chat setting, either from the admin's setting or from the database.
+// Returns error if database query fails.
 func (s *sAdmin) GetAndFindSetting(ctx context.Context, admin *model.CustomerAdmin) (*model.CustomerAdminChatSetting, error) {
 	if admin.Setting != nil {
 		return admin.Setting, nil
@@ -184,6 +202,9 @@ func (s *sAdmin) GetAndFindSetting(ctx context.Context, admin *model.CustomerAdm
 		return s.FindSetting(ctx, admin.Id, true)
 	}
 }
+
+// GetApiSetting retrieves a customer admin chat setting and converts it to an API format.
+// Returns error if database query fails.
 func (s *sAdmin) GetApiSetting(ctx context.Context, admin *model.CustomerAdmin) (*api.CurrentAdminSetting, error) {
 	var setting *model.CustomerAdminChatSetting
 	if admin.Setting != nil {
@@ -224,9 +245,10 @@ func (s *sAdmin) GetApiSetting(ctx context.Context, admin *model.CustomerAdmin) 
 		apiSetting.Avatar, _ = service.File().FindAnd2Api(ctx, setting.Avatar)
 	}
 	return apiSetting, nil
-
 }
 
+// GetAvatar retrieves the avatar URL for a customer admin, either from the admin's setting or from the database.
+// Returns error if retrieval fails.
 func (s *sAdmin) GetAvatar(ctx context.Context, admin *model.CustomerAdmin) (string, error) {
 	setting, err := s.GetAndFindSetting(ctx, admin)
 	if err != nil {
@@ -246,6 +268,8 @@ func (s *sAdmin) GetAvatar(ctx context.Context, admin *model.CustomerAdmin) (str
 	return "", nil
 }
 
+// GetChatName retrieves the chat name for a customer admin, either from the admin's setting or from the database.
+// Returns error if retrieval fails.
 func (s *sAdmin) GetChatName(ctx context.Context, admin *model.CustomerAdmin) (string, error) {
 	setting, err := s.GetAndFindSetting(ctx, admin)
 	if err != nil {
@@ -257,6 +281,8 @@ func (s *sAdmin) GetChatName(ctx context.Context, admin *model.CustomerAdmin) (s
 	return admin.Username, nil
 }
 
+// GetAdminsWithSetting retrieves all customer admins with their settings, optionally filtered by a where clause.
+// Returns error if database query fails.
 func (s *sAdmin) GetAdminsWithSetting(ctx context.Context, where any) (res []*model.CustomerAdmin, err error) {
 	err = s.Dao.Ctx(ctx).Where(where).WithAll().Scan(&res)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {

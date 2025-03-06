@@ -12,6 +12,10 @@ var (
 	Def *gcache.Cache
 )
 
+// init initializes the cache
+// It sets the cache adapter based on the configuration
+// If the adapter is redis, it creates a new redis connection and sets it as the adapter
+// Otherwise, it sets the default adapter
 func init() {
 	ctx := gctx.New()
 	cacheAdapter, err := g.Config().Get(ctx, "cache.adapter")

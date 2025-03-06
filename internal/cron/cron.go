@@ -4,10 +4,11 @@ import (
 	"context"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
+	"time"
+
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtimer"
-	"time"
 )
 
 func Run() {
