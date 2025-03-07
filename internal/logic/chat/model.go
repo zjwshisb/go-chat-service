@@ -13,11 +13,6 @@ type iChatUser interface {
 	accessTo(user iChatUser) bool
 }
 
-type chatConnMessage struct {
-	Conn iWsConn
-	Msg  *model.CustomerChatMessage
-}
-
 type user struct {
 	Entity *model.User
 }
