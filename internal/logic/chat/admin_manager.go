@@ -19,8 +19,11 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 )
 
+// newAdminManager creates a new admin manager
+// cluster: whether to use cluster mode
+// Returns: a pointer to the admin manager
 func newAdminManager(cluster bool) *adminManager {
-	adminM = &adminManager{
+	adminM := &adminManager{
 		newManager(10, time.Minute, cluster, consts.WsTypeAdmin),
 	}
 	adminM.on(eventRegister, adminM.onRegister)
@@ -219,6 +222,9 @@ func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint
 				log.Errorf(ctx, "%+v", err)
 			}
 		})
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 }
@@ -289,6 +295,9 @@ func (m *adminManager) noticeUserOffline(ctx context.Context, uid uint, forceLoc
 			return err
 		}
 		adminLocal, server, err := m.isUserLocal(ctx, adminModel.Id)
+		if err != nil {
+			return err
+		}
 		if m.isCallLocal(forceLocal...) || adminLocal {
 			conn, exist := m.getConn(adminModel.CustomerId, adminModel.Id)
 			if exist {
@@ -315,6 +324,9 @@ func (m *adminManager) noticeUserOffline(ctx context.Context, uid uint, forceLoc
 // Returns error if sending fails
 func (m *adminManager) noticeUserOnline(ctx context.Context, uid uint, platform string, forceLocal ...bool) (err error) {
 	adminId, err := relation.getUserValidAdmin(ctx, uid)
+	if err != nil {
+		return err
+	}
 	if adminId > 0 {
 		adminModel, err := service.Admin().First(ctx, do.CustomerAdmins{Id: adminId})
 		if err != nil {

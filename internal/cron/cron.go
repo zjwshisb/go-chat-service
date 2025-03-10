@@ -2,6 +2,7 @@ package cron
 
 import (
 	"context"
+	"fmt"
 	"gf-chat/internal/model/do"
 	"gf-chat/internal/service"
 	"time"
@@ -18,6 +19,7 @@ func Run() {
 		if err != nil {
 			g.Log().Errorf(ctx, "%+v", err)
 		}
+		fmt.Scan()
 		for _, admin := range admins {
 			invalidIds, err := service.Chat().GetInvalidUsers(ctx, admin.Id)
 			if err != nil {

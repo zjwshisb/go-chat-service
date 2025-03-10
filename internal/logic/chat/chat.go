@@ -54,6 +54,12 @@ func (s sChat) GetUsersWithLimitTime(ctx gctx.Ctx, adminId uint) (uids []uint, t
 	return relation.getUsersWithLimitTime(ctx, adminId)
 }
 
+// GetUsersByAdmin 获取客服的所有用户
+func (s sChat) GetUsersByAdmin(ctx gctx.Ctx, adminId uint) ([]uint, error) {
+	uids, _, err := relation.getUsersWithLimitTime(ctx, adminId)
+	return uids, err
+}
+
 func (s sChat) GetInvalidUsers(ctx gctx.Ctx, adminId uint) ([]uint, error) {
 	return relation.getInvalidUsers(ctx, adminId)
 }

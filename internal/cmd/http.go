@@ -8,6 +8,7 @@ import (
 	_ "gf-chat/internal/controller/rule"
 	"gf-chat/internal/cron"
 	"gf-chat/internal/service"
+
 	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"

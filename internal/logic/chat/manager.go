@@ -415,24 +415,22 @@ func (m *manager) ping() {
 		duration = time.Second * 60
 	}
 	ticker := time.NewTicker(duration)
-	for {
-		select {
-		case <-ticker.C:
-			ping := action.newPing()
-			for _, s := range m.shard {
-				conns := s.getAll()
-				for _, conn := range conns {
-					// 超过60分钟没有活动，则关闭连接，节省资源
-					duration := gtime.Now().Unix() - conn.getLastActive().Unix()
-					if duration > 60*60 {
-						conn.close()
-					} else {
-						m.SendAction(ping, conn)
-					}
+	for range ticker.C {
+		ping := action.newPing()
+		for _, s := range m.shard {
+			conns := s.getAll()
+			for _, conn := range conns {
+				// 超过60分钟没有活动，则关闭连接，节省资源
+				duration := gtime.Now().Unix() - conn.getLastActive().Unix()
+				if duration > 60*60 {
+					conn.close()
+				} else {
+					m.SendAction(ping, conn)
 				}
 			}
 		}
 	}
+
 }
 
 // run initializes the shard structure and starts the ping goroutine

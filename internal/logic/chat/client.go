@@ -36,6 +36,7 @@ type iWsConn interface {
 	createTime() *gtime.Time
 }
 
+// client represents a chat client connection
 type client struct {
 	conn        *websocket.Conn
 	closeSignal chan interface{}     // 连接断开后的广播通道，用于中断readMsg,sendMsg goroutine
@@ -50,6 +51,7 @@ type client struct {
 	platform   string
 }
 
+// newClient creates a new client instance
 func newClient(conn *websocket.Conn, user iChatUser, platform string) *client {
 	return &client{
 		conn:        conn,
@@ -64,13 +66,18 @@ func newClient(conn *websocket.Conn, user iChatUser, platform string) *client {
 		lastActive:  gtime.Now(),
 	}
 }
+
+// GetLastActive returns the last active time of the client
 func (c *client) getLastActive() *gtime.Time {
 	return c.lastActive
 }
+
+// GetCreatedTime returns the creation time of the client
 func (c *client) createTime() *gtime.Time {
 	return c.created
 }
 
+// GetCustomerId returns the customer ID of the client
 func (c *client) getCustomerId() uint {
 	return c.user.getCustomerId()
 }
@@ -80,14 +87,17 @@ func (c *client) getUuid() string {
 	return c.uuid
 }
 
+// GetPlatform returns the platform of the client
 func (c *client) getPlatform() string {
 	return c.platform
 }
 
+// GetUser returns the user of the client
 func (c *client) getUser() iChatUser {
 	return c.user
 }
 
+// GetUserId returns the user ID of the client
 func (c *client) getUserId() uint {
 	return c.user.getPrimaryKey()
 }
@@ -98,7 +108,7 @@ func (c *client) run() {
 	go c.sendMsg()
 }
 
-// closes the connection and unregisters the client from the manager
+// closes the connection and unregister the client from the manager
 func (c *client) close() {
 	c.Once.Do(func() {
 		close(c.closeSignal)
@@ -157,6 +167,7 @@ func (c *client) validate(data map[string]interface{}) error {
 	return nil
 }
 
+// isTypeValid checks if the message type is valid
 func (c *client) isTypeValid(t string) bool {
 	allowTypes := []string{
 		consts.MessageTypeText,
