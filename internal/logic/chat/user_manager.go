@@ -400,6 +400,7 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 		err = gerror.NewCode(gcode.CodeBusinessValidationFailed, "is in")
 		return
 	}
+	fmt.Println(adminM)
 	onlineAdminIds, err := adminM.getOnlineUserIds(ctx, user.getCustomerId())
 	if err != nil {
 		return

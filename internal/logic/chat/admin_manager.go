@@ -23,7 +23,7 @@ import (
 // cluster: whether to use cluster mode
 // Returns: a pointer to the admin manager
 func newAdminManager(cluster bool) *adminManager {
-	adminM := &adminManager{
+	adminM = &adminManager{
 		newManager(10, time.Minute, cluster, consts.WsTypeAdmin),
 	}
 	adminM.on(eventRegister, adminM.onRegister)
