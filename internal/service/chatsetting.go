@@ -16,6 +16,7 @@ type (
 		RemoveCache(ctx context.Context, customerId uint) error
 		GetIsUserShowQueue(ctx context.Context, customerId uint) (isShow bool, err error)
 		GetIsUserShowRead(ctx context.Context, customerId uint) (isShow bool, err error)
+		GetAiOpen(ctx context.Context, customerId uint) (b bool, err error)
 	}
 )
 

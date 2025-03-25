@@ -9,6 +9,7 @@ import (
 	"gf-chat/internal/service"
 	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
 	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 var (
@@ -73,6 +74,16 @@ var (
 			},
 			Options: []api.Option{},
 		},
+		{
+			CustomerChatSettings: entity.CustomerChatSettings{
+				Name:        consts.ChatSettingAiOpen,
+				Title:       "是否开启ai回复",
+				Value:       "",
+				Type:        "select",
+				Description: "用户未被接入时且未在等待待接入时是否启用ai回复",
+			},
+			Options: options1,
+		},
 	}
 
 	rules = []entity.CustomerChatAutoRules{
@@ -101,6 +112,9 @@ type sSetup struct {
 }
 
 func (s *sSetup) Setup(ctx gctx.Ctx, customerId uint) {
+	if customerId <= 0 {
+		panic("invalid customer id:" + gconv.String(customerId))
+	}
 	for _, setting := range settings {
 		m, _ := service.ChatSetting().First(ctx, do.CustomerChatSettings{
 			Name:       setting.Name,

@@ -13,9 +13,11 @@ type (
 		GenReqId() string
 		ToRead(ctx context.Context, where any) (int64, error)
 		GetAdminName(ctx context.Context, model *model.CustomerChatMessage) (string, error)
+		GetAiMessageContext(ctx context.Context, uid uint, curId uint) (res []*model.CustomerChatMessage, err error)
 		ToApi(ctx context.Context, message *model.CustomerChatMessage) (*v1.ChatMessage, error)
 		GetAvatar(ctx context.Context, model *model.CustomerChatMessage) (string, error)
 		NewNotice(session *model.CustomerChatSession, content string) *model.CustomerChatMessage
+		NewAi(content string) *model.CustomerChatMessage
 		NewOffline(ctx context.Context, admin *model.CustomerAdmin) (msg *model.CustomerChatMessage, err error)
 		NewWelcome(ctx context.Context, admin *model.CustomerAdmin) (msg *model.CustomerChatMessage, err error)
 		Insert(ctx context.Context, message *model.CustomerChatMessage) (*model.CustomerChatMessage, error)

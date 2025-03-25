@@ -98,6 +98,7 @@ const (
 	MessageSourceUser   = 0
 	MessageSourceAdmin  = 1
 	MessageSourceSystem = 2
+	MessageSourceAi     = 3
 )
 
 const (
@@ -111,6 +112,7 @@ const (
 	ChatSettingSystemAvatar   = "system-avatar"
 	ChatSettingShowQueue      = "show-queue"
 	ChatSettingShowRead       = "show-read"
+	ChatSettingAiOpen         = "ai-open"
 )
 
 const (

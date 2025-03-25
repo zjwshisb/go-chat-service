@@ -18,7 +18,6 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 
 	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/os/gcache"
 )
 
 func newUserManager(cluster bool) *userManager {
@@ -163,6 +162,74 @@ func (s *userManager) broadcastQueueLocation(ctx context.Context, customerId uin
 	return
 }
 
+func (s *userManager) triggerAiResponse(ctx context.Context, msg *model.CustomerChatMessage) error {
+	aiOpen, err := service.ChatSetting().GetAiOpen(ctx, msg.CustomerId)
+	fmt.Println(aiOpen)
+	if err != nil {
+		return err
+	}
+	if aiOpen {
+		messages, err := service.ChatMessage().GetAiMessageContext(ctx, msg.UserId, msg.Id)
+		if err != nil {
+			return err
+		}
+		aiText, err := service.Langchain().Ask(ctx, msg.Content, service.Langchain().MessageToContent(messages)...)
+		if err != nil {
+			return err
+		}
+		respMsg := service.ChatMessage().NewAi(aiText)
+		respMsg.UserId = msg.UserId
+		respMsg.SessionId = msg.SessionId
+		respMsg.CustomerId = msg.CustomerId
+		respMsg, err = service.ChatMessage().Insert(ctx, respMsg)
+		if err != nil {
+			return err
+		}
+		err = s.deliveryMessage(ctx, respMsg)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *userManager) deliveryToAdmin(ctx context.Context, conn iWsConn, msg *model.CustomerChatMessage) error {
+	// 获取有效会话
+	session, err := service.ChatSession().FirstActive(ctx, msg.UserId, msg.AdminId, nil)
+	if err != nil {
+		return err
+	}
+	// 更新有效时间
+	err = relation.updateUser(ctx, msg.AdminId, msg.UserId)
+	if err != nil {
+		return err
+	}
+	msg.SessionId = session.Id
+	_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
+		SessionId: msg.SessionId,
+	})
+	if err != nil {
+		return err
+	}
+	adminOnline, _, err := adminM.getConnInfo(ctx, msg.CustomerId, msg.AdminId)
+	if err != nil {
+		return err
+	}
+	if adminOnline {
+		err = userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOnline, msg, conn)
+		if err != nil {
+			return err
+		}
+		return adminM.deliveryMessage(ctx, msg)
+	} else {
+		err = adminM.handleOffline(ctx, msg, conn)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // onMessage handles incoming messages from users
 // It processes the message by:
 // 1. Setting message source and user ID
@@ -192,40 +259,7 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 	// 发送回执
 	conn.deliver(action.newReceipt(msg))
 	if msg.AdminId > 0 {
-		// 获取有效会话
-		session, err := service.ChatSession().FirstActive(ctx, msg.UserId, msg.AdminId, nil)
-		if err != nil {
-			return err
-		}
-		// 更新有效时间
-		err = relation.updateUser(ctx, msg.AdminId, msg.UserId)
-		if err != nil {
-			return err
-		}
-		msg.SessionId = session.Id
-		_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
-			SessionId: msg.SessionId,
-		})
-		if err != nil {
-			return err
-		}
-		adminOnline, _, err := adminM.getConnInfo(ctx, msg.CustomerId, msg.AdminId)
-		if err != nil {
-			return err
-		}
-		if adminOnline {
-			err = userM.triggerMessageEvent(ctx, consts.AutoRuleSceneAdminOnline, msg, conn)
-			if err != nil {
-				return err
-			}
-			return adminM.deliveryMessage(ctx, msg)
-		} else {
-			err = adminM.handleOffline(ctx, msg, conn)
-			if err != nil {
-				return err
-			}
-		}
-
+		return s.deliveryToAdmin(ctx, conn, msg)
 	} else {
 		// 触发自动回复事件
 		err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneNotAccepted, msg, conn)
@@ -292,6 +326,11 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 					if err != nil {
 						return err
 					}
+				} else {
+					err = s.triggerAiResponse(ctx, msg)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		} else {
@@ -351,7 +390,7 @@ func (s *userManager) triggerEnterEvent(ctx context.Context, conn iWsConn) (err 
 		return
 	}
 	conn.deliver(action.newReceive(entityMessage))
-	err = gcache.Set(ctx, cacheKey, gtime.Now().String(), time.Minute*10)
+	err = cache.Def.Set(ctx, cacheKey, gtime.Now().String(), time.Minute*10)
 	if err != nil {
 		return
 	}

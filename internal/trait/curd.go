@@ -66,7 +66,6 @@ func (c Curd[R]) First(ctx ctx, where any, order ...any) (model *R, err error) {
 
 func (c Curd[R]) Exists(ctx ctx, where any) (exists bool, err error) {
 	return c.Dao.Ctx(ctx).Where(where).Exist()
-
 }
 
 func (c Curd[R]) All(ctx ctx, where any, with []any, order any, limit ...int) (items []*R, err error) {

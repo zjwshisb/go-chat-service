@@ -13,6 +13,7 @@ import (
 	"gf-chat/internal/service"
 	"gf-chat/internal/trait"
 	"github.com/duke-git/lancet/v2/slice"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/grand"
@@ -79,7 +80,16 @@ func (s *sChatMessage) GetLastGroupByUsers(ctx context.Context, adminId uint, ui
 func (s *sChatMessage) GenReqId() string {
 	return grand.S(20)
 }
-
+func (s *sChatMessage) GetAiMessageContext(ctx context.Context, uid uint, curId uint) (res []*model.CustomerChatMessage, err error) {
+	start := gtime.Now().AddDate(0, 0, -1)
+	return s.All(ctx, g.Map{
+		"user_id":      uid,
+		"source":       []int{consts.MessageSourceUser, consts.MessageSourceAi},
+		"session_id":   0,
+		"created_at >": start,
+		"id !=":        curId,
+	}, g.Slice{}, "id", 100)
+}
 func (s *sChatMessage) ToRead(ctx context.Context, id any) (int64, error) {
 	l, err := s.Dao.Ctx(ctx).WhereNull("read_at").WherePri(id).Update(&do.CustomerChatMessages{
 		ReadAt: gtime.Now(),
@@ -98,6 +108,8 @@ func (s *sChatMessage) GetAdminName(ctx context.Context, model *model.CustomerCh
 		}
 		avatar, err = service.ChatSetting().GetName(ctx, model.CustomerId)
 		return
+	case consts.MessageSourceAi:
+		fallthrough
 	case consts.MessageSourceSystem:
 		avatar, err = service.ChatSetting().GetName(ctx, model.CustomerId)
 		return
@@ -144,13 +156,24 @@ func (s *sChatMessage) GetAvatar(ctx context.Context, model *model.CustomerChatM
 			return service.ChatSetting().GetAvatar(ctx, model.CustomerId)
 		}
 	case consts.MessageSourceSystem:
+		fallthrough
+	case consts.MessageSourceAi:
 		return service.ChatSetting().GetAvatar(ctx, model.CustomerId)
 	case consts.MessageSourceUser:
 		return "", nil
 	}
 	return "", nil
 }
-
+func (s *sChatMessage) NewAi(content string) *model.CustomerChatMessage {
+	return &model.CustomerChatMessage{
+		CustomerChatMessages: entity.CustomerChatMessages{
+			Type:    consts.MessageTypeText,
+			Content: content,
+			ReqId:   s.GenReqId(),
+			Source:  consts.MessageSourceAi,
+		},
+	}
+}
 func (s *sChatMessage) NewNotice(session *model.CustomerChatSession, content string) *model.CustomerChatMessage {
 	return &model.CustomerChatMessage{
 		CustomerChatMessages: entity.CustomerChatMessages{

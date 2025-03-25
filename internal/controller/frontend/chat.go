@@ -140,7 +140,7 @@ func (c cChat) Read(ctx context.Context, req *api.ChatReadReq) (res *baseApi.Nil
 	message, err := service.ChatMessage().First(ctx, do.CustomerChatMessages{
 		Id:     req.MsgId,
 		UserId: user.Id,
-		Source: []int{consts.MessageSourceAdmin, consts.MessageSourceSystem},
+		Source: []int{consts.MessageSourceAdmin, consts.MessageSourceSystem, consts.MessageSourceAi},
 	})
 	if err != nil {
 		return

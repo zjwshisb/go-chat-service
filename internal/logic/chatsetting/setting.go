@@ -31,6 +31,8 @@ const (
 	transferCacheKey = "customer:%d:setting:transfer"
 	readCacheKey     = "customer:%d:setting:read"
 	queueCacheKey    = "customer:%d:setting:queue"
+	aiCacheKey       = "customer:%d:setting:ai"
+	cacheTime        = 10
 )
 
 type sChatSetting struct {
@@ -99,7 +101,7 @@ func (s *sChatSetting) GetIsUserShowQueue(ctx context.Context, customerId uint) 
 			return
 		}
 		return setting.Value == "1", nil
-	}, time.Minute*10)
+	}, time.Minute*cacheTime)
 	if err != nil {
 		return
 	}
@@ -125,7 +127,7 @@ func (s *sChatSetting) GetAvatar(ctx context.Context, customerId uint) (name str
 		}
 		fileUrl := service.File().ToApi(file).Url
 		return fileUrl, nil
-	}, time.Minute*10)
+	}, time.Minute*cacheTime)
 	if err != nil {
 		return
 	}
@@ -146,7 +148,27 @@ func (s *sChatSetting) GetIsAutoTransferManual(ctx context.Context, customerId u
 			return
 		}
 		return gconv.Bool(gconv.Int(setting.Value)), nil
-	}, time.Minute*10)
+	}, time.Minute*cacheTime)
+	if err != nil {
+		return
+	}
+	return v.Bool(), nil
+}
+
+func (s *sChatSetting) GetAiOpen(ctx context.Context, customerId uint) (b bool, err error) {
+	v, err := cache.Def.GetOrSetFunc(ctx, fmt.Sprintf(aiCacheKey, customerId), func(ctx context.Context) (r any, err error) {
+		setting, err := s.First(ctx, do.CustomerChatSettings{
+			CustomerId: customerId,
+			Name:       consts.ChatSettingAiOpen,
+		})
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return false, nil
+			}
+			return
+		}
+		return gconv.Bool(gconv.Int(setting.Value)), nil
+	}, time.Minute*cacheTime)
 	if err != nil {
 		return
 	}

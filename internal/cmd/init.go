@@ -12,7 +12,7 @@ import (
 var Init = &gcmd.Command{
 	Name:        "init",
 	Brief:       "init database",
-	Description: "初始化客服数据库",
+	Description: "初始化客服数据库信息",
 	Arguments: []gcmd.Argument{
 		{
 			Name:   "customerId",

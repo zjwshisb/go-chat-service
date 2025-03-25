@@ -49,20 +49,21 @@ func (m *adminManager) deliveryMessage(ctx context.Context, msg *model.CustomerC
 			adminConn.deliver(action.newReceive(msg))
 		}
 		return nil
-	}
-	if server != "" {
-		rpcClient := service.Grpc().Client(ctx, server)
-		if rpcClient != nil {
-			_, err = rpcClient.SendMessage(ctx, &grpc.SendMessageRequest{
-				MsgId: uint32(msg.Id),
-				Type:  consts.WsTypeAdmin,
-			})
-			if err != nil {
-				return err
+	} else {
+		if server != "" {
+			rpcClient := service.Grpc().Client(ctx, server)
+			if rpcClient != nil {
+				_, err = rpcClient.SendMessage(ctx, &grpc.SendMessageRequest{
+					MsgId: uint32(msg.Id),
+					Type:  consts.WsTypeAdmin,
+				})
+				if err != nil {
+					return err
+				}
 			}
 		}
+		return nil
 	}
-	return nil
 }
 
 // handleOffline handles offline messages

@@ -7,13 +7,15 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gogf/gf/contrib/drivers/mysql/v2 v2.8.3
 	github.com/gogf/gf/contrib/nosql/redis/v2 v2.8.3
+	github.com/gogf/gf/contrib/registry/etcd/v2 v2.8.3
 	github.com/gogf/gf/contrib/rpc/grpcx/v2 v2.8.3
 	github.com/gogf/gf/v2 v2.8.3
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/gorilla/websocket v1.5.3
 	github.com/qiniu/go-sdk/v7 v7.13.0
+	github.com/tmc/langchaingo v0.1.13
 	golang.org/x/crypto v0.30.0
-	golang.org/x/time v0.0.0-20220609170525-579cf78fd858
+	golang.org/x/time v0.5.0
 	google.golang.org/grpc v1.64.1
 	google.golang.org/protobuf v1.34.2
 )
@@ -25,13 +27,13 @@ require (
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-sql-driver/mysql v1.7.1 // indirect
-	github.com/gogf/gf/contrib/registry/etcd/v2 v2.8.3 // indirect
 	github.com/gogf/gf/contrib/registry/file/v2 v2.8.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
@@ -42,6 +44,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
+	github.com/pkoukk/tiktoken-go v0.1.6 // indirect
 	github.com/redis/go-redis/v9 v9.7.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.17 // indirect
@@ -54,12 +57,12 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.17.0 // indirect
-	golang.org/x/exp v0.0.0-20221208152030-732eee02a75a // indirect
+	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1 // indirect
 	golang.org/x/net v0.32.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240318140521-94a12d6c2237 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240604185151-ef581f913117 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240604185151-ef581f913117 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

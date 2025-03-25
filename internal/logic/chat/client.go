@@ -238,7 +238,6 @@ func (c *client) readMsg() {
 							c.manager.handleMessage(ctx, c, msg)
 						}()
 						c.lastActive = gtime.Now()
-
 					}
 				}
 			}

@@ -47,3 +47,6 @@ websocket:
     path: "./storage/sql"
     level: "all"
     stdout: false
+langchain:
+  open: true
+  model: "qwen:0.5b"

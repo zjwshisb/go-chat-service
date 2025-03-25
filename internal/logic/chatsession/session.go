@@ -170,7 +170,6 @@ func (s *sChatSession) FirstNormal(ctx context.Context, uid uint, adminId uint) 
 }
 
 func (s *sChatSession) FirstActive(ctx context.Context, uid uint, adminId, t any) (*model.CustomerChatSession, error) {
-
 	w := g.Map{
 		"user_id":             uid,
 		"admin_id":            adminId,
