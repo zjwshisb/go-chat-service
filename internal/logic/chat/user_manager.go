@@ -18,7 +18,6 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 
 	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/os/gcache"
 )
 
 func newUserManager(cluster bool) *userManager {
@@ -351,7 +350,7 @@ func (s *userManager) triggerEnterEvent(ctx context.Context, conn iWsConn) (err 
 		return
 	}
 	conn.deliver(action.newReceive(entityMessage))
-	err = gcache.Set(ctx, cacheKey, gtime.Now().String(), time.Minute*10)
+	err = cache.Def.Set(ctx, cacheKey, gtime.Now().String(), time.Minute*10)
 	if err != nil {
 		return
 	}
