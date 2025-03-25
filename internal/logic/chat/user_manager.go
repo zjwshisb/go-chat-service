@@ -315,17 +315,6 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 							SessionId: msg.SessionId,
 						})
 					}
-					if err != nil {
-						return err
-					}
-					err = adminM.broadcastWaitingUser(ctx, conn.getCustomerId())
-					if err != nil {
-						return err
-					}
-					err = s.broadcastQueueLocation(ctx, conn.getCustomerId())
-					if err != nil {
-						return err
-					}
 				} else {
 					err = s.triggerAiResponse(ctx, msg)
 					if err != nil {
@@ -421,7 +410,7 @@ func (s *userManager) onRegister(ctx context.Context, arg eventArg) (err error) 
 	return err
 }
 
-// addToManual adds a user to the manual chat queue and handles the initial setup
+// adds a user to the manual chat queue and handles the initial setup
 // It checks if the user is already in queue, finds available admins, and handles offline admin scenarios
 // Parameters:
 //   - ctx: The context for the operation
@@ -439,7 +428,6 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 		err = gerror.NewCode(gcode.CodeBusinessValidationFailed, "is in")
 		return
 	}
-	fmt.Println(adminM)
 	onlineAdminIds, err := adminM.getOnlineUserIds(ctx, user.getCustomerId())
 	if err != nil {
 		return
@@ -500,7 +488,14 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 	if err != nil {
 		return nil, err
 	}
-
+	err = adminM.broadcastWaitingUser(ctx, message.CustomerId)
+	if err != nil {
+		return
+	}
+	err = s.broadcastQueueLocation(ctx, message.CustomerId)
+	if err != nil {
+		return
+	}
 	return
 }
 
@@ -547,14 +542,7 @@ func (s *userManager) triggerMessageEvent(ctx context.Context, scene string, mes
 			if err != nil {
 				return
 			}
-			err = adminM.broadcastWaitingUser(ctx, message.CustomerId)
-			if err != nil {
-				return
-			}
-			err = s.broadcastQueueLocation(ctx, message.CustomerId)
-			if err != nil {
-				return
-			}
+
 			err = service.AutoRule().IncrTriggerCount(ctx, rule)
 			if err != nil {
 				return
