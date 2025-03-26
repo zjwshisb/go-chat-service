@@ -81,6 +81,7 @@ type ChatWaitingUser struct {
 	MessageCount uint                `json:"message_count"`
 	Description  string              `json:"description"`
 	SessionId    uint                `json:"session_id"`
+	Platform     string              `json:"platform"`
 }
 
 type ChatSimpleMessage struct {

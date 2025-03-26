@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"context"
 	"gf-chat/api"
 	"gf-chat/internal/consts"
 	"gf-chat/internal/model"
@@ -130,14 +131,15 @@ func (c *client) validate(data map[string]interface{}) error {
 	content, exist := data["content"]
 	if exist {
 		s, ok := content.(string)
-		if ok {
-			length := utf8.RuneCountInString(s)
-			if length == 0 {
-				return gerror.NewCode(gcode.CodeBusinessValidationFailed, "请勿发送空内容")
-			}
-			if length > 512 {
-				return gerror.NewCode(gcode.CodeBusinessValidationFailed, "内容长度必须小于512个字符")
-			}
+		if !ok {
+			return gerror.NewCode(gcode.CodeBusinessValidationFailed, "消息不合法")
+		}
+		length := utf8.RuneCountInString(s)
+		if length == 0 {
+			return gerror.NewCode(gcode.CodeBusinessValidationFailed, "请勿发送空内容")
+		}
+		if length > 512 {
+			return gerror.NewCode(gcode.CodeBusinessValidationFailed, "内容长度必须小于512个字符")
 		}
 	}
 	reqId, exist := data["req_id"]
@@ -147,7 +149,6 @@ func (c *client) validate(data map[string]interface{}) error {
 	reqIdStr, ok := reqId.(string)
 	if !ok {
 		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "消息不合法")
-
 	}
 	length := len(reqIdStr)
 	if length <= 0 || length > 20 {
@@ -180,70 +181,84 @@ func (c *client) isTypeValid(t string) bool {
 	return slice.Contain(allowTypes, t)
 }
 
-// readMsg continuously reads messages from the websocket connection.
-// It runs in a goroutine and handles incoming messages by:
-// 1. Reading raw messages from the websocket connection
-// 2. Unmarshaling them into ChatAction objects
-// 3. Validating the message data
-// 4. Processing messages based on their action type (e.g. sending messages)
-// 5. Updating the last active timestamp
-// The method will exit when the connection is closed via the closeSignal channel.
 func (c *client) readMsg() {
-	var msg = make(chan []byte, 50)
+	msgChan := make(chan []byte, 50)
+	ctx := gctx.New()
+
+	// Start message reader goroutine
+	go c.readMessageLoop(msgChan)
+
 	for {
-		go func() {
-			_, message, err := c.conn.ReadMessage()
-			// 读消息失败说明连接异常，调用close方法
-			if err != nil {
-				c.close()
-			} else {
-				msg <- message
-			}
-		}()
 		select {
 		case <-c.closeSignal:
 			return
-		case msgStr := <-msg:
-			ctx := gctx.New()
-			act, err := action.unMarshal(msgStr)
-			log.Debug(ctx, "read", msgStr)
-			if err != nil {
+		case msgBytes := <-msgChan:
+			if err := c.handleMessage(ctx, msgBytes); err != nil {
 				log.Errorf(ctx, "%+v", err)
-				break
 			}
-			data, ok := act.Data.(g.Map)
-			if !ok {
-				break
-			}
-			err = c.validate(data)
-			if err != nil {
-				c.deliver(action.newErrorMessage(err.Error()))
-			} else {
-				switch act.Action {
-				case consts.ActionSendMessage:
-					msg, err := action.getMessage(act)
-					if err != nil {
-						log.Errorf(ctx, "%+v", err)
-					} else {
-						iu := c.getUser()
-						switch u := iu.(type) {
-						case *admin:
-							msg.Admin = u.Entity
-						case *user:
-							msg.User = u.Entity
-						}
-						msg.CustomerId = c.getCustomerId()
-						msg.ReceivedAt = gtime.Now()
-						go func() {
-							c.manager.handleMessage(ctx, c, msg)
-						}()
-						c.lastActive = gtime.Now()
-					}
-				}
-			}
-
 		}
 	}
+}
+
+// readMessageLoop continuously reads messages from websocket connection
+func (c *client) readMessageLoop(msgChan chan<- []byte) {
+	for {
+		_, message, err := c.conn.ReadMessage()
+		if err != nil {
+			c.close()
+			return
+		}
+		select {
+		case <-c.closeSignal:
+			return
+		case msgChan <- message:
+		}
+	}
+}
+
+// handleMessage processes a single message
+func (c *client) handleMessage(ctx context.Context, msgBytes []byte) error {
+	log.Debug(ctx, "read", msgBytes)
+	act, err := action.unMarshal(msgBytes)
+	if err != nil {
+		return err
+	}
+	data, ok := act.Data.(g.Map)
+	if !ok {
+		return gerror.New("invalid action data type")
+	}
+	if err = c.validate(data); err != nil {
+		c.deliver(action.newErrorMessage(err.Error()))
+		return nil
+	}
+	if act.Action != consts.ActionSendMessage {
+		return gerror.New("invalid action type")
+	}
+	return c.processMessage(ctx, act)
+}
+
+// processMessage handles message type actions
+func (c *client) processMessage(ctx context.Context, act *api.ChatAction) error {
+	msg, err := action.getMessage(act)
+	if err != nil {
+		return err
+	}
+	// Set message metadata
+	msg.CustomerId = c.getCustomerId()
+	msg.ReceivedAt = gtime.Now()
+
+	// Set user information based on type
+	switch u := c.getUser().(type) {
+	case *admin:
+		msg.Admin = u.Entity
+	case *user:
+		msg.User = u.Entity
+	}
+
+	// Process message asynchronously
+	go c.manager.handleMessage(ctx, c, msg)
+	c.lastActive = gtime.Now()
+	return nil
 }
 
 // Deliver 投递消息
@@ -251,63 +266,74 @@ func (c *client) deliver(act *api.ChatAction) {
 	c.send <- act
 }
 
-// sendMsg handles sending messages to the websocket connection. It runs in a separate goroutine and continuously processes messages until closed.
-// It handles:
-// - Receiving ChatAction messages from the client's send channel
-// - Marshaling messages to JSON format before sending
-// - Sending messages over the websocket connection using WriteMessage
-// - Special action handling:
-//   - ActionMoreThanOne: Closes connection when user has multiple active sessions
-//   - ActionOtherLogin: Closes connection when user logs in elsewhere
-//   - ActionReceiveMessage: Updates message send timestamp in database after successful delivery
-//
-// - Graceful shutdown via closeSignal channel
-// - Error handling for marshal/send failures
-// The method blocks until either:
-// 1. An unrecoverable error occurs during message sending
-// 2. The connection is explicitly closed
-// 3. The closeSignal channel receives a shutdown signal
+// sendMsg handles sending messages to the websocket connection
 func (c *client) sendMsg() {
+	ctx := gctx.New()
 	for {
 		select {
 		case act := <-c.send:
-			ctx := gctx.New()
-			msgByte, err := action.marshal(ctx, *act)
-			log.Debug(ctx, "send", string(msgByte))
-			if err != nil {
+			if err := c.processOutgoingMessage(ctx, act); err != nil {
 				log.Errorf(ctx, "%+v", err)
-				break
-			}
-			err = c.conn.WriteMessage(websocket.TextMessage, msgByte)
-			if err != nil {
-				log.Errorf(ctx, "%+v", err)
-				c.close()
-				return
-			}
-			switch act.Action {
-			case consts.ActionMoreThanOne:
-				c.close()
-			case consts.ActionOtherLogin:
-				c.close()
-			case consts.ActionReceiveMessage:
-				msg, ok := act.Data.(*model.CustomerChatMessage)
-				if !ok {
-					err = gerror.NewCode(gcode.CodeValidationFailed, "action.data is not a message model")
-					log.Errorf(ctx, "%+v", err)
-				} else {
-					if msg.SendAt == nil {
-						_, err := service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
-							SendAt: gtime.Now(),
-						})
-						if err != nil {
-							log.Errorf(ctx, "%+v", err)
-						}
-					}
-				}
-			default:
 			}
 		case <-c.closeSignal:
 			return
 		}
 	}
+}
+
+// processOutgoingMessage handles the processing and sending of a single message
+func (c *client) processOutgoingMessage(ctx context.Context, act *api.ChatAction) error {
+	// Marshal message
+	msgBytes, err := action.marshal(ctx, *act)
+	if err != nil {
+		return err
+	}
+	log.Debug(ctx, "send", string(msgBytes))
+
+	// Send message
+	if err = c.conn.WriteMessage(websocket.TextMessage, msgBytes); err != nil {
+		c.close()
+		return gerror.New("connection closed")
+	}
+
+	// Handle special actions
+	if err = c.handleSpecialActions(ctx, act); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// handleSpecialActions processes special action types that require additional handling
+func (c *client) handleSpecialActions(ctx context.Context, act *api.ChatAction) error {
+	switch act.Action {
+	case consts.ActionMoreThanOne, consts.ActionOtherLogin:
+		c.close()
+		return nil
+
+	case consts.ActionReceiveMessage:
+		return c.handleReceiveMessage(ctx, act)
+	}
+
+	return nil
+}
+
+// handleReceiveMessage processes received messages and updates their send timestamp
+func (c *client) handleReceiveMessage(ctx context.Context, act *api.ChatAction) error {
+	msg, ok := act.Data.(*model.CustomerChatMessage)
+	if !ok {
+		return gerror.NewCode(gcode.CodeValidationFailed, "action.data is not a message model")
+	}
+	if msg.SendAt != nil {
+		return nil // Message already marked as sent
+	}
+	// Update message send timestamp
+	_, err := service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
+		SendAt: gtime.Now(),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

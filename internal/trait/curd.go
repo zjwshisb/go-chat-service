@@ -19,7 +19,7 @@ type ICurd[R any] interface {
 	First(ctx ctx, where any, order ...any) (model *R, err error)
 	Paginate(ctx ctx, where any, p api.Paginate, with []any, order any) (paginator *model.Paginator[*R], err error)
 	Update(ctx ctx, where any, data any) (count int64, err error)
-	UpdatePri(ctx ctx, where any, data any) (count int64, err error)
+	UpdatePri(ctx ctx, primaryKey any, data any) (count int64, err error)
 	Exists(ctx ctx, where any) (exists bool, err error)
 	Delete(ctx ctx, primaryKey any) error
 	Count(ctx ctx, where any) (count int, err error)

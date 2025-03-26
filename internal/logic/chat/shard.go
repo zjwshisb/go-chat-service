@@ -12,11 +12,11 @@ type shard struct {
 func (s *shard) getAll() []iWsConn {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	conns := make([]iWsConn, 0, len(s.m))
+	cons := make([]iWsConn, 0, len(s.m))
 	for _, conn := range s.m {
-		conns = append(conns, conn)
+		cons = append(cons, conn)
 	}
-	return conns
+	return cons
 }
 
 // getTotalCount returns the total number of connections in the shard

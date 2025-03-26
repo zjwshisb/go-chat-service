@@ -34,23 +34,6 @@ type userManager struct {
 	*manager
 }
 
-// deliveryMessage delivers a message to the appropriate user connection
-// Returns error if delivery fails
-// deliveryMessage delivers a chat message to a user's websocket connection.
-// It handles both local and remote message delivery in a clustered environment.
-//
-// Parameters:
-// - ctx: The context for the operation
-// - message: The chat message to deliver containing user ID, customer ID etc.
-// - forceLocal: Optional bool to force local delivery even in clustered mode
-//
-// The method:
-// 1. Checks if the target user is connected locally or on a remote server
-// 2. For local users, delivers directly to their websocket connection
-// 3. For remote users, forwards the message via gRPC to the appropriate server
-// 4. Handles special message types like ratings that require additional processing
-//
-// Returns error if message delivery fails
 func (s *userManager) deliveryMessage(ctx context.Context, message *model.CustomerChatMessage, forceLocal ...bool) error {
 	userLocal, server, err := s.isUserLocal(ctx, message.UserId)
 	if err != nil {
@@ -164,7 +147,6 @@ func (s *userManager) broadcastQueueLocation(ctx context.Context, customerId uin
 
 func (s *userManager) triggerAiResponse(ctx context.Context, msg *model.CustomerChatMessage) error {
 	aiOpen, err := service.ChatSetting().GetAiOpen(ctx, msg.CustomerId)
-	fmt.Println(aiOpen)
 	if err != nil {
 		return err
 	}
@@ -230,6 +212,82 @@ func (s *userManager) deliveryToAdmin(ctx context.Context, conn iWsConn, msg *mo
 	return nil
 }
 
+func (s *userManager) handleManual(ctx context.Context, msg *model.CustomerChatMessage, user iChatUser) error {
+	var inManual bool
+	// 在代人工接入列表中
+	inManual, err := manual.isInSet(ctx, msg.UserId, msg.CustomerId)
+	if err != nil {
+		return err
+	}
+	if inManual {
+		session, err := service.ChatSession().FirstNormal(ctx, msg.UserId, 0)
+		if err != nil {
+			_ = manual.removeFromSet(ctx, msg.UserId, msg.CustomerId)
+			return err
+		}
+		msg.SessionId = session.Id
+		_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
+			SessionId: msg.SessionId,
+		})
+		if err != nil {
+			return err
+		}
+		err = adminM.broadcastWaitingUser(ctx, msg.CustomerId)
+		if err != nil {
+			return err
+		}
+	} else {
+		// 不在待人工接入列表中
+		var isAutoAdd bool
+		isAutoAdd, err = service.ChatSetting().GetIsAutoTransferManual(ctx, msg.CustomerId)
+		if err != nil {
+			return err
+		}
+		if isAutoAdd { // 如果自动转人工
+			session, err := s.addToManual(ctx, user)
+			if err != nil {
+				return err
+			}
+			if session != nil {
+				msg.SessionId = session.Id
+				_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
+					SessionId: msg.SessionId,
+				})
+			}
+		} else {
+			err = s.triggerAiResponse(ctx, msg)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *userManager) handleTransfer(ctx context.Context, msg *model.CustomerChatMessage) (inTransfer bool, err error) {
+	transferAdminId, err := service.ChatTransfer().GetUserTransferId(ctx, msg.CustomerId, msg.UserId)
+	if err != nil {
+		_ = service.ChatTransfer().RemoveUser(ctx, msg.CustomerId, msg.UserId)
+		return
+	}
+	inTransfer = transferAdminId > 0
+	if inTransfer {
+		var session *model.CustomerChatSession
+		session, err = service.ChatSession().FirstTransfer(ctx, msg.UserId, transferAdminId)
+		if err != nil {
+			return
+		}
+		msg.SessionId = session.Id
+		_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
+			SessionId: msg.SessionId,
+		})
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 // onMessage handles incoming messages from users
 // It processes the message by:
 // 1. Setting message source and user ID
@@ -260,80 +318,20 @@ func (s *userManager) onMessage(ctx context.Context, arg eventArg) (err error) {
 	conn.deliver(action.newReceipt(msg))
 	if msg.AdminId > 0 {
 		return s.deliveryToAdmin(ctx, conn, msg)
-	} else {
-		// 触发自动回复事件
-		err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneNotAccepted, msg, conn)
+	}
+	// 触发自动回复事件
+	err = s.triggerMessageEvent(ctx, consts.AutoRuleSceneNotAccepted, msg, conn)
+	if err != nil {
+		log.Errorf(ctx, "%+v", err)
+	}
+	inTransfer, err := s.handleTransfer(ctx, msg)
+	if err != nil {
+		return
+	}
+	if !inTransfer {
+		err = s.handleManual(ctx, msg, conn.getUser())
 		if err != nil {
-			log.Errorf(ctx, "%+v", err)
-		}
-		var transferAdminId uint
-		// 转接adminId
-		transferAdminId, err = service.ChatTransfer().GetUserTransferId(ctx, conn.getCustomerId(), conn.getUserId())
-		if err != nil {
-			_ = service.ChatTransfer().RemoveUser(ctx, conn.getCustomerId(), conn.getUserId())
 			return
-		}
-		var session *model.CustomerChatSession
-		if transferAdminId == 0 {
-			// 在代人工接入列表中
-			inManual, err := manual.isInSet(ctx, conn.getUserId(), conn.getCustomerId())
-			if err != nil {
-				return err
-			}
-			if inManual {
-				session, err = service.ChatSession().FirstNormal(ctx, msg.UserId, 0)
-				if err != nil {
-					_ = manual.removeFromSet(ctx, conn.getUserId(), conn.getCustomerId())
-					return err
-				}
-				msg.SessionId = session.Id
-				_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
-					SessionId: msg.SessionId,
-				})
-				if err != nil {
-					return err
-				}
-				err = adminM.broadcastWaitingUser(ctx, conn.getCustomerId())
-				if err != nil {
-					return err
-				}
-			} else {
-				// 不在代人工接入列表中
-				var isAutoAdd bool
-				isAutoAdd, err = service.ChatSetting().GetIsAutoTransferManual(ctx, conn.getCustomerId())
-				if err != nil {
-					return err
-				}
-				if isAutoAdd { // 如果自动转人工
-					session, err = s.addToManual(ctx, conn.getUser())
-					if err != nil {
-						return err
-					}
-					if session != nil {
-						msg.SessionId = session.Id
-						_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
-							SessionId: msg.SessionId,
-						})
-					}
-				} else {
-					err = s.triggerAiResponse(ctx, msg)
-					if err != nil {
-						return err
-					}
-				}
-			}
-		} else {
-			session, err = service.ChatSession().FirstTransfer(ctx, conn.getUserId(), transferAdminId)
-			if err != nil {
-				return
-			}
-			msg.SessionId = session.Id
-			_, err = service.ChatMessage().UpdatePri(ctx, msg.Id, do.CustomerChatMessages{
-				SessionId: msg.SessionId,
-			})
-			if err != nil {
-				return
-			}
 		}
 	}
 	return nil
@@ -433,12 +431,12 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 		return
 	}
 	if len(onlineAdminIds) == 0 { // 如果没有在线客服
-		rule, _ := service.AutoRule().GetSystemOne(ctx, user.getCustomerId(), consts.AutoRuleMatchAdminAllOffLine)
-		if rule != nil {
+		rule, err := service.AutoRule().GetSystemOne(ctx, user.getCustomerId(), consts.AutoRuleMatchAdminAllOffLine)
+		if err == nil {
 			switch rule.ReplyType {
 			case consts.AutoRuleReplyTypeMessage:
-				autoMessage, _ := service.AutoRule().GetMessage(ctx, rule)
-				if autoMessage != nil {
+				autoMessage, err := service.AutoRule().GetMessage(ctx, rule)
+				if err == nil {
 					message, err := service.AutoMessage().ToChatMessage(ctx, autoMessage)
 					if err != nil {
 						return nil, err

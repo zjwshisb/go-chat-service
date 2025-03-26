@@ -73,11 +73,11 @@ func (m *adminManager) handleOffline(ctx context.Context, msg *model.CustomerCha
 	if err != nil {
 		return err
 	}
-	admin, err := service.Admin().First(ctx, do.CustomerAdmins{Id: msg.AdminId})
+	userAdmin, err := service.Admin().First(ctx, do.CustomerAdmins{Id: msg.AdminId})
 	if err != nil {
 		return err
 	}
-	message, err := service.ChatMessage().NewOffline(ctx, admin)
+	message, err := service.ChatMessage().NewOffline(ctx, userAdmin)
 	if err != nil {
 		return err
 	}
@@ -185,6 +185,7 @@ func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint
 			return err
 		}
 		for _, session := range sessions {
+			_, platform, _ := userM.getConnInfo(ctx, session.CustomerId, session.UserId)
 			userMap[session.UserId] = &v1.ChatWaitingUser{
 				Username:     session.User.Username,
 				Avatar:       "",
@@ -194,6 +195,7 @@ func (m *adminManager) broadcastWaitingUser(ctx context.Context, customerId uint
 				Messages:     make([]v1.ChatSimpleMessage, 0),
 				LastTime:     session.QueriedAt,
 				SessionId:    session.Id,
+				Platform:     platform,
 			}
 		}
 		for _, m := range messages {

@@ -12,12 +12,15 @@ import (
 	"github.com/tmc/langchaingo/llms/ollama"
 )
 
-var open bool
+func init() {
+	service.RegisterLangchain(newLangchian())
+}
 
 type langchian struct {
 	llm *ollama.LLM
 }
 
+// todo RAG
 func newLangchian() *langchian {
 	config, _ := g.Config().Get(gctx.New(), "langchain.model", "llama3.2")
 	llm, err := ollama.New(ollama.WithModel(config.String()), ollama.WithSystemPrompt("你是一个客服系统"))
@@ -25,10 +28,6 @@ func newLangchian() *langchian {
 		panic(err)
 	}
 	return &langchian{llm: llm}
-}
-
-func init() {
-	service.RegisterLangchain(newLangchian())
 }
 
 func (receiver langchian) Ask(ctx context.Context, msg string, messages ...llms.MessageContent) (resp string, err error) {
@@ -42,6 +41,7 @@ func (receiver langchian) Ask(ctx context.Context, msg string, messages ...llms.
 	resp = completion.Choices[0].Content
 	return
 }
+
 func (receiver langchian) MessageToContent(messages []*model.CustomerChatMessage) []llms.MessageContent {
 	return slice.Map(messages, func(index int, item *model.CustomerChatMessage) llms.MessageContent {
 		role := llms.ChatMessageTypeHuman

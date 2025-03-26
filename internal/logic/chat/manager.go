@@ -330,21 +330,19 @@ func (m *manager) getAllConn(customerId uint) (conns []iWsConn) {
 func (m *manager) unregister(conn iWsConn) {
 	ctx := gctx.New()
 	existConn, exist := m.getConn(conn.getCustomerId(), conn.getUserId())
-	if exist {
-		if existConn == conn {
-			m.removeConn(conn.getUser())
-			if m.cluster {
-				err := m.removeUserServer(ctx, conn.getUserId())
-				if err != nil {
-					log.Errorf(ctx, "%+v", err)
-				}
-			}
-			err := m.trigger(ctx, eventUnRegister, eventArg{
-				conn: conn,
-			})
+	if exist && existConn == conn {
+		m.removeConn(conn.getUser())
+		if m.cluster {
+			err := m.removeUserServer(ctx, conn.getUserId())
 			if err != nil {
 				log.Errorf(ctx, "%+v", err)
 			}
+		}
+		err := m.trigger(ctx, eventUnRegister, eventArg{
+			conn: conn,
+		})
+		if err != nil {
+			log.Errorf(ctx, "%+v", err)
 		}
 	}
 }
@@ -352,24 +350,24 @@ func (m *manager) unregister(conn iWsConn) {
 // register registers a client with the manager
 // Adds the client to the connection map and triggers the register event
 func (m *manager) register(ctx context.Context, conn *websocket.Conn, user iChatUser, platform string) error {
-	client := newClient(conn, user, platform)
-	client.manager = m
+	uClient := newClient(conn, user, platform)
+	uClient.manager = m
 	timer := time.After(1 * time.Second)
-	err := m.noticeRepeatConnect(ctx, user.getPrimaryKey(), user.getCustomerId(), client.getUuid())
+	err := m.noticeRepeatConnect(ctx, user.getPrimaryKey(), user.getCustomerId(), uClient.getUuid())
 	if err != nil {
 		return err
 	}
-	m.addConn(client)
+	m.addConn(uClient)
 	if m.cluster {
 		err := m.setUserServer(ctx, user.getPrimaryKey(), service.Grpc().GetServerName())
 		if err != nil {
 			return err
 		}
 	}
-	client.run()
+	uClient.run()
 	<-timer
 	err = m.trigger(ctx, eventRegister, eventArg{
-		conn: client,
+		conn: uClient,
 	})
 	return err
 }
@@ -430,7 +428,6 @@ func (m *manager) ping() {
 			}
 		}
 	}
-
 }
 
 // run initializes the shard structure and starts the ping goroutine

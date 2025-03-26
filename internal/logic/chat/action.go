@@ -32,13 +32,12 @@ func (a *iAction) getMessage(action *api.ChatAction) (*model.CustomerChatMessage
 	return message, nil
 }
 
-// unMarshal unmarshals JSON bytes into ChatAction
 func (a *iAction) unMarshal(b []byte) (*api.ChatAction, error) {
-	action := &api.ChatAction{}
-	if err := json.Unmarshal(b, action); err != nil {
+	chatAction := &api.ChatAction{}
+	if err := json.Unmarshal(b, chatAction); err != nil {
 		return nil, err
 	}
-	return action, nil
+	return chatAction, nil
 }
 
 // marshal marshals ChatAction to JSON bytes
