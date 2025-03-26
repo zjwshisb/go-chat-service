@@ -454,7 +454,7 @@ func (s *userManager) addToManual(ctx context.Context, user iChatUser) (session 
 					if err != nil {
 						return nil, err
 					}
-					return nil, nil
+					return nil, gerror.New("interrupt")
 				}
 			}
 		}
@@ -533,6 +533,9 @@ func (s *userManager) triggerMessageEvent(ctx context.Context, scene string, mes
 			var session *model.CustomerChatSession
 			session, err = s.addToManual(ctx, user)
 			if err != nil {
+				if err.Error() == "interrupt" {
+					return nil
+				}
 				return
 			}
 			message.SessionId = session.Id
@@ -550,6 +553,7 @@ func (s *userManager) triggerMessageEvent(ctx context.Context, scene string, mes
 		// 回复消息
 		case consts.AutoRuleReplyTypeMessage:
 			autoMessage, err := service.AutoRule().GetMessage(ctx, rule)
+			fmt.Println(autoMessage)
 			if err != nil {
 				return err
 			}
